@@ -141,6 +141,8 @@ char* tab_bar_buttons_text[] = {
 Config conf;
 Config gui_conf;
 
+Sound click_snd;
+
 Texture2D run_tex;
 Texture2D stop_tex;
 Texture2D drop_tex;
@@ -1403,6 +1405,7 @@ bool handle_mouse_click(void) {
             argument_set_block(hover_info.argument, mouse_blockchain.blocks[0]);
             update_measurements(&vm, &hover_info.argument->data.block);
             vector_clear(mouse_blockchain.blocks);
+            PlaySound(click_snd);
         } else if (
             hover_info.block && 
             hover_info.blockchain && 
@@ -1413,6 +1416,7 @@ bool handle_mouse_click(void) {
             blockchain_insert(hover_info.blockchain, &mouse_blockchain, hover_info.blockchain_index);
             // Update block link to make valgrind happy
             hover_info.block = &hover_info.blockchain->blocks[hover_info.blockchain_index];
+            PlaySound(click_snd);
         } else {
             // Put block
             printf("Put block\n");
@@ -2096,6 +2100,8 @@ void setup(void) {
     SetTextureFilter(font_cond.texture, TEXTURE_FILTER_BILINEAR);
     SetTextureFilter(font_eb.texture, TEXTURE_FILTER_BILINEAR);
 
+    click_snd = LoadSound(DATA_PATH "click.wav");
+
     line_shader = LoadShaderFromMemory(line_shader_vertex, line_shader_fragment);
     shader_time_loc = GetShaderLocation(line_shader, "time");
 
@@ -2314,6 +2320,7 @@ int main(void) {
 
     SetConfigFlags(FLAG_MSAA_4X_HINT);
     InitWindow(800, 600, "Scrap");
+    InitAudioDevice();
     SetTargetFPS(60);
     //EnableEventWaiting();
     SetWindowState(FLAG_WINDOW_RESIZABLE | FLAG_VSYNC_HINT);
