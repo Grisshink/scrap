@@ -67,6 +67,7 @@ typedef enum {
     BLOCKTYPE_CONTROL,
     BLOCKTYPE_CONTROLEND,
     BLOCKTYPE_END,
+    BLOCKTYPE_HAT,
 } ScrBlockType;
 
 struct ScrBlockArgument;
@@ -760,6 +761,7 @@ void* exec_thread_entry(void* thread_exec) {
     exec->arg_stack_len = 0;
     exec->control_stack_len = 0;
     for (exec->running_chain_ind = 0; exec->running_chain_ind < vector_size(exec->code); exec->running_chain_ind++) {
+        if (exec->vm->blockdefs[exec->code[exec->running_chain_ind].blocks[0].id].type != BLOCKTYPE_HAT) continue;
         if (!exec_run_chain(exec->vm, exec, exec->code[exec->running_chain_ind])) {
             pthread_exit((void*)0);
         }
