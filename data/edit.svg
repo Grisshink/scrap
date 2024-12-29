@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="32"
+   height="32"
+   viewBox="0 0 8.4666665 8.4666666"
+   version="1.1"
+   id="svg1"
+   inkscape:version="1.4 (e7c3feb100, 2024-10-09)"
+   sodipodi:docname="edit.svg"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview1"
+     pagecolor="#202020"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="false"
+     inkscape:deskcolor="#000000"
+     inkscape:document-units="px"
+     showborder="true"
+     inkscape:antialias-rendering="true"
+     inkscape:zoom="5.6568542"
+     inkscape:cx="12.81631"
+     inkscape:cy="12.81631"
+     inkscape:window-width="1896"
+     inkscape:window-height="1006"
+     inkscape:window-x="10"
+     inkscape:window-y="10"
+     inkscape:window-maximized="0"
+     inkscape:current-layer="svg1" />
+  <defs
+     id="defs1" />
+  <g
+     inkscape:label="Слой 1"
+     inkscape:groupmode="layer"
+     id="layer1">
+    <g
+       id="g3"
+       transform="translate(0.11624184,3.7202161)">
+      <rect
+         style="fill:#ffffff;stroke-width:0.529167;stroke-linecap:square"
+         id="rect1"
+         width="4.4979167"
+         height="1.5875"
+         x="-4.9296446"
+         y="-4.067802"
+         transform="rotate(135)" />
+      <path
+         sodipodi:type="star"
+         style="fill:#ffffff;stroke-width:0.374234;stroke-linecap:square"
+         id="path1"
+         inkscape:flatsided="true"
+         sodipodi:sides="3"
+         sodipodi:cx="0.89269298"
+         sodipodi:cy="2.3644302"
+         sodipodi:r1="0.69652826"
+         sodipodi:r2="0.34826413"
+         sodipodi:arg1="1.0471976"
+         sodipodi:arg2="2.0943951"
+         inkscape:rounded="0"
+         inkscape:randomized="0"
+         d="M 1.2409571,2.9676414 0.19616473,2.3644302 1.2409571,1.761219 Z"
+         inkscape:transform-center-x="-0.28063303"
+         transform="matrix(1.0744068,-1.0744068,-0.93046357,-0.93046357,3.1129281,5.9173127)"
+         inkscape:transform-center-y="-0.14834103" />
+      <rect
+         style="fill:#ffffff;stroke-width:0.529168;stroke-linecap:square"
+         id="rect2"
+         width="0.52916664"
+         height="1.5875"
+         x="-5.987978"
+         y="-4.067802"
+         transform="rotate(135)" />
+    </g>
+  </g>
+</svg>
