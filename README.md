@@ -18,12 +18,6 @@ Scrap is currently in **Beta** stage. Some features may be missing or break, so 
 - Holding middle mouse button will do the same, except it works all the time
 - Press `Space` to jump to chain in code base (Useful if you got lost in code base)
 
-## Screenshots
-
-![Screenshot1](/extras/scrap_screenshot1.png)
-![Screenshot2](/extras/scrap_screenshot2.png)
-![Screenshot3](/extras/scrap_screenshot3.png)
-
 ## Building
 
 ### Dependencies
@@ -33,7 +27,7 @@ Before building you need to have [Raylib](https://github.com/raysan5/raylib) bui
 
 ### Build
 
-Currently Scrap can be built for *Windows* and *linux*. 
+Currently Scrap can be built for *Windows*, *Linux* and *MacOS*. 
 
 #### Linux build
 
@@ -56,6 +50,19 @@ make -B TARGET=WINDOWS
 ```
 
 This will build `scrap.exe` binary which can be run normally.
+
+#### MacOS build
+To build and run Scrap on macOS, you need to install `gcc` and `make`.
+First, install Homebrew:
+```
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+```
+After that, you need to run the following commands:
+```
+brew install gcc
+make TARGET=MACOS
+./scrap
+```
 
 ## Wait, there is more?
 
