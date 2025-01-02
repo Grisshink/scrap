@@ -16,18 +16,22 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+#ifndef VM_H
+#define VM_H
+
 #include <stddef.h>
 #include <stdio.h>
 #include <pthread.h>
 #include <stdbool.h>
 #include <stdatomic.h>
+#include "vec.h"
+#include <string.h>
 
 #define VM_ARG_STACK_SIZE 1024
 #define VM_CONTROL_STACK_SIZE 32768
 #define VM_VARIABLE_STACK_SIZE 1024
 #define VM_CHAIN_STACK_SIZE 1024
 
-typedef struct ScrString ScrString;
 typedef struct ScrVec ScrVec;
 typedef struct ScrColor ScrColor;
 typedef struct ScrImage ScrImage;
@@ -68,12 +72,6 @@ typedef struct ScrChainStackData ScrChainStackData;
 
 typedef char** (*ScrListAccessor)(ScrBlock* block, size_t* list_len);
 typedef ScrData (*ScrBlockFunc)(ScrExec* exec, int argc, ScrData* argv);
-
-struct ScrString {
-    char* str;
-    size_t len;
-    size_t cap;
-};
 
 struct ScrVec {
     float x, y;
@@ -364,7 +362,9 @@ ScrExec exec_new(void);
 void exec_free(ScrExec* exec);
 void exec_add_chain(ScrVm* vm, ScrExec* exec, ScrBlockChain chain);
 void exec_remove_chain(ScrVm* vm, ScrExec* exec, size_t ind);
+void exec_copy_code(ScrVm* vm, ScrExec* exec, ScrBlockChain* code);
 bool exec_run_chain(ScrExec* exec, ScrBlockChain* chain, ScrData* return_val);
+bool exec_run_custom(ScrExec* exec, ScrBlockChain* chain, int argc, ScrData* argv, ScrData* return_val);
 bool exec_start(ScrVm* vm, ScrExec* exec);
 bool exec_stop(ScrVm* vm, ScrExec* exec);
 bool exec_join(ScrVm* vm, ScrExec* exec, size_t* return_code);
@@ -377,6 +377,9 @@ ScrVariable* variable_stack_get_variable(ScrExec* exec, const char* name);
 int data_to_int(ScrData arg);
 int data_to_bool(ScrData arg);
 const char* data_to_str(ScrData arg);
+double data_to_double(ScrData arg);
+ScrData data_copy(ScrData arg);
+void data_free(ScrData data);
 
 ScrBlockdef* blockdef_new(const char* id, ScrBlockdefType type, ScrColor color, ScrBlockFunc func);
 size_t blockdef_register(ScrVm* vm, ScrBlockdef* blockdef);
@@ -388,12 +391,15 @@ void blockdef_add_blockdef_editor(ScrBlockdef* blockdef);
 void blockdef_delete_input(ScrBlockdef* blockdef, size_t input);
 void blockdef_set_id(ScrBlockdef* blockdef, const char* new_id);
 void blockdef_unregister(ScrVm* vm, size_t id);
+void blockdef_free(ScrBlockdef* blockdef);
 
 ScrBlockChain blockchain_new(void);
 ScrBlockChain blockchain_copy(ScrBlockChain* chain, size_t ind);
+ScrBlockChain blockchain_copy_single(ScrBlockChain* chain, size_t pos);
 void blockchain_add_block(ScrBlockChain* chain, ScrBlock block);
 void blockchain_clear_blocks(ScrBlockChain* chain);
 void blockchain_insert(ScrBlockChain* dst, ScrBlockChain* src, size_t pos);
+void blockchain_update_parent_links(ScrBlockChain* chain);
 // Splits off blockchain src in two at specified pos, placing lower half into blockchain dst
 void blockchain_detach(ScrBlockChain* dst, ScrBlockChain* src, size_t pos);
 void blockchain_detach_single(ScrBlockChain* dst, ScrBlockChain* src, size_t pos);
@@ -411,311 +417,13 @@ void argument_set_text(ScrArgument* block_arg, char* text);
 
 #ifdef SCRVM_IMPLEMENTATION
 
-////////////////////////////////////////////////////////////////////
-//                           BEGIN vec.h                          //
-////////////////////////////////////////////////////////////////////
-
-/*
-BSD 3-Clause License
-
-Copyright (c) 2024, Mashpoe
-All rights reserved.
-
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are met:
-
-1. Redistributions of source code must retain the above copyright notice, this
-   list of conditions and the following disclaimer.
-
-2. Redistributions in binary form must reproduce the above copyright notice,
-   this list of conditions and the following disclaimer in the documentation
-   and/or other materials provided with the distribution.
-
-3. Neither the name of the copyright holder nor the names of its
-   contributors may be used to endorse or promote products derived from
-   this software without specific prior written permission.
-
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-*/
-
-#ifndef vec_h
-#define vec_h
-
-#ifdef __cpp_decltype
-#include <type_traits>
-#define typeof(T) std::remove_reference<std::add_lvalue_reference<decltype(T)>::type>::type
-#endif
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-#include <stdlib.h>
-
-// generic type for internal use
-typedef void* vector;
-// number of elements in a vector
-typedef size_t vec_size_t;
-// number of bytes for a type
-typedef size_t vec_type_t;
-
-// TODO: more rigorous check for typeof support with different compilers
-#if _MSC_VER == 0 || __STDC_VERSION__ >= 202311L || defined __cpp_decltype
-
-// shortcut defines
-
-// vec_addr is a vector* (aka type**)
-#define vector_add_dst(vec_addr)\
-	((typeof(*vec_addr))(\
-	    _vector_add_dst((vector*)vec_addr, sizeof(**vec_addr))\
-	))
-#define vector_insert_dst(vec_addr, pos)\
-	((typeof(*vec_addr))(\
-	    _vector_insert_dst((vector*)vec_addr, sizeof(**vec_addr), pos)))
-
-#define vector_add(vec_addr, value)\
-	(*vector_add_dst(vec_addr) = value)
-#define vector_insert(vec_addr, pos, value)\
-	(*vector_insert_dst(vec_addr, pos) = value)
-
-#else
-
-#define vector_add_dst(vec_addr, type)\
-	((type*)_vector_add_dst((vector*)vec_addr, sizeof(type)))
-#define vector_insert_dst(vec_addr, type, pos)\
-	((type*)_vector_insert_dst((vector*)vec_addr, sizeof(type), pos))
-
-#define vector_add(vec_addr, type, value)\
-	(*vector_add_dst(vec_addr, type) = value)
-#define vector_insert(vec_addr, type, pos, value)\
-	(*vector_insert_dst(vec_addr, type, pos) = value)
-
-#endif
-
-// vec is a vector (aka type*)
-#define vector_erase(vec, pos, len)\
-	(_vector_erase((vector)vec, sizeof(*vec), pos, len))
-#define vector_remove(vec, pos)\
-	(_vector_remove((vector)vec, sizeof(*vec), pos))
-
-#define vector_reserve(vec_addr, capacity)\
-	(_vector_reserve((vector*)vec_addr, sizeof(**vec_addr), capacity))
-
-#define vector_copy(vec)\
-	(_vector_copy((vector)vec, sizeof(*vec)))
-
-vector vector_create(void);
-
-void vector_free(vector vec);
-
-void* _vector_add_dst(vector* vec_addr, vec_type_t type_size);
-
-void* _vector_insert_dst(vector* vec_addr, vec_type_t type_size, vec_size_t pos);
-
-void _vector_erase(vector vec_addr, vec_type_t type_size, vec_size_t pos, vec_size_t len);
-
-void _vector_remove(vector vec_addr, vec_type_t type_size, vec_size_t pos);
-
-void vector_pop(vector vec);
-
-void vector_clear(vector vec);
-
-void _vector_reserve(vector* vec_addr, vec_type_t type_size, vec_size_t capacity);
-
-vector _vector_copy(vector vec, vec_type_t type_size);
-
-vec_size_t vector_size(vector vec);
-
-vec_size_t vector_capacity(vector vec);
-
-// closing bracket for extern "C"
-#ifdef __cplusplus
-}
-#endif
-
-#endif /* vec_h */
-
-////////////////////////////////////////////////////////////////////
-//                            END vec.h                           //
-////////////////////////////////////////////////////////////////////
-
-#ifdef SCRVM_VEC_C
-////////////////////////////////////////////////////////////////////
-//                           BEGIN vec.c                          //
-////////////////////////////////////////////////////////////////////
-/*
-BSD 3-Clause License
-
-Copyright (c) 2024, Mashpoe
-All rights reserved.
-
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are met:
-
-1. Redistributions of source code must retain the above copyright notice, this
-   list of conditions and the following disclaimer.
-
-2. Redistributions in binary form must reproduce the above copyright notice,
-   this list of conditions and the following disclaimer in the documentation
-   and/or other materials provided with the distribution.
-
-3. Neither the name of the copyright holder nor the names of its
-   contributors may be used to endorse or promote products derived from
-   this software without specific prior written permission.
-
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-*/
-
-#include <string.h>
-
-typedef struct
-{
-	vec_size_t size;
-	vec_size_t capacity;
-	unsigned char data[]; 
-} vector_header;
-
-vector_header* vector_get_header(vector vec) { return &((vector_header*)vec)[-1]; }
-
-vector vector_create(void)
-{
-	vector_header* h = (vector_header*)malloc(sizeof(vector_header));
-	h->capacity = 0;
-	h->size = 0;
-
-	return &h->data;
-}
-
-void vector_free(vector vec) { free(vector_get_header(vec)); }
-
-vec_size_t vector_size(vector vec) { return vector_get_header(vec)->size; }
-
-vec_size_t vector_capacity(vector vec) { return vector_get_header(vec)->capacity; }
-
-vector_header* vector_realloc(vector_header* h, vec_type_t type_size)
-{
-	vec_size_t new_capacity = (h->capacity == 0) ? 1 : h->capacity * 2;
-	vector_header* new_h = (vector_header*)realloc(h, sizeof(vector_header) + new_capacity * type_size);
-	new_h->capacity = new_capacity;
-
-	return new_h;
-}
-
-bool vector_has_space(vector_header* h)
-{
-	return h->capacity - h->size > 0;
-}
-
-void* _vector_add_dst(vector* vec_addr, vec_type_t type_size)
-{
-	vector_header* h = vector_get_header(*vec_addr);
-
-	if (!vector_has_space(h))
-	{
-		h = vector_realloc(h, type_size);
-		*vec_addr = h->data;
-	}
-
-	return &h->data[type_size * h->size++];
-}
-
-void* _vector_insert_dst(vector* vec_addr, vec_type_t type_size, vec_size_t pos)
-{
-	vector_header* h = vector_get_header(*vec_addr);
-
-	vec_size_t new_length = h->size + 1;
-
-	// make sure there is enough room for the new element
-	if (!vector_has_space(h))
-	{
-		h = vector_realloc(h, type_size);
-		*vec_addr = h->data;
-	}
-	// move trailing elements
-	memmove(&h->data[(pos + 1) * type_size],
-		&h->data[pos * type_size],
-		(h->size - pos) * type_size);
-
-	h->size = new_length;
-
-	return &h->data[pos * type_size];
-}
-
-void _vector_erase(vector vec, vec_type_t type_size, vec_size_t pos, vec_size_t len)
-{
-	vector_header* h = vector_get_header(vec);
-	memmove(&h->data[pos * type_size],
-		&h->data[(pos + len) * type_size],
-		(h->size - pos - len) * type_size);
-
-	h->size -= len;
-}
-
-void _vector_remove(vector vec, vec_type_t type_size, vec_size_t pos)
-{
-	_vector_erase(vec, type_size, pos, 1);
-}
-
-void vector_pop(vector vec) { --vector_get_header(vec)->size; }
-
-void vector_clear(vector vec) { vector_get_header(vec)->size = 0; }
-
-void _vector_reserve(vector* vec_addr, vec_type_t type_size, vec_size_t capacity)
-{
-	vector_header* h = vector_get_header(*vec_addr);
-	if (h->capacity >= capacity)
-	{
-		return;
-	}
-
-	h = (vector_header*)realloc(h, sizeof(vector_header) + capacity * type_size);
-	h->capacity = capacity;
-	*vec_addr = &h->data;
-}
-
-vector _vector_copy(vector vec, vec_type_t type_size)
-{
-	vector_header* h = vector_get_header(vec);
-	size_t alloc_size = sizeof(vector_header) + h->size * type_size;
-	vector_header* copy_h = (vector_header*)malloc(alloc_size);
-	memcpy(copy_h, h, alloc_size);
-	copy_h->capacity = copy_h->size;
-
-	return &copy_h->data;
-}
-
-////////////////////////////////////////////////////////////////////
-//                            END vec.c                           //
-////////////////////////////////////////////////////////////////////
-#endif /* SCRVM_VEC_C */
-
 #include <assert.h>
 
 // Private functions
-void blockchain_update_parent_links(ScrBlockChain* chain);
 void arg_stack_push_arg(ScrExec* exec, ScrData data);
 void arg_stack_undo_args(ScrExec* exec, size_t count);
 void variable_stack_pop_layer(ScrExec* exec);
 void variable_stack_cleanup(ScrExec* exec);
-void data_free(ScrData data);
 void blockdef_free(ScrBlockdef* blockdef);
 ScrBlockdef* blockdef_copy(ScrBlockdef* blockdef);
 void chain_stack_push(ScrExec* exec, ScrChainStackData data);
@@ -1188,38 +896,6 @@ const char* data_to_str(ScrData arg) {
     default:
         return "";
     }
-}
-
-ScrString string_new(size_t cap) {
-    ScrString string;
-    string.str = malloc((cap + 1)* sizeof(char));
-    *string.str = 0;
-    string.len = 0;
-    string.cap = cap;
-    return string;
-}
-
-void string_add(ScrString* string, const char* other) {
-    size_t new_len = string->len + strlen(other);
-    if (new_len > string->cap) {
-        string->str = realloc(string->str, (new_len + 1) * sizeof(char));
-        string->cap = new_len;
-    }
-    strcat(string->str, other);
-    string->len = new_len;
-}
-
-ScrData string_make_managed(ScrString* string) {
-    ScrData out;
-    out.type = DATA_STR;
-    out.storage.type = DATA_STORAGE_MANAGED;
-    out.storage.storage_len = string->len + 1;
-    out.data.str_arg = string->str;
-    return out;
-}
-
-void string_free(ScrString string) {
-    free(string.str);
 }
 
 ScrBlock block_new(ScrBlockdef* blockdef) {
@@ -1774,4 +1450,5 @@ void blockdef_unregister(ScrVm* vm, size_t block_id) {
     vector_remove(vm->blockdefs, block_id);
 }
 
-#endif /* SCRVM_IMPLEMENTATION */
+#endif // SCRVM_IMPLEMENTATION
+#endif // VM_H

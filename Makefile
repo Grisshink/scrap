@@ -2,7 +2,7 @@ SCRAP_VERSION := 0.1.1-beta
 
 TARGET ?= LINUX
 
-COMMON_CFLAGS := -Wall -Wextra -O3 -s -DSCRAP_VERSION=\"$(SCRAP_VERSION)\" -fmax-errors=5
+COMMON_CFLAGS := -Wall -Wextra -O3 -g -DSCRAP_VERSION=\"$(SCRAP_VERSION)\" -fmax-errors=5
 
 ifeq ($(TARGET), LINUX)
 	CC := gcc
@@ -19,7 +19,7 @@ else
 	LDFLAGS := -static -lraylib -lole32 -lcomdlg32 -lwinmm -lgdi32 -Wl,--subsystem,windows
 endif
 
-OBJFILES := scrap.o filedialogs.o
+OBJFILES := $(addprefix src/,filedialogs.o gui.o render.o save.o term.o blocks.o scrap.o vec.o util.o input.o measure.o)
 EXE_NAME := scrap
 
 LINUX_DIR := $(EXE_NAME)-v$(SCRAP_VERSION)-linux
@@ -61,6 +61,23 @@ $(EXE_NAME): $(OBJFILES)
 
 scrap.o: scrap.c external/raylib-nuklear.h vm.h
 	$(CC) $(CFLAGS) -c -o $@ scrap.c
-
-filedialogs.o: external/tinyfiledialogs.c
-	$(CC) $(CFLAGS) -c -o $@ external/tinyfiledialogs.c
+src/gui.o: src/gui.c
+	$(CC) $(CFLAGS) -c -o $@ $<
+src/render.o: src/render.c
+	$(CC) $(CFLAGS) -c -o $@ $<
+src/save.o: src/save.c
+	$(CC) $(CFLAGS) -c -o $@ $<
+src/term.o: src/term.c
+	$(CC) $(CFLAGS) -c -o $@ $<
+src/blocks.o: src/blocks.c
+	$(CC) $(CFLAGS) -c -o $@ $<
+src/vec.o: src/vec.c
+	$(CC) $(CFLAGS) -c -o $@ $<
+src/util.o: src/util.c
+	$(CC) $(CFLAGS) -c -o $@ $<
+src/input.o: src/input.c
+	$(CC) $(CFLAGS) -c -o $@ $<
+src/measure.o: src/measure.c
+	$(CC) $(CFLAGS) -c -o $@ $<
+src/filedialogs.o: external/tinyfiledialogs.c
+	$(CC) $(CFLAGS) -c -o $@ $<
