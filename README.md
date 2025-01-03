@@ -33,6 +33,13 @@ Before building you need to have [Raylib](https://github.com/raysan5/raylib) bui
 
 ### Build
 
+Before building the repo needs to be cloned along with its submodules. To do this, run:
+
+```bash
+git clone --recursive https://github.com/Grisshink/scrap.git
+cd scrap
+```
+
 Currently Scrap can be built for *Windows*, *Linux* and *MacOS*. 
 
 #### Linux build
@@ -40,7 +47,7 @@ Currently Scrap can be built for *Windows*, *Linux* and *MacOS*.
 To build and run Scrap on linux you need to install `gcc` and `make`. After install, just run following commands:
 
 ```bash
-make
+make -j$(nproc)
 ./scrap
 ```
 
@@ -68,9 +75,9 @@ First, install Homebrew:
 
 After that, you need to run the following commands:
 
-```
+```bash
 brew install gcc
-make TARGET=MACOS
+make -j$(nproc) TARGET=MACOS
 ./scrap
 ```
 
