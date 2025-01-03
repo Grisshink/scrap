@@ -2,21 +2,18 @@ SCRAP_VERSION := 0.1.1-beta
 
 TARGET ?= LINUX
 
-COMMON_CFLAGS := -Wall -Wextra -O3 -s -DSCRAP_VERSION=\"$(SCRAP_VERSION)\" -fmax-errors=5
+CFLAGS := -Wall -Wextra -O3 -s -DSCRAP_VERSION=\"$(SCRAP_VERSION)\" -fmax-errors=5 -I./raylib/src
 
 ifeq ($(TARGET), LINUX)
 	CC := gcc
-	CFLAGS := $(COMMON_CFLAGS)
-	LDFLAGS := -lraylib -lGL -lm -lpthread -lX11
+	LDFLAGS := -lGL -lm -lpthread -lX11
 else ifeq ($(TARGET), MACOS)
 	# Thanks for @arducat for MacOS support
 	CC := gcc-14
-	CFLAGS := $(COMMON_CFLAGS) -I./raylib/include
-	LDFLAGS := -L./raylib/lib -lraylib -framework CoreVideo -framework IOKit -framework Cocoa -framework GLUT -framework OpenGL -lm -lpthread
+	LDFLAGS := -framework CoreVideo -framework IOKit -framework Cocoa -framework GLUT -framework OpenGL -lm -lpthread
 else
 	CC := x86_64-w64-mingw32-gcc
-	CFLAGS := $(COMMON_CFLAGS) -I./raylib/include -L./raylib/lib
-	LDFLAGS := -static -lraylib -lole32 -lcomdlg32 -lwinmm -lgdi32 -Wl,--subsystem,windows
+	LDFLAGS := -static -lole32 -lcomdlg32 -lwinmm -lgdi32 -Wl,--subsystem,windows
 endif
 
 OBJFILES := $(addprefix src/,filedialogs.o gui.o render.o save.o term.o blocks.o scrap.o vec.o util.o input.o measure.o)
@@ -29,6 +26,7 @@ WINDOWS_DIR := $(EXE_NAME)-v$(SCRAP_VERSION)-windows64
 all: $(EXE_NAME)
 
 clean:
+	make -C raylib/src clean
 	rm -f $(OBJFILES) $(EXE_NAME) $(EXE_NAME).exe Scrap-x86_64.AppImage $(LINUX_DIR).tar.gz $(WINDOWS_DIR).zip $(MACOS_DIR).zip
 
 windows-build: $(EXE_NAME)
@@ -57,7 +55,8 @@ appimage: $(EXE_NAME)
 	rm -r scrap.AppDir
 
 $(EXE_NAME): $(OBJFILES)
-	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
+	make -C raylib/src CC=$(CC)
+	$(CC) $(CFLAGS) -o $@ $^ raylib/src/libraylib.a $(LDFLAGS)
 
 src/scrap.h: src/vm.h src/config.h
 
