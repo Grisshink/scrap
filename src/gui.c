@@ -8,8 +8,6 @@
 #include <stdlib.h>
 #include <math.h>
 
-#define LICENSE_URL "https://www.gnu.org/licenses/gpl-3.0.html"
-
 #define ARRLEN(x) (sizeof(x)/sizeof(x[0]))
 #define MIN(x, y) ((x) < (y) ? (x) : (y))
 #define MAX(x, y) ((x) > (y) ? (x) : (y))

@@ -6,8 +6,6 @@
 #include <stdlib.h>
 #include <assert.h>
 
-#define CONFIG_PATH "config.txt"
-
 #define ARRLEN(x) (sizeof(x)/sizeof(x[0]))
 
 typedef struct {

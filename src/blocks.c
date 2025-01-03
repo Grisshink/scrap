@@ -1,5 +1,4 @@
 #include "blocks.h"
-#include "vm.h"
 #include "term.h"
 #include "scrap.h"
 

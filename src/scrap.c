@@ -20,8 +20,6 @@
 #include "scrap.h"
 #include "blocks.h"
 
-#define DROP_TEX_WIDTH ((float)(conf.font_size - BLOCK_OUTLINE_SIZE * 4) / (float)drop_tex.height * (float)drop_tex.width)
-
 Image logo_img;
 
 Shader line_shader;

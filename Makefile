@@ -59,25 +59,27 @@ appimage: $(EXE_NAME)
 $(EXE_NAME): $(OBJFILES)
 	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
 
-scrap.o: scrap.c external/raylib-nuklear.h vm.h
+src/scrap.h: src/vm.h src/config.h
+
+scrap.o: scrap.c external/raylib-nuklear.h src/scrap.h
 	$(CC) $(CFLAGS) -c -o $@ scrap.c
-src/gui.o: src/gui.c
+src/gui.o: src/gui.c src/scrap.h
 	$(CC) $(CFLAGS) -c -o $@ $<
-src/render.o: src/render.c
+src/render.o: src/render.c src/scrap.h
 	$(CC) $(CFLAGS) -c -o $@ $<
-src/save.o: src/save.c
+src/save.o: src/save.c src/scrap.h
 	$(CC) $(CFLAGS) -c -o $@ $<
-src/term.o: src/term.c
+src/term.o: src/term.c src/scrap.h
 	$(CC) $(CFLAGS) -c -o $@ $<
-src/blocks.o: src/blocks.c
+src/blocks.o: src/blocks.c src/scrap.h
 	$(CC) $(CFLAGS) -c -o $@ $<
 src/vec.o: src/vec.c
 	$(CC) $(CFLAGS) -c -o $@ $<
-src/util.o: src/util.c
+src/util.o: src/util.c src/scrap.h
 	$(CC) $(CFLAGS) -c -o $@ $<
-src/input.o: src/input.c
+src/input.o: src/input.c src/scrap.h
 	$(CC) $(CFLAGS) -c -o $@ $<
-src/measure.o: src/measure.c
+src/measure.o: src/measure.c src/scrap.h
 	$(CC) $(CFLAGS) -c -o $@ $<
 src/filedialogs.o: external/tinyfiledialogs.c
 	$(CC) $(CFLAGS) -c -o $@ $<
