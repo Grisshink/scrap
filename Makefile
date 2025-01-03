@@ -2,7 +2,7 @@ SCRAP_VERSION := 0.1.1-beta
 
 TARGET ?= LINUX
 
-COMMON_CFLAGS := -Wall -Wextra -O3 -g -DSCRAP_VERSION=\"$(SCRAP_VERSION)\" -fmax-errors=5
+COMMON_CFLAGS := -Wall -Wextra -O3 -s -DSCRAP_VERSION=\"$(SCRAP_VERSION)\" -fmax-errors=5
 
 ifeq ($(TARGET), LINUX)
 	CC := gcc
