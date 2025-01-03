@@ -179,6 +179,7 @@ extern char* tab_bar_buttons_text[2];
 // scrap.c
 void blockcode_add_blockchain(BlockCode* blockcode, ScrBlockChain chain);
 void blockcode_remove_blockchain(BlockCode* blockcode, size_t ind);
+void sanitize_links(void);
 
 // render.c
 void sidebar_init(void);

@@ -718,6 +718,7 @@ void draw_term(void) {
 void process_render(void) {
     ClearBackground(GetColor(0x202020ff));
 
+    Vector2 mouse_pos = GetMousePosition();
     int sw = GetScreenWidth();
     int sh = GetScreenHeight();
 
