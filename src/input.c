@@ -136,7 +136,7 @@ void blockdef_update_collisions(Vector2 position, ScrBlockdef* blockdef, bool ed
         Rectangle arg_size;
 
         switch (cur->type) {
-        case INPUT_TEXT_DISPLAY:
+        case INPUT_TEXT_DISPLAY: ;
             ScrMeasurement ms = cur->data.stext.editor_ms;
             if (editing) {
                 arg_size.x = cursor.x;
@@ -173,7 +173,7 @@ void blockdef_update_collisions(Vector2 position, ScrBlockdef* blockdef, bool ed
                 hover_info.editor.blockdef_input = i;
             }
             break;
-        default:
+        default: ;
             Vector2 size = MeasureTextEx(font_cond, "NODEF", BLOCK_TEXT_SIZE, 0.0);
             width = size.x;
             break;
@@ -236,7 +236,7 @@ void block_update_collisions(Vector2 position, ScrBlock* block) {
                     break;
                 }
                 break;
-            case ARGUMENT_BLOCK:
+            case ARGUMENT_BLOCK: ;
                 Vector2 block_pos;
                 block_pos.x = cursor.x;
                 block_pos.y = cursor.y + (block->ms.placement == PLACEMENT_VERTICAL ? 0 : block_size.height / 2 - block->arguments[arg_id].ms.size.y / 2); 
@@ -341,7 +341,7 @@ void block_update_collisions(Vector2 position, ScrBlock* block) {
 
             arg_id++;
             break;
-        default:
+        default: ;
             Vector2 size = MeasureTextEx(font_cond, "NODEF", BLOCK_TEXT_SIZE, 0.0);
             width = size.x;
             height = size.y;
