@@ -62,7 +62,7 @@ void init_gui(void) {
     warn_tex_nuc = TextureToNuklear(warn_tex);
     font_eb_nuc = LoadFontIntoNuklear(font_eb, conf.font_size);
     font_cond_nuc = LoadFontIntoNuklear(font_cond, conf.font_size * 0.6);
-    gui.ctx = InitNuklearEx(font_cond_nuc, &line_shader);
+    gui.ctx = InitNuklearEx(font_cond_nuc, &line_shader, &shader_time);
     apply_styles();
 }
 

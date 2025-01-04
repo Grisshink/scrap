@@ -63,8 +63,8 @@
 extern "C" {
 #endif
 
-NK_API struct nk_context* InitNuklear(int fontSize, Shader* rect_shader);                // Initialize the Nuklear GUI context using raylib's font
-NK_API struct nk_context* InitNuklearEx(struct nk_user_font* userFont, Shader* rect_shader); // Initialize the Nuklear GUI context, with a custom font
+NK_API struct nk_context* InitNuklear(int fontSize, Shader* rect_shader, float* shader_time);                // Initialize the Nuklear GUI context using raylib's font
+NK_API struct nk_context* InitNuklearEx(struct nk_user_font* userFont, Shader* rect_shader, float* shader_time); // Initialize the Nuklear GUI context, with a custom font
 NK_API struct nk_user_font* LoadFontIntoNuklear(Font font, float fontSize);
 NK_API Font LoadFontFromNuklear(int fontSize);                      // Loads the default Nuklear font
 NK_API void UpdateNuklear(struct nk_context * ctx);                 // Update the input state and internal components for Nuklear
@@ -85,6 +85,7 @@ NK_API void CleanupNuklearImage(struct nk_image img);               // Frees the
 NK_API void SetNuklearScaling(struct nk_context * ctx, float scaling); // Sets the scaling for the given Nuklear context
 NK_API float GetNuklearScaling(struct nk_context * ctx);            // Retrieves the scaling of the given Nuklear context
 NK_API Shader* GetNuklearShader(struct nk_context * ctx);
+NK_API float* GetNuklearShaderTime(struct nk_context * ctx);
 
 // Internal Nuklear functions
 NK_API float nk_raylib_font_get_text_width(nk_handle handle, float height, const char *text, int len);
@@ -93,7 +94,7 @@ NK_API void nk_raylib_clipboard_paste(nk_handle usr, struct nk_text_edit *edit);
 NK_API void nk_raylib_clipboard_copy(nk_handle usr, const char *text, int len);
 NK_API void* nk_raylib_malloc(nk_handle unused, void *old, nk_size size);
 NK_API void nk_raylib_mfree(nk_handle unused, void *ptr);
-NK_API struct nk_context* InitNuklearContext(struct nk_user_font* userFont, Shader* rect_shader);
+NK_API struct nk_context* InitNuklearContext(struct nk_user_font* userFont, Shader* rect_shader, float* shader_time);
 NK_API void nk_raylib_input_keyboard(struct nk_context * ctx);
 NK_API void nk_raylib_input_mouse(struct nk_context * ctx);
 
@@ -154,6 +155,7 @@ extern "C" {
 typedef struct NuklearUserData {
     float scaling; // The scaling of the Nuklear user interface.
     Shader* rect_shader;
+    float* shader_time;
 } NuklearUserData;
 
 /**
@@ -263,7 +265,7 @@ nk_raylib_mfree(nk_handle unused, void *ptr)
  * @internal
  */
 NK_API struct nk_context*
-InitNuklearContext(struct nk_user_font* userFont, Shader* rect_shader)
+InitNuklearContext(struct nk_user_font* userFont, Shader* rect_shader, float* shader_time)
 {
     struct nk_context* ctx = (struct nk_context*)MemAlloc(sizeof(struct nk_context));
     if (ctx == NULL) {
@@ -300,6 +302,7 @@ InitNuklearContext(struct nk_user_font* userFont, Shader* rect_shader)
     // Set the internal user data.
     userData->scaling = 1.0f;
     userData->rect_shader = rect_shader;
+    userData->shader_time = shader_time;
     nk_handle userDataHandle;
     userDataHandle.id = 1;
     userDataHandle.ptr = (void*)userData;
@@ -318,7 +321,7 @@ InitNuklearContext(struct nk_user_font* userFont, Shader* rect_shader)
  * @return The nuklear context, or NULL on error.
  */
 NK_API struct nk_context*
-InitNuklear(int fontSize, Shader* rect_shader)
+InitNuklear(int fontSize, Shader* rect_shader, float* shader_time)
 {
     // User font.
     struct nk_user_font* userFont = (struct nk_user_font*)MemAlloc(sizeof(struct nk_user_font));
@@ -333,7 +336,7 @@ InitNuklear(int fontSize, Shader* rect_shader)
     userFont->userdata = nk_handle_ptr(0);
 
     // Nuklear context.
-    return InitNuklearContext(userFont, rect_shader);
+    return InitNuklearContext(userFont, rect_shader, shader_time);
 }
 
 /**
@@ -345,10 +348,10 @@ InitNuklear(int fontSize, Shader* rect_shader)
  * @return The nuklear context, or NULL on error.
  */
 NK_API struct nk_context*
-InitNuklearEx(struct nk_user_font* userFont, Shader* rect_shader)
+InitNuklearEx(struct nk_user_font* userFont, Shader* rect_shader, float* shader_time)
 {
     // Nuklear context.
-    return InitNuklearContext(userFont, rect_shader);
+    return InitNuklearContext(userFont, rect_shader, shader_time);
 }
 
 NK_API struct nk_user_font*
@@ -472,6 +475,7 @@ DrawNuklear(struct nk_context * ctx)
     const struct nk_command *cmd;
     const float scale = GetNuklearScaling(ctx);
     const Shader *shader = GetNuklearShader(ctx);
+    const float *shader_time = GetNuklearShaderTime(ctx);
 
     nk_foreach(cmd, ctx) {
         switch (cmd->type) {
@@ -524,7 +528,7 @@ DrawNuklear(struct nk_context * ctx)
                     DrawRectangleRoundedLinesEx(rect, roundness, RAYLIB_NUKLEAR_DEFAULT_ARC_SEGMENTS, (float)r->line_thickness * scale, color);
 #endif
                 }
-                else {
+                else if (*shader_time < 1.0) {
                     BeginShaderMode(*shader);
                     DrawRectangleLinesEx(rect, r->line_thickness * scale, color);
                     EndShaderMode();
@@ -1091,6 +1095,21 @@ GetNuklearShader(struct nk_context * ctx)
     struct NuklearUserData* userData = (struct NuklearUserData*)ctx->userdata.ptr;
     if (userData != NULL) {
         return userData->rect_shader;
+    }
+
+    return NULL;
+}
+
+NK_API float*
+GetNuklearShaderTime(struct nk_context * ctx)
+{
+    if (ctx == NULL) {
+        return NULL;
+    }
+
+    struct NuklearUserData* userData = (struct NuklearUserData*)ctx->userdata.ptr;
+    if (userData != NULL) {
+        return userData->shader_time;
     }
 
     return NULL;

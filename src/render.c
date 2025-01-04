@@ -603,6 +603,7 @@ void draw_dots(void) {
         }
     }
 
+    if (shader_time == 1.0) return;
     BeginShaderMode(line_shader);
     for (int y = MOD(-(int)camera_pos.y, conf.font_size * 2); y < win_height; y += conf.font_size * 2) {
         DrawLine(0, y, win_width, y, (Color) { 0x40, 0x40, 0x40, 0xff });
