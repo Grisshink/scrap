@@ -393,7 +393,7 @@ bool load_blockdef_input(SaveArena* save, ScrInput* input) {
     input->type = type;
 
     switch (input->type) {
-    case INPUT_TEXT_DISPLAY:
+    case INPUT_TEXT_DISPLAY: ;
         unsigned int text_len;
         char* text = save_read_array(save, sizeof(char), &text_len);
         if (!text) return false;
@@ -406,7 +406,7 @@ bool load_blockdef_input(SaveArena* save, ScrInput* input) {
         for (char* str = text; *str; str++) vector_add(&input->data.stext.text, *str);
         vector_add(&input->data.stext.text, 0);
         break;
-    case INPUT_ARGUMENT:
+    case INPUT_ARGUMENT: ;
         ScrInputArgumentConstraint constr; 
         if (!save_read_varint(save, (unsigned int*)&constr)) return false;
 
@@ -484,7 +484,7 @@ bool load_block_argument(SaveArena* save, ScrArgument* arg) {
 
     switch (arg_type) {
     case ARGUMENT_TEXT:
-    case ARGUMENT_CONST_STRING:
+    case ARGUMENT_CONST_STRING: ;
         unsigned int text_id;
         if (!save_read_varint(save, &text_id)) return false;
 
@@ -492,13 +492,13 @@ bool load_block_argument(SaveArena* save, ScrArgument* arg) {
         for (char* str = (char*)save_block_ids[text_id]; *str; str++) vector_add(&arg->data.text, *str);
         vector_add(&arg->data.text, 0);
         break;
-    case ARGUMENT_BLOCK:
+    case ARGUMENT_BLOCK: ;
         ScrBlock block;
         if (!load_block(save, &block)) return false;
         
         arg->data.block = block;
         break;
-    case ARGUMENT_BLOCKDEF:
+    case ARGUMENT_BLOCKDEF: ;
         unsigned int blockdef_id;
         if (!save_read_varint(save, &blockdef_id)) return false;
 

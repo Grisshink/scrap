@@ -517,7 +517,7 @@ bool exec_block(ScrExec* exec, ScrBlock block, ScrData* block_return, bool from_
                     },
                 });
                 break;
-            case ARGUMENT_BLOCK:
+            case ARGUMENT_BLOCK: ;
                 ScrData arg_return;
                 if (!exec_block(exec, block_arg.data.block, &arg_return, false, false, (ScrData) {0})) return false;
                 arg_stack_push_arg(exec, arg_return);

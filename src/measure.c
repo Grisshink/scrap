@@ -124,7 +124,7 @@ void update_measurements(ScrBlock* block, ScrPlacementStrategy placement) {
         case INPUT_ARGUMENT:
             switch (block->arguments[arg_id].type) {
             case ARGUMENT_CONST_STRING:
-            case ARGUMENT_TEXT:
+            case ARGUMENT_TEXT: ;
                 ScrMeasurement string_ms = measure_input_box(block->arguments[arg_id].data.text);
                 block->arguments[arg_id].ms = string_ms;
                 ms = string_ms;
@@ -148,7 +148,7 @@ void update_measurements(ScrBlock* block, ScrPlacementStrategy placement) {
             block->arguments[arg_id].ms = ms;
             arg_id++;
             break;
-        case INPUT_BLOCKDEF_EDITOR:
+        case INPUT_BLOCKDEF_EDITOR: ;
             ScrBlockdef* blockdef = block->arguments[arg_id].data.blockdef;
             blockdef_update_measurements(blockdef, hover_info.editor.edit_blockdef == blockdef);
             ScrMeasurement editor_ms = block->arguments[arg_id].data.blockdef->ms;
