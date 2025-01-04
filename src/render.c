@@ -719,7 +719,10 @@ void draw_term(void) {
 void process_render(void) {
     ClearBackground(GetColor(0x202020ff));
 
+#ifdef DEBUG
     Vector2 mouse_pos = GetMousePosition();
+#endif //DEBUG
+
     int sw = GetScreenWidth();
     int sh = GetScreenHeight();
 
