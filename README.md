@@ -28,17 +28,13 @@ Scrap is currently in **Beta** stage. Some features may be missing or break, so 
 
 ### Dependencies
 
-Before building you need to have [Raylib](https://github.com/raysan5/raylib) built and installed on your system 
-**(Make sure you use Raylib 5.0 and enabled SUPPORT_FILEFORMAT_SVG in `config.h` or else it will not build properly!)**.
+Scrap requires these dependencies to run (They are all built into the repo, so you don't have to download anything):
+- [Raylib 5.0](https://github.com/raysan5/raylib) (Patched to support SVGs)
+- [Nuklear](https://github.com/Immediate-Mode-UI/Nuklear) (Patched, see [Pull request](https://github.com/Immediate-Mode-UI/Nuklear/pull/755))
+- [raylib-nuklear](https://github.com/RobLoach/raylib-nuklear) (Patched to add shaders to all borders)
+- [tinyfiledialogs](https://sourceforge.net/projects/tinyfiledialogs/)
 
 ### Build
-
-Before building the repo needs to be cloned along with its submodules. To do this, run:
-
-```bash
-git clone --recursive https://github.com/Grisshink/scrap.git
-cd scrap
-```
 
 Currently Scrap can be built for *Windows*, *Linux* and *MacOS*. 
 
@@ -55,7 +51,6 @@ make -j$(nproc)
 
 To build and run Scrap on Windows you need to have [mingw-w64](https://www.mingw-w64.org/) installed. 
 The most recommended way to use it is through [MSYS2](https://www.msys2.org/). 
-Scrap expects `libraylib.a` file to be located in `raylib/lib/` folder and its headers in `raylib/include` folder. 
 After that, just run following commands:
 
 ```bash
