@@ -719,10 +719,6 @@ void draw_term(void) {
 void process_render(void) {
     ClearBackground(GetColor(0x202020ff));
 
-#ifdef DEBUG
-    Vector2 mouse_pos = GetMousePosition();
-#endif //DEBUG
-
     int sw = GetScreenWidth();
     int sh = GetScreenHeight();
 
@@ -780,7 +776,7 @@ void process_render(void) {
                 hover_info.sidebar,
                 mouse_blockchain.blocks,
                 hover_info.time_at_last_pos,
-                (int)mouse_pos.x, (int)mouse_pos.y,
+                GetMouseX(), GetMouseY(),
                 (int)hover_info.mouse_click_pos.x, (int)hover_info.mouse_click_pos.y,
                 camera_pos.x, camera_pos.y, camera_click_pos.x, camera_click_pos.y,
                 hover_info.dropdown_hover_ind, dropdown.scroll_amount,
