@@ -733,7 +733,7 @@ void prerender_font_shadow(Font* font) {
     );
     UnloadTexture(font->texture);
     font->texture = LoadTextureFromImage(render_img);
-    SetTextureFilter(font->texture, TEXTURE_FILTER_ANISOTROPIC_4X);
+    SetTextureFilter(font->texture, TEXTURE_FILTER_BILINEAR);
 }
 
 void process_render(void) {

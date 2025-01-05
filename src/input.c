@@ -20,6 +20,7 @@
 #include "blocks.h"
 
 #include <assert.h>
+#include <math.h>
 
 #define ARRLEN(x) (sizeof(x)/sizeof(x[0]))
 #define MAX(x, y) ((x) > (y) ? (x) : (y))

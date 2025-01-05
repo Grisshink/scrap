@@ -18,6 +18,7 @@
 #include "scrap.h"
 
 #include <assert.h>
+#include <math.h>
 
 #define MAX(x, y) ((x) > (y) ? (x) : (y))
 #define MIN(x, y) ((x) < (y) ? (x) : (y))

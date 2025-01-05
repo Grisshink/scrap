@@ -22,7 +22,7 @@
 
 #define SHADOW_DISTANCE floorf(1.66 * (float)conf.font_size / 32.0)
 #define BLOCK_OUTLINE_SIZE (2.0 * (float)conf.font_size / 32.0)
-#define BLOCK_TEXT_SIZE (conf.font_size * 0.6)
+#define BLOCK_TEXT_SIZE floorf((float)conf.font_size * 0.6)
 #define BLOCK_IMAGE_SIZE (conf.font_size - BLOCK_OUTLINE_SIZE * 4)
 #define BLOCK_PADDING (5.0 * (float)conf.font_size / 32.0)
 #define BLOCK_STRING_PADDING (10.0 * (float)conf.font_size / 32.0)

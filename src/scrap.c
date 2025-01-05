@@ -20,6 +20,8 @@
 #include "scrap.h"
 #include "blocks.h"
 
+#include <math.h>
+
 Image logo_img;
 
 Shader line_shader;
