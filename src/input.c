@@ -656,7 +656,7 @@ bool handle_blockdef_editor_click(void) {
         bool is_arg = blockdef->inputs[hover_info.editor.blockdef_input].type == INPUT_ARGUMENT;
         blockdef_delete_input(blockdef, hover_info.editor.blockdef_input);
         if (is_arg) {
-            for (size_t i = 0; i < vector_size(blockdef->inputs); i++) {
+            for (size_t i = hover_info.editor.blockdef_input; i < vector_size(blockdef->inputs); i++) {
                 if (blockdef->inputs[i].type != INPUT_ARGUMENT) continue;
                 blockdef->inputs[i].data.arg.blockdef->arg_id--;
             }
