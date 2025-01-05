@@ -257,16 +257,21 @@ void save_block_arguments(SaveArena* save, ScrArgument* arg) {
     save_add_varint(save, arg->input_id);
     save_add_varint(save, arg->type);
 
+    int string_id;
     switch (arg->type) {
     case ARGUMENT_TEXT:
     case ARGUMENT_CONST_STRING:
-        save_add_varint(save, save_find_id(arg->data.text));
+        string_id = save_find_id(arg->data.text);
+        assert(string_id != -1);
+        save_add_varint(save, string_id);
         break;
     case ARGUMENT_BLOCK:
         save_block(save, &arg->data.block);
         break;
     case ARGUMENT_BLOCKDEF:
-        save_add_varint(save, save_find_id(arg->data.blockdef->id));
+        string_id = save_find_id(arg->data.blockdef->id);
+        assert(string_id != -1);
+        save_add_varint(save, string_id);
         break;
     default:
         assert(false && "Unimplemented argument save");
@@ -279,7 +284,9 @@ void save_block(SaveArena* save, ScrBlock* block) {
 
     int arg_count = vector_size(block->arguments);
 
-    save_add_varint(save, save_find_id(block->blockdef->id));
+    int string_id = save_find_id(block->blockdef->id);
+    assert(string_id != -1);
+    save_add_varint(save, string_id);
     save_add_varint(save, arg_count);
     for (int i = 0; i < arg_count; i++) save_block_arguments(save, &block->arguments[i]);
 }
@@ -324,7 +331,11 @@ void block_collect_ids(ScrBlock* block) {
         case ARGUMENT_BLOCK:
             block_collect_ids(&block->arguments[i].data.block);
             break;
+        case ARGUMENT_BLOCKDEF:
+            save_add_id(block->arguments[i].data.blockdef->id);
+            break;
         default:
+            assert(false && "Unimplemented argument save id");
             break;
         }
     }
@@ -501,6 +512,10 @@ bool load_block_argument(SaveArena* save, ScrArgument* arg) {
     case ARGUMENT_BLOCKDEF: ;
         unsigned int blockdef_id;
         if (!save_read_varint(save, &blockdef_id)) return false;
+        if (blockdef_id >= vector_size(save_block_ids)) {
+            printf("[LOAD] Out of bounds read of save_block_id at %u\n", blockdef_id);
+            return false;
+        }
 
         ScrBlockdef* blockdef = find_blockdef(save_blockdefs, save_block_ids[blockdef_id]);
         if (!blockdef) return false;
