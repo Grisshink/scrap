@@ -140,7 +140,6 @@ void draw_blockdef(Vector2 position, ScrBlockdef* blockdef, bool editing) {
     if (!CheckCollisionRecs(block_size, (Rectangle) { 0, 0, GetScreenWidth(), GetScreenHeight() })) return;
 
     draw_block_base(block_size, blockdef, block_color, outline_color);
-    //DrawTextEx(font_cond, TextFormat("%zu", blockdef->ref_count), (Vector2) { block_size.x, block_size.y - conf.font_size }, BLOCK_TEXT_SIZE, 0.0, WHITE);
 
     cursor.x += BLOCK_PADDING;
 
@@ -212,7 +211,6 @@ void draw_block(Vector2 position, ScrBlock* block, bool force_outline, bool forc
 
     draw_block_base(block_size, blockdef, block_color, 
         force_outline || (blockdef->type != BLOCKTYPE_CONTROL && blockdef->type != BLOCKTYPE_CONTROLEND) ? outline_color : (Color) {0});
-    //draw_text_shadow(font_cond, TextFormat("%d", blockdef->ref_count), (Vector2) { block_size.x, block_size.y }, BLOCK_TEXT_SIZE, 0.0, WHITE, BLACK);
 
     cursor.x += BLOCK_PADDING;
     if (block->ms.placement == PLACEMENT_VERTICAL) cursor.y += BLOCK_OUTLINE_SIZE * 2;
