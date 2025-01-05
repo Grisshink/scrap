@@ -36,6 +36,13 @@ Scrap requires these dependencies to run (They are all built into the repo, so y
 
 ### Build
 
+Before building the repo needs to be cloned along with its submodules. To do this, run:
+
+```bash
+git clone --recursive https://github.com/Grisshink/scrap.git
+cd scrap
+```
+
 Currently Scrap can be built for *Windows*, *Linux* and *MacOS*. 
 
 #### Linux build
