@@ -95,6 +95,32 @@ bool edit_text(char** text) {
     return typed;
 }
 
+bool start_vm(void) {
+    if (vm.is_running) return false;
+
+    term_restart();
+    exec = exec_new();
+    exec_copy_code(&vm, &exec, editor_code);
+    if (!exec_start(&vm, &exec)) {
+        actionbar_show("Start failed!");
+        return false;
+    }
+
+    actionbar_show("Started successfully!");
+    if (current_tab != TAB_OUTPUT) {
+        shader_time = 0.0;
+        current_tab = TAB_OUTPUT;
+    }
+    return true;
+}
+
+bool stop_vm(void) {
+    if (!vm.is_running) return false;
+    printf("STOP\n");
+    exec_stop(&vm, &exec);
+    return true;
+}
+
 void deselect_all(void) {
     hover_info.select_argument = NULL;
     hover_info.select_input = NULL;
@@ -536,22 +562,10 @@ bool handle_top_bar_click(void) {
             current_tab = hover_info.top_bars.ind;
         }
     } else if (hover_info.top_bars.type == TOPBAR_RUN_BUTTON) {
-        if (hover_info.top_bars.ind == 1 && !vm.is_running) {
-            term_restart();
-            exec = exec_new();
-            exec_copy_code(&vm, &exec, editor_code);
-            if (exec_start(&vm, &exec)) {
-                actionbar_show("Started successfully!");
-                if (current_tab != TAB_OUTPUT) {
-                    shader_time = 0.0;
-                    current_tab = TAB_OUTPUT;
-                }
-            } else {
-                actionbar_show("Start failed!");
-            }
-        } else if (hover_info.top_bars.ind == 0 && vm.is_running) {
-            printf("STOP\n");
-            exec_stop(&vm, &exec);
+        if (hover_info.top_bars.ind == 1) {
+            start_vm();
+        } else if (hover_info.top_bars.ind == 0) {
+            stop_vm();
         }
     }
     return true;
@@ -849,6 +863,15 @@ bool handle_mouse_click(void) {
 }
 
 void handle_key_press(void) {
+    if (IsKeyPressed(KEY_F5)) {
+        start_vm();
+        return;
+    }
+    if (IsKeyPressed(KEY_F6)) {
+        stop_vm();
+        return;
+    }
+
     if (current_tab == TAB_OUTPUT) {
         if (!vm.is_running) return;
         if (IsKeyPressed(KEY_ENTER)) {

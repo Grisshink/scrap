@@ -15,8 +15,9 @@ Scrap is currently in **Beta** stage. Some features may be missing or break, so 
 - Click on blocks to pick up them, click again to drop them
 - You can use `Ctrl` to take only one block and `Alt` to pick up its duplicate
 - Hold left mouse button to move around code space
-- Holding middle mouse button will do the same, except it works all the time
+- Holding middle mouse button will do the same, except it works everywhere
 - Press `Space` to jump to chain in code base (Useful if you got lost in code base)
+- Press `F5` to run the project. Press `F6` to stop it.
 
 ## Screenshots
 
