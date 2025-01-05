@@ -894,15 +894,17 @@ void handle_key_press(void) {
 }
 
 void handle_mouse_wheel(void) {
+    if (current_tab != TAB_CODE) return;
+
     Vector2 wheel = GetMouseWheelMoveV();
 
     dropdown.scroll_amount = MAX(dropdown.scroll_amount - wheel.y, 0);
     if (hover_info.sidebar) {
-        sidebar.scroll_amount = MAX(sidebar.scroll_amount - wheel.y * (conf.font_size + SIDE_BAR_PADDING) * 4, 0);
+        sidebar.scroll_amount = MAX(sidebar.scroll_amount - wheel.y * (conf.font_size + SIDE_BAR_PADDING) * 6, 0);
     } else {
         if (hover_info.select_argument) return;
-        camera_pos.x -= wheel.x * conf.font_size;
-        camera_pos.y -= wheel.y * conf.font_size;
+        camera_pos.x -= wheel.x * conf.font_size * 2;
+        camera_pos.y -= wheel.y * conf.font_size * 2;
     }
 }
 
