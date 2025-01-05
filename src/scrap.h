@@ -137,6 +137,7 @@ extern HoverInfo hover_info;
 extern Shader line_shader;
 
 extern Font font_cond;
+extern Font font_cond_shadow;
 extern Font font_eb;
 extern Font font_mono;
 
@@ -185,6 +186,7 @@ void sanitize_links(void);
 void sidebar_init(void);
 void actionbar_show(const char* text);
 void process_render(void);
+void prerender_font_shadow(Font* font);
 
 // input.c
 void process_input(void);

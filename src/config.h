@@ -20,6 +20,7 @@
 #define FONT_SYMBOLS_MAX_SIZE 1024
 #define ACTION_BAR_MAX_SIZE 128
 
+#define SHADOW_DISTANCE floorf(1.66 * (float)conf.font_size / 32.0)
 #define BLOCK_OUTLINE_SIZE (2.0 * (float)conf.font_size / 32.0)
 #define BLOCK_TEXT_SIZE (conf.font_size * 0.6)
 #define BLOCK_IMAGE_SIZE (conf.font_size - BLOCK_OUTLINE_SIZE * 4)

@@ -47,14 +47,9 @@ void actionbar_show(const char* text) {
     actionbar.show_time = 3.0;
 }
 
-void draw_text_shadow(Font font, const char *text, Vector2 position, float font_size, float spacing, Color tint, Color shadow) {
-    DrawTextEx(font, text, (Vector2) { position.x + 1, position.y + 1 }, font_size, spacing, shadow);
-    DrawTextEx(font, text, position, font_size, spacing, tint);
-}
-
 void draw_image(Vector2 position, ScrImage image, float size) {
     Texture2D* img = image.image_ptr;
-    DrawTextureEx(*img, (Vector2) { position.x + 1, position.y + 1 }, 0.0, size / (float)img->height, (Color) { 0x00, 0x00, 0x00, 0x88 });
+    DrawTextureEx(*img, (Vector2) { position.x + SHADOW_DISTANCE, position.y + SHADOW_DISTANCE }, 0.0, size / (float)img->height, (Color) { 0x00, 0x00, 0x00, 0x80 });
     DrawTextureEx(*img, position, 0.0, size / (float)img->height, WHITE);
 }
 
@@ -167,7 +162,7 @@ void draw_blockdef(Vector2 position, ScrBlockdef* blockdef, bool editing) {
                 arg_pos.x += input_ms.size.x + BLOCK_PADDING * 0.5;
                 draw_block_button(arg_pos, del_arg_tex, hover_info.editor.part == EDITOR_DEL_ARG && hover_info.editor.blockdef == blockdef);
             } else {
-                draw_text_shadow(font_cond, cur->data.stext.text, arg_pos, BLOCK_TEXT_SIZE, 0.0, WHITE, (Color) { 0x00, 0x00, 0x00, 0x88 });
+                DrawTextEx(font_cond_shadow, cur->data.stext.text, (Vector2) { floorf(arg_pos.x), floorf(arg_pos.y) }, BLOCK_TEXT_SIZE, 0.0, WHITE);
             }
             break;
         case INPUT_IMAGE_DISPLAY:
@@ -235,7 +230,7 @@ void draw_block(Vector2 position, ScrBlock* block, bool force_outline, bool forc
             height = cur.data.stext.ms.size.y;
             arg_pos.y += block->ms.placement == PLACEMENT_VERTICAL ? 0 : block_size.height * 0.5 - BLOCK_TEXT_SIZE * 0.5;
 
-            draw_text_shadow(font_cond, cur.data.stext.text, arg_pos, BLOCK_TEXT_SIZE, 0.0, WHITE, (Color) { 0x00, 0x00, 0x00, 0x88 });
+            DrawTextEx(font_cond_shadow, cur.data.stext.text, (Vector2) { floorf(arg_pos.x), floorf(arg_pos.y) }, BLOCK_TEXT_SIZE, 0.0, WHITE);
             break;
         case INPUT_IMAGE_DISPLAY:
             width = cur.data.simage.ms.size.x;
@@ -277,8 +272,8 @@ void draw_block(Vector2 position, ScrBlock* block, bool force_outline, bool forc
                 DrawRectangleRoundedLines(arg_size, 0.5, 4, BLOCK_OUTLINE_SIZE, ColorBrightness(color, &block->arguments[arg_id] == hover_info.select_argument ? -0.5 : 0.5));
             }
             Vector2 ms = MeasureTextEx(font_cond, block->arguments[arg_id].data.text, BLOCK_TEXT_SIZE, 0);
-            draw_text_shadow(
-                font_cond, 
+            DrawTextEx(
+                font_cond_shadow, 
                 block->arguments[arg_id].data.text,
                 (Vector2) { 
                     cursor.x + BLOCK_STRING_PADDING * 0.5, 
@@ -286,8 +281,7 @@ void draw_block(Vector2 position, ScrBlock* block, bool force_outline, bool forc
                 },
                 BLOCK_TEXT_SIZE,
                 0.0,
-                WHITE,
-                (Color) { 0x00, 0x00, 0x00, 0x88 }
+                WHITE
             );
 
             draw_image(
@@ -590,7 +584,7 @@ void draw_dropdown_list(void) {
     char** list = block_input.data.drop.list(hover_info.select_block, &list_len);
     for (size_t i = dropdown.scroll_amount; i < list_len; i++) {
         if (pos.y > GetScreenHeight()) break;
-        draw_text_shadow(font_cond, list[i], pos, BLOCK_TEXT_SIZE, 0, WHITE, (Color) { 0x00, 0x00, 0x00, 0x88 });
+        DrawTextEx(font_cond_shadow, list[i], pos, BLOCK_TEXT_SIZE, 0, WHITE);
         pos.y += conf.font_size;
     }
 }
@@ -716,6 +710,30 @@ void draw_term(void) {
     }
 
     pthread_mutex_unlock(&term.lock);
+}
+
+void prerender_font_shadow(Font* font) {
+    SetTextureFilter(font->texture, TEXTURE_FILTER_POINT);
+    Image font_img = LoadImageFromTexture(font->texture);
+    Image render_img = ImageCopy(font_img);
+    ImageClearBackground(&render_img, BLANK);
+    ImageDraw(
+        &render_img, 
+        font_img, 
+        (Rectangle) { 0, 0, font_img.width, font_img.height }, 
+        (Rectangle) { SHADOW_DISTANCE, SHADOW_DISTANCE, font_img.width, font_img.height }, 
+        (Color) { 0x00, 0x00, 0x00, 0x88 }
+    );
+    ImageDraw(
+        &render_img, 
+        font_img, 
+        (Rectangle) { 0, 0, font_img.width, font_img.height }, 
+        (Rectangle) { 0, 0, font_img.width, font_img.height }, 
+        WHITE
+    );
+    UnloadTexture(font->texture);
+    font->texture = LoadTextureFromImage(render_img);
+    SetTextureFilter(font->texture, TEXTURE_FILTER_ANISOTROPIC_4X);
 }
 
 void process_render(void) {

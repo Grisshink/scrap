@@ -35,6 +35,7 @@ HoverInfo hover_info = {0};
 Shader line_shader;
 
 Font font_cond;
+Font font_cond_shadow;
 Font font_eb;
 Font font_mono;
 
@@ -175,13 +176,17 @@ void setup(void) {
     int codepoints_count;
     int *codepoints = LoadCodepoints(conf.font_symbols, &codepoints_count);
     font_cond = LoadFontEx(conf.font_path, conf.font_size, codepoints, codepoints_count);
+    font_cond_shadow = LoadFontEx(conf.font_path, BLOCK_TEXT_SIZE, codepoints, codepoints_count);
     font_eb = LoadFontEx(conf.font_bold_path, conf.font_size, codepoints, codepoints_count);
     font_mono = LoadFontEx(conf.font_mono_path, conf.font_size, codepoints, codepoints_count);
     UnloadCodepoints(codepoints);
 
     SetTextureFilter(font_cond.texture, TEXTURE_FILTER_BILINEAR);
+    SetTextureFilter(font_cond_shadow.texture, TEXTURE_FILTER_BILINEAR);
     SetTextureFilter(font_eb.texture, TEXTURE_FILTER_BILINEAR);
     SetTextureFilter(font_mono.texture, TEXTURE_FILTER_BILINEAR);
+
+    prerender_font_shadow(&font_cond_shadow);
 
     line_shader = LoadShaderFromMemory(line_shader_vertex, line_shader_fragment);
     shader_time_loc = GetShaderLocation(line_shader, "time");
