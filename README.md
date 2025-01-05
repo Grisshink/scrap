@@ -1,4 +1,4 @@
-![Scrap splash](/extras/scrap_splash.png)
+![Scrap splash](/extras/scrap_splash_v2.png)
 
 # Scrap
 
