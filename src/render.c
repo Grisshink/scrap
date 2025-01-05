@@ -78,7 +78,7 @@ void draw_input_box(Vector2 position, ScrMeasurement ms, char** input, bool roun
     if (rounded) {
         DrawRectangleRounded(rect, 0.5, 5, WHITE);
         if (hovered || selected) {
-            DrawRectangleRoundedLines(rect, 0.5, 5, BLOCK_OUTLINE_SIZE, selected ? selected_color : hovered_color);
+            DrawRectangleRoundedLinesEx(rect, 0.5, 5, BLOCK_OUTLINE_SIZE, selected ? selected_color : hovered_color);
         }
     } else {
         DrawRectangleRec(rect, WHITE);
@@ -269,7 +269,7 @@ void draw_block(Vector2 position, ScrBlock* block, bool force_outline, bool forc
             DrawRectangleRounded(arg_size, 0.5, 4, ColorBrightness(color, collision ? 0.0 : -0.3));
 
             if (&block->arguments[arg_id] == hover_info.argument || &block->arguments[arg_id] == hover_info.select_argument) {
-                DrawRectangleRoundedLines(arg_size, 0.5, 4, BLOCK_OUTLINE_SIZE, ColorBrightness(color, &block->arguments[arg_id] == hover_info.select_argument ? -0.5 : 0.5));
+                DrawRectangleRoundedLinesEx(arg_size, 0.5, 4, BLOCK_OUTLINE_SIZE, ColorBrightness(color, &block->arguments[arg_id] == hover_info.select_argument ? -0.5 : 0.5));
             }
             Vector2 ms = MeasureTextEx(font_cond, block->arguments[arg_id].data.text, BLOCK_TEXT_SIZE, 0);
             DrawTextEx(

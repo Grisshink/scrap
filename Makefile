@@ -6,7 +6,7 @@ CFLAGS := -Wall -Wextra -O3 -s -DSCRAP_VERSION=\"$(SCRAP_VERSION)\" -fmax-errors
 
 ifeq ($(TARGET), LINUX)
 	CC := gcc
-	LDFLAGS := -lGL -lm -lpthread -lX11
+	LDFLAGS := -lGL -lm -lpthread -lX11 -ldl
 else ifeq ($(TARGET), MACOS)
 	# Thanks for @arducat for MacOS support
 	CC := gcc-14
@@ -55,7 +55,7 @@ appimage: $(EXE_NAME)
 	rm -r scrap.AppDir
 
 $(EXE_NAME): $(OBJFILES)
-	make -C raylib/src CC=$(CC)
+	make -C raylib/src CC=$(CC) CUSTOM_CFLAGS=-DSUPPORT_FILEFORMAT_SVG
 	$(CC) $(CFLAGS) -o $@ $^ raylib/src/libraylib.a $(LDFLAGS)
 
 src/scrap.h: src/vm.h src/config.h
