@@ -1,4 +1,4 @@
-SCRAP_VERSION := 0.1.1-beta
+SCRAP_VERSION := 0.2-beta
 
 TARGET ?= LINUX
 
