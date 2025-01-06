@@ -403,10 +403,13 @@ bool load_blockdef_input(SaveArena* save, ScrInput* input) {
     if (!save_read_varint(save, (unsigned int*)&type)) return false;
     input->type = type;
 
+    unsigned int text_len;
+    ScrInputArgumentConstraint constr; 
+    char* text;
+
     switch (input->type) {
-    case INPUT_TEXT_DISPLAY: ;
-        unsigned int text_len;
-        char* text = save_read_array(save, sizeof(char), &text_len);
+    case INPUT_TEXT_DISPLAY:
+        text = save_read_array(save, sizeof(char), &text_len);
         if (!text) return false;
         if (text[text_len - 1] != 0) return false;
 
@@ -417,8 +420,7 @@ bool load_blockdef_input(SaveArena* save, ScrInput* input) {
         for (char* str = text; *str; str++) vector_add(&input->data.stext.text, *str);
         vector_add(&input->data.stext.text, 0);
         break;
-    case INPUT_ARGUMENT: ;
-        ScrInputArgumentConstraint constr; 
+    case INPUT_ARGUMENT:
         if (!save_read_varint(save, (unsigned int*)&constr)) return false;
 
         ScrBlockdef* blockdef = load_blockdef(save);
@@ -493,24 +495,25 @@ bool load_block_argument(SaveArena* save, ScrArgument* arg) {
     arg->type = arg_type;
     arg->input_id = input_id;
 
+    unsigned int text_id;
+    ScrBlock block;
+    unsigned int blockdef_id;
+
     switch (arg_type) {
     case ARGUMENT_TEXT:
-    case ARGUMENT_CONST_STRING: ;
-        unsigned int text_id;
+    case ARGUMENT_CONST_STRING:
         if (!save_read_varint(save, &text_id)) return false;
 
         arg->data.text = vector_create();
         for (char* str = (char*)save_block_ids[text_id]; *str; str++) vector_add(&arg->data.text, *str);
         vector_add(&arg->data.text, 0);
         break;
-    case ARGUMENT_BLOCK: ;
-        ScrBlock block;
+    case ARGUMENT_BLOCK:
         if (!load_block(save, &block)) return false;
         
         arg->data.block = block;
         break;
-    case ARGUMENT_BLOCKDEF: ;
-        unsigned int blockdef_id;
+    case ARGUMENT_BLOCKDEF:
         if (!save_read_varint(save, &blockdef_id)) return false;
         if (blockdef_id >= vector_size(save_block_ids)) {
             printf("[LOAD] Out of bounds read of save_block_id at %u\n", blockdef_id);

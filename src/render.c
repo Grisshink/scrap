@@ -179,9 +179,8 @@ void draw_blockdef(Vector2 position, ScrBlockdef* blockdef, bool editing) {
         case INPUT_BLOCKDEF_EDITOR:
             assert(false && "Unimplemented");
             break;
-        default: ;
-            Vector2 size = MeasureTextEx(font_cond, "NODEF", BLOCK_TEXT_SIZE, 0.0);
-            width = size.x;
+        default:
+            width = MeasureTextEx(font_cond, "NODEF", BLOCK_TEXT_SIZE, 0.0).x;
             arg_pos.y += block_size.height * 0.5 - BLOCK_TEXT_SIZE * 0.5;
 
             DrawTextEx(font_cond, "NODEF", arg_pos, BLOCK_TEXT_SIZE, 0.0, RED);
@@ -347,7 +346,7 @@ void draw_block(Vector2 position, ScrBlock* block, bool force_outline, bool forc
 
             arg_id++;
             break;
-        default: ;
+        default: ; // This fixes gcc-9 error
             Vector2 size = MeasureTextEx(font_cond, "NODEF", BLOCK_TEXT_SIZE, 0.0);
             width = size.x;
             height = size.y;

@@ -163,12 +163,11 @@ void blockdef_update_collisions(Vector2 position, ScrBlockdef* blockdef, bool ed
         Rectangle arg_size;
 
         switch (cur->type) {
-        case INPUT_TEXT_DISPLAY: ;
-            ScrMeasurement ms = cur->data.stext.editor_ms;
+        case INPUT_TEXT_DISPLAY:
             if (editing) {
                 arg_size.x = cursor.x;
                 arg_size.y = cursor.y + block_size.height * 0.5 - (conf.font_size - BLOCK_OUTLINE_SIZE * 4) * 0.5;
-                arg_size.width = ms.size.x - conf.font_size - BLOCK_PADDING;
+                arg_size.width = cur->data.stext.editor_ms.size.x - conf.font_size - BLOCK_PADDING;
                 arg_size.height = conf.font_size - BLOCK_OUTLINE_SIZE * 4;
 
                 if (CheckCollisionPointRec(GetMousePosition(), arg_size)) {
@@ -182,7 +181,7 @@ void blockdef_update_collisions(Vector2 position, ScrBlockdef* blockdef, bool ed
                     break;
                 }
             }
-            width = ms.size.x;
+            width = cur->data.stext.editor_ms.size.x;
             break;
         case INPUT_IMAGE_DISPLAY:
             width = cur->data.simage.ms.size.x;
@@ -200,9 +199,8 @@ void blockdef_update_collisions(Vector2 position, ScrBlockdef* blockdef, bool ed
                 hover_info.editor.blockdef_input = i;
             }
             break;
-        default: ;
-            Vector2 size = MeasureTextEx(font_cond, "NODEF", BLOCK_TEXT_SIZE, 0.0);
-            width = size.x;
+        default:
+            width = MeasureTextEx(font_cond, "NODEF", BLOCK_TEXT_SIZE, 0.0).x;
             break;
         }
 
@@ -263,13 +261,9 @@ void block_update_collisions(Vector2 position, ScrBlock* block) {
                     break;
                 }
                 break;
-            case ARGUMENT_BLOCK: ;
-                Vector2 block_pos;
-                block_pos.x = cursor.x;
-                block_pos.y = cursor.y + (block->ms.placement == PLACEMENT_VERTICAL ? 0 : block_size.height / 2 - block->arguments[arg_id].ms.size.y / 2); 
-
-                arg_size.x = block_pos.x;
-                arg_size.y = block_pos.y;
+            case ARGUMENT_BLOCK:
+                arg_size.x = cursor.x;
+                arg_size.y = cursor.y + (block->ms.placement == PLACEMENT_VERTICAL ? 0 : block_size.height / 2 - block->arguments[arg_id].ms.size.y / 2); 
                 arg_size.width = block->arguments[arg_id].ms.size.x;
                 arg_size.height = block->arguments[arg_id].ms.size.y;
                 height = arg_size.height;
@@ -278,7 +272,7 @@ void block_update_collisions(Vector2 position, ScrBlock* block) {
                     hover_info.prev_argument = &block->arguments[arg_id];
                 }
                 
-                block_update_collisions(block_pos, &block->arguments[arg_id].data.block);
+                block_update_collisions((Vector2) { arg_size.x, arg_size.y }, &block->arguments[arg_id].data.block);
                 break;
             default:
                 assert(false && "Unimplemented argument collision");
@@ -368,7 +362,7 @@ void block_update_collisions(Vector2 position, ScrBlock* block) {
 
             arg_id++;
             break;
-        default: ;
+        default: ; // This fixes gcc-9 error
             Vector2 size = MeasureTextEx(font_cond, "NODEF", BLOCK_TEXT_SIZE, 0.0);
             width = size.x;
             height = size.y;

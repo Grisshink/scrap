@@ -125,7 +125,7 @@ void update_measurements(ScrBlock* block, ScrPlacementStrategy placement) {
         case INPUT_ARGUMENT:
             switch (block->arguments[arg_id].type) {
             case ARGUMENT_CONST_STRING:
-            case ARGUMENT_TEXT: ;
+            case ARGUMENT_TEXT: ; // This fixes gcc-9 error
                 ScrMeasurement string_ms = measure_input_box(block->arguments[arg_id].data.text);
                 block->arguments[arg_id].ms = string_ms;
                 ms = string_ms;
