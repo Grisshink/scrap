@@ -112,6 +112,7 @@ void load_config(Config* config) {
             cursor++;
             value_size++;
         }
+        (void) value_size;
         if (file[cursor] == '\0') has_lines = false;
         file[cursor++] = '\0';
 

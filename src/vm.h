@@ -304,19 +304,28 @@ struct ScrVm {
 // Public macros
 #define RETURN_NOTHING return (ScrData) { \
     .type = DATA_NOTHING, \
-    .storage = DATA_STORAGE_STATIC, \
+    .storage = (ScrDataStorage) { \
+        .type = DATA_STORAGE_STATIC, \
+        .storage_len = 0, \
+    }, \
     .data = (ScrDataContents) {0}, \
 }
 
 #define RETURN_OMIT_ARGS return (ScrData) { \
     .type = DATA_OMIT_ARGS, \
-    .storage = DATA_STORAGE_STATIC, \
+    .storage = (ScrDataStorage) { \
+        .type = DATA_STORAGE_STATIC, \
+        .storage_len = 0, \
+    }, \
     .data = (ScrDataContents) {0}, \
 }
 
 #define RETURN_INT(val) return (ScrData) { \
     .type = DATA_INT, \
-    .storage = DATA_STORAGE_STATIC, \
+    .storage = (ScrDataStorage) { \
+        .type = DATA_STORAGE_STATIC, \
+        .storage_len = 0, \
+    }, \
     .data = (ScrDataContents) { \
         .int_arg = (val) \
     }, \
@@ -324,7 +333,10 @@ struct ScrVm {
 
 #define RETURN_DOUBLE(val) return (ScrData) { \
     .type = DATA_DOUBLE, \
-    .storage = DATA_STORAGE_STATIC, \
+    .storage = (ScrDataStorage) { \
+        .type = DATA_STORAGE_STATIC, \
+        .storage_len = 0, \
+    }, \
     .data = (ScrDataContents) { \
         .double_arg = (val) \
     }, \
@@ -332,7 +344,10 @@ struct ScrVm {
 
 #define RETURN_BOOL(val) return (ScrData) { \
     .type = DATA_BOOL, \
-    .storage = DATA_STORAGE_STATIC, \
+    .storage = (ScrDataStorage) { \
+        .type = DATA_STORAGE_STATIC, \
+        .storage_len = 0, \
+    }, \
     .data = (ScrDataContents) { \
         .int_arg = (val) \
     }, \
@@ -474,7 +489,10 @@ bool exec_block(ScrExec* exec, ScrBlock block, ScrData* block_return, bool from_
     if (block.blockdef->arg_id != -1) {
         arg_stack_push_arg(exec, (ScrData) {
             .type = DATA_INT,
-            .storage = DATA_STORAGE_STATIC,
+            .storage = (ScrDataStorage) {
+                .type = DATA_STORAGE_STATIC,
+                .storage_len = 0,
+            },
             .data = (ScrDataContents) {
                 .int_arg = block.blockdef->arg_id,
             },
@@ -484,7 +502,10 @@ bool exec_block(ScrExec* exec, ScrBlock block, ScrData* block_return, bool from_
     if (block.blockdef->chain) {
         arg_stack_push_arg(exec, (ScrData) {
             .type = DATA_CHAIN,
-            .storage = DATA_STORAGE_STATIC,
+            .storage = (ScrDataStorage) {
+                .type = DATA_STORAGE_STATIC,
+                .storage_len = 0,
+            },
             .data = (ScrDataContents) {
                 .chain_arg = block.blockdef->chain,
             },
@@ -494,7 +515,10 @@ bool exec_block(ScrExec* exec, ScrBlock block, ScrData* block_return, bool from_
     if (block.blockdef->type == BLOCKTYPE_CONTROL || block.blockdef->type == BLOCKTYPE_CONTROLEND) {
         arg_stack_push_arg(exec, (ScrData) {
             .type = DATA_CONTROL,
-            .storage = DATA_STORAGE_STATIC,
+            .storage = (ScrDataStorage) {
+                .type = DATA_STORAGE_STATIC,
+                .storage_len = 0,
+            },
             .data = (ScrDataContents) {
                 .control_arg = from_end ? CONTROL_ARG_END : CONTROL_ARG_BEGIN,
             },
@@ -511,7 +535,10 @@ bool exec_block(ScrExec* exec, ScrBlock block, ScrData* block_return, bool from_
             case ARGUMENT_CONST_STRING:
                 arg_stack_push_arg(exec, (ScrData) {
                     .type = DATA_STR,
-                    .storage = DATA_STORAGE_STATIC,
+                    .storage = (ScrDataStorage) {
+                        .type = DATA_STORAGE_STATIC,
+                        .storage_len = 0,
+                    },
                     .data = (ScrDataContents) {
                         .str_arg = block_arg.data.text,
                     },
@@ -1066,7 +1093,6 @@ ScrBlockChain blockchain_copy_single(ScrBlockChain* chain, size_t pos) {
         return new;
     }
 
-    int size = 0;
     int layer = 0;
     for (size_t i = pos; i < vector_size(chain->blocks) && layer >= 0; i++) {
         block_type = chain->blocks[i].blockdef->type;
@@ -1076,7 +1102,6 @@ ScrBlockChain blockchain_copy_single(ScrBlockChain* chain, size_t pos) {
         } else if (block_type == BLOCKTYPE_END) {
             layer--;
         }
-        size++;
     }
 
     blockchain_update_parent_links(&new);

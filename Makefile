@@ -2,7 +2,7 @@ SCRAP_VERSION := 0.2-beta
 
 TARGET ?= LINUX
 
-CFLAGS := -Wall -Wextra -O3 -s -DSCRAP_VERSION=\"$(SCRAP_VERSION)\" -fmax-errors=5 -I./raylib/src
+CFLAGS := -Wall -Wextra -s -O3 -DSCRAP_VERSION=\"$(SCRAP_VERSION)\" -I./raylib/src
 
 ifeq ($(TARGET), LINUX)
 	CC := gcc
@@ -14,6 +14,12 @@ else ifeq ($(TARGET), MACOS)
 else
 	CC := x86_64-w64-mingw32-gcc
 	LDFLAGS := -static -lole32 -lcomdlg32 -lwinmm -lgdi32 -Wl,--subsystem,windows
+endif
+
+ifeq ($(CC), clang)
+	CFLAGS += -ferror-limit=5
+else
+	CFLAGS += -fmax-errors=5
 endif
 
 OBJFILES := $(addprefix src/,filedialogs.o gui.o render.o save.o term.o blocks.o scrap.o vec.o util.o input.o measure.o)
