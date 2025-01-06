@@ -593,17 +593,17 @@ void draw_dots(void) {
 
     for (int y = MOD(-(int)camera_pos.y, conf.font_size * 2); y < win_height; y += conf.font_size * 2) {
         for (int x = MOD(-(int)camera_pos.x, conf.font_size * 2); x < win_width; x += conf.font_size * 2) {
-            DrawPixel(x, y, (Color) { 0x60, 0x60, 0x60, 0xff });
+            DrawRectangle(x, y, 2, 2, (Color) { 0x40, 0x40, 0x40, 0xff });
         }
     }
 
     if (shader_time == 1.0) return;
     BeginShaderMode(line_shader);
     for (int y = MOD(-(int)camera_pos.y, conf.font_size * 2); y < win_height; y += conf.font_size * 2) {
-        DrawLine(0, y, win_width, y, (Color) { 0x40, 0x40, 0x40, 0xff });
+        DrawRectangle(0, y, win_width, 2, (Color) { 0x40, 0x40, 0x40, 0xff });
     }
     for (int x = MOD(-(int)camera_pos.x, conf.font_size * 2); x < win_width; x += conf.font_size * 2) {
-        DrawLine(x, 0, x, win_height, (Color) { 0x40, 0x40, 0x40, 0xff });
+        DrawRectangle(x, 0, 2, win_height, (Color) { 0x40, 0x40, 0x40, 0xff });
     }
     EndShaderMode();
 }
