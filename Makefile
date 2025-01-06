@@ -56,7 +56,7 @@ appimage: $(EXE_NAME)
 	rm -r scrap.AppDir
 
 $(EXE_NAME): $(OBJFILES)
-	make -C raylib/src CC=$(CC) CUSTOM_CFLAGS=-DSUPPORT_FILEFORMAT_SVG
+	make -C raylib/src CC=$(CC) CUSTOM_CFLAGS=-DSUPPORT_FILEFORMAT_SVG PLATFORM_OS=$(TARGET)
 	$(CC) $(CFLAGS) -o $@ $^ raylib/src/libraylib.a $(LDFLAGS)
 
 scrap.o: scrap.c external/raylib-nuklear.h $(SCRAP_HEADERS)
