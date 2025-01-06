@@ -588,6 +588,7 @@ bool exec_run_chain(ScrExec* exec, ScrBlockChain* chain, ScrData* return_val) {
                 chain_stack_pop(exec);
                 return false;
             }
+            exec->running_chain = chain;
             if (chain_data->running_ind != i) i = chain_data->running_ind;
         }
         if (BLOCKDEF->type == BLOCKTYPE_CONTROLEND && block_ind != i) {
