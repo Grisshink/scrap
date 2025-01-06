@@ -50,12 +50,9 @@ void set_default_config(Config* config) {
     config->fps_limit = 60;
     config->block_size_threshold = 1000;
     strncpy(config->font_symbols, "qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNMйцукенгшщзхъфывапролджэячсмитьбюёЙЦУКЕНГШЩЗХЪФЫВАПРОЛДЖЭЯЧСМИТЬБЮЁ ,./;'\\[]=-0987654321`~!@#$%^&*()_+{}:\"|<>?", sizeof(config->font_symbols) - 1);
-    const char* path = into_data_path(DATA_PATH "nk57-cond.otf");
-    strncpy(config->font_path, path, sizeof(config->font_path) - 1);
-    path = into_data_path(DATA_PATH "nk57-eb.otf");
-    strncpy(config->font_bold_path, path, sizeof(config->font_bold_path) - 1);
-    path = into_data_path(DATA_PATH "nk57.otf");
-    strncpy(config->font_mono_path, path, sizeof(config->font_mono_path) - 1);
+    strncpy(config->font_path, DATA_PATH "nk57-cond.otf", sizeof(config->font_path) - 1);
+    strncpy(config->font_bold_path, DATA_PATH "nk57-eb.otf", sizeof(config->font_bold_path) - 1);
+    strncpy(config->font_mono_path, DATA_PATH "nk57.otf", sizeof(config->font_mono_path) - 1);
 }
 
 void apply_config(Config* dst, Config* src) {

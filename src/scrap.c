@@ -152,6 +152,10 @@ Texture2D load_svg(const char* path) {
     return texture;
 }
 
+const char* get_font_path(char* font_path) {
+    return font_path[0] != '/' && font_path[1] != ':' ? into_data_path(font_path) : font_path;
+}
+
 void setup(void) {
     run_tex = LoadTexture(into_data_path(DATA_PATH "run.png"));
     SetTextureFilter(run_tex, TEXTURE_FILTER_BILINEAR);
@@ -177,10 +181,10 @@ void setup(void) {
 
     int codepoints_count;
     int *codepoints = LoadCodepoints(conf.font_symbols, &codepoints_count);
-    font_cond = LoadFontEx(conf.font_path, conf.font_size, codepoints, codepoints_count);
-    font_cond_shadow = LoadFontEx(conf.font_path, BLOCK_TEXT_SIZE, codepoints, codepoints_count);
-    font_eb = LoadFontEx(conf.font_bold_path, conf.font_size, codepoints, codepoints_count);
-    font_mono = LoadFontEx(conf.font_mono_path, conf.font_size, codepoints, codepoints_count);
+    font_cond = LoadFontEx(get_font_path(conf.font_path), conf.font_size, codepoints, codepoints_count);
+    font_cond_shadow = LoadFontEx(get_font_path(conf.font_path), BLOCK_TEXT_SIZE, codepoints, codepoints_count);
+    font_eb = LoadFontEx(get_font_path(conf.font_bold_path), conf.font_size, codepoints, codepoints_count);
+    font_mono = LoadFontEx(get_font_path(conf.font_mono_path), conf.font_size, codepoints, codepoints_count);
     UnloadCodepoints(codepoints);
 
     SetTextureFilter(font_cond.texture, TEXTURE_FILTER_BILINEAR);
