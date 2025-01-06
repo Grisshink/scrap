@@ -67,6 +67,17 @@ void string_add(String* string, const char* other) {
     string->len = new_len;
 }
 
+void string_add_array(String* string, const char* arr, int arr_len) {
+    size_t new_len = string->len + arr_len;
+    if (new_len > string->cap) {
+        string->str = realloc(string->str, (new_len + 1) * sizeof(char));
+        string->cap = new_len;
+    }
+    memcpy(&string->str[string->len], arr, arr_len);
+    string->str[new_len] = 0;
+    string->len = new_len;
+}
+
 ScrData string_make_managed(String* string) {
     ScrData out;
     out.type = DATA_STR;
@@ -503,6 +514,97 @@ ScrData block_join(ScrExec* exec, int argc, ScrData* argv) {
     string_add(&string, data_to_str(argv[0]));
     string_add(&string, data_to_str(argv[1]));
     return string_make_managed(&string);
+}
+
+ScrData block_ord(ScrExec* exec, int argc, ScrData* argv) {
+    (void) exec;
+    if (argc < 1) RETURN_INT(0);
+
+    const char* str = data_to_str(argv[0]);
+    int codepoint_size;
+    int codepoint = GetCodepoint(str, &codepoint_size);
+
+    RETURN_INT(codepoint);
+}
+
+ScrData block_chr(ScrExec* exec, int argc, ScrData* argv) {
+    (void) exec;
+    if (argc < 1) RETURN_NOTHING;
+
+    int text_size;
+    const char* text = CodepointToUTF8(data_to_int(argv[0]), &text_size);
+
+    String string = string_new(0);
+    string_add_array(&string, text, text_size);
+    return string_make_managed(&string);
+}
+
+ScrData block_letter_in(ScrExec* exec, int argc, ScrData* argv) {
+    (void) exec;
+    if (argc < 2) RETURN_NOTHING;
+
+    int pos = 0;
+    int target = data_to_int(argv[0]);
+    if (target <= 0) RETURN_NOTHING;
+    for (char* str = (char*)data_to_str(argv[1]); *str; str++) {
+        // Increment pos only on the beginning of multibyte char
+        if ((*str & 0x80) == 0 || (*str & 0x40) != 0) pos++;
+
+        if (pos == target) {
+            int codepoint_size;
+            GetCodepoint(str, &codepoint_size);
+
+            String string = string_new(0);
+            string_add_array(&string, str, codepoint_size);
+            return string_make_managed(&string);
+        }
+    }
+
+    RETURN_NOTHING;
+}
+
+ScrData block_substring(ScrExec* exec, int argc, ScrData* argv) {
+    (void) exec;
+    if (argc < 3) RETURN_NOTHING;
+
+    int start_pos = data_to_int(argv[0]);
+    int end_pos = data_to_int(argv[1]);
+    if (start_pos <= 0) start_pos = 1;
+    if (end_pos <= 0) RETURN_NOTHING;
+    if (start_pos > end_pos) RETURN_NOTHING;
+
+    char* substr_start = NULL;
+    int substr_len = 0;
+
+    int pos = 0;
+    for (char* str = (char*)data_to_str(argv[2]); *str; str++) {
+        // Increment pos only on the beginning of multibyte char
+        if ((*str & 0x80) == 0 || (*str & 0x40) != 0) pos++;
+        if (substr_start) substr_len++;
+
+        if (pos == start_pos && !substr_start) {
+            substr_start = str;
+            substr_len = 1;
+        }
+        if (pos == end_pos) {
+            if (!substr_start) RETURN_NOTHING;
+            int codepoint_size;
+            GetCodepoint(str, &codepoint_size);
+            substr_len += codepoint_size - 1;
+
+            String string = string_new(0);
+            string_add_array(&string, substr_start, substr_len);
+            return string_make_managed(&string);
+        }
+    }
+
+    if (substr_start) {
+        String string = string_new(0);
+        string_add_array(&string, substr_start, substr_len);
+        return string_make_managed(&string);
+    }
+
+    RETURN_NOTHING;
 }
 
 ScrData block_length(ScrExec* exec, int argc, ScrData* argv) {
@@ -1056,6 +1158,32 @@ void load_blocks(ScrVm* vm) {
     blockdef_add_argument(sc_join, "абоба ", BLOCKCONSTR_UNLIMITED);
     blockdef_add_argument(sc_join, "мусор", BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_join);
+
+    ScrBlockdef* sc_ord = blockdef_new("ord", BLOCKTYPE_NORMAL, (ScrColor) { 0x00, 0xcc, 0x77, 0xFF }, block_ord);
+    blockdef_add_text(sc_ord, "Ord");
+    blockdef_add_argument(sc_ord, "A", BLOCKCONSTR_UNLIMITED);
+    blockdef_register(vm, sc_ord);
+
+    ScrBlockdef* sc_chr = blockdef_new("chr", BLOCKTYPE_NORMAL, (ScrColor) { 0x00, 0xcc, 0x77, 0xFF }, block_chr);
+    blockdef_add_text(sc_chr, "Chr");
+    blockdef_add_argument(sc_chr, "65", BLOCKCONSTR_UNLIMITED);
+    blockdef_register(vm, sc_chr);
+
+    ScrBlockdef* sc_letter_in = blockdef_new("letter_in", BLOCKTYPE_NORMAL, (ScrColor) { 0x00, 0xcc, 0x77, 0xFF }, block_letter_in);
+    blockdef_add_text(sc_letter_in, "Letter");
+    blockdef_add_argument(sc_letter_in, "1", BLOCKCONSTR_UNLIMITED);
+    blockdef_add_text(sc_letter_in, "in");
+    blockdef_add_argument(sc_letter_in, "string", BLOCKCONSTR_UNLIMITED);
+    blockdef_register(vm, sc_letter_in);
+
+    ScrBlockdef* sc_substring = blockdef_new("substring", BLOCKTYPE_NORMAL, (ScrColor) { 0x00, 0xcc, 0x77, 0xFF }, block_substring);
+    blockdef_add_text(sc_substring, "Substring");
+    blockdef_add_argument(sc_substring, "2", BLOCKCONSTR_UNLIMITED);
+    blockdef_add_text(sc_substring, "-");
+    blockdef_add_argument(sc_substring, "4", BLOCKCONSTR_UNLIMITED);
+    blockdef_add_text(sc_substring, "in");
+    blockdef_add_argument(sc_substring, "string", BLOCKCONSTR_UNLIMITED);
+    blockdef_register(vm, sc_substring);
 
     ScrBlockdef* sc_length = blockdef_new("length", BLOCKTYPE_NORMAL, (ScrColor) { 0x00, 0xcc, 0x77, 0xFF }, block_length);
     blockdef_add_text(sc_length, "Length");
