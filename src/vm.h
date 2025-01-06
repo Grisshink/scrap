@@ -355,7 +355,7 @@ struct ScrVm {
 
 #define control_stack_push_data(data, type) \
     if (exec->control_stack_len + sizeof(type) > VM_CONTROL_STACK_SIZE) { \
-        printf("[VM] CRITICAL: Control stack overflow\n"); \
+        TraceLog(LOG_FATAL, "[VM] Control stack overflow\n"); \
         pthread_exit((void*)0); \
     } \
     *(type *)(exec->control_stack + exec->control_stack_len) = (data); \
@@ -363,7 +363,7 @@ struct ScrVm {
 
 #define control_stack_pop_data(data, type) \
     if (sizeof(type) > exec->control_stack_len) { \
-        printf("[VM] CRITICAL: Control stack underflow\n"); \
+        TraceLog(LOG_FATAL, "[VM] Control stack underflow\n"); \
         pthread_exit((void*)0); \
     } \
     exec->control_stack_len -= sizeof(type); \
@@ -788,7 +788,7 @@ ScrVariable* variable_stack_get_variable(ScrExec* exec, const char* name) {
 
 void chain_stack_push(ScrExec* exec, ScrChainStackData data) {
     if (exec->chain_stack_len >= VM_CHAIN_STACK_SIZE) {
-        printf("[VM] CRITICAL: Chain stack overflow\n");
+        TraceLog(LOG_FATAL, "[VM] Chain stack overflow\n");
         pthread_exit((void*)0);
     }
     exec->chain_stack[exec->chain_stack_len++] = data;
@@ -796,7 +796,7 @@ void chain_stack_push(ScrExec* exec, ScrChainStackData data) {
 
 void chain_stack_pop(ScrExec* exec) {
     if (exec->chain_stack_len == 0) {
-        printf("[VM] CRITICAL: Chain stack underflow\n");
+        TraceLog(LOG_FATAL, "[VM] Chain stack underflow\n");
         pthread_exit((void*)0);
     }
     exec->chain_stack_len--;
@@ -804,7 +804,7 @@ void chain_stack_pop(ScrExec* exec) {
 
 void arg_stack_push_arg(ScrExec* exec, ScrData arg) {
     if (exec->arg_stack_len >= VM_ARG_STACK_SIZE) {
-        printf("[VM] CRITICAL: Arg stack overflow\n");
+        TraceLog(LOG_FATAL, "[VM] Arg stack overflow\n");
         pthread_exit((void*)0);
     }
     exec->arg_stack[exec->arg_stack_len++] = arg;
@@ -812,7 +812,7 @@ void arg_stack_push_arg(ScrExec* exec, ScrData arg) {
 
 void arg_stack_undo_args(ScrExec* exec, size_t count) {
     if (count > exec->arg_stack_len) {
-        printf("[VM] CRITICAL: Arg stack underflow\n");
+        TraceLog(LOG_FATAL, "[VM] Arg stack underflow\n");
         pthread_exit((void*)0);
     }
     for (size_t i = 0; i < count; i++) {
@@ -1358,7 +1358,7 @@ ScrBlockdef* blockdef_copy(ScrBlockdef* blockdef) {
 }
 
 size_t blockdef_register(ScrVm* vm, ScrBlockdef* blockdef) {
-    if (!blockdef->func) printf("[VM] WARNING: Block \"%s\" has not defined its implementation!\n", blockdef->id);
+    if (!blockdef->func) TraceLog(LOG_WARNING, "[VM] Block \"%s\" has not defined its implementation!\n", blockdef->id);
 
     vector_add(&vm->blockdefs, blockdef);
     blockdef->ref_count++;

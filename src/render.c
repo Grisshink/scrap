@@ -42,7 +42,7 @@ void sidebar_init(void) {
 }
 
 void actionbar_show(const char* text) {
-    printf("[ACTION] %s\n", text);
+    TraceLog(LOG_INFO, "[ACTION] %s\n", text);
     strncpy(actionbar.text, text, sizeof(actionbar.text) - 1);
     actionbar.show_time = 3.0;
 }
