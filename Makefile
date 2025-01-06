@@ -17,6 +17,7 @@ else
 endif
 
 OBJFILES := $(addprefix src/,filedialogs.o gui.o render.o save.o term.o blocks.o scrap.o vec.o util.o input.o measure.o)
+SCRAP_HEADERS := src/scrap.h src/vm.h src/config.h
 EXE_NAME := scrap
 
 LINUX_DIR := $(EXE_NAME)-v$(SCRAP_VERSION)-linux
@@ -58,27 +59,25 @@ $(EXE_NAME): $(OBJFILES)
 	make -C raylib/src CC=$(CC) CUSTOM_CFLAGS=-DSUPPORT_FILEFORMAT_SVG
 	$(CC) $(CFLAGS) -o $@ $^ raylib/src/libraylib.a $(LDFLAGS)
 
-src/scrap.h: src/vm.h src/config.h
-
-scrap.o: scrap.c external/raylib-nuklear.h src/scrap.h
+scrap.o: scrap.c external/raylib-nuklear.h $(SCRAP_HEADERS)
 	$(CC) $(CFLAGS) -c -o $@ scrap.c
-src/gui.o: src/gui.c src/scrap.h
+src/gui.o: src/gui.c $(SCRAP_HEADERS)
 	$(CC) $(CFLAGS) -c -o $@ $<
-src/render.o: src/render.c src/scrap.h
+src/render.o: src/render.c $(SCRAP_HEADERS)
 	$(CC) $(CFLAGS) -c -o $@ $<
-src/save.o: src/save.c src/scrap.h
+src/save.o: src/save.c $(SCRAP_HEADERS)
 	$(CC) $(CFLAGS) -c -o $@ $<
-src/term.o: src/term.c src/scrap.h
+src/term.o: src/term.c src/term.h $(SCRAP_HEADERS)
 	$(CC) $(CFLAGS) -c -o $@ $<
-src/blocks.o: src/blocks.c src/scrap.h
+src/blocks.o: src/blocks.c src/blocks.h $(SCRAP_HEADERS)
 	$(CC) $(CFLAGS) -c -o $@ $<
 src/vec.o: src/vec.c
 	$(CC) $(CFLAGS) -c -o $@ $<
-src/util.o: src/util.c src/scrap.h
+src/util.o: src/util.c $(SCRAP_HEADERS)
 	$(CC) $(CFLAGS) -c -o $@ $<
-src/input.o: src/input.c src/scrap.h
+src/input.o: src/input.c $(SCRAP_HEADERS)
 	$(CC) $(CFLAGS) -c -o $@ $<
-src/measure.o: src/measure.c src/scrap.h
+src/measure.o: src/measure.c $(SCRAP_HEADERS)
 	$(CC) $(CFLAGS) -c -o $@ $<
 src/filedialogs.o: external/tinyfiledialogs.c
 	$(CC) $(CFLAGS) -c -o $@ $<
