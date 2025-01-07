@@ -30,13 +30,17 @@ LINUX_DIR := $(EXE_NAME)-v$(SCRAP_VERSION)-linux
 MACOS_DIR := $(EXE_NAME)-v$(SCRAP_VERSION)-macos
 WINDOWS_DIR := $(EXE_NAME)-v$(SCRAP_VERSION)-windows64
 
+ifeq ($(TARGET), WINDOWS)
+all: $(EXE_NAME).exe
+else
 all: $(EXE_NAME)
+endif
 
 clean:
 	make -C raylib/src clean
-	rm -f $(OBJFILES) $(EXE_NAME) $(EXE_NAME).exe Scrap-x86_64.AppImage $(LINUX_DIR).tar.gz $(WINDOWS_DIR).zip $(MACOS_DIR).zip
+	rm -f $(OBJFILES) $(EXE_NAME) $(EXE_NAME).exe Scrap-x86_64.AppImage $(LINUX_DIR).tar.gz $(WINDOWS_DIR).zip $(MACOS_DIR).zip scrap.res
 
-windows-build: $(EXE_NAME)
+windows-build: $(EXE_NAME).exe
 	mkdir -p $(WINDOWS_DIR)
 	cp -r data examples extras LICENSE README.md $(EXE_NAME).exe $(WINDOWS_DIR)
 	zip -r $(WINDOWS_DIR).zip $(WINDOWS_DIR)
@@ -60,6 +64,11 @@ appimage: $(EXE_NAME)
 	cp -r data scrap.desktop extras/scrap.png scrap.AppDir
 	appimagetool-x86_64.AppImage scrap.AppDir
 	rm -r scrap.AppDir
+
+$(EXE_NAME).exe: $(OBJFILES)
+	make -C raylib/src CC=$(CC) CUSTOM_CFLAGS=-DSUPPORT_FILEFORMAT_SVG PLATFORM_OS=$(TARGET)
+	x86_64-w64-mingw32-windres scrap.rc -O coff -o scrap.res
+	$(CC) $(CFLAGS) -o $@ $^ raylib/src/libraylib.a scrap.res $(LDFLAGS)
 
 $(EXE_NAME): $(OBJFILES)
 	make -C raylib/src CC=$(CC) CUSTOM_CFLAGS=-DSUPPORT_FILEFORMAT_SVG PLATFORM_OS=$(TARGET)
