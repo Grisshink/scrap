@@ -116,7 +116,7 @@ void load_config(Config* config) {
         if (file[cursor] == '\0') has_lines = false;
         file[cursor++] = '\0';
 
-        TraceLog(LOG_INFO, "Field = \"%s\" Value = \"%s\"\n", field, value);
+        TraceLog(LOG_INFO, "Field = \"%s\" Value = \"%s\"", field, value);
         if (!strcmp(field, "UI_SIZE")) {
             int val = atoi(value);
             config->font_size = val ? val : config->font_size;
@@ -138,7 +138,7 @@ void load_config(Config* config) {
         } else if (!strcmp(field, "FONT_MONO_PATH")) {
             strncpy(config->font_mono_path, value, sizeof(config->font_mono_path) - 1);
         } else {
-            TraceLog(LOG_WARNING, "Unknown key: %s\n", field);
+            TraceLog(LOG_WARNING, "Unknown key: %s", field);
         }
     }
 
@@ -169,7 +169,7 @@ void* save_alloc(SaveArena* save, size_t size) {
 
 void* save_read_item(SaveArena* save, size_t data_size) {
     if ((size_t)(save->next + data_size - save->ptr) > save->max_size) {
-        TraceLog(LOG_ERROR, "[LOAD] Unexpected EOF reading data\n");
+        TraceLog(LOG_ERROR, "[LOAD] Unexpected EOF reading data");
         return NULL;
     }
     void* ptr = save->next;
@@ -433,7 +433,7 @@ bool load_blockdef_input(SaveArena* save, ScrInput* input) {
         vector_add(&save_blockdefs, input->data.arg.blockdef);
         break;
     default:
-        TraceLog(LOG_ERROR, "[LOAD] Unimplemented input load\n");
+        TraceLog(LOG_ERROR, "[LOAD] Unimplemented input load");
         return false;
         break;
     }
@@ -514,7 +514,7 @@ bool load_block_argument(SaveArena* save, ScrArgument* arg) {
     case ARGUMENT_BLOCKDEF:
         if (!save_read_varint(save, &blockdef_id)) return false;
         if (blockdef_id >= vector_size(save_block_ids)) {
-            TraceLog(LOG_ERROR, "[LOAD] Out of bounds read of save_block_id at %u\n", blockdef_id);
+            TraceLog(LOG_ERROR, "[LOAD] Out of bounds read of save_block_id at %u", blockdef_id);
             return false;
         }
 
@@ -525,7 +525,7 @@ bool load_block_argument(SaveArena* save, ScrArgument* arg) {
         arg->data.blockdef->ref_count++;
         break;
     default:
-        TraceLog(LOG_ERROR, "[LOAD] Unimplemented argument load\n");
+        TraceLog(LOG_ERROR, "[LOAD] Unimplemented argument load");
         return false;
     }
     return true;
@@ -540,7 +540,7 @@ bool load_block(SaveArena* save, ScrBlock* block) {
     if (!blockdef) {
         blockdef = find_blockdef(vm.blockdefs, save_block_ids[block_id]);
         if (!blockdef) {
-            TraceLog(LOG_ERROR, "[LOAD] No blockdef matched id: %s\n", save_block_ids[block_id]);
+            TraceLog(LOG_ERROR, "[LOAD] No blockdef matched id: %s", save_block_ids[block_id]);
             return false;
         }
     }
@@ -608,7 +608,7 @@ ScrBlockChain* load_code(const char* file_path) {
     unsigned int ver;
     if (!save_read_varint(&save, &ver)) goto load_fail;
     if (ver != 1) {
-        TraceLog(LOG_ERROR, "[LOAD] Unsupported version %d. Current scrap build expects save version 1\n", ver);
+        TraceLog(LOG_ERROR, "[LOAD] Unsupported version %d. Current scrap build expects save version 1", ver);
         goto load_fail;
     }
 
@@ -618,7 +618,7 @@ ScrBlockChain* load_code(const char* file_path) {
     if (ident_len == 0) goto load_fail;
 
     if (ident[ident_len - 1] != 0 || ident_len != sizeof(scrap_ident) || strncmp(ident, scrap_ident, sizeof(scrap_ident))) {
-        TraceLog(LOG_ERROR, "[LOAD] Not valid scrap save\n");
+        TraceLog(LOG_ERROR, "[LOAD] Not valid scrap save");
         goto load_fail;
     }
 

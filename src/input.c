@@ -116,7 +116,7 @@ bool start_vm(void) {
 
 bool stop_vm(void) {
     if (!vm.is_running) return false;
-    TraceLog(LOG_INFO, "STOP\n");
+    TraceLog(LOG_INFO, "STOP");
     exec_stop(&vm, &exec);
     return true;
 }
@@ -706,7 +706,7 @@ bool handle_code_editor_click(bool mouse_empty) {
 
             if (hover_info.argument) {
                 // Attach to argument
-                TraceLog(LOG_INFO, "Attach to argument\n");
+                TraceLog(LOG_INFO, "Attach to argument");
                 if (hover_info.argument->type != ARGUMENT_TEXT) return true;
                 mouse_blockchain.blocks[0].parent = hover_info.block;
                 argument_set_block(hover_info.argument, mouse_blockchain.blocks[0]);
@@ -714,7 +714,7 @@ bool handle_code_editor_click(bool mouse_empty) {
                 vector_clear(mouse_blockchain.blocks);
             } else if (hover_info.prev_argument) {
                 // Swap argument
-                TraceLog(LOG_INFO, "Swap argument\n");
+                TraceLog(LOG_INFO, "Swap argument");
                 if (hover_info.prev_argument->type != ARGUMENT_BLOCK) return true;
                 mouse_blockchain.blocks[0].parent = hover_info.block->parent;
                 ScrBlock temp = mouse_blockchain.blocks[0];
@@ -730,14 +730,14 @@ bool handle_code_editor_click(bool mouse_empty) {
             hover_info.block->parent == NULL
         ) {
             // Attach block
-            TraceLog(LOG_INFO, "Attach block\n");
+            TraceLog(LOG_INFO, "Attach block");
             if (mouse_blockchain.blocks[0].blockdef->type == BLOCKTYPE_HAT) return true;
             blockchain_insert(hover_info.blockchain, &mouse_blockchain, hover_info.blockchain_index);
             // Update block link to make valgrind happy
             hover_info.block = &hover_info.blockchain->blocks[hover_info.blockchain_index];
         } else {
             // Put block
-            TraceLog(LOG_INFO, "Put block\n");
+            TraceLog(LOG_INFO, "Put block");
             mouse_blockchain.pos.x += camera_pos.x;
             mouse_blockchain.pos.y += camera_pos.y;
             blockcode_add_blockchain(&block_code, mouse_blockchain);
@@ -748,11 +748,11 @@ bool handle_code_editor_click(bool mouse_empty) {
         if (hover_info.block->parent) {
             if (IsKeyDown(KEY_LEFT_ALT) || IsKeyDown(KEY_RIGHT_ALT)) {
                 // Copy argument
-                TraceLog(LOG_INFO, "Copy argument\n");
+                TraceLog(LOG_INFO, "Copy argument");
                 blockchain_add_block(&mouse_blockchain, block_copy(hover_info.block, NULL));
             } else {
                 // Detach argument
-                TraceLog(LOG_INFO, "Detach argument\n");
+                TraceLog(LOG_INFO, "Detach argument");
                 assert(hover_info.prev_argument != NULL);
 
                 blockchain_add_block(&mouse_blockchain, *hover_info.block);
@@ -767,12 +767,12 @@ bool handle_code_editor_click(bool mouse_empty) {
             if (IsKeyDown(KEY_LEFT_ALT) || IsKeyDown(KEY_RIGHT_ALT)) {
                 if (IsKeyDown(KEY_LEFT_CONTROL) || IsKeyDown(KEY_RIGHT_CONTROL)) {
                     // Copy block
-                    TraceLog(LOG_INFO, "Copy block\n");
+                    TraceLog(LOG_INFO, "Copy block");
                     blockchain_free(&mouse_blockchain);
                     mouse_blockchain = blockchain_copy_single(hover_info.blockchain, hover_info.blockchain_index);
                 } else {
                     // Copy chain
-                    TraceLog(LOG_INFO, "Copy chain\n");
+                    TraceLog(LOG_INFO, "Copy chain");
                     blockchain_free(&mouse_blockchain);
                     mouse_blockchain = blockchain_copy(hover_info.blockchain, hover_info.blockchain_index);
                 }
@@ -782,7 +782,7 @@ bool handle_code_editor_click(bool mouse_empty) {
                 hover_info.editor.edit_block = NULL;
                 if (IsKeyDown(KEY_LEFT_CONTROL) || IsKeyDown(KEY_RIGHT_CONTROL)) {
                     // Detach block
-                    TraceLog(LOG_INFO, "Detach block\n");
+                    TraceLog(LOG_INFO, "Detach block");
                     blockchain_detach_single(&mouse_blockchain, hover_info.blockchain, hover_info.blockchain_index);
                     if (vector_size(hover_info.blockchain->blocks) == 0) {
                         blockchain_free(hover_info.blockchain);
@@ -791,7 +791,7 @@ bool handle_code_editor_click(bool mouse_empty) {
                     }
                 } else {
                     // Detach chain
-                    TraceLog(LOG_INFO, "Detach chain\n");
+                    TraceLog(LOG_INFO, "Detach chain");
                     blockchain_detach(&mouse_blockchain, hover_info.blockchain, hover_info.blockchain_index);
                     if (hover_info.blockchain_index == 0) {
                         blockchain_free(hover_info.blockchain);
