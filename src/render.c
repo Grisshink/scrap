@@ -825,6 +825,7 @@ void process_render(void) {
     }
 
     draw_gui();
+    scrap_gui_render();
 
     draw_dropdown_list();
     draw_tooltip();

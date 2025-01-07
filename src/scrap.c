@@ -66,6 +66,7 @@ Sidebar sidebar = {0};
 ScrBlockChain* editor_code = {0};
 DrawStack* draw_stack = NULL;
 ScrBlockChain mouse_blockchain = {0};
+Gui* gui = NULL;
 
 float shader_time = 0.0;
 int blockchain_select_counter = -1;
@@ -156,6 +157,100 @@ const char* get_font_path(char* font_path) {
     return font_path[0] != '/' && font_path[1] != ':' ? into_data_path(font_path) : font_path;
 }
 
+GuiMeasurement scrap_gui_measure_image(void* image, int size) {
+    Texture2D* img = image;
+    return (GuiMeasurement) { img->width * ((float)size / (float)img->height), size };
+}
+
+GuiMeasurement scrap_gui_measure_text(const char* text, int size) {
+    Vector2 text_size = MeasureTextEx(font_cond_shadow, text, size, 0.0);
+    return (GuiMeasurement) { text_size.x, text_size.y };
+}
+
+GuiColor as_gui_color(Color color) {
+    return (GuiColor) { color.r, color.g, color.b, color.a };
+}
+
+Color as_gui_rl_color(GuiColor color) {
+    return (Color) { color.r, color.g, color.b, color.a };
+}
+
+void scrap_gui_process(void) {
+    // Gui
+    gui_begin(gui, 400, 150);
+        // BlockChain
+        gui_layout_begin_vertical(gui, 0, (GuiColor) {0});
+            // Block
+            gui_layout_begin_static(gui, BLOCK_OUTLINE_SIZE * 2, BLOCK_OUTLINE_SIZE * 2, (GuiColor) { 0x00, 0xaa, 0x66, 0xff });
+                gui_layout_begin_horizontal(gui, BLOCK_PADDING, (GuiColor) {0});
+                    // Image
+                    gui_draw_image(gui, &term_tex, BLOCK_IMAGE_SIZE, as_gui_color(WHITE));
+                    // Text
+                    gui_draw_text(gui, "Hello, world!", BLOCK_TEXT_SIZE, as_gui_color(WHITE));
+                    // Argument
+                    gui_layout_begin_static(gui, BLOCK_STRING_PADDING / 2, 0, as_gui_color(WHITE));
+                        gui_layout_set_min_size(gui, conf.font_size - BLOCK_OUTLINE_SIZE * 4, conf.font_size - BLOCK_OUTLINE_SIZE * 4);
+                        gui_draw_text(gui, "arg", BLOCK_TEXT_SIZE, as_gui_color(BLACK));
+                    gui_layout_end_static(gui);
+                    // Text
+                    gui_draw_text(gui, "other text", BLOCK_TEXT_SIZE, as_gui_color(WHITE));
+                gui_layout_end_horizontal(gui);
+            gui_layout_end_static(gui);
+
+            // Block
+            gui_layout_begin_static(gui, BLOCK_OUTLINE_SIZE * 2, BLOCK_OUTLINE_SIZE * 2, (GuiColor) { 0x99, 0x00, 0xff, 0xff });
+                gui_layout_begin_horizontal(gui, BLOCK_PADDING, (GuiColor) {0});
+                    // Image
+                    gui_draw_image(gui, &special_tex, BLOCK_IMAGE_SIZE, as_gui_color(WHITE));
+                    // Text
+                    gui_draw_text(gui, "other block", BLOCK_TEXT_SIZE, as_gui_color(WHITE));
+                gui_layout_end_horizontal(gui);
+            gui_layout_end_static(gui);
+        gui_layout_end_vertical(gui);
+    gui_end(gui);
+}
+
+void scrap_gui_render(void) {
+    DrawCommand* command;
+    GUI_GET_COMMANDS(gui, command) {
+        Texture2D* image = command->data.image;
+
+        switch (command->type) {
+        case DRAWTYPE_UNKNOWN:
+            assert(false && "Got unknown draw type");
+            break;
+        case DRAWTYPE_RECT:
+            DrawRectangle(command->pos_x, command->pos_y, command->width, command->height, as_gui_rl_color(command->color));
+            break;
+        case DRAWTYPE_TEXT:
+            DrawTextEx(font_cond_shadow, command->data.text, (Vector2) { command->pos_x, command->pos_y }, command->height, 0.0, as_gui_rl_color(command->color));
+            break;
+        case DRAWTYPE_IMAGE:
+            DrawTextureEx(
+                *image, 
+                (Vector2) { command->pos_x + SHADOW_DISTANCE, command->pos_y + SHADOW_DISTANCE },
+                0.0,
+                (float)command->height / (float)image->height,
+                (Color) { 0x00, 0x00, 0x00, 0x80 }
+            );
+            DrawTextureEx(
+                *image, 
+                (Vector2) { command->pos_x, command->pos_y},
+                0.0,
+                (float)command->height / (float)image->height,
+                as_gui_rl_color(command->color)
+            );
+            break;
+        default:
+            assert(false && "Unimplemented command render");
+            break;
+        }
+#ifdef DEBUG
+        DrawRectangleLines(command->pos_x, command->pos_y, command->width, command->height, PINK);
+#endif
+    }
+}
+
 void setup(void) {
     run_tex = LoadTexture(into_data_path(DATA_PATH "run.png"));
     SetTextureFilter(run_tex, TEXTURE_FILTER_BILINEAR);
@@ -209,6 +304,12 @@ void setup(void) {
     term_init();
 
     init_gui();
+
+    gui = malloc(sizeof(Gui));
+    gui_init(gui);
+    gui_set_measure_text_func(gui, scrap_gui_measure_text);
+    gui_set_measure_image_func(gui, scrap_gui_measure_image);
+    TraceLog(LOG_INFO, "Allocated %.2f KiB for gui", (float)sizeof(Gui) / 1024.0f);
 }
 
 int main(void) {
@@ -281,6 +382,7 @@ int main(void) {
     }
     vector_free(sidebar.blocks);
     vm_free(&vm);
+    free(gui);
     CloseWindow();
 
     return 0;

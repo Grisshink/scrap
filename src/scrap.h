@@ -21,6 +21,7 @@
 #include "vm.h"
 #include "raylib.h"
 #include "config.h"
+#include "scrap_gui.h"
 
 typedef struct {
     int font_size;
@@ -167,6 +168,7 @@ extern ScrBlockChain* editor_code;
 extern DrawStack* draw_stack;
 extern ScrBlockChain mouse_blockchain;
 extern ScrExec exec;
+extern Gui* gui;
 
 extern Vector2 camera_click_pos;
 extern Vector2 camera_pos;
@@ -181,6 +183,8 @@ extern char* tab_bar_buttons_text[2];
 void blockcode_add_blockchain(BlockCode* blockcode, ScrBlockChain chain);
 void blockcode_remove_blockchain(BlockCode* blockcode, size_t ind);
 void sanitize_links(void);
+void scrap_gui_process(void);
+void scrap_gui_render(void);
 
 // render.c
 void sidebar_init(void);

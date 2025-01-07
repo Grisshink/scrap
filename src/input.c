@@ -968,6 +968,7 @@ void process_input(void) {
     }
 
     update_gui();
+    scrap_gui_process();
 
     if (GetMouseWheelMove() != 0.0) {
         handle_mouse_wheel();

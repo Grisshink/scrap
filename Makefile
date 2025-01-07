@@ -22,8 +22,8 @@ else
 	CFLAGS += -fmax-errors=5
 endif
 
-OBJFILES := $(addprefix src/,filedialogs.o gui.o render.o save.o term.o blocks.o scrap.o vec.o util.o input.o measure.o)
-SCRAP_HEADERS := src/scrap.h src/vm.h src/config.h
+OBJFILES := $(addprefix src/,filedialogs.o gui.o render.o save.o term.o blocks.o scrap.o vec.o util.o input.o measure.o scrap_gui.o)
+SCRAP_HEADERS := src/scrap.h src/vm.h src/config.h src/scrap_gui.h
 EXE_NAME := scrap
 
 LINUX_DIR := $(EXE_NAME)-v$(SCRAP_VERSION)-linux
@@ -77,6 +77,8 @@ $(EXE_NAME): $(OBJFILES)
 scrap.o: scrap.c external/raylib-nuklear.h $(SCRAP_HEADERS)
 	$(CC) $(CFLAGS) -c -o $@ scrap.c
 src/gui.o: src/gui.c $(SCRAP_HEADERS)
+	$(CC) $(CFLAGS) -c -o $@ $<
+src/scrap_gui.o: src/scrap_gui.c src/scrap_gui.h
 	$(CC) $(CFLAGS) -c -o $@ $<
 src/render.o: src/render.c $(SCRAP_HEADERS)
 	$(CC) $(CFLAGS) -c -o $@ $<
