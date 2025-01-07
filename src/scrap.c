@@ -123,7 +123,7 @@ void sanitize_block(ScrBlock* block) {
     for (vec_size_t i = 0; i < vector_size(block->arguments); i++) {
         if (block->arguments[i].type != ARGUMENT_BLOCK) continue;
         if (block->arguments[i].data.block.parent != block) {
-            printf("ERROR: Block %p detached from parent %p! (Got %p)\n", &block->arguments[i].data.block, block, block->arguments[i].data.block.parent);
+            TraceLog(LOG_ERROR, "Block %p detached from parent %p! (Got %p)\n", &block->arguments[i].data.block, block, block->arguments[i].data.block.parent);
             assert(false);
             return;
         }
