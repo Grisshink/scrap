@@ -818,7 +818,7 @@ void process_render(void) {
         };
         DrawTextEx(font_cond, "Scrap v" SCRAP_VERSION, debug_pos, conf.font_size * 0.5, 0.0, (Color) { 0xff, 0xff, 0xff, 0x40 });
         debug_pos.y += conf.font_size * 0.5;
-        DrawTextEx(font_cond, TextFormat("FPS: %d, Frame time: %.3f", GetFPS(), GetFrameTime()), debug_pos, conf.font_size * 0.5, 0.0, (Color) { 0xff, 0xff, 0xff, 0x40 });
+        DrawTextEx(font_cond, TextFormat("FPS: %d, Frame time: %.3f\nCommand count: %zu/%zu", GetFPS(), GetFrameTime(), gui->command_stack_len, COMMAND_STACK_SIZE), debug_pos, conf.font_size * 0.5, 0.0, (Color) { 0xff, 0xff, 0xff, 0x40 });
 #endif
     } else if (current_tab == TAB_OUTPUT) {
         draw_term();

@@ -177,7 +177,8 @@ Color as_gui_rl_color(GuiColor color) {
 
 void scrap_gui_process(void) {
     // Gui
-    gui_begin(gui, 400, 150);
+    gui_begin(gui, GetMouseX(), GetMouseY());
+    //gui_begin(gui, 400, 150);
         // BlockChain
         gui_layout_begin_vertical(gui, 0, (GuiColor) {0});
             // Block
@@ -197,15 +198,33 @@ void scrap_gui_process(void) {
                 gui_layout_end_horizontal(gui);
             gui_layout_end_static(gui);
 
-            // Block
-            gui_layout_begin_static(gui, BLOCK_OUTLINE_SIZE * 2, BLOCK_OUTLINE_SIZE * 2, (GuiColor) { 0x99, 0x00, 0xff, 0xff });
-                gui_layout_begin_horizontal(gui, BLOCK_PADDING, (GuiColor) {0});
-                    // Image
-                    gui_draw_image(gui, &special_tex, BLOCK_IMAGE_SIZE, as_gui_color(WHITE));
-                    // Text
-                    gui_draw_text(gui, "other block", BLOCK_TEXT_SIZE, as_gui_color(WHITE));
+            gui_layout_begin_static(gui, 0, 0, (GuiColor) {0});
+                gui_layout_begin_horizontal(gui, 0, (GuiColor) {0});
+                    gui_draw_rect(gui, BLOCK_CONTROL_INDENT, 0, (GuiColor) {0});
+                    gui_layout_begin_vertical(gui, 0, (GuiColor) {0});
+                        // Block
+                        gui_layout_begin_static(gui, BLOCK_OUTLINE_SIZE * 2, BLOCK_OUTLINE_SIZE * 2, (GuiColor) { 0x99, 0x00, 0xff, 0xff });
+                            gui_layout_begin_horizontal(gui, BLOCK_PADDING, (GuiColor) {0});
+                                // Image
+                                gui_draw_image(gui, &special_tex, BLOCK_IMAGE_SIZE, as_gui_color(WHITE));
+                                // Text
+                                gui_draw_text(gui, "other block", BLOCK_TEXT_SIZE, as_gui_color(WHITE));
+                            gui_layout_end_horizontal(gui);
+                        gui_layout_end_static(gui);
+                        // Block
+                        gui_layout_begin_static(gui, BLOCK_OUTLINE_SIZE * 2, BLOCK_OUTLINE_SIZE * 2, (GuiColor) { 0x99, 0x00, 0xff, 0xff });
+                            gui_layout_begin_horizontal(gui, BLOCK_PADDING, (GuiColor) {0});
+                                // Image
+                                gui_draw_image(gui, &special_tex, BLOCK_IMAGE_SIZE, as_gui_color(WHITE));
+                                // Text
+                                gui_draw_text(gui, "other block", BLOCK_TEXT_SIZE, as_gui_color(WHITE));
+                            gui_layout_end_horizontal(gui);
+                        gui_layout_end_static(gui);
+                    gui_layout_end_vertical(gui);
                 gui_layout_end_horizontal(gui);
+                gui_draw_rect(gui, BLOCK_CONTROL_INDENT, gui->layout_stack[gui->layout_stack_len - 1].size.h, (GuiColor) { 0x00, 0xaa, 0x66, 0xff });
             gui_layout_end_static(gui);
+
         gui_layout_end_vertical(gui);
     gui_end(gui);
 }
@@ -309,6 +328,7 @@ void setup(void) {
     gui_init(gui);
     gui_set_measure_text_func(gui, scrap_gui_measure_text);
     gui_set_measure_image_func(gui, scrap_gui_measure_image);
+    gui_update_window_size(gui, GetScreenWidth(), GetScreenHeight());
     TraceLog(LOG_INFO, "Allocated %.2f KiB for gui", (float)sizeof(Gui) / 1024.0f);
 }
 

@@ -18,6 +18,7 @@
 #include "scrap_gui.h"
 
 #include <assert.h>
+#include <stdbool.h>
 
 #define MAX(x, y) ((x) > (y) ? (x) : (y))
 #define MIN(x, y) ((x) < (y) ? (x) : (y))
@@ -37,6 +38,11 @@ static void layout_adv_horizontal(Layout* layout, GuiMeasurement size) {
     layout->size.w += size.w + layout->data.gap;
     layout->size.h = MAX(size.h, layout->size.h);
     layout->cursor_x += size.w + layout->data.gap;
+}
+
+static bool inside_window(Gui* gui, Element el) {
+    return (el->pos_x + el->width  > 0) && (el->pos_x < gui->win_w) && 
+           (el->pos_y + el->height > 0) && (el->pos_y < gui->win_h);
 }
 
 static Layout* gui_layout_begin(Gui* gui, GuiColor rect_color) {
@@ -69,6 +75,9 @@ static void gui_layout_end(Gui* gui) {
         layout->background->width = layout->size.w;
         layout->background->height = layout->size.h;
         gui_end_element(gui, layout->background);
+        if (!inside_window(gui, layout->background) && layout->background - gui->command_stack == gui->command_stack_len - 1) {
+            gui->command_stack_len--;
+        }
     } else {
         Layout* prev = &gui->layout_stack[gui->layout_stack_len - 1];
         prev->advance(prev, layout->size);
@@ -144,6 +153,11 @@ void gui_set_measure_image_func(Gui* gui, MeasureImageFunc measure_image) {
     gui->measure_image = measure_image;
 }
 
+void gui_update_window_size(Gui* gui, int win_w, int win_h) {
+    gui->win_w = win_w;
+    gui->win_h = win_h;
+}
+
 Element gui_begin_element(Gui* gui) {
     assert(gui->command_stack_len < COMMAND_STACK_SIZE);
 
@@ -179,6 +193,7 @@ void gui_draw_rect(Gui* gui, int size_x, int size_y, GuiColor color) {
     el->height = size_y;
     el->color = color;
     gui_end_element(gui, el);
+    if (!inside_window(gui, el)) gui->command_stack_len--;
 }
 
 void gui_draw_text(Gui* gui, const char* text, int size, GuiColor color) {
@@ -191,6 +206,7 @@ void gui_draw_text(Gui* gui, const char* text, int size, GuiColor color) {
     el->color = color;
     el->data.text = text;
     gui_end_element(gui, el);
+    if (!inside_window(gui, el)) gui->command_stack_len--;
 }
 
 void gui_draw_image(Gui* gui, void* image, int size, GuiColor color) {
@@ -203,5 +219,5 @@ void gui_draw_image(Gui* gui, void* image, int size, GuiColor color) {
     el->color = color;
     el->data.image = image;
     gui_end_element(gui, el);
-    
+    if (!inside_window(gui, el)) gui->command_stack_len--;
 }

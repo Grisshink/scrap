@@ -87,11 +87,14 @@ typedef struct {
 
     MeasureTextFunc measure_text;
     MeasureImageFunc measure_image;
+
+    int win_w, win_h;
 } Gui;
 
 #define GUI_GET_COMMANDS(gui, command) while (gui->command_stack_iter < gui->command_stack_len && (command = &gui->command_stack[gui->command_stack_iter++]))
 
 void gui_begin(Gui* gui, int pos_x, int pos_y);
+void gui_update_window_size(Gui* gui, int win_w, int win_h);
 void gui_init(Gui* gui);
 void gui_set_measure_text_func(Gui* gui, MeasureTextFunc measure_text);
 void gui_set_measure_image_func(Gui* gui, MeasureImageFunc measure_image);
