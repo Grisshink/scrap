@@ -29,6 +29,12 @@ static void layout_adv_static(Gui* gui, Layout* layout, GuiMeasurement size) {
     layout->size.h = MAX(size.h + layout->data.padding.h * 2, layout->size.h);
 }
 
+static void layout_adv_fixed(Gui* gui, Layout* layout, GuiMeasurement size) {
+    (void) gui;
+    (void) layout;
+    (void) size;
+}
+
 static void layout_adv_vertical(Gui* gui, Layout* layout, GuiMeasurement size) {
     int prev_w = layout->size.w;
     size_t prev_command_end = layout->command_end;
@@ -43,7 +49,7 @@ static void layout_adv_vertical(Gui* gui, Layout* layout, GuiMeasurement size) {
             int offset = (layout->size.w - prev_w) / (layout->align == ALIGN_CENTER ? 2 : 1);
             for (size_t i = layout->command_start; i < prev_command_end; i++) gui->command_stack[i].pos_x += offset;
         } else {
-            int offset = (layout->size.w - gui->command_stack[prev_command_end].width) / (layout->align == ALIGN_CENTER ? 2 : 1);
+            int offset = (layout->size.w - size.w /*gui->command_stack[prev_command_end].width*/) / (layout->align == ALIGN_CENTER ? 2 : 1);
             for (size_t i = prev_command_end; i < layout->command_end; i++) gui->command_stack[i].pos_x += offset;
         }
     }
@@ -63,7 +69,7 @@ static void layout_adv_horizontal(Gui* gui, Layout* layout, GuiMeasurement size)
             int offset = (layout->size.h - prev_h) / (layout->align == ALIGN_CENTER ? 2 : 1);
             for (size_t i = layout->command_start; i < prev_command_end; i++) gui->command_stack[i].pos_y += offset;
         } else {
-            int offset = (layout->size.h - gui->command_stack[prev_command_end].height) / (layout->align == ALIGN_CENTER ? 2 : 1);
+            int offset = (layout->size.h - size.h /*gui->command_stack[prev_command_end].height*/) / (layout->align == ALIGN_CENTER ? 2 : 1);
             for (size_t i = prev_command_end; i < layout->command_end; i++) gui->command_stack[i].pos_y += offset;
         }
     }
@@ -182,6 +188,20 @@ void gui_layout_end_horizontal(Gui* gui) {
     gui_layout_end(gui);
 }
 
+void gui_layout_begin_fixed(Gui* gui, int size_x, int size_y, GuiColor rect_color, GuiColor border_color, int border_width) {
+    Layout* layout = gui_layout_begin(gui, rect_color, border_color, border_width);
+    layout->advance = layout_adv_fixed;
+    layout->type = LAYOUT_FIXED;
+    layout->size = (GuiMeasurement) { size_x, size_y };
+
+    gui_begin_scissor(gui, size_x, size_y);
+}
+
+void gui_layout_end_fixed(Gui* gui) {
+    gui_end_scissor(gui);
+    gui_layout_end(gui);
+}
+
 void gui_init(Gui* gui) {
     gui->measure_text = NULL;
     gui->measure_image = NULL;
@@ -237,8 +257,24 @@ void gui_end_element(Gui* gui, Element element) {
 void gui_layout_set_min_size(Gui* gui, int width, int height) {
     assert(gui->layout_stack_len > 0);
     Layout* lay = &gui->layout_stack[gui->layout_stack_len - 1];
-    lay->size.w = lay->size.w == 0 ? width : lay->size.w;
-    lay->size.h = lay->size.h == 0 ? height : lay->size.h;
+    lay->size.w = MAX(width, lay->size.w);
+    lay->size.h = MAX(height, lay->size.h);
+}
+
+void gui_begin_scissor(Gui* gui, int size_x, int size_y) {
+    Element el = gui_begin_element(gui);
+    el->type = DRAWTYPE_SCISSOR_BEGIN;
+    el->width = size_x;
+    el->height = size_y;
+    gui_end_element(gui, el);
+    //if (!inside_window(gui, el)) gui->command_stack_len--;
+}
+
+void gui_end_scissor(Gui* gui) {
+    Element el = gui_begin_element(gui);
+    el->type = DRAWTYPE_SCISSOR_END;
+    gui_end_element(gui, el);
+    //if (!inside_window(gui, el)) gui->command_stack_len--;
 }
 
 void gui_draw_rect(Gui* gui, int size_x, int size_y, GuiColor color) {
@@ -262,15 +298,16 @@ void gui_draw_border(Gui* gui, int size_x, int size_y, int border_width, GuiColo
     if (!inside_window(gui, el)) gui->command_stack_len--;
 }
 
-void gui_draw_text(Gui* gui, const char* text, int size, GuiColor color) {
+void gui_draw_text(Gui* gui, void* font, const char* text, int size, GuiColor color) {
     assert(gui->measure_text != NULL);
     Element el = gui_begin_element(gui);
-    GuiMeasurement text_size = gui->measure_text(text, size);
+    GuiMeasurement text_size = gui->measure_text(font, text, size);
     el->type = DRAWTYPE_TEXT;
     el->width = text_size.w;
     el->height = text_size.h;
     el->color = color;
-    el->data.text = text;
+    el->data.text.text = text;
+    el->data.text.font = font;
     gui_end_element(gui, el);
     if (!inside_window(gui, el)) gui->command_stack_len--;
 }

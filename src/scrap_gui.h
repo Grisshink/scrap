@@ -33,16 +33,23 @@ typedef struct {
     unsigned char r, g, b, a;
 } GuiColor;
 
+typedef struct {
+    void* font;
+    const char* text;
+} GuiTextData;
+
 typedef enum {
     DRAWTYPE_UNKNOWN = 0,
     DRAWTYPE_RECT,
     DRAWTYPE_TEXT,
     DRAWTYPE_BORDER,
     DRAWTYPE_IMAGE,
+    DRAWTYPE_SCISSOR_BEGIN,
+    DRAWTYPE_SCISSOR_END,
 } DrawType;
 
 typedef union {
-    const char* text;
+    GuiTextData text;
     void* image;
     void* custom_data;
     int border_width;
@@ -70,6 +77,7 @@ typedef enum {
     LAYOUT_STATIC,
     LAYOUT_VERTICAL,
     LAYOUT_HORIZONTAL,
+    LAYOUT_FIXED,
 } LayoutType;
 
 typedef union {
@@ -90,7 +98,7 @@ typedef struct Layout {
     void (*advance)(Gui* gui, struct Layout* layout, GuiMeasurement size);
 } Layout;
 
-typedef GuiMeasurement (*MeasureTextFunc)(const char* text, int size);
+typedef GuiMeasurement (*MeasureTextFunc)(void* font, const char* text, int size);
 typedef GuiMeasurement (*MeasureImageFunc)(void* image, int size);
 
 struct Gui {
@@ -127,12 +135,18 @@ void gui_layout_end_vertical(Gui* gui);
 void gui_layout_begin_horizontal(Gui* gui, int gap, AlignmentType align, GuiColor rect_color, GuiColor border_color, int border_width);
 void gui_layout_end_horizontal(Gui* gui);
 
+void gui_layout_begin_fixed(Gui* gui, int size_x, int size_y, GuiColor rect_color, GuiColor border_color, int border_width);
+void gui_layout_end_fixed(Gui* gui);
+
 void gui_layout_set_min_size(Gui* gui, int width, int height);
 
 void gui_draw_rect(Gui* gui, int size_x, int size_y, GuiColor color);
 void gui_draw_border(Gui* gui, int size_x, int size_y, int border_width, GuiColor color);
-void gui_draw_text(Gui* gui, const char* text, int size, GuiColor color);
+void gui_draw_text(Gui* gui, void* font, const char* text, int size, GuiColor color);
 void gui_draw_image(Gui* gui, void* image, int size, GuiColor color);
+
+void gui_begin_scissor(Gui* gui, int size_x, int size_y);
+void gui_end_scissor(Gui* gui);
 
 Element gui_begin_element(Gui* gui);
 void gui_end_element(Gui* gui, Element element);
