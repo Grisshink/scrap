@@ -27,6 +27,7 @@
 #define MOD(x, y) (((x) % (y) + (y)) % (y))
 #define LERP(min, max, t) (((max) - (min)) * (t) + (min))
 #define UNLERP(min, max, v) (((float)(v) - (float)(min)) / ((float)(max) - (float)(min)))
+#define CONVERT_COLOR(color, type) (type) { color.r, color.g, color.b, color.a }
 
 void sidebar_init(void) {
     sidebar.blocks = vector_create();
@@ -731,6 +732,228 @@ void prerender_font_shadow(Font* font) {
     UnloadTexture(font->texture);
     font->texture = LoadTextureFromImage(render_img);
     SetTextureFilter(font->texture, TEXTURE_FILTER_BILINEAR);
+}
+
+void scrap_gui_draw_blockdef(ScrBlockdef* blockdef) {
+    bool collision = false;
+    Color block_color = CONVERT_COLOR(blockdef->color, Color);
+    Color outline_color = ColorBrightness(block_color, collision ? 0.5 : -0.2);
+
+    gui_layout_begin_static(gui, BLOCK_OUTLINE_SIZE * 2, BLOCK_OUTLINE_SIZE * 2, CONVERT_COLOR(block_color, GuiColor), CONVERT_COLOR(outline_color, GuiColor), BLOCK_OUTLINE_SIZE);
+    gui_layout_begin_horizontal(gui, BLOCK_PADDING, ALIGN_CENTER, NO_COLOR);
+    gui_layout_set_min_size(gui, 0, conf.font_size - BLOCK_OUTLINE_SIZE * 4);
+
+    for (size_t i = 0; i < vector_size(blockdef->inputs); i++) {
+        ScrInput* input = &blockdef->inputs[i];
+
+        switch (input->type) {
+        case INPUT_TEXT_DISPLAY:
+            gui_draw_text(gui, &font_cond_shadow, input->data.stext.text, BLOCK_TEXT_SIZE, CONVERT_COLOR(WHITE, GuiColor));
+            break;
+        case INPUT_IMAGE_DISPLAY:
+            gui_draw_image(gui, input->data.simage.image.image_ptr, BLOCK_IMAGE_SIZE, CONVERT_COLOR(WHITE, GuiColor));
+            break;
+        case INPUT_ARGUMENT:
+            scrap_gui_draw_blockdef(input->data.arg.blockdef);
+            break;
+        default:
+            gui_draw_text(gui, &font_cond_shadow, "NODEF", BLOCK_TEXT_SIZE, CONVERT_COLOR(RED, GuiColor));
+            break;
+        }
+    }
+    gui_layout_end_horizontal(gui);
+    gui_layout_end_static(gui);
+}
+
+void scrap_gui_draw_block(ScrBlock* block) {
+    bool collision = false;
+    Color block_color = CONVERT_COLOR(block->blockdef->color, Color);
+    Color dropdown_color = ColorBrightness(block_color, collision ? 0.0 : -0.3);
+    Color outline_color = ColorBrightness(block_color, collision ? 0.5 : -0.2);
+
+    gui_layout_begin_static(gui, BLOCK_OUTLINE_SIZE * 2, BLOCK_OUTLINE_SIZE * 2, CONVERT_COLOR(block_color, GuiColor), CONVERT_COLOR(outline_color, GuiColor), BLOCK_OUTLINE_SIZE);
+    gui_layout_begin_horizontal(gui, BLOCK_PADDING, ALIGN_CENTER, NO_COLOR);
+    gui_layout_set_min_size(gui, 0, conf.font_size - BLOCK_OUTLINE_SIZE * 4);
+
+    size_t arg_id = 0;
+    for (size_t i = 0; i < vector_size(block->blockdef->inputs); i++) {
+        ScrInput* input = &block->blockdef->inputs[i];
+        ScrArgument* arg = &block->arguments[arg_id];
+
+        switch (input->type) {
+        case INPUT_TEXT_DISPLAY:
+            gui_draw_text(gui, &font_cond_shadow, input->data.stext.text, BLOCK_TEXT_SIZE, CONVERT_COLOR(WHITE, GuiColor));
+            break;
+        case INPUT_IMAGE_DISPLAY:
+            gui_draw_image(gui, input->data.simage.image.image_ptr, BLOCK_IMAGE_SIZE, CONVERT_COLOR(WHITE, GuiColor));
+            break;
+        case INPUT_ARGUMENT:
+            switch (arg->type) {
+            case ARGUMENT_TEXT:
+            case ARGUMENT_CONST_STRING:
+                gui_layout_begin_static(gui, BLOCK_STRING_PADDING / 2, 0, CONVERT_COLOR(WHITE, GuiColor), NO_BORDER);
+                    gui_layout_set_min_size(gui, conf.font_size - BLOCK_OUTLINE_SIZE * 4, 0);
+                    gui_layout_begin_horizontal(gui, 0, ALIGN_CENTER, NO_COLOR);
+                        gui_layout_set_min_size(gui, 0, conf.font_size - BLOCK_OUTLINE_SIZE * 4);
+                        gui_draw_text(gui, &font_cond, arg->data.text, BLOCK_TEXT_SIZE, CONVERT_COLOR(BLACK, GuiColor));
+                    gui_layout_end_horizontal(gui);
+                gui_layout_end_static(gui);
+                break;
+            case ARGUMENT_BLOCK:
+                scrap_gui_draw_block(&arg->data.block);
+                break;
+            default:
+                break;
+            }
+            arg_id++;
+            break;
+        case INPUT_DROPDOWN:
+            assert(arg->type == ARGUMENT_CONST_STRING);
+            gui_layout_begin_static(gui, BLOCK_STRING_PADDING / 2, 0, CONVERT_COLOR(dropdown_color, GuiColor), NO_BORDER);
+                gui_layout_begin_horizontal(gui, 0, ALIGN_CENTER, NO_COLOR);
+                    gui_layout_set_min_size(gui, 0, conf.font_size - BLOCK_OUTLINE_SIZE * 4);
+                    gui_draw_text(gui, &font_cond_shadow, arg->data.text, BLOCK_TEXT_SIZE, CONVERT_COLOR(WHITE, GuiColor));
+                    gui_draw_image(gui, &drop_tex, BLOCK_IMAGE_SIZE, CONVERT_COLOR(WHITE, GuiColor));
+                gui_layout_end_horizontal(gui);
+            gui_layout_end_static(gui);
+            arg_id++;
+            break;
+        case INPUT_BLOCKDEF_EDITOR:
+            assert(arg->type == ARGUMENT_BLOCKDEF);
+            gui_layout_begin_static(gui, BLOCK_OUTLINE_SIZE * 2, BLOCK_OUTLINE_SIZE, CONVERT_COLOR(dropdown_color, GuiColor), NO_BORDER);
+                gui_layout_begin_horizontal(gui, BLOCK_PADDING, ALIGN_CENTER, NO_COLOR);
+                    scrap_gui_draw_blockdef(arg->data.blockdef);
+                    gui_layout_begin_static(gui, 0, 0, (GuiColor) { 0xff, 0xff, 0xff, 0x40 }, NO_BORDER);
+                        gui_draw_image(gui, &edit_tex, BLOCK_IMAGE_SIZE, CONVERT_COLOR(WHITE, GuiColor));
+                    gui_layout_end_static(gui);
+                    gui_layout_begin_static(gui, 0, 0, (GuiColor) { 0xff, 0xff, 0xff, 0x40 }, NO_BORDER);
+                        gui_draw_image(gui, &close_tex, BLOCK_IMAGE_SIZE, CONVERT_COLOR(WHITE, GuiColor));
+                    gui_layout_end_static(gui);
+                gui_layout_end_horizontal(gui);
+            gui_layout_end_static(gui);
+            arg_id++;
+            break;
+        default:
+            gui_draw_text(gui, &font_cond_shadow, "NODEF", BLOCK_TEXT_SIZE, CONVERT_COLOR(RED, GuiColor));
+            break;
+        }
+    }
+    gui_layout_end_horizontal(gui);
+    gui_layout_end_static(gui);
+}
+
+void scrap_gui_draw_button(const char* text, int size) {
+    gui_layout_begin_static(gui, conf.font_size * 0.3, 0, NO_COLOR);
+        gui_layout_begin_horizontal(gui, 0, ALIGN_CENTER, NO_COLOR);
+            gui_layout_set_min_size(gui, 0, size);
+            gui_draw_text(gui, &font_cond, text, conf.font_size * 0.6, CONVERT_COLOR(WHITE, GuiColor));
+        gui_layout_end_horizontal(gui);
+    gui_layout_end_static(gui);
+}
+
+void scrap_gui_draw_top_bar(void) {
+    gui_layout_begin_fixed(gui, GetScreenWidth(), conf.font_size * 1.2, (GuiColor) { 0x30, 0x30, 0x30, 0xff }, NO_BORDER);
+        gui_layout_begin_static(gui, 5, 0, NO_COLOR);
+            gui_layout_begin_horizontal(gui, 10, ALIGN_CENTER, NO_COLOR);
+                gui_layout_set_min_size(gui, 0, conf.font_size * 1.2);
+                gui_draw_image(gui, &logo_tex, logo_tex.height, CONVERT_COLOR(WHITE, GuiColor));
+                gui_draw_text(gui, &font_eb, "Scrap", conf.font_size * 0.8, CONVERT_COLOR(WHITE, GuiColor));
+
+                gui_layout_begin_horizontal(gui, 0, ALIGN_TOP, NO_COLOR);
+                    scrap_gui_draw_button("File", conf.font_size * 1.2);
+                    scrap_gui_draw_button("Settings", conf.font_size * 1.2);
+                    scrap_gui_draw_button("About", conf.font_size * 1.2);
+                gui_layout_end_horizontal(gui);
+            gui_layout_end_horizontal(gui);
+        gui_layout_end_static(gui);
+    gui_layout_end_fixed(gui);
+}
+
+void scrap_gui_draw_sidebar(void) {
+    gui_layout_begin_fixed(gui, conf.side_bar_size, GetScreenHeight(), (GuiColor) { 0x00, 0x00, 0x00, 0x80 }, NO_BORDER);
+        gui_layout_begin_static(gui, SIDE_BAR_PADDING, SIDE_BAR_PADDING, NO_COLOR);
+            gui_layout_begin_vertical(gui, SIDE_BAR_PADDING, ALIGN_LEFT, NO_COLOR);
+                for (size_t i = dropdown.scroll_amount; i < vector_size(sidebar.blocks); i++) {
+                    scrap_gui_draw_block(&sidebar.blocks[i]);
+                }
+            gui_layout_end_vertical(gui);
+        gui_layout_end_static(gui);
+    gui_layout_end_fixed(gui);
+}
+
+void scrap_gui_process(void) {
+    // Gui
+    gui_begin(gui, 0, 0);
+        gui_layout_begin_vertical(gui, 0, ALIGN_LEFT, NO_COLOR);
+            scrap_gui_draw_top_bar();
+            scrap_gui_draw_sidebar();
+        gui_layout_end_vertical(gui);
+    gui_end(gui);
+}
+
+void scrap_gui_render(void) {
+    DrawCommand* command;
+    GUI_GET_COMMANDS(gui, command) {
+        Texture2D* image = command->data.image;
+
+        switch (command->type) {
+        case DRAWTYPE_UNKNOWN:
+            assert(false && "Got unknown draw type");
+            break;
+        case DRAWTYPE_BORDER:
+            DrawRectangleLinesEx((Rectangle) { command->pos_x, command->pos_y, command->width, command->height }, command->data.border_width, CONVERT_COLOR(command->color, Color));
+            break;
+        case DRAWTYPE_RECT:
+            DrawRectangle(command->pos_x, command->pos_y, command->width, command->height, CONVERT_COLOR(command->color, Color));
+            break;
+        case DRAWTYPE_TEXT:
+            DrawTextEx(
+                *(Font*)command->data.text.font, 
+                command->data.text.text, 
+                (Vector2) { command->pos_x, command->pos_y }, 
+                command->height, 
+                0.0, 
+                CONVERT_COLOR(command->color, Color)
+            );
+            break;
+        case DRAWTYPE_IMAGE:
+            DrawTextureEx(
+                *image, 
+                (Vector2) { command->pos_x + SHADOW_DISTANCE, command->pos_y + SHADOW_DISTANCE },
+                0.0,
+                (float)command->height / (float)image->height,
+                (Color) { 0x00, 0x00, 0x00, 0x80 }
+            );
+            DrawTextureEx(
+                *image, 
+                (Vector2) { command->pos_x, command->pos_y},
+                0.0,
+                (float)command->height / (float)image->height,
+                CONVERT_COLOR(command->color, Color)
+            );
+            break;
+        case DRAWTYPE_SCISSOR_BEGIN:
+            BeginScissorMode(command->pos_x, command->pos_y, command->width, command->height);
+            break;
+        case DRAWTYPE_SCISSOR_END:
+            EndScissorMode();
+            break;
+        default:
+            assert(false && "Unimplemented command render");
+            break;
+        }
+#ifdef DEBUG
+        DrawRectangleLinesEx((Rectangle) { command->pos_x, command->pos_y, command->width, command->height }, 1.0, PINK);
+#endif
+    }
+}
+
+void scrap_gui_process_render(void) {
+    scrap_gui_process();
+
+    ClearBackground(GetColor(0x202020ff));
+    draw_dots();
+    scrap_gui_render();
 }
 
 void process_render(void) {

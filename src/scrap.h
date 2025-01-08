@@ -183,14 +183,13 @@ extern char* tab_bar_buttons_text[2];
 void blockcode_add_blockchain(BlockCode* blockcode, ScrBlockChain chain);
 void blockcode_remove_blockchain(BlockCode* blockcode, size_t ind);
 void sanitize_links(void);
-void scrap_gui_process(void);
-void scrap_gui_render(void);
 
 // render.c
 void sidebar_init(void);
 void actionbar_show(const char* text);
 void process_render(void);
 void prerender_font_shadow(Font* font);
+void scrap_gui_process_render(void);
 
 // input.c
 void process_input(void);
