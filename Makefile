@@ -74,8 +74,8 @@ $(EXE_NAME): $(OBJFILES)
 	make -C raylib/src CC=$(CC) CUSTOM_CFLAGS=-DSUPPORT_FILEFORMAT_SVG PLATFORM_OS=$(TARGET)
 	$(CC) $(CFLAGS) -o $@ $^ raylib/src/libraylib.a $(LDFLAGS)
 
-scrap.o: scrap.c external/raylib-nuklear.h $(SCRAP_HEADERS)
-	$(CC) $(CFLAGS) -c -o $@ scrap.c
+src/scrap.o: src/scrap.c external/raylib-nuklear.h $(SCRAP_HEADERS)
+	$(CC) $(CFLAGS) -c -o $@ $<
 src/gui.o: src/gui.c $(SCRAP_HEADERS)
 	$(CC) $(CFLAGS) -c -o $@ $<
 src/scrap_gui.o: src/scrap_gui.c src/scrap_gui.h
