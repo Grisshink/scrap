@@ -23,6 +23,8 @@
 #define COMMAND_STACK_SIZE 65536
 #define LAYOUT_STACK_SIZE 4096
 
+typedef struct Gui Gui;
+
 typedef struct {
     int w, h;
 } GuiMeasurement;
@@ -35,6 +37,7 @@ typedef enum {
     DRAWTYPE_UNKNOWN = 0,
     DRAWTYPE_RECT,
     DRAWTYPE_TEXT,
+    DRAWTYPE_BORDER,
     DRAWTYPE_IMAGE,
 } DrawType;
 
@@ -42,6 +45,7 @@ typedef union {
     const char* text;
     void* image;
     void* custom_data;
+    int border_width;
 } DrawData;
 
 typedef struct {
@@ -53,6 +57,14 @@ typedef struct {
 } DrawCommand;
 
 typedef DrawCommand* Element;
+
+typedef enum {
+    ALIGN_LEFT = 0,
+    ALIGN_CENTER,
+    ALIGN_RIGHT,
+    ALIGN_TOP = 0,
+    ALIGN_BOTTOM = 2,
+} AlignmentType;
 
 typedef enum {
     LAYOUT_STATIC,
@@ -70,14 +82,17 @@ typedef struct Layout {
     LayoutData data;
     GuiMeasurement size;
     int cursor_x, cursor_y;
+    size_t command_start;
+    size_t command_end;
+    AlignmentType align;
     Element background;
-    void (*advance)(struct Layout* layout, GuiMeasurement size);
+    void (*advance)(Gui* gui, struct Layout* layout, GuiMeasurement size);
 } Layout;
 
 typedef GuiMeasurement (*MeasureTextFunc)(const char* text, int size);
 typedef GuiMeasurement (*MeasureImageFunc)(void* image, int size);
 
-typedef struct {
+struct Gui {
     Layout layout_stack[LAYOUT_STACK_SIZE];
     size_t layout_stack_len;
 
@@ -89,7 +104,7 @@ typedef struct {
     MeasureImageFunc measure_image;
 
     int win_w, win_h;
-} Gui;
+};
 
 #define GUI_GET_COMMANDS(gui, command) while (gui->command_stack_iter < gui->command_stack_len && (command = &gui->command_stack[gui->command_stack_iter++]))
 
@@ -102,13 +117,17 @@ void gui_end(Gui* gui);
 
 void gui_layout_begin_static(Gui* gui, int pad_x, int pad_y, GuiColor rect_color);
 void gui_layout_end_static(Gui* gui);
-void gui_layout_begin_vertical(Gui* gui, int gap, GuiColor rect_color);
+
+void gui_layout_begin_vertical(Gui* gui, int gap, AlignmentType align, GuiColor rect_color);
 void gui_layout_end_vertical(Gui* gui);
-void gui_layout_begin_horizontal(Gui* gui, int gap, GuiColor rect_color);
+
+void gui_layout_begin_horizontal(Gui* gui, int gap, AlignmentType align, GuiColor rect_color);
 void gui_layout_end_horizontal(Gui* gui);
+
 void gui_layout_set_min_size(Gui* gui, int width, int height);
 
 void gui_draw_rect(Gui* gui, int size_x, int size_y, GuiColor color);
+void gui_draw_border(Gui* gui, int size_x, int size_y, int border_width, GuiColor color);
 void gui_draw_text(Gui* gui, const char* text, int size, GuiColor color);
 void gui_draw_image(Gui* gui, void* image, int size, GuiColor color);
 
