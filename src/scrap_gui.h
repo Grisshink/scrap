@@ -86,6 +86,7 @@ typedef struct Layout {
     size_t command_end;
     AlignmentType align;
     Element background;
+    Element background_border;
     void (*advance)(Gui* gui, struct Layout* layout, GuiMeasurement size);
 } Layout;
 
@@ -99,7 +100,6 @@ struct Gui {
     DrawCommand command_stack[COMMAND_STACK_SIZE];
     size_t command_stack_len;
     size_t command_stack_iter;
-
     MeasureTextFunc measure_text;
     MeasureImageFunc measure_image;
 
@@ -107,6 +107,9 @@ struct Gui {
 };
 
 #define GUI_GET_COMMANDS(gui, command) while (gui->command_stack_iter < gui->command_stack_len && (command = &gui->command_stack[gui->command_stack_iter++]))
+#define TRANSPARENT (GuiColor) {0}
+#define NO_BORDER TRANSPARENT, 0
+#define NO_COLOR TRANSPARENT, NO_BORDER
 
 void gui_begin(Gui* gui, int pos_x, int pos_y);
 void gui_update_window_size(Gui* gui, int win_w, int win_h);
@@ -115,13 +118,13 @@ void gui_set_measure_text_func(Gui* gui, MeasureTextFunc measure_text);
 void gui_set_measure_image_func(Gui* gui, MeasureImageFunc measure_image);
 void gui_end(Gui* gui);
 
-void gui_layout_begin_static(Gui* gui, int pad_x, int pad_y, GuiColor rect_color);
+void gui_layout_begin_static(Gui* gui, int pad_x, int pad_y, GuiColor rect_color, GuiColor border_color, int border_width);
 void gui_layout_end_static(Gui* gui);
 
-void gui_layout_begin_vertical(Gui* gui, int gap, AlignmentType align, GuiColor rect_color);
+void gui_layout_begin_vertical(Gui* gui, int gap, AlignmentType align, GuiColor rect_color, GuiColor border_color, int border_width);
 void gui_layout_end_vertical(Gui* gui);
 
-void gui_layout_begin_horizontal(Gui* gui, int gap, AlignmentType align, GuiColor rect_color);
+void gui_layout_begin_horizontal(Gui* gui, int gap, AlignmentType align, GuiColor rect_color, GuiColor border_color, int border_width);
 void gui_layout_end_horizontal(Gui* gui);
 
 void gui_layout_set_min_size(Gui* gui, int width, int height);

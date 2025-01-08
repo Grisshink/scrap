@@ -74,7 +74,7 @@ static bool inside_window(Gui* gui, Element el) {
            (el->pos_y + el->height > 0) && (el->pos_y < gui->win_h);
 }
 
-static Layout* gui_layout_begin(Gui* gui, GuiColor rect_color) {
+static Layout* gui_layout_begin(Gui* gui, GuiColor rect_color, GuiColor border_color, int border_width) {
     assert(gui->layout_stack_len < LAYOUT_STACK_SIZE);
 
     Layout* layout = &gui->layout_stack[gui->layout_stack_len++];
@@ -92,6 +92,14 @@ static Layout* gui_layout_begin(Gui* gui, GuiColor rect_color) {
         layout->background->type = DRAWTYPE_RECT;
         layout->background->color = rect_color;
     }
+    if (border_color.a == 0) {
+        layout->background_border = NULL;
+    } else {
+        layout->background_border = gui_begin_element(gui);
+        layout->background_border->type = DRAWTYPE_BORDER;
+        layout->background_border->data.border_width = border_width;
+        layout->background_border->color = border_color;
+    }
     return layout;
 }
 
@@ -103,6 +111,18 @@ static void gui_layout_end(Gui* gui) {
     if (layout->background) {
         layout->background->width = layout->size.w;
         layout->background->height = layout->size.h;
+    }
+    if (layout->background_border) {
+        layout->background_border->width = layout->size.w;
+        layout->background_border->height = layout->size.h;
+    }
+
+    if (layout->background_border) {
+        gui_end_element(gui, layout->background_border);
+        if (!inside_window(gui, layout->background_border) && (size_t)(layout->background_border - gui->command_stack) == gui->command_stack_len - 1) {
+            gui->command_stack_len--;
+        }
+    } else if (layout->background) {
         gui_end_element(gui, layout->background);
         if (!inside_window(gui, layout->background) && (size_t)(layout->background - gui->command_stack) == gui->command_stack_len - 1) {
             gui->command_stack_len--;
@@ -113,8 +133,8 @@ static void gui_layout_end(Gui* gui) {
     }
 }
 
-void gui_layout_begin_static(Gui* gui, int pad_x, int pad_y, GuiColor rect_color) {
-    Layout* layout = gui_layout_begin(gui, rect_color);
+void gui_layout_begin_static(Gui* gui, int pad_x, int pad_y, GuiColor rect_color, GuiColor border_color, int border_width) {
+    Layout* layout = gui_layout_begin(gui, rect_color, border_color, border_width);
     layout->advance = layout_adv_static;
     layout->type = LAYOUT_STATIC;
     layout->size = (GuiMeasurement) { pad_x * 2, pad_y * 2 };
@@ -128,8 +148,8 @@ void gui_layout_end_static(Gui* gui) {
     gui_layout_end(gui);
 }
 
-void gui_layout_begin_vertical(Gui* gui, int gap, AlignmentType align, GuiColor rect_color) {
-    Layout* layout = gui_layout_begin(gui, rect_color);
+void gui_layout_begin_vertical(Gui* gui, int gap, AlignmentType align, GuiColor rect_color, GuiColor border_color, int border_width) {
+    Layout* layout = gui_layout_begin(gui, rect_color, border_color, border_width);
     layout->advance = layout_adv_vertical;
     layout->type = LAYOUT_VERTICAL;
     layout->size = (GuiMeasurement) {0};
@@ -145,8 +165,8 @@ void gui_layout_end_vertical(Gui* gui) {
     gui_layout_end(gui);
 }
 
-void gui_layout_begin_horizontal(Gui* gui, int gap, AlignmentType align, GuiColor rect_color) {
-    Layout* layout = gui_layout_begin(gui, rect_color);
+void gui_layout_begin_horizontal(Gui* gui, int gap, AlignmentType align, GuiColor rect_color, GuiColor border_color, int border_width) {
+    Layout* layout = gui_layout_begin(gui, rect_color, border_color, border_width);
     layout->advance = layout_adv_horizontal;
     layout->type = LAYOUT_HORIZONTAL;
     layout->size = (GuiMeasurement) {0};
@@ -171,7 +191,7 @@ void gui_begin(Gui* gui, int pos_x, int pos_y) {
     gui->layout_stack_len = 0;
     gui->command_stack_len = 0;
     gui->command_stack_iter = 0;
-    gui_layout_begin_static(gui, 0, 0, (GuiColor) {0});
+    gui_layout_begin_static(gui, 0, 0, NO_COLOR);
     gui->layout_stack[0].cursor_x = pos_x;
     gui->layout_stack[0].cursor_y = pos_y;
 }
