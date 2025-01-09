@@ -739,8 +739,11 @@ void scrap_gui_draw_blockdef(ScrBlockdef* blockdef) {
     Color block_color = CONVERT_COLOR(blockdef->color, Color);
     Color outline_color = ColorBrightness(block_color, collision ? 0.5 : -0.2);
 
-    gui_layout_begin_static(gui, BLOCK_OUTLINE_SIZE * 2, BLOCK_OUTLINE_SIZE * 2, CONVERT_COLOR(block_color, GuiColor), CONVERT_COLOR(outline_color, GuiColor), BLOCK_OUTLINE_SIZE);
-    gui_layout_begin_horizontal(gui, BLOCK_PADDING, ALIGN_CENTER, NO_COLOR);
+    gui_layout_begin_static(gui, BLOCK_OUTLINE_SIZE * 2, BLOCK_OUTLINE_SIZE * 2);
+    gui_layout_draw_rect(gui, CONVERT_COLOR(block_color, GuiColor));
+    gui_layout_draw_border(gui, CONVERT_COLOR(outline_color, GuiColor), BLOCK_OUTLINE_SIZE);
+
+    gui_layout_begin_horizontal(gui, BLOCK_PADDING, ALIGN_CENTER);
     gui_layout_set_min_size(gui, 0, conf.font_size - BLOCK_OUTLINE_SIZE * 4);
 
     for (size_t i = 0; i < vector_size(blockdef->inputs); i++) {
@@ -771,8 +774,11 @@ void scrap_gui_draw_block(ScrBlock* block) {
     Color dropdown_color = ColorBrightness(block_color, collision ? 0.0 : -0.3);
     Color outline_color = ColorBrightness(block_color, collision ? 0.5 : -0.2);
 
-    gui_layout_begin_static(gui, BLOCK_OUTLINE_SIZE * 2, BLOCK_OUTLINE_SIZE * 2, CONVERT_COLOR(block_color, GuiColor), CONVERT_COLOR(outline_color, GuiColor), BLOCK_OUTLINE_SIZE);
-    gui_layout_begin_horizontal(gui, BLOCK_PADDING, ALIGN_CENTER, NO_COLOR);
+    gui_layout_begin_static(gui, BLOCK_OUTLINE_SIZE * 2, BLOCK_OUTLINE_SIZE * 2);
+    gui_layout_draw_rect(gui, CONVERT_COLOR(block_color, GuiColor));
+    gui_layout_draw_border(gui, CONVERT_COLOR(outline_color, GuiColor), BLOCK_OUTLINE_SIZE);
+
+    gui_layout_begin_horizontal(gui, BLOCK_PADDING, ALIGN_CENTER);
     gui_layout_set_min_size(gui, 0, conf.font_size - BLOCK_OUTLINE_SIZE * 4);
 
     size_t arg_id = 0;
@@ -791,9 +797,10 @@ void scrap_gui_draw_block(ScrBlock* block) {
             switch (arg->type) {
             case ARGUMENT_TEXT:
             case ARGUMENT_CONST_STRING:
-                gui_layout_begin_static(gui, BLOCK_STRING_PADDING / 2, 0, CONVERT_COLOR(WHITE, GuiColor), NO_BORDER);
+                gui_layout_begin_static(gui, BLOCK_STRING_PADDING / 2, 0);
+                gui_layout_draw_rect(gui, CONVERT_COLOR(WHITE, GuiColor));
                     gui_layout_set_min_size(gui, conf.font_size - BLOCK_OUTLINE_SIZE * 4, 0);
-                    gui_layout_begin_horizontal(gui, 0, ALIGN_CENTER, NO_COLOR);
+                    gui_layout_begin_horizontal(gui, 0, ALIGN_CENTER);
                         gui_layout_set_min_size(gui, 0, conf.font_size - BLOCK_OUTLINE_SIZE * 4);
                         gui_draw_text(gui, &font_cond, arg->data.text, BLOCK_TEXT_SIZE, CONVERT_COLOR(BLACK, GuiColor));
                     gui_layout_end_horizontal(gui);
@@ -809,8 +816,9 @@ void scrap_gui_draw_block(ScrBlock* block) {
             break;
         case INPUT_DROPDOWN:
             assert(arg->type == ARGUMENT_CONST_STRING);
-            gui_layout_begin_static(gui, BLOCK_STRING_PADDING / 2, 0, CONVERT_COLOR(dropdown_color, GuiColor), NO_BORDER);
-                gui_layout_begin_horizontal(gui, 0, ALIGN_CENTER, NO_COLOR);
+            gui_layout_begin_static(gui, BLOCK_STRING_PADDING / 2, 0);
+            gui_layout_draw_rect(gui, CONVERT_COLOR(dropdown_color, GuiColor));
+                gui_layout_begin_horizontal(gui, 0, ALIGN_CENTER);
                     gui_layout_set_min_size(gui, 0, conf.font_size - BLOCK_OUTLINE_SIZE * 4);
                     gui_draw_text(gui, &font_cond_shadow, arg->data.text, BLOCK_TEXT_SIZE, CONVERT_COLOR(WHITE, GuiColor));
                     gui_draw_image(gui, &drop_tex, BLOCK_IMAGE_SIZE, CONVERT_COLOR(WHITE, GuiColor));
@@ -820,13 +828,16 @@ void scrap_gui_draw_block(ScrBlock* block) {
             break;
         case INPUT_BLOCKDEF_EDITOR:
             assert(arg->type == ARGUMENT_BLOCKDEF);
-            gui_layout_begin_static(gui, BLOCK_OUTLINE_SIZE * 2, BLOCK_OUTLINE_SIZE, CONVERT_COLOR(dropdown_color, GuiColor), NO_BORDER);
-                gui_layout_begin_horizontal(gui, BLOCK_PADDING, ALIGN_CENTER, NO_COLOR);
+            gui_layout_begin_static(gui, BLOCK_OUTLINE_SIZE * 2, BLOCK_OUTLINE_SIZE);
+            gui_layout_draw_rect(gui, CONVERT_COLOR(dropdown_color, GuiColor));
+                gui_layout_begin_horizontal(gui, BLOCK_PADDING, ALIGN_CENTER);
                     scrap_gui_draw_blockdef(arg->data.blockdef);
-                    gui_layout_begin_static(gui, 0, 0, (GuiColor) { 0xff, 0xff, 0xff, 0x40 }, NO_BORDER);
+                    gui_layout_begin_static(gui, 0, 0);
+                    gui_layout_draw_rect(gui, (GuiColor) { 0xff, 0xff, 0xff, 0x40 });
                         gui_draw_image(gui, &edit_tex, BLOCK_IMAGE_SIZE, CONVERT_COLOR(WHITE, GuiColor));
                     gui_layout_end_static(gui);
-                    gui_layout_begin_static(gui, 0, 0, (GuiColor) { 0xff, 0xff, 0xff, 0x40 }, NO_BORDER);
+                    gui_layout_begin_static(gui, 0, 0);
+                    gui_layout_draw_rect(gui, (GuiColor) { 0xff, 0xff, 0xff, 0x40 });
                         gui_draw_image(gui, &close_tex, BLOCK_IMAGE_SIZE, CONVERT_COLOR(WHITE, GuiColor));
                     gui_layout_end_static(gui);
                 gui_layout_end_horizontal(gui);
@@ -843,8 +854,8 @@ void scrap_gui_draw_block(ScrBlock* block) {
 }
 
 void scrap_gui_draw_button(const char* text, int size) {
-    gui_layout_begin_static(gui, conf.font_size * 0.3, 0, NO_COLOR);
-        gui_layout_begin_horizontal(gui, 0, ALIGN_CENTER, NO_COLOR);
+    gui_layout_begin_static(gui, conf.font_size * 0.3, 0);
+        gui_layout_begin_horizontal(gui, 0, ALIGN_CENTER);
             gui_layout_set_min_size(gui, 0, size);
             gui_draw_text(gui, &font_cond, text, conf.font_size * 0.6, CONVERT_COLOR(WHITE, GuiColor));
         gui_layout_end_horizontal(gui);
@@ -852,27 +863,44 @@ void scrap_gui_draw_button(const char* text, int size) {
 }
 
 void scrap_gui_draw_top_bar(void) {
-    gui_layout_begin_fixed(gui, GetScreenWidth(), conf.font_size * 1.2, (GuiColor) { 0x30, 0x30, 0x30, 0xff }, NO_BORDER);
-        gui_layout_begin_static(gui, 5, 0, NO_COLOR);
-            gui_layout_begin_horizontal(gui, 10, ALIGN_CENTER, NO_COLOR);
-                gui_layout_set_min_size(gui, 0, conf.font_size * 1.2);
+    int top_bar_size = conf.font_size * 1.2;
+    gui_layout_begin_fixed(gui, GetScreenWidth(), top_bar_size);
+    gui_layout_draw_rect(gui, (GuiColor) { 0x30, 0x30, 0x30, 0xff });
+        gui_layout_begin_static(gui, 5, 0);
+            gui_layout_begin_horizontal(gui, 10, ALIGN_CENTER);
+                gui_layout_set_min_size(gui, 0, top_bar_size);
                 gui_draw_image(gui, &logo_tex, logo_tex.height, CONVERT_COLOR(WHITE, GuiColor));
                 gui_draw_text(gui, &font_eb, "Scrap", conf.font_size * 0.8, CONVERT_COLOR(WHITE, GuiColor));
 
-                gui_layout_begin_horizontal(gui, 0, ALIGN_TOP, NO_COLOR);
-                    scrap_gui_draw_button("File", conf.font_size * 1.2);
-                    scrap_gui_draw_button("Settings", conf.font_size * 1.2);
-                    scrap_gui_draw_button("About", conf.font_size * 1.2);
+                gui_layout_begin_horizontal(gui, 0, ALIGN_TOP);
+                    scrap_gui_draw_button("File", top_bar_size);
+                    scrap_gui_draw_button("Settings", top_bar_size);
+                    scrap_gui_draw_button("About", top_bar_size);
                 gui_layout_end_horizontal(gui);
             gui_layout_end_horizontal(gui);
         gui_layout_end_static(gui);
     gui_layout_end_fixed(gui);
 }
 
+void scrap_gui_draw_tab_bar(void) {
+    int tab_bar_size = conf.font_size;
+    gui_layout_begin_fixed(gui, GetScreenWidth(), tab_bar_size);
+    gui_layout_draw_rect(gui, (GuiColor) { 0x2b, 0x2b, 0x2b, 0xff });
+        gui_layout_begin_horizontal(gui, 0, ALIGN_TOP);
+            gui_layout_set_min_size(gui, 0, tab_bar_size);
+            scrap_gui_draw_button("Code", tab_bar_size);
+            scrap_gui_draw_button("Output", tab_bar_size);
+            gui_draw_image(gui, &stop_tex, tab_bar_size, CONVERT_COLOR(WHITE, GuiColor));
+            gui_draw_image(gui, &run_tex, tab_bar_size, CONVERT_COLOR(WHITE, GuiColor));
+        gui_layout_end_horizontal(gui);
+    gui_layout_end_fixed(gui);
+}
+
 void scrap_gui_draw_sidebar(void) {
-    gui_layout_begin_fixed(gui, conf.side_bar_size, GetScreenHeight(), (GuiColor) { 0x00, 0x00, 0x00, 0x80 }, NO_BORDER);
-        gui_layout_begin_static(gui, SIDE_BAR_PADDING, SIDE_BAR_PADDING, NO_COLOR);
-            gui_layout_begin_vertical(gui, SIDE_BAR_PADDING, ALIGN_LEFT, NO_COLOR);
+    gui_layout_begin_fixed(gui, conf.side_bar_size, GetScreenHeight());
+    gui_layout_draw_rect(gui, (GuiColor) { 0x00, 0x00, 0x00, 0x80 });
+        gui_layout_begin_static(gui, SIDE_BAR_PADDING, SIDE_BAR_PADDING);
+            gui_layout_begin_vertical(gui, SIDE_BAR_PADDING, ALIGN_LEFT);
                 for (size_t i = dropdown.scroll_amount; i < vector_size(sidebar.blocks); i++) {
                     scrap_gui_draw_block(&sidebar.blocks[i]);
                 }
@@ -884,8 +912,9 @@ void scrap_gui_draw_sidebar(void) {
 void scrap_gui_process(void) {
     // Gui
     gui_begin(gui, 0, 0);
-        gui_layout_begin_vertical(gui, 0, ALIGN_LEFT, NO_COLOR);
+        gui_layout_begin_vertical(gui, 0, ALIGN_LEFT);
             scrap_gui_draw_top_bar();
+            scrap_gui_draw_tab_bar();
             scrap_gui_draw_sidebar();
         gui_layout_end_vertical(gui);
     gui_end(gui);

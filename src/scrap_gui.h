@@ -21,8 +21,7 @@
 #include <stddef.h>
 
 #define COMMAND_STACK_SIZE 65536
-#define LAYOUT_STACK_SIZE 4096
-
+#define LAYOUT_STACK_SIZE 8192
 typedef struct Gui Gui;
 
 typedef struct {
@@ -126,19 +125,22 @@ void gui_set_measure_text_func(Gui* gui, MeasureTextFunc measure_text);
 void gui_set_measure_image_func(Gui* gui, MeasureImageFunc measure_image);
 void gui_end(Gui* gui);
 
-void gui_layout_begin_static(Gui* gui, int pad_x, int pad_y, GuiColor rect_color, GuiColor border_color, int border_width);
+void gui_layout_begin_static(Gui* gui, int pad_x, int pad_y);
 void gui_layout_end_static(Gui* gui);
 
-void gui_layout_begin_vertical(Gui* gui, int gap, AlignmentType align, GuiColor rect_color, GuiColor border_color, int border_width);
+void gui_layout_begin_vertical(Gui* gui, int gap, AlignmentType align);
 void gui_layout_end_vertical(Gui* gui);
 
-void gui_layout_begin_horizontal(Gui* gui, int gap, AlignmentType align, GuiColor rect_color, GuiColor border_color, int border_width);
+void gui_layout_begin_horizontal(Gui* gui, int gap, AlignmentType align);
 void gui_layout_end_horizontal(Gui* gui);
 
-void gui_layout_begin_fixed(Gui* gui, int size_x, int size_y, GuiColor rect_color, GuiColor border_color, int border_width);
+void gui_layout_begin_fixed(Gui* gui, int size_x, int size_y);
 void gui_layout_end_fixed(Gui* gui);
 
 void gui_layout_set_min_size(Gui* gui, int width, int height);
+
+void gui_layout_draw_rect(Gui* gui, GuiColor rect_color);
+void gui_layout_draw_border(Gui* gui, GuiColor border_color, int border_width);
 
 void gui_draw_rect(Gui* gui, int size_x, int size_y, GuiColor color);
 void gui_draw_border(Gui* gui, int size_x, int size_y, int border_width, GuiColor color);
