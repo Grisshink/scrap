@@ -20,8 +20,7 @@
 
 #include <stddef.h>
 
-#define COMMAND_STACK_SIZE 65536
-#define LAYOUT_STACK_SIZE 8192
+#define ELEMENT_STACK_SIZE 8192
 typedef struct Gui Gui;
 
 typedef struct {
@@ -62,8 +61,6 @@ typedef struct {
     DrawData data;
 } DrawCommand;
 
-typedef DrawCommand* Element;
-
 typedef enum {
     ALIGN_LEFT = 0,
     ALIGN_CENTER,
@@ -79,34 +76,47 @@ typedef enum {
     LAYOUT_FIXED,
 } LayoutType;
 
-typedef union {
-    int gap;
-    GuiMeasurement padding;
-} LayoutData;
+typedef enum {
+    SIZING_FIXED,
+    SIZING_FIT,
+    SIZING_GROW,
+} ElementSizing;
 
-typedef struct Layout {
-    LayoutType type;
-    LayoutData data;
-    GuiMeasurement size;
+typedef enum {
+    DIRECTION_HORIZONTAL,
+    DIRECTION_VERTICAL,
+} FlexDirection;
+
+typedef struct FlexElement {
+    int x, y, w, h;
     int cursor_x, cursor_y;
-    size_t command_start;
-    size_t command_end;
+    int pad_w, pad_h;
+    int gap;
+    DrawType draw_type;
+    DrawData data;
+    GuiColor color;
+    ElementSizing sizing_x;
+    ElementSizing sizing_y;
+    FlexDirection direction;
     AlignmentType align;
-    Element background;
-    Element background_border;
-    void (*advance)(Gui* gui, struct Layout* layout, GuiMeasurement size);
-} Layout;
+    int element_count;
+    struct FlexElement* next;
+} FlexElement;
 
 typedef GuiMeasurement (*MeasureTextFunc)(void* font, const char* text, int size);
 typedef GuiMeasurement (*MeasureImageFunc)(void* image, int size);
 
 struct Gui {
-    Layout layout_stack[LAYOUT_STACK_SIZE];
-    size_t layout_stack_len;
-
-    DrawCommand command_stack[COMMAND_STACK_SIZE];
+    DrawCommand command_stack[ELEMENT_STACK_SIZE];
     size_t command_stack_len;
     size_t command_stack_iter;
+
+    FlexElement element_stack[ELEMENT_STACK_SIZE];
+    size_t element_stack_len;
+
+    FlexElement* element_ptr_stack[ELEMENT_STACK_SIZE];
+    size_t element_ptr_stack_len;
+
     MeasureTextFunc measure_text;
     MeasureImageFunc measure_image;
 
@@ -118,39 +128,32 @@ struct Gui {
 #define NO_BORDER TRANSPARENT, 0
 #define NO_COLOR TRANSPARENT, NO_BORDER
 
-void gui_begin(Gui* gui, int pos_x, int pos_y);
+void gui_begin(Gui* gui);
 void gui_update_window_size(Gui* gui, int win_w, int win_h);
 void gui_init(Gui* gui);
 void gui_set_measure_text_func(Gui* gui, MeasureTextFunc measure_text);
 void gui_set_measure_image_func(Gui* gui, MeasureImageFunc measure_image);
 void gui_end(Gui* gui);
 
-void gui_layout_begin_static(Gui* gui, int pad_x, int pad_y);
-void gui_layout_end_static(Gui* gui);
+FlexElement* gui_element_begin(Gui* gui);
+void gui_element_end(Gui* gui);
 
-void gui_layout_begin_vertical(Gui* gui, int gap, AlignmentType align);
-void gui_layout_end_vertical(Gui* gui);
+void gui_set_fixed(Gui* gui, int w, int h);
+void gui_set_fit(Gui* gui);
+void gui_set_grow(Gui* gui, FlexDirection direction);
+void gui_set_rect(Gui* gui, GuiColor color);
+void gui_set_direction(Gui* gui, FlexDirection direction);
+void gui_set_border(Gui* gui, GuiColor color, int border_width);
+void gui_set_text(Gui* gui, void* font, const char* text, int size, GuiColor color);
+void gui_set_image(Gui* gui, void* image, int size, GuiColor color);
+void gui_set_min_size(Gui* gui, int min_w, int min_h);
+void gui_set_align(Gui* gui, AlignmentType align);
+void gui_set_padding(Gui* gui, int pad_w, int pad_h);
+void gui_set_gap(Gui* gui, int gap);
 
-void gui_layout_begin_horizontal(Gui* gui, int gap, AlignmentType align);
-void gui_layout_end_horizontal(Gui* gui);
-
-void gui_layout_begin_fixed(Gui* gui, int size_x, int size_y);
-void gui_layout_end_fixed(Gui* gui);
-
-void gui_layout_set_min_size(Gui* gui, int width, int height);
-
-void gui_layout_draw_rect(Gui* gui, GuiColor rect_color);
-void gui_layout_draw_border(Gui* gui, GuiColor border_color, int border_width);
-
-void gui_draw_rect(Gui* gui, int size_x, int size_y, GuiColor color);
-void gui_draw_border(Gui* gui, int size_x, int size_y, int border_width, GuiColor color);
-void gui_draw_text(Gui* gui, void* font, const char* text, int size, GuiColor color);
-void gui_draw_image(Gui* gui, void* image, int size, GuiColor color);
-
-void gui_begin_scissor(Gui* gui, int size_x, int size_y);
-void gui_end_scissor(Gui* gui);
-
-Element gui_begin_element(Gui* gui);
-void gui_end_element(Gui* gui, Element element);
+void gui_text(Gui* gui, void* font, const char* text, int size, GuiColor color);
+void gui_image(Gui* gui, void* image, int size, GuiColor color);
+void gui_grow(Gui* gui, FlexDirection direction);
+void gui_spacer(Gui* gui, int w, int h);
 
 #endif // SCRAP_GUI_H

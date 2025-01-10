@@ -739,33 +739,39 @@ void scrap_gui_draw_blockdef(ScrBlockdef* blockdef) {
     Color block_color = CONVERT_COLOR(blockdef->color, Color);
     Color outline_color = ColorBrightness(block_color, collision ? 0.5 : -0.2);
 
-    gui_layout_begin_static(gui, BLOCK_OUTLINE_SIZE * 2, BLOCK_OUTLINE_SIZE * 2);
-    gui_layout_draw_rect(gui, CONVERT_COLOR(block_color, GuiColor));
-    gui_layout_draw_border(gui, CONVERT_COLOR(outline_color, GuiColor), BLOCK_OUTLINE_SIZE);
+    gui_element_begin(gui);
+        gui_set_direction(gui, DIRECTION_HORIZONTAL);
+        gui_set_rect(gui, CONVERT_COLOR(block_color, GuiColor));
 
-    gui_layout_begin_horizontal(gui, BLOCK_PADDING, ALIGN_CENTER);
-    gui_layout_set_min_size(gui, 0, conf.font_size - BLOCK_OUTLINE_SIZE * 4);
+    gui_element_begin(gui);
+        gui_set_direction(gui, DIRECTION_HORIZONTAL);
+        gui_set_border(gui, CONVERT_COLOR(outline_color, GuiColor), BLOCK_OUTLINE_SIZE);
+        gui_set_align(gui, ALIGN_CENTER);
+        gui_set_min_size(gui, 0, conf.font_size);
+        gui_set_padding(gui, BLOCK_OUTLINE_SIZE * 2, BLOCK_OUTLINE_SIZE * 2);
+        gui_set_gap(gui, BLOCK_PADDING);
 
     for (size_t i = 0; i < vector_size(blockdef->inputs); i++) {
         ScrInput* input = &blockdef->inputs[i];
 
         switch (input->type) {
         case INPUT_TEXT_DISPLAY:
-            gui_draw_text(gui, &font_cond_shadow, input->data.stext.text, BLOCK_TEXT_SIZE, CONVERT_COLOR(WHITE, GuiColor));
+            gui_text(gui, &font_cond_shadow, input->data.stext.text, BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
             break;
         case INPUT_IMAGE_DISPLAY:
-            gui_draw_image(gui, input->data.simage.image.image_ptr, BLOCK_IMAGE_SIZE, CONVERT_COLOR(WHITE, GuiColor));
+            gui_image(gui, input->data.simage.image.image_ptr, BLOCK_IMAGE_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
             break;
         case INPUT_ARGUMENT:
             scrap_gui_draw_blockdef(input->data.arg.blockdef);
             break;
         default:
-            gui_draw_text(gui, &font_cond_shadow, "NODEF", BLOCK_TEXT_SIZE, CONVERT_COLOR(RED, GuiColor));
+            gui_text(gui, &font_cond_shadow, "NODEF", BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
             break;
         }
     }
-    gui_layout_end_horizontal(gui);
-    gui_layout_end_static(gui);
+
+    gui_element_end(gui);
+    gui_element_end(gui);
 }
 
 void scrap_gui_draw_block(ScrBlock* block) {
@@ -774,13 +780,18 @@ void scrap_gui_draw_block(ScrBlock* block) {
     Color dropdown_color = ColorBrightness(block_color, collision ? 0.0 : -0.3);
     Color outline_color = ColorBrightness(block_color, collision ? 0.5 : -0.2);
 
-    gui_layout_begin_static(gui, BLOCK_OUTLINE_SIZE * 2, BLOCK_OUTLINE_SIZE * 2);
-    gui_layout_draw_rect(gui, CONVERT_COLOR(block_color, GuiColor));
-    gui_layout_draw_border(gui, CONVERT_COLOR(outline_color, GuiColor), BLOCK_OUTLINE_SIZE);
+    gui_element_begin(gui);
+        gui_set_direction(gui, DIRECTION_HORIZONTAL);
+        gui_set_rect(gui, CONVERT_COLOR(block_color, GuiColor));
 
-    gui_layout_begin_horizontal(gui, BLOCK_PADDING, ALIGN_CENTER);
-    gui_layout_set_min_size(gui, 0, conf.font_size - BLOCK_OUTLINE_SIZE * 4);
-
+    gui_element_begin(gui);
+        gui_set_direction(gui, DIRECTION_HORIZONTAL);
+        gui_set_border(gui, CONVERT_COLOR(outline_color, GuiColor), BLOCK_OUTLINE_SIZE);
+        gui_set_align(gui, ALIGN_CENTER);
+        gui_set_min_size(gui, 0, conf.font_size);
+        gui_set_padding(gui, BLOCK_OUTLINE_SIZE * 2, BLOCK_OUTLINE_SIZE * 2);
+        gui_set_gap(gui, BLOCK_PADDING);
+    
     size_t arg_id = 0;
     for (size_t i = 0; i < vector_size(block->blockdef->inputs); i++) {
         ScrInput* input = &block->blockdef->inputs[i];
@@ -788,135 +799,160 @@ void scrap_gui_draw_block(ScrBlock* block) {
 
         switch (input->type) {
         case INPUT_TEXT_DISPLAY:
-            gui_draw_text(gui, &font_cond_shadow, input->data.stext.text, BLOCK_TEXT_SIZE, CONVERT_COLOR(WHITE, GuiColor));
+            gui_text(gui, &font_cond_shadow, input->data.stext.text, BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
             break;
         case INPUT_IMAGE_DISPLAY:
-            gui_draw_image(gui, input->data.simage.image.image_ptr, BLOCK_IMAGE_SIZE, CONVERT_COLOR(WHITE, GuiColor));
+            gui_image(gui, input->data.simage.image.image_ptr, BLOCK_IMAGE_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
             break;
         case INPUT_ARGUMENT:
             switch (arg->type) {
-            case ARGUMENT_TEXT:
             case ARGUMENT_CONST_STRING:
-                gui_layout_begin_static(gui, BLOCK_STRING_PADDING / 2, 0);
-                gui_layout_draw_rect(gui, CONVERT_COLOR(WHITE, GuiColor));
-                    gui_layout_set_min_size(gui, conf.font_size - BLOCK_OUTLINE_SIZE * 4, 0);
-                    gui_layout_begin_horizontal(gui, 0, ALIGN_CENTER);
-                        gui_layout_set_min_size(gui, 0, conf.font_size - BLOCK_OUTLINE_SIZE * 4);
-                        gui_draw_text(gui, &font_cond, arg->data.text, BLOCK_TEXT_SIZE, CONVERT_COLOR(BLACK, GuiColor));
-                    gui_layout_end_horizontal(gui);
-                gui_layout_end_static(gui);
+            case ARGUMENT_TEXT:
+                gui_element_begin(gui);
+                    gui_set_direction(gui, DIRECTION_HORIZONTAL);
+                    gui_set_min_size(gui, 0, conf.font_size - BLOCK_OUTLINE_SIZE * 4);
+                    gui_set_padding(gui, BLOCK_STRING_PADDING / 2, 0);
+                    gui_set_align(gui, ALIGN_CENTER);
+                    gui_set_rect(gui, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+
+                    gui_text(gui, &font_cond, arg->data.text, BLOCK_TEXT_SIZE, (GuiColor) { 0x00, 0x00, 0x00, 0xff });
+                gui_element_end(gui);
                 break;
             case ARGUMENT_BLOCK:
                 scrap_gui_draw_block(&arg->data.block);
                 break;
             default:
+                gui_text(gui, &font_cond_shadow, "NODEF", BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0x00, 0x00, 0xff });
                 break;
             }
             arg_id++;
             break;
         case INPUT_DROPDOWN:
             assert(arg->type == ARGUMENT_CONST_STRING);
-            gui_layout_begin_static(gui, BLOCK_STRING_PADDING / 2, 0);
-            gui_layout_draw_rect(gui, CONVERT_COLOR(dropdown_color, GuiColor));
-                gui_layout_begin_horizontal(gui, 0, ALIGN_CENTER);
-                    gui_layout_set_min_size(gui, 0, conf.font_size - BLOCK_OUTLINE_SIZE * 4);
-                    gui_draw_text(gui, &font_cond_shadow, arg->data.text, BLOCK_TEXT_SIZE, CONVERT_COLOR(WHITE, GuiColor));
-                    gui_draw_image(gui, &drop_tex, BLOCK_IMAGE_SIZE, CONVERT_COLOR(WHITE, GuiColor));
-                gui_layout_end_horizontal(gui);
-            gui_layout_end_static(gui);
+            gui_element_begin(gui);
+                gui_set_direction(gui, DIRECTION_HORIZONTAL);
+                gui_set_min_size(gui, 0, conf.font_size - BLOCK_OUTLINE_SIZE * 4);
+                gui_set_padding(gui, BLOCK_STRING_PADDING / 2, 0);
+                gui_set_align(gui, ALIGN_CENTER);
+                gui_set_rect(gui, CONVERT_COLOR(dropdown_color, GuiColor));
+
+                gui_text(gui, &font_cond_shadow, arg->data.text, BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+                gui_image(gui, &drop_tex, BLOCK_IMAGE_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+            gui_element_end(gui);
             arg_id++;
             break;
         case INPUT_BLOCKDEF_EDITOR:
             assert(arg->type == ARGUMENT_BLOCKDEF);
-            gui_layout_begin_static(gui, BLOCK_OUTLINE_SIZE * 2, BLOCK_OUTLINE_SIZE);
-            gui_layout_draw_rect(gui, CONVERT_COLOR(dropdown_color, GuiColor));
-                gui_layout_begin_horizontal(gui, BLOCK_PADDING, ALIGN_CENTER);
-                    scrap_gui_draw_blockdef(arg->data.blockdef);
-                    gui_layout_begin_static(gui, 0, 0);
-                    gui_layout_draw_rect(gui, (GuiColor) { 0xff, 0xff, 0xff, 0x40 });
-                        gui_draw_image(gui, &edit_tex, BLOCK_IMAGE_SIZE, CONVERT_COLOR(WHITE, GuiColor));
-                    gui_layout_end_static(gui);
-                    gui_layout_begin_static(gui, 0, 0);
-                    gui_layout_draw_rect(gui, (GuiColor) { 0xff, 0xff, 0xff, 0x40 });
-                        gui_draw_image(gui, &close_tex, BLOCK_IMAGE_SIZE, CONVERT_COLOR(WHITE, GuiColor));
-                    gui_layout_end_static(gui);
-                gui_layout_end_horizontal(gui);
-            gui_layout_end_static(gui);
+            gui_element_begin(gui);
+                gui_set_direction(gui, DIRECTION_HORIZONTAL);
+                gui_set_padding(gui, BLOCK_OUTLINE_SIZE * 2, BLOCK_OUTLINE_SIZE * 2);
+                gui_set_rect(gui, CONVERT_COLOR(dropdown_color, GuiColor));
+                gui_set_align(gui, ALIGN_CENTER);
+                gui_set_gap(gui, BLOCK_PADDING);
+
+                scrap_gui_draw_blockdef(arg->data.blockdef);
+
+                gui_element_begin(gui);
+                    gui_set_rect(gui, (GuiColor) { 0xff, 0xff, 0xff, 0x40 });
+
+                    gui_image(gui, &edit_tex, BLOCK_IMAGE_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+                gui_element_end(gui);
+
+                gui_element_begin(gui);
+                    gui_set_rect(gui, (GuiColor) { 0xff, 0xff, 0xff, 0x40 });
+
+                    gui_image(gui, &close_tex, BLOCK_IMAGE_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+                gui_element_end(gui);
+            gui_element_end(gui);
             arg_id++;
             break;
         default:
-            gui_draw_text(gui, &font_cond_shadow, "NODEF", BLOCK_TEXT_SIZE, CONVERT_COLOR(RED, GuiColor));
+            gui_text(gui, &font_cond_shadow, "NODEF", BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0x00, 0x00, 0xff });
             break;
         }
     }
-    gui_layout_end_horizontal(gui);
-    gui_layout_end_static(gui);
+
+    gui_element_end(gui);
+    gui_element_end(gui);
 }
 
 void scrap_gui_draw_button(const char* text, int size) {
-    gui_layout_begin_static(gui, conf.font_size * 0.3, 0);
-        gui_layout_begin_horizontal(gui, 0, ALIGN_CENTER);
-            gui_layout_set_min_size(gui, 0, size);
-            gui_draw_text(gui, &font_cond, text, conf.font_size * 0.6, CONVERT_COLOR(WHITE, GuiColor));
-        gui_layout_end_horizontal(gui);
-    gui_layout_end_static(gui);
+    gui_element_begin(gui);
+        gui_set_direction(gui, DIRECTION_HORIZONTAL);
+        gui_set_align(gui, ALIGN_CENTER);
+        gui_set_min_size(gui, 0, size);
+        gui_set_padding(gui, conf.font_size * 0.3, 0);
+
+        gui_text(gui, &font_cond, text, conf.font_size * 0.6, CONVERT_COLOR(WHITE, GuiColor));
+    gui_element_end(gui);
 }
 
 void scrap_gui_draw_top_bar(void) {
-    int top_bar_size = conf.font_size * 1.2;
-    gui_layout_begin_fixed(gui, GetScreenWidth(), top_bar_size);
-    gui_layout_draw_rect(gui, (GuiColor) { 0x30, 0x30, 0x30, 0xff });
-        gui_layout_begin_static(gui, 5, 0);
-            gui_layout_begin_horizontal(gui, 10, ALIGN_CENTER);
-                gui_layout_set_min_size(gui, 0, top_bar_size);
-                gui_draw_image(gui, &logo_tex, logo_tex.height, CONVERT_COLOR(WHITE, GuiColor));
-                gui_draw_text(gui, &font_eb, "Scrap", conf.font_size * 0.8, CONVERT_COLOR(WHITE, GuiColor));
+    const int top_bar_size = conf.font_size * 1.2;
+    gui_element_begin(gui);
+        gui_set_grow(gui, DIRECTION_HORIZONTAL);
+        gui_set_direction(gui, DIRECTION_HORIZONTAL);
+        gui_set_rect(gui, (GuiColor) { 0x30, 0x30, 0x30, 0xff });
+        gui_set_min_size(gui, 0, top_bar_size);
+        gui_set_align(gui, ALIGN_CENTER);
 
-                gui_layout_begin_horizontal(gui, 0, ALIGN_TOP);
-                    scrap_gui_draw_button("File", top_bar_size);
-                    scrap_gui_draw_button("Settings", top_bar_size);
-                    scrap_gui_draw_button("About", top_bar_size);
-                gui_layout_end_horizontal(gui);
-            gui_layout_end_horizontal(gui);
-        gui_layout_end_static(gui);
-    gui_layout_end_fixed(gui);
+        gui_spacer(gui, 5, 0);
+        gui_image(gui, &logo_tex, conf.font_size, CONVERT_COLOR(WHITE, GuiColor));
+        gui_spacer(gui, 10, 0);
+        gui_text(gui, &font_eb, "Scrap", conf.font_size * 0.8, CONVERT_COLOR(WHITE, GuiColor));
+        gui_spacer(gui, 10, 0);
+
+        scrap_gui_draw_button("File", top_bar_size);
+        scrap_gui_draw_button("Settings", top_bar_size);
+        scrap_gui_draw_button("About", top_bar_size);
+    gui_element_end(gui);
 }
 
 void scrap_gui_draw_tab_bar(void) {
-    int tab_bar_size = conf.font_size;
-    gui_layout_begin_fixed(gui, GetScreenWidth(), tab_bar_size);
-    gui_layout_draw_rect(gui, (GuiColor) { 0x2b, 0x2b, 0x2b, 0xff });
-        gui_layout_begin_horizontal(gui, 0, ALIGN_TOP);
-            gui_layout_set_min_size(gui, 0, tab_bar_size);
-            scrap_gui_draw_button("Code", tab_bar_size);
-            scrap_gui_draw_button("Output", tab_bar_size);
-            gui_draw_image(gui, &stop_tex, tab_bar_size, CONVERT_COLOR(WHITE, GuiColor));
-            gui_draw_image(gui, &run_tex, tab_bar_size, CONVERT_COLOR(WHITE, GuiColor));
-        gui_layout_end_horizontal(gui);
-    gui_layout_end_fixed(gui);
+    const int tab_bar_size = conf.font_size;
+    gui_element_begin(gui);
+        gui_set_grow(gui, DIRECTION_HORIZONTAL);
+        gui_set_direction(gui, DIRECTION_HORIZONTAL);
+        gui_set_rect(gui, (GuiColor) { 0x2b, 0x2b, 0x2b, 0xff });
+        gui_set_min_size(gui, 0, tab_bar_size);
+        gui_set_align(gui, ALIGN_CENTER);
+
+        scrap_gui_draw_button("Code", tab_bar_size);
+        scrap_gui_draw_button("Output", tab_bar_size);
+        gui_grow(gui, DIRECTION_HORIZONTAL);
+        gui_text(gui, &font_cond_shadow, "aboba", BLOCK_TEXT_SIZE, CONVERT_COLOR(WHITE, GuiColor));
+        gui_grow(gui, DIRECTION_HORIZONTAL);
+        gui_image(gui, &stop_tex, tab_bar_size, CONVERT_COLOR(WHITE, GuiColor));
+        gui_image(gui, &run_tex, tab_bar_size, CONVERT_COLOR(WHITE, GuiColor));
+    gui_element_end(gui);
 }
 
 void scrap_gui_draw_sidebar(void) {
-    gui_layout_begin_fixed(gui, conf.side_bar_size, GetScreenHeight());
-    gui_layout_draw_rect(gui, (GuiColor) { 0x00, 0x00, 0x00, 0x80 });
-        gui_layout_begin_static(gui, SIDE_BAR_PADDING, SIDE_BAR_PADDING);
-            gui_layout_begin_vertical(gui, SIDE_BAR_PADDING, ALIGN_LEFT);
-                for (size_t i = dropdown.scroll_amount; i < vector_size(sidebar.blocks); i++) {
-                    scrap_gui_draw_block(&sidebar.blocks[i]);
-                }
-            gui_layout_end_vertical(gui);
-        gui_layout_end_static(gui);
-    gui_layout_end_fixed(gui);
+    gui_element_begin(gui);
+        gui_set_grow(gui, DIRECTION_VERTICAL);
+        gui_set_grow(gui, DIRECTION_HORIZONTAL);
+        gui_set_direction(gui, DIRECTION_HORIZONTAL);
+
+        gui_element_begin(gui);
+            gui_set_fixed(gui, conf.side_bar_size, 0);
+            gui_set_grow(gui, DIRECTION_VERTICAL);
+            gui_set_rect(gui, (GuiColor) { 0x00, 0x00, 0x00, 0x80 });
+            gui_set_padding(gui, SIDE_BAR_PADDING, SIDE_BAR_PADDING);
+            gui_set_gap(gui, SIDE_BAR_PADDING);
+
+            for (size_t i = dropdown.scroll_amount; i < vector_size(sidebar.blocks); i++) {
+                scrap_gui_draw_block(&sidebar.blocks[i]);
+            }
+        gui_element_end(gui);
+    gui_element_end(gui);
 }
 
 void scrap_gui_process(void) {
     // Gui
-    gui_begin(gui, 0, 0);
-        gui_layout_begin_vertical(gui, 0, ALIGN_LEFT);
-            scrap_gui_draw_top_bar();
-            scrap_gui_draw_tab_bar();
-            scrap_gui_draw_sidebar();
-        gui_layout_end_vertical(gui);
+    gui_begin(gui);
+        scrap_gui_draw_top_bar();
+        scrap_gui_draw_tab_bar();
+        scrap_gui_draw_sidebar();
     gui_end(gui);
 }
 
@@ -983,36 +1019,6 @@ void scrap_gui_process_render(void) {
     ClearBackground(GetColor(0x202020ff));
     draw_dots();
     scrap_gui_render();
-}
-
-void process_render(void) {
-    ClearBackground(GetColor(0x202020ff));
-
-    int sw = GetScreenWidth();
-    int sh = GetScreenHeight();
-
-    DrawRectangle(0, 0, sw, conf.font_size * 1.2, (Color){ 0x30, 0x30, 0x30, 0xFF });
-    DrawRectangle(0, conf.font_size * 1.2, sw, conf.font_size, (Color){ 0x2B, 0x2B, 0x2B, 0xFF });
-    draw_tab_buttons(sw);
-    draw_top_bar();
-
-    if (current_tab == TAB_CODE) {
-        BeginScissorMode(0, conf.font_size * 2.2, sw, sh - conf.font_size * 2.2);
-            draw_dots();
-            for (vec_size_t i = 0; i < vector_size(editor_code); i++) {
-                draw_block_chain(&editor_code[i], camera_pos, hover_info.exec_chain == &editor_code[i]);
-            }
-        EndScissorMode();
-
-        draw_scrollbars();
-
-        draw_sidebar();
-
-        BeginScissorMode(0, conf.font_size * 2.2, sw, sh - conf.font_size * 2.2);
-            draw_block_chain(&mouse_blockchain, (Vector2) {0}, false);
-        EndScissorMode();
-
-        draw_action_bar();
 
 #ifdef DEBUG
         DrawTextEx(
@@ -1070,8 +1076,52 @@ void process_render(void) {
         };
         DrawTextEx(font_cond, "Scrap v" SCRAP_VERSION, debug_pos, conf.font_size * 0.5, 0.0, (Color) { 0xff, 0xff, 0xff, 0x40 });
         debug_pos.y += conf.font_size * 0.5;
-        DrawTextEx(font_cond, TextFormat("FPS: %d, Frame time: %.3f\nCommand count: %zu/%zu", GetFPS(), GetFrameTime(), gui->command_stack_len, COMMAND_STACK_SIZE), debug_pos, conf.font_size * 0.5, 0.0, (Color) { 0xff, 0xff, 0xff, 0x40 });
+        DrawTextEx(
+            font_cond, 
+            TextFormat(
+                "FPS: %d, Frame time: %.3f\nCommand count: %zu/%zu\nElement count: %zu/%zu", 
+                GetFPS(), 
+                GetFrameTime(), 
+                gui->command_stack_len, ELEMENT_STACK_SIZE,
+                gui->element_stack_len, ELEMENT_STACK_SIZE
+            ), 
+            debug_pos, 
+            conf.font_size * 0.5, 
+            0.0, 
+            (Color) { 0xff, 0xff, 0xff, 0x40 }
+        );
 #endif
+
+}
+
+void process_render(void) {
+    ClearBackground(GetColor(0x202020ff));
+
+    int sw = GetScreenWidth();
+    int sh = GetScreenHeight();
+
+    DrawRectangle(0, 0, sw, conf.font_size * 1.2, (Color){ 0x30, 0x30, 0x30, 0xFF });
+    DrawRectangle(0, conf.font_size * 1.2, sw, conf.font_size, (Color){ 0x2B, 0x2B, 0x2B, 0xFF });
+    draw_tab_buttons(sw);
+    draw_top_bar();
+
+    if (current_tab == TAB_CODE) {
+        BeginScissorMode(0, conf.font_size * 2.2, sw, sh - conf.font_size * 2.2);
+            draw_dots();
+            for (vec_size_t i = 0; i < vector_size(editor_code); i++) {
+                draw_block_chain(&editor_code[i], camera_pos, hover_info.exec_chain == &editor_code[i]);
+            }
+        EndScissorMode();
+
+        draw_scrollbars();
+
+        draw_sidebar();
+
+        BeginScissorMode(0, conf.font_size * 2.2, sw, sh - conf.font_size * 2.2);
+            draw_block_chain(&mouse_blockchain, (Vector2) {0}, false);
+        EndScissorMode();
+
+        draw_action_bar();
     } else if (current_tab == TAB_OUTPUT) {
         draw_term();
     }
