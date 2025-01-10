@@ -133,6 +133,11 @@ typedef struct {
     ScrBlock* block;
 } DrawStack;
 
+typedef struct {
+    struct timespec start;
+    const char* name;
+} Timer;
+
 extern Config conf;
 extern HoverInfo hover_info;
 extern Shader line_shader;
@@ -201,6 +206,8 @@ Color as_rl_color(ScrColor color);
 int leading_ones(unsigned char byte);
 const char* into_data_path(const char* path);
 ScrBlock block_new_ms(ScrBlockdef* blockdef);
+Timer start_timer(const char* name);
+void end_timer(Timer timer);
 
 // measure.c
 void blockdef_update_measurements(ScrBlockdef* blockdef, bool editing);
