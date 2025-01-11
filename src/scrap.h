@@ -68,7 +68,7 @@ typedef struct {
     bool drag_cancelled;
 
     ScrBlockChain* blockchain;
-    size_t blockchain_index;
+    //size_t blockchain_index;
     int blockchain_layer;
 
     ScrBlock* block;

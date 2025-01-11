@@ -985,12 +985,12 @@ void blockchain_on_hover(FlexElement* el) {
 void scrap_gui_draw_blockchain(ScrBlockChain* chain) {
     gui_element_begin(gui);
         gui_set_direction(gui, DIRECTION_VERTICAL);
-        gui_set_border(gui, CONVERT_COLOR(PINK, GuiColor), BLOCK_OUTLINE_SIZE);
+        gui_set_border(gui, CONVERT_COLOR(YELLOW, GuiColor), BLOCK_OUTLINE_SIZE);
         gui_on_hover(gui, blockchain_on_hover);
         gui_set_custom_data(gui, chain);
+        gui_set_padding(gui, 5, 5);
 
     for (size_t i = 0; i < vector_size(chain->blocks); i++) {
-        hover_info.blockchain_index = i;
         scrap_gui_draw_block(&chain->blocks[i]);
     }
 
@@ -1098,7 +1098,7 @@ void scrap_gui_render(void) {
             break;
         }
 #ifdef DEBUG
-        DrawRectangleLinesEx((Rectangle) { command->pos_x, command->pos_y, command->width, command->height }, 1.0, PINK);
+        DrawRectangleLinesEx((Rectangle) { command->pos_x, command->pos_y, command->width, command->height }, 1.0, (Color) { 0xff, 0x00, 0xff, 0x40 });
 #endif
     }
 }
@@ -1112,7 +1112,7 @@ void scrap_gui_process_render(void) {
         DrawTextEx(
             font_cond, 
             TextFormat(
-                "BlockChain: %p, Ind: %d, Layer: %d\n"
+                "BlockChain: %p, Layer: %d\n"
                 "Block: %p, Parent: %p\n"
                 "Argument: %p, Pos: (%.3f, %.3f)\n"
                 "Prev argument: %p\n"
@@ -1126,9 +1126,9 @@ void scrap_gui_process_render(void) {
                 "Bar: %d, Ind: %d\n"
                 "Min: (%.3f, %.3f), Max: (%.3f, %.3f)\n"
                 "Sidebar scroll: %d, Max: %d\n"
-                "Editor: %d, Editing: %p, Blockdef: %p, input: %zu\n",
+                "Editor: %d, Editing: %p, Blockdef: %p, input: %zu\n"
+                "Elements: %zu/%zu, Draw: %zu/%zu",
                 hover_info.blockchain,
-                hover_info.blockchain_index,
                 hover_info.blockchain_layer,
                 hover_info.block,
                 hover_info.block ? hover_info.block->parent : NULL,
@@ -1147,7 +1147,8 @@ void scrap_gui_process_render(void) {
                 hover_info.top_bars.type, hover_info.top_bars.ind,
                 block_code.min_pos.x, block_code.min_pos.y, block_code.max_pos.x, block_code.max_pos.y,
                 sidebar.scroll_amount, sidebar.max_y,
-                hover_info.editor.part, hover_info.editor.edit_blockdef, hover_info.editor.blockdef, hover_info.editor.blockdef_input
+                hover_info.editor.part, hover_info.editor.edit_blockdef, hover_info.editor.blockdef, hover_info.editor.blockdef_input,
+                gui->element_stack_len, ELEMENT_STACK_SIZE, gui->command_stack_len, ELEMENT_STACK_SIZE
             ), 
             (Vector2){ 
                 conf.side_bar_size + 5, 

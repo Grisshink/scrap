@@ -20,7 +20,7 @@
 
 #include <stddef.h>
 
-#define ELEMENT_STACK_SIZE 8192
+#define ELEMENT_STACK_SIZE 32768
 typedef struct Gui Gui;
 typedef struct FlexElement FlexElement;
 
