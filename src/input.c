@@ -539,13 +539,13 @@ bool handle_top_bar_click(void) {
     if (hover_info.top_bars.type == TOPBAR_TOP) {
         switch (hover_info.top_bars.ind) {
         case 0:
-            if (!vm.is_running) gui_show(GUI_TYPE_FILE);
+            //if (!vm.is_running) gui_show(GUI_TYPE_FILE);
             break;
         case 1:
-            gui_show(GUI_TYPE_SETTINGS);
+            //gui_show(GUI_TYPE_SETTINGS);
             break;
         case 2:
-            gui_show(GUI_TYPE_ABOUT);
+            //gui_show(GUI_TYPE_ABOUT);
             break;
         default:
             break;
@@ -811,10 +811,10 @@ bool handle_mouse_click(void) {
     hover_info.mouse_click_pos = GetMousePosition();
     camera_click_pos = camera_pos;
 
-    if (gui_is_shown()) {
+    /*if (gui_is_shown()) {
         if (gui_get_type() == GUI_TYPE_FILE) gui_hide_immediate();
         return true;
-    }
+    }*/
     if (hover_info.top_bars.ind != -1) return handle_top_bar_click();
     if (current_tab != TAB_CODE) return true;
     if (vm.is_running) return false;
@@ -934,8 +934,8 @@ void handle_mouse_drag(void) {
     camera_pos.y = camera_click_pos.y - (mouse_pos.y - hover_info.mouse_click_pos.y);
 }
 
-void process_input(void) {
-    hover_info.sidebar = GetMouseX() < conf.side_bar_size && GetMouseY() > conf.font_size * 2.2;
+void scrap_gui_process_input(void) {
+    hover_info.sidebar = 0;
     hover_info.block = NULL;
     hover_info.argument = NULL;
     hover_info.input = NULL;
@@ -953,6 +953,17 @@ void process_input(void) {
     hover_info.editor.blockdef = NULL;
     hover_info.editor.blockdef_input = -1;
 
+    if (IsWindowResized()) {
+        shader_time = 0.0;
+        term_resize();
+        gui_update_window_size(gui, GetScreenWidth(), GetScreenHeight());
+    }
+
+    gui_update_mouse_pos(gui, GetMouseX(), GetMouseY());
+    mouse_blockchain.pos = as_scr_vec(GetMousePosition());
+}
+
+void process_input(void) {
     Vector2 mouse_pos = GetMousePosition();
     if ((int)hover_info.last_mouse_pos.x == (int)mouse_pos.x && (int)hover_info.last_mouse_pos.y == (int)mouse_pos.y) {
         hover_info.time_at_last_pos += GetFrameTime();
@@ -960,14 +971,6 @@ void process_input(void) {
         hover_info.last_mouse_pos = mouse_pos;
         hover_info.time_at_last_pos = 0;
     }
-
-    dropdown_check_collisions();
-    if (!gui_is_shown()) {
-        check_block_collisions();
-        bars_check_collisions();
-    }
-
-    update_gui();
 
     if (GetMouseWheelMove() != 0.0) {
         handle_mouse_wheel();
@@ -990,17 +993,9 @@ void process_input(void) {
         handle_key_press();
     }
 
-    if (IsWindowResized()) {
-        shader_time = 0.0;
-        term_resize();
-        gui_update_window_size(gui, GetScreenWidth(), GetScreenHeight());
-    }
-
     if (sidebar.max_y > GetScreenHeight()) {
         sidebar.scroll_amount = MIN(sidebar.scroll_amount, sidebar.max_y - GetScreenHeight());
     } else {
         sidebar.scroll_amount = 0;
     }
-
-    mouse_blockchain.pos = as_scr_vec(GetMousePosition());
 }

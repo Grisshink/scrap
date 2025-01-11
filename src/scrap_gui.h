@@ -22,6 +22,7 @@
 
 #define ELEMENT_STACK_SIZE 8192
 typedef struct Gui Gui;
+typedef struct FlexElement FlexElement;
 
 typedef struct {
     int w, h;
@@ -87,7 +88,9 @@ typedef enum {
     DIRECTION_VERTICAL,
 } FlexDirection;
 
-typedef struct FlexElement {
+typedef void (*HoverHandler)(FlexElement* el);
+
+struct FlexElement {
     int x, y, w, h;
     int cursor_x, cursor_y;
     int pad_w, pad_h;
@@ -99,9 +102,11 @@ typedef struct FlexElement {
     ElementSizing sizing_y;
     FlexDirection direction;
     AlignmentType align;
+    HoverHandler handle_hover;
+    void* custom_data;
     int element_count;
     struct FlexElement* next;
-} FlexElement;
+};
 
 typedef GuiMeasurement (*MeasureTextFunc)(void* font, const char* text, int size);
 typedef GuiMeasurement (*MeasureImageFunc)(void* image, int size);
@@ -121,6 +126,7 @@ struct Gui {
     MeasureImageFunc measure_image;
 
     int win_w, win_h;
+    int mouse_x, mouse_y;
 };
 
 #define GUI_GET_COMMANDS(gui, command) while (gui->command_stack_iter < gui->command_stack_len && (command = &gui->command_stack[gui->command_stack_iter++]))
@@ -128,12 +134,13 @@ struct Gui {
 #define NO_BORDER TRANSPARENT, 0
 #define NO_COLOR TRANSPARENT, NO_BORDER
 
-void gui_begin(Gui* gui);
-void gui_update_window_size(Gui* gui, int win_w, int win_h);
 void gui_init(Gui* gui);
+void gui_begin(Gui* gui);
+void gui_end(Gui* gui);
+void gui_update_window_size(Gui* gui, int win_w, int win_h);
+void gui_update_mouse_pos(Gui* gui, int mouse_x, int mouse_y);
 void gui_set_measure_text_func(Gui* gui, MeasureTextFunc measure_text);
 void gui_set_measure_image_func(Gui* gui, MeasureImageFunc measure_image);
-void gui_end(Gui* gui);
 
 FlexElement* gui_element_begin(Gui* gui);
 void gui_element_end(Gui* gui);
@@ -150,6 +157,9 @@ void gui_set_min_size(Gui* gui, int min_w, int min_h);
 void gui_set_align(Gui* gui, AlignmentType align);
 void gui_set_padding(Gui* gui, int pad_w, int pad_h);
 void gui_set_gap(Gui* gui, int gap);
+void gui_set_custom_data(Gui* gui, void* custom_data);
+
+void gui_on_hover(Gui* gui, HoverHandler handler);
 
 void gui_text(Gui* gui, void* font, const char* text, int size, GuiColor color);
 void gui_image(Gui* gui, void* image, int size, GuiColor color);

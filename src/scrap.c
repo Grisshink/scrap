@@ -202,7 +202,7 @@ void setup(void) {
     int *codepoints = LoadCodepoints(conf.font_symbols, &codepoints_count);
     font_cond = LoadFontEx(get_font_path(conf.font_path), conf.font_size, codepoints, codepoints_count);
     font_cond_shadow = LoadFontEx(get_font_path(conf.font_path), BLOCK_TEXT_SIZE, codepoints, codepoints_count);
-    font_eb = LoadFontEx(get_font_path(conf.font_bold_path), conf.font_size, codepoints, codepoints_count);
+    font_eb = LoadFontEx(get_font_path(conf.font_bold_path), conf.font_size * 0.8, codepoints, codepoints_count);
     font_mono = LoadFontEx(get_font_path(conf.font_mono_path), conf.font_size, codepoints, codepoints_count);
     UnloadCodepoints(codepoints);
 
@@ -227,8 +227,6 @@ void setup(void) {
 
     term_init();
 
-    init_gui();
-
     gui = malloc(sizeof(Gui));
     gui_init(gui);
     gui_set_measure_text_func(gui, scrap_gui_measure_text);
@@ -250,7 +248,7 @@ int main(void) {
     SetWindowIcon(logo_img);
 
     while (!WindowShouldClose()) {
-        process_input();
+        scrap_gui_process_input();
 
         actionbar.show_time -= GetFrameTime();
         if (actionbar.show_time < 0) actionbar.show_time = 0;
@@ -258,15 +256,6 @@ int main(void) {
         if (shader_time_loc != -1) SetShaderValue(line_shader, shader_time_loc, &shader_time, SHADER_UNIFORM_FLOAT);
         shader_time += GetFrameTime() / 2.0;
         if (shader_time >= 1.0) shader_time = 1.0;
-
-        // I have no idea why, but this code may occasionally crash X server, so it is turned off for now
-        /*if (hover_info.argument || hover_info.select_argument) {
-            SetMouseCursor(MOUSE_CURSOR_IBEAM);
-        } else if (hover_info.block) {
-            SetMouseCursor(MOUSE_CURSOR_POINTING_HAND);
-        } else {
-            SetMouseCursor(MOUSE_CURSOR_DEFAULT);
-        }*/
 
         size_t vm_return = -1;
         if (exec_try_join(&vm, &exec, &vm_return)) {
@@ -285,7 +274,6 @@ int main(void) {
 
         BeginDrawing();
         scrap_gui_process_render();
-        //process_render();
         EndDrawing();
     }
 
@@ -302,7 +290,6 @@ int main(void) {
         blockchain_free(&editor_code[i]);
     }
     vector_free(editor_code);
-    gui_free();
     for (vec_size_t i = 0; i < vector_size(sidebar.blocks); i++) {
         block_free(&sidebar.blocks[i]);
     }

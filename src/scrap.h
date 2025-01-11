@@ -198,6 +198,7 @@ void scrap_gui_process_render(void);
 
 // input.c
 void process_input(void);
+void scrap_gui_process_input(void);
 
 // util.c
 ScrVec as_scr_vec(Vector2 vec);
@@ -223,14 +224,14 @@ void save_code(const char* file_path, ScrBlockChain* code);
 ScrBlockChain* load_code(const char* file_path);
 
 // gui.c
-void init_gui(void);
-void gui_show(NuklearGuiType type);
-void gui_hide_immediate(void);
-NuklearGuiType gui_get_type(void);
-bool gui_is_shown(void);
-void update_gui(void);
-void draw_gui(void);
-void gui_free(void);
+// void init_gui(void);
+// void gui_show(NuklearGuiType type);
+// void gui_hide_immediate(void);
+// NuklearGuiType gui_get_type(void);
+// bool gui_is_shown(void);
+// void update_gui(void);
+// void draw_gui(void);
+// void gui_free(void);
 
 // blocks.c
 void load_blocks(ScrVm* vm);

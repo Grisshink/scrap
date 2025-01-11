@@ -30,6 +30,11 @@ static bool inside_window(Gui* gui, DrawCommand* command) {
            (command->pos_y + command->height > 0) && (command->pos_y < gui->win_h);
 }
 
+static bool mouse_inside(Gui* gui, int x, int y, int w, int h) {
+    return ((gui->mouse_x > x) && (gui->mouse_x < x + w) && 
+            (gui->mouse_y > y) && (gui->mouse_y < y + h));
+}
+
 void gui_init(Gui* gui) {
     gui->measure_text = NULL;
     gui->measure_image = NULL;
@@ -37,6 +42,8 @@ void gui_init(Gui* gui) {
     gui->element_stack_len = 0;
     gui->win_w = 0;
     gui->win_h = 0;
+    gui->mouse_x = 0;
+    gui->mouse_y = 0;
     gui->command_stack_iter = 0;
 }
 
@@ -62,12 +69,18 @@ void gui_set_measure_image_func(Gui* gui, MeasureImageFunc measure_image) {
     gui->measure_image = measure_image;
 }
 
+void gui_update_mouse_pos(Gui* gui, int mouse_x, int mouse_y) {
+    gui->mouse_x = mouse_x;
+    gui->mouse_y = mouse_y;
+}
+
 void gui_update_window_size(Gui* gui, int win_w, int win_h) {
     gui->win_w = win_w;
     gui->win_h = win_h;
 }
 
 void gui_render(Gui* gui, FlexElement* el, int pos_x, int pos_y) {
+    if (el->handle_hover && mouse_inside(gui, el->x + pos_x, el->y + pos_y, el->w, el->h)) el->handle_hover(el);
     if (el->draw_type != DRAWTYPE_UNKNOWN) {
         DrawCommand* command = &gui->command_stack[gui->command_stack_len++];
         command->pos_x = pos_x + el->x;
@@ -107,9 +120,11 @@ FlexElement* gui_element_begin(Gui* gui) {
     el->gap = 0;
     el->w = 0;
     el->h = 0;
-    el->next = NULL;
     el->direction = DIRECTION_VERTICAL;
     el->align = ALIGN_TOP;
+    el->next = NULL;
+    el->handle_hover = NULL;
+    el->custom_data = NULL;
     return el;
 }
 
@@ -216,6 +231,16 @@ void gui_element_end(Gui* gui) {
     } else {
         gui_element_realign(el);
     }
+}
+
+void gui_on_hover(Gui* gui, HoverHandler handler) {
+    FlexElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
+    el->handle_hover = handler;
+}
+
+void gui_set_custom_data(Gui* gui, void* custom_data) {
+    FlexElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
+    el->custom_data = custom_data;
 }
 
 void gui_set_fixed(Gui* gui, int w, int h) {

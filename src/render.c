@@ -774,6 +774,24 @@ void scrap_gui_draw_blockdef(ScrBlockdef* blockdef) {
     gui_element_end(gui);
 }
 
+void block_border_on_hover(FlexElement* el) {
+    Color new_col = ColorBrightness(CONVERT_COLOR(el->color, Color), 0.5);
+    el->color = CONVERT_COLOR(new_col, GuiColor);
+}
+
+void block_on_hover(FlexElement* el) {
+    Color new_col = ColorBrightness(CONVERT_COLOR(el->color, Color), 0.3);
+    el->color = CONVERT_COLOR(new_col, GuiColor);
+    hover_info.block = el->custom_data;
+}
+
+void argument_on_hover(FlexElement* el) {
+    el->draw_type = DRAWTYPE_BORDER;
+    el->color = (GuiColor) { 0xa0, 0xa0, 0xa0, 0xff };
+    el->data.border_width = BLOCK_OUTLINE_SIZE;
+    hover_info.argument = el->custom_data;
+}
+
 void scrap_gui_draw_block(ScrBlock* block) {
     bool collision = false;
     Color block_color = CONVERT_COLOR(block->blockdef->color, Color);
@@ -783,6 +801,8 @@ void scrap_gui_draw_block(ScrBlock* block) {
     gui_element_begin(gui);
         gui_set_direction(gui, DIRECTION_HORIZONTAL);
         gui_set_rect(gui, CONVERT_COLOR(block_color, GuiColor));
+        gui_set_custom_data(gui, block);
+        gui_on_hover(gui, block_on_hover);
 
     gui_element_begin(gui);
         gui_set_direction(gui, DIRECTION_HORIZONTAL);
@@ -791,6 +811,7 @@ void scrap_gui_draw_block(ScrBlock* block) {
         gui_set_min_size(gui, 0, conf.font_size);
         gui_set_padding(gui, BLOCK_OUTLINE_SIZE * 2, BLOCK_OUTLINE_SIZE * 2);
         gui_set_gap(gui, BLOCK_PADDING);
+        gui_on_hover(gui, block_border_on_hover);
     
     size_t arg_id = 0;
     for (size_t i = 0; i < vector_size(block->blockdef->inputs); i++) {
@@ -809,13 +830,18 @@ void scrap_gui_draw_block(ScrBlock* block) {
             case ARGUMENT_CONST_STRING:
             case ARGUMENT_TEXT:
                 gui_element_begin(gui);
-                    gui_set_direction(gui, DIRECTION_HORIZONTAL);
-                    gui_set_min_size(gui, 0, conf.font_size - BLOCK_OUTLINE_SIZE * 4);
-                    gui_set_padding(gui, BLOCK_STRING_PADDING / 2, 0);
-                    gui_set_align(gui, ALIGN_CENTER);
                     gui_set_rect(gui, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
 
-                    gui_text(gui, &font_cond, arg->data.text, BLOCK_TEXT_SIZE, (GuiColor) { 0x00, 0x00, 0x00, 0xff });
+                    gui_element_begin(gui);
+                        gui_set_direction(gui, DIRECTION_HORIZONTAL);
+                        gui_set_min_size(gui, 0, conf.font_size - BLOCK_OUTLINE_SIZE * 4);
+                        gui_set_align(gui, ALIGN_CENTER);
+                        gui_set_padding(gui, BLOCK_STRING_PADDING / 2, 0);
+                        gui_set_custom_data(gui, arg);
+                        gui_on_hover(gui, argument_on_hover);
+
+                        gui_text(gui, &font_cond, arg->data.text, BLOCK_TEXT_SIZE, (GuiColor) { 0x00, 0x00, 0x00, 0xff });
+                    gui_element_end(gui);
                 gui_element_end(gui);
                 break;
             case ARGUMENT_BLOCK:
@@ -876,14 +902,20 @@ void scrap_gui_draw_block(ScrBlock* block) {
     gui_element_end(gui);
 }
 
+void button_on_hover(FlexElement* el) {
+    el->draw_type = DRAWTYPE_RECT;
+    el->color = (GuiColor) { 0x40, 0x40, 0x40, 0xff };
+}
+
 void scrap_gui_draw_button(const char* text, int size) {
     gui_element_begin(gui);
         gui_set_direction(gui, DIRECTION_HORIZONTAL);
         gui_set_align(gui, ALIGN_CENTER);
         gui_set_min_size(gui, 0, size);
         gui_set_padding(gui, conf.font_size * 0.3, 0);
+        gui_on_hover(gui, button_on_hover);
 
-        gui_text(gui, &font_cond, text, conf.font_size * 0.6, CONVERT_COLOR(WHITE, GuiColor));
+        gui_text(gui, &font_cond_shadow, text, BLOCK_TEXT_SIZE, CONVERT_COLOR(WHITE, GuiColor));
     gui_element_end(gui);
 }
 
@@ -919,12 +951,25 @@ void scrap_gui_draw_tab_bar(void) {
 
         scrap_gui_draw_button("Code", tab_bar_size);
         scrap_gui_draw_button("Output", tab_bar_size);
+
         gui_grow(gui, DIRECTION_HORIZONTAL);
-        gui_text(gui, &font_cond_shadow, "aboba", BLOCK_TEXT_SIZE, CONVERT_COLOR(WHITE, GuiColor));
+        gui_text(gui, &font_cond, "Project.scrp", BLOCK_TEXT_SIZE, (GuiColor) { 0x80, 0x80, 0x80, 0xff });
         gui_grow(gui, DIRECTION_HORIZONTAL);
-        gui_image(gui, &stop_tex, tab_bar_size, CONVERT_COLOR(WHITE, GuiColor));
-        gui_image(gui, &run_tex, tab_bar_size, CONVERT_COLOR(WHITE, GuiColor));
+        
+        gui_element_begin(gui);
+            gui_on_hover(gui, button_on_hover);
+            gui_image(gui, &stop_tex, tab_bar_size, CONVERT_COLOR(WHITE, GuiColor));
+        gui_element_end(gui);
+        gui_element_begin(gui);
+            gui_on_hover(gui, button_on_hover);
+            gui_image(gui, &run_tex, tab_bar_size, CONVERT_COLOR(WHITE, GuiColor));
+        gui_element_end(gui);
     gui_element_end(gui);
+}
+
+void sidebar_on_hover(FlexElement* el) {
+    (void) el;
+    hover_info.sidebar = 1;
 }
 
 void scrap_gui_draw_sidebar(void) {
@@ -939,6 +984,7 @@ void scrap_gui_draw_sidebar(void) {
             gui_set_rect(gui, (GuiColor) { 0x00, 0x00, 0x00, 0x80 });
             gui_set_padding(gui, SIDE_BAR_PADDING, SIDE_BAR_PADDING);
             gui_set_gap(gui, SIDE_BAR_PADDING);
+            gui_on_hover(gui, sidebar_on_hover);
 
             for (size_t i = dropdown.scroll_amount; i < vector_size(sidebar.blocks); i++) {
                 scrap_gui_draw_block(&sidebar.blocks[i]);
@@ -1100,22 +1146,14 @@ void process_render(void) {
     int sw = GetScreenWidth();
     int sh = GetScreenHeight();
 
-    DrawRectangle(0, 0, sw, conf.font_size * 1.2, (Color){ 0x30, 0x30, 0x30, 0xFF });
-    DrawRectangle(0, conf.font_size * 1.2, sw, conf.font_size, (Color){ 0x2B, 0x2B, 0x2B, 0xFF });
-    draw_tab_buttons(sw);
-    draw_top_bar();
-
     if (current_tab == TAB_CODE) {
         BeginScissorMode(0, conf.font_size * 2.2, sw, sh - conf.font_size * 2.2);
-            draw_dots();
             for (vec_size_t i = 0; i < vector_size(editor_code); i++) {
                 draw_block_chain(&editor_code[i], camera_pos, hover_info.exec_chain == &editor_code[i]);
             }
         EndScissorMode();
 
         draw_scrollbars();
-
-        draw_sidebar();
 
         BeginScissorMode(0, conf.font_size * 2.2, sw, sh - conf.font_size * 2.2);
             draw_block_chain(&mouse_blockchain, (Vector2) {0}, false);
@@ -1126,7 +1164,6 @@ void process_render(void) {
         draw_term();
     }
 
-    draw_gui();
     scrap_gui_render();
 
     draw_dropdown_list();
