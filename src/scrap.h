@@ -195,6 +195,7 @@ void actionbar_show(const char* text);
 void process_render(void);
 void prerender_font_shadow(Font* font);
 void scrap_gui_process_render(void);
+void scrap_gui_process(void);
 
 // input.c
 void process_input(void);

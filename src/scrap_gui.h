@@ -103,6 +103,7 @@ struct FlexElement {
     FlexDirection direction;
     AlignmentType align;
     HoverHandler handle_hover;
+    unsigned char is_floating;
     void* custom_data;
     int element_count;
     struct FlexElement* next;
@@ -158,6 +159,8 @@ void gui_set_align(Gui* gui, AlignmentType align);
 void gui_set_padding(Gui* gui, int pad_w, int pad_h);
 void gui_set_gap(Gui* gui, int gap);
 void gui_set_custom_data(Gui* gui, void* custom_data);
+void gui_set_floating(Gui* gui);
+void gui_set_position(Gui* gui, int x, int y);
 
 void gui_on_hover(Gui* gui, HoverHandler handler);
 

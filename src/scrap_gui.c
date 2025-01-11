@@ -108,6 +108,7 @@ FlexElement* gui_element_begin(Gui* gui) {
     FlexElement* el = &gui->element_stack[gui->element_stack_len++];
     gui->element_ptr_stack[gui->element_ptr_stack_len++] = el;
     el->draw_type = DRAWTYPE_UNKNOWN;
+    el->is_floating = 0;
     el->x = prev ? prev->cursor_x : 0;
     el->y = prev ? prev->cursor_y : 0;
     el->element_count = 0;
@@ -134,10 +135,12 @@ void gui_element_realign(FlexElement* el) {
     int align_div = el->align == ALIGN_CENTER ? 2 : 1;
     FlexElement *iter = el + 1;
     for (int i = 0; i < el->element_count; i++) {
-        if (el->direction == DIRECTION_VERTICAL) {
-            iter->x = (el->w - iter->w) / align_div;
-        } else {
-            iter->y = (el->h - iter->h) / align_div;
+        if (!iter->is_floating) {
+            if (el->direction == DIRECTION_VERTICAL) {
+                iter->x = (el->w - iter->w) / align_div;
+            } else {
+                iter->y = (el->h - iter->h) / align_div;
+            }
         }
         iter = iter->next;
     }
@@ -153,20 +156,22 @@ void gui_element_resize(Gui* gui, FlexElement* el, int new_w, int new_h) {
 
     FlexElement* iter = el + 1;
     for (int i = 0; i < el->element_count; i++) {
-        if (el->direction == DIRECTION_VERTICAL) {
-            if (iter->sizing_y == SIZING_GROW) {
-                grow_elements++;
+        if (!iter->is_floating) {
+            if (el->direction == DIRECTION_VERTICAL) {
+                if (iter->sizing_y == SIZING_GROW) {
+                    grow_elements++;
+                } else {
+                    left_h -= iter->h;
+                }
+                left_h -= el->gap;
             } else {
-                left_h -= iter->h;
+                if (iter->sizing_x == SIZING_GROW) {
+                    grow_elements++;
+                } else {
+                    left_w -= iter->w;
+                }
+                left_w -= el->gap;
             }
-            left_h -= el->gap;
-        } else {
-            if (iter->sizing_x == SIZING_GROW) {
-                grow_elements++;
-            } else {
-                left_w -= iter->w;
-            }
-            left_w -= el->gap;
         }
         iter = iter->next;
     }
@@ -176,21 +181,23 @@ void gui_element_resize(Gui* gui, FlexElement* el, int new_w, int new_h) {
 
     iter = el + 1;
     for (int i = 0; i < el->element_count; i++) {
-        iter->x = cursor_x;
-        iter->y = cursor_y;
+        if (!iter->is_floating) {
+            iter->x = cursor_x;
+            iter->y = cursor_y;
 
-        int size_w = iter->w;
-        int size_h = iter->h;
-        if (el->direction == DIRECTION_VERTICAL) {
-            if (iter->sizing_x == SIZING_GROW) size_w = el->w;
-            if (iter->sizing_y == SIZING_GROW) size_h = left_h / grow_elements;
-            if (iter->sizing_x == SIZING_GROW || iter->sizing_y == SIZING_GROW) gui_element_resize(gui, iter, size_w, size_h);
-            cursor_y += iter->h + el->gap;
-        } else {
-            if (iter->sizing_x == SIZING_GROW) size_w = left_w / grow_elements;
-            if (iter->sizing_y == SIZING_GROW) size_h = el->h;
-            if (iter->sizing_x == SIZING_GROW || iter->sizing_y == SIZING_GROW) gui_element_resize(gui, iter, size_w, size_h);
-            cursor_x += iter->w + el->gap;
+            int size_w = iter->w;
+            int size_h = iter->h;
+            if (el->direction == DIRECTION_VERTICAL) {
+                if (iter->sizing_x == SIZING_GROW) size_w = el->w;
+                if (iter->sizing_y == SIZING_GROW) size_h = left_h / grow_elements;
+                if (iter->sizing_x == SIZING_GROW || iter->sizing_y == SIZING_GROW) gui_element_resize(gui, iter, size_w, size_h);
+                cursor_y += iter->h + el->gap;
+            } else {
+                if (iter->sizing_x == SIZING_GROW) size_w = left_w / grow_elements;
+                if (iter->sizing_y == SIZING_GROW) size_h = el->h;
+                if (iter->sizing_x == SIZING_GROW || iter->sizing_y == SIZING_GROW) gui_element_resize(gui, iter, size_w, size_h);
+                cursor_x += iter->w + el->gap;
+            }
         }
         iter = iter->next;
     }
@@ -236,6 +243,17 @@ void gui_element_end(Gui* gui) {
 void gui_on_hover(Gui* gui, HoverHandler handler) {
     FlexElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
     el->handle_hover = handler;
+}
+
+void gui_set_floating(Gui* gui) {
+    FlexElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
+    el->is_floating = 1;
+}
+
+void gui_set_position(Gui* gui, int x, int y) {
+    FlexElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
+    el->x = x;
+    el->y = y;
 }
 
 void gui_set_custom_data(Gui* gui, void* custom_data) {

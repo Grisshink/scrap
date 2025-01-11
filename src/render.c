@@ -785,6 +785,10 @@ void block_on_hover(FlexElement* el) {
     hover_info.block = el->custom_data;
 }
 
+void block_argument_on_hover(FlexElement* el) {
+    hover_info.prev_argument = el->custom_data;
+}
+
 void argument_on_hover(FlexElement* el) {
     el->draw_type = DRAWTYPE_BORDER;
     el->color = (GuiColor) { 0xa0, 0xa0, 0xa0, 0xff };
@@ -845,7 +849,12 @@ void scrap_gui_draw_block(ScrBlock* block) {
                 gui_element_end(gui);
                 break;
             case ARGUMENT_BLOCK:
-                scrap_gui_draw_block(&arg->data.block);
+                gui_element_begin(gui);
+                    gui_on_hover(gui, block_argument_on_hover);
+                    gui_set_custom_data(gui, arg);
+
+                    scrap_gui_draw_block(&arg->data.block);
+                gui_element_end(gui);
                 break;
             default:
                 gui_text(gui, &font_cond_shadow, "NODEF", BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0x00, 0x00, 0xff });
@@ -903,19 +912,21 @@ void scrap_gui_draw_block(ScrBlock* block) {
 }
 
 void button_on_hover(FlexElement* el) {
+    if (el->draw_type == DRAWTYPE_RECT) return;
     el->draw_type = DRAWTYPE_RECT;
     el->color = (GuiColor) { 0x40, 0x40, 0x40, 0xff };
 }
 
-void scrap_gui_draw_button(const char* text, int size) {
+void scrap_gui_draw_button(const char* text, int size, bool selected) {
     gui_element_begin(gui);
         gui_set_direction(gui, DIRECTION_HORIZONTAL);
         gui_set_align(gui, ALIGN_CENTER);
         gui_set_min_size(gui, 0, size);
         gui_set_padding(gui, conf.font_size * 0.3, 0);
+        if (selected) gui_set_rect(gui, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
         gui_on_hover(gui, button_on_hover);
 
-        gui_text(gui, &font_cond_shadow, text, BLOCK_TEXT_SIZE, CONVERT_COLOR(WHITE, GuiColor));
+        gui_text(gui, &font_cond, text, BLOCK_TEXT_SIZE, selected ? (GuiColor) { 0x00, 0x00, 0x00, 0xff } : (GuiColor) { 0xff, 0xff, 0xff, 0xff });
     gui_element_end(gui);
 }
 
@@ -934,9 +945,9 @@ void scrap_gui_draw_top_bar(void) {
         gui_text(gui, &font_eb, "Scrap", conf.font_size * 0.8, CONVERT_COLOR(WHITE, GuiColor));
         gui_spacer(gui, 10, 0);
 
-        scrap_gui_draw_button("File", top_bar_size);
-        scrap_gui_draw_button("Settings", top_bar_size);
-        scrap_gui_draw_button("About", top_bar_size);
+        scrap_gui_draw_button("File", top_bar_size, false);
+        scrap_gui_draw_button("Settings", top_bar_size, false);
+        scrap_gui_draw_button("About", top_bar_size, false);
     gui_element_end(gui);
 }
 
@@ -949,8 +960,8 @@ void scrap_gui_draw_tab_bar(void) {
         gui_set_min_size(gui, 0, tab_bar_size);
         gui_set_align(gui, ALIGN_CENTER);
 
-        scrap_gui_draw_button("Code", tab_bar_size);
-        scrap_gui_draw_button("Output", tab_bar_size);
+        scrap_gui_draw_button("Code", tab_bar_size, current_tab == TAB_CODE);
+        scrap_gui_draw_button("Output", tab_bar_size, current_tab == TAB_OUTPUT);
 
         gui_grow(gui, DIRECTION_HORIZONTAL);
         gui_text(gui, &font_cond, "Project.scrp", BLOCK_TEXT_SIZE, (GuiColor) { 0x80, 0x80, 0x80, 0xff });
@@ -964,6 +975,25 @@ void scrap_gui_draw_tab_bar(void) {
             gui_on_hover(gui, button_on_hover);
             gui_image(gui, &run_tex, tab_bar_size, CONVERT_COLOR(WHITE, GuiColor));
         gui_element_end(gui);
+    gui_element_end(gui);
+}
+
+void blockchain_on_hover(FlexElement* el) {
+    hover_info.blockchain = el->custom_data;
+}
+
+void scrap_gui_draw_blockchain(ScrBlockChain* chain) {
+    gui_element_begin(gui);
+        gui_set_direction(gui, DIRECTION_VERTICAL);
+        gui_set_border(gui, CONVERT_COLOR(PINK, GuiColor), BLOCK_OUTLINE_SIZE);
+        gui_on_hover(gui, blockchain_on_hover);
+        gui_set_custom_data(gui, chain);
+
+    for (size_t i = 0; i < vector_size(chain->blocks); i++) {
+        hover_info.blockchain_index = i;
+        scrap_gui_draw_block(&chain->blocks[i]);
+    }
+
     gui_element_end(gui);
 }
 
@@ -996,9 +1026,23 @@ void scrap_gui_draw_sidebar(void) {
 void scrap_gui_process(void) {
     // Gui
     gui_begin(gui);
+        for (size_t i = 0; i < vector_size(editor_code); i++) {
+            gui_element_begin(gui);
+                gui_set_floating(gui);
+                gui_set_position(gui, editor_code[i].pos.x - camera_pos.x, editor_code[i].pos.y - camera_pos.y);
+
+                scrap_gui_draw_blockchain(&editor_code[i]);
+            gui_element_end(gui);
+        }
         scrap_gui_draw_top_bar();
         scrap_gui_draw_tab_bar();
         scrap_gui_draw_sidebar();
+        gui_element_begin(gui);
+            gui_set_floating(gui);
+            gui_set_position(gui, gui->mouse_x, gui->mouse_y);
+
+            scrap_gui_draw_blockchain(&mouse_blockchain);
+        gui_element_end(gui);
     gui_end(gui);
 }
 
@@ -1060,8 +1104,6 @@ void scrap_gui_render(void) {
 }
 
 void scrap_gui_process_render(void) {
-    scrap_gui_process();
-
     ClearBackground(GetColor(0x202020ff));
     draw_dots();
     scrap_gui_render();

@@ -572,6 +572,7 @@ bool handle_sidebar_click(bool mouse_empty) {
     }
     if (mouse_empty && hover_info.block) {
         // Pickup block
+        TraceLog(LOG_INFO, "Pickup block");
         blockchain_add_block(&mouse_blockchain, block_new_ms(hover_info.block->blockdef));
         if (hover_info.block->blockdef->type == BLOCKTYPE_CONTROL && vm.end_blockdef) {
             blockchain_add_block(&mouse_blockchain, block_new_ms(vm.blockdefs[vm.end_blockdef]));
@@ -579,6 +580,7 @@ bool handle_sidebar_click(bool mouse_empty) {
         return true;
     } else if (!mouse_empty) {
         // Drop block
+        TraceLog(LOG_INFO, "Drop block");
         for (size_t i = 0; i < vector_size(mouse_blockchain.blocks); i++) {
             for (size_t j = 0; j < vector_size(mouse_blockchain.blocks[i].arguments); j++) {
                 ScrArgument* arg = &mouse_blockchain.blocks[i].arguments[j];
@@ -697,6 +699,7 @@ bool handle_blockdef_editor_click(void) {
 }
 
 bool handle_code_editor_click(bool mouse_empty) {
+    TraceLog(LOG_INFO, "Handle editor");
     if (!mouse_empty) {
         mouse_blockchain.pos = as_scr_vec(GetMousePosition());
         if (hover_info.argument || hover_info.prev_argument) {
@@ -815,7 +818,7 @@ bool handle_mouse_click(void) {
         if (gui_get_type() == GUI_TYPE_FILE) gui_hide_immediate();
         return true;
     }*/
-    if (hover_info.top_bars.ind != -1) return handle_top_bar_click();
+    //if (hover_info.top_bars.ind != -1) return handle_top_bar_click();
     if (current_tab != TAB_CODE) return true;
     if (vm.is_running) return false;
 
@@ -953,6 +956,25 @@ void scrap_gui_process_input(void) {
     hover_info.editor.blockdef = NULL;
     hover_info.editor.blockdef_input = -1;
 
+    scrap_gui_process();
+
+    if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+        hover_info.drag_cancelled = handle_mouse_click();
+#ifdef DEBUG
+        // This will traverse through all blocks in codebase, which is expensive in large codebase.
+        // Ideally all functions should not be broken in the first place. This helps with debugging invalid states
+        sanitize_links();
+#endif
+    } else if (IsMouseButtonPressed(MOUSE_BUTTON_MIDDLE)) {
+        hover_info.mouse_click_pos = GetMousePosition();
+        camera_click_pos = camera_pos;
+    } else if (IsMouseButtonDown(MOUSE_BUTTON_MIDDLE) || IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
+        handle_mouse_drag();
+    } else {
+        hover_info.drag_cancelled = false;
+        handle_key_press();
+    }
+
     if (IsWindowResized()) {
         shader_time = 0.0;
         term_resize();
@@ -976,22 +998,6 @@ void process_input(void) {
         handle_mouse_wheel();
     }
 
-    if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
-        hover_info.drag_cancelled = handle_mouse_click();
-#ifdef DEBUG
-        // This will traverse through all blocks in codebase, which is expensive in large codebase.
-        // Ideally all functions should not be broken in the first place. This helps with debugging invalid states
-        sanitize_links();
-#endif
-    } else if (IsMouseButtonPressed(MOUSE_BUTTON_MIDDLE)) {
-        hover_info.mouse_click_pos = GetMousePosition();
-        camera_click_pos = camera_pos;
-    } else if (IsMouseButtonDown(MOUSE_BUTTON_MIDDLE) || IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
-        handle_mouse_drag();
-    } else {
-        hover_info.drag_cancelled = false;
-        handle_key_press();
-    }
 
     if (sidebar.max_y > GetScreenHeight()) {
         sidebar.scroll_amount = MIN(sidebar.scroll_amount, sidebar.max_y - GetScreenHeight());
