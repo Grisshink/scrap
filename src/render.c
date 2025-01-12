@@ -1027,12 +1027,21 @@ void scrap_gui_process(void) {
     // Gui
     gui_begin(gui);
         for (size_t i = 0; i < vector_size(editor_code); i++) {
+            Vector2 chain_pos = (Vector2) {
+                editor_code[i].pos.x - camera_pos.x, 
+                editor_code[i].pos.y - camera_pos.y,
+            };
+            if (chain_pos.x > gui->win_w || chain_pos.y > gui->win_h) continue;
+            if (editor_code[i].ms.size.x > 0 && editor_code[i].ms.size.y > 0 && (chain_pos.x + editor_code[i].ms.size.x < 0 || chain_pos.y + editor_code[i].ms.size.y < 0)) continue;
             gui_element_begin(gui);
                 gui_set_floating(gui);
-                gui_set_position(gui, editor_code[i].pos.x - camera_pos.x, editor_code[i].pos.y - camera_pos.y);
+                gui_set_position(gui, chain_pos.x, chain_pos.y);
 
                 scrap_gui_draw_blockchain(&editor_code[i]);
             gui_element_end(gui);
+            FlexElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len];
+            editor_code[i].ms.size.x = el->w;
+            editor_code[i].ms.size.y = el->h;
         }
         scrap_gui_draw_top_bar();
         scrap_gui_draw_tab_bar();

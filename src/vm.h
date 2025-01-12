@@ -252,6 +252,7 @@ struct ScrData {
 
 struct ScrBlockChain {
     ScrVec pos;
+    ScrMeasurement ms;
     ScrBlock* blocks;
     int custom_argc;
     ScrData* custom_argv;
@@ -1074,6 +1075,7 @@ ScrBlockChain blockchain_new(void) {
     ScrBlockChain chain;
     chain.pos = (ScrVec) {0};
     chain.blocks = vector_create();
+    chain.ms = (ScrMeasurement) {0};
 
     return chain;
 }
