@@ -1148,7 +1148,7 @@ void scrap_gui_process_render(void) {
                 block_code.min_pos.x, block_code.min_pos.y, block_code.max_pos.x, block_code.max_pos.y,
                 sidebar.scroll_amount, sidebar.max_y,
                 hover_info.editor.part, hover_info.editor.edit_blockdef, hover_info.editor.blockdef, hover_info.editor.blockdef_input,
-                gui->element_stack_len, ELEMENT_STACK_SIZE, gui->command_stack_len, ELEMENT_STACK_SIZE
+                gui->element_stack_len, ELEMENT_STACK_SIZE, gui->command_stack_len, COMMAND_STACK_SIZE
             ), 
             (Vector2){ 
                 conf.side_bar_size + 5, 

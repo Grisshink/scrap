@@ -162,9 +162,45 @@ GuiMeasurement scrap_gui_measure_image(void* image, int size) {
     return (GuiMeasurement) { img->width * ((float)size / (float)img->height), size };
 }
 
+int search_glyph(int codepoint) {
+    // We assume that ASCII region is the first region, so this index should correspond to char '?' in the glyph table
+    const int fallback = 31;
+    for (int i = 0; i < CODEPOINT_REGION_COUNT; i++) {
+        if (codepoint < codepoint_regions[i][0] || codepoint > codepoint_regions[i][1]) continue;
+        return codepoint - codepoint_regions[i][0] + codepoint_start_ranges[i];
+    }
+    return fallback;
+}
+
+GuiMeasurement custom_measure(Font font, const char *text, float font_size) {
+    GuiMeasurement ms = {0};
+
+    if ((font.texture.id == 0) || !text) return ms;
+
+    int size = TextLength(text);
+    int codepoint = 0; // Current character
+    int index = 0; // Index position in sprite font
+
+    for (int i = 0; i < size;) {
+        int next = 0;
+        codepoint = GetCodepointNext(&text[i], &next);
+        index = search_glyph(codepoint);
+        i += next;
+
+        if (font.glyphs[index].advanceX != 0) {
+            ms.w += font.glyphs[index].advanceX;
+        } else {
+            ms.w += font.recs[index].width + font.glyphs[index].offsetX;
+        }
+    }
+
+    ms.w *= font_size / (float)font.baseSize;
+    ms.h = font_size;
+    return ms;
+}
+
 GuiMeasurement scrap_gui_measure_text(void* font, const char* text, int size) {
-    Vector2 text_size = MeasureTextEx(*(Font*)font, text, size, 0.0);
-    return (GuiMeasurement) { text_size.x, text_size.y };
+    return custom_measure(*(Font*)font, text, size);
 }
 
 GuiColor as_gui_color(Color color) {
@@ -198,13 +234,20 @@ void setup(void) {
     special_tex = load_svg(into_data_path(DATA_PATH "special.svg"));
     list_tex = load_svg(into_data_path(DATA_PATH "list.svg"));
 
-    int codepoints_count;
-    int *codepoints = LoadCodepoints(conf.font_symbols, &codepoints_count);
+    int* codepoints = vector_create();
+    for (int i = 0; i < CODEPOINT_REGION_COUNT; i++) {
+        codepoint_start_ranges[i] = vector_size(codepoints);
+        for (int j = codepoint_regions[i][0]; j <= codepoint_regions[i][1]; j++) {
+            vector_add(&codepoints, j);
+        }
+    }
+    int codepoints_count = vector_size(codepoints);
+
     font_cond = LoadFontEx(get_font_path(conf.font_path), conf.font_size, codepoints, codepoints_count);
     font_cond_shadow = LoadFontEx(get_font_path(conf.font_path), BLOCK_TEXT_SIZE, codepoints, codepoints_count);
     font_eb = LoadFontEx(get_font_path(conf.font_bold_path), conf.font_size * 0.8, codepoints, codepoints_count);
     font_mono = LoadFontEx(get_font_path(conf.font_mono_path), conf.font_size, codepoints, codepoints_count);
-    UnloadCodepoints(codepoints);
+    vector_free(codepoints);
 
     SetTextureFilter(font_cond.texture, TEXTURE_FILTER_BILINEAR);
     SetTextureFilter(font_cond_shadow.texture, TEXTURE_FILTER_BILINEAR);

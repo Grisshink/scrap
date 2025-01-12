@@ -964,7 +964,9 @@ void scrap_gui_process_input(void) {
     hover_info.editor.blockdef = NULL;
     hover_info.editor.blockdef_input = -1;
 
+    //Timer t = start_timer("gui process");
     scrap_gui_process();
+    //end_timer(t);
 
     if (hover_info.block && hover_info.argument) {
         int ind = hover_info.argument - hover_info.block->arguments;

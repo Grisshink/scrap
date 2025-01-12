@@ -28,7 +28,6 @@ typedef struct {
     int side_bar_size;
     int fps_limit;
     int block_size_threshold;
-    char font_symbols[FONT_SYMBOLS_MAX_SIZE];
     char font_path[FONT_PATH_MAX_SIZE];
     char font_bold_path[FONT_PATH_MAX_SIZE];
     char font_mono_path[FONT_PATH_MAX_SIZE];
@@ -183,6 +182,9 @@ extern int blockchain_select_counter;
 
 extern char* top_bar_buttons_text[3];
 extern char* tab_bar_buttons_text[2];
+
+extern const int codepoint_regions[CODEPOINT_REGION_COUNT][2];
+extern int codepoint_start_ranges[CODEPOINT_REGION_COUNT];
 
 // scrap.c
 void blockcode_add_blockchain(BlockCode* blockcode, ScrBlockChain chain);

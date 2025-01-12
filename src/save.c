@@ -32,6 +32,12 @@ typedef struct {
     size_t max_size;
 } SaveArena;
 
+const int codepoint_regions[CODEPOINT_REGION_COUNT][2] = {
+    { 0x20, 0x7e }, // All printable ASCII chars
+    { 0x400, 0x451 }, // Cyrillic letters
+};
+int codepoint_start_ranges[CODEPOINT_REGION_COUNT] = {0};
+
 char scrap_ident[] = "SCRAP";
 const char** save_block_ids = NULL;
 ScrBlockdef** save_blockdefs = NULL;
@@ -49,7 +55,6 @@ void set_default_config(Config* config) {
     config->side_bar_size = 300;
     config->fps_limit = 60;
     config->block_size_threshold = 1000;
-    strncpy(config->font_symbols, "qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNMйцукенгшщзхъфывапролджэячсмитьбюёЙЦУКЕНГШЩЗХЪФЫВАПРОЛДЖЭЯЧСМИТЬБЮЁ ,./;'\\[]=-0987654321`~!@#$%^&*()_+{}:\"|<>?", sizeof(config->font_symbols) - 1);
     strncpy(config->font_path, DATA_PATH "nk57-cond.otf", sizeof(config->font_path) - 1);
     strncpy(config->font_bold_path, DATA_PATH "nk57-eb.otf", sizeof(config->font_bold_path) - 1);
     strncpy(config->font_mono_path, DATA_PATH "nk57.otf", sizeof(config->font_mono_path) - 1);
@@ -68,7 +73,6 @@ void save_config(Config* config) {
     file_size += ARRLEN("SIDE_BAR_SIZE") + 10 + 1;
     file_size += ARRLEN("FPS_LIMIT") + 10 + 1;
     file_size += ARRLEN("BLOCK_SIZE_THRESHOLD") + 10 + 1;
-    file_size += ARRLEN("FONT_SYMBOLS") + strlen(config->font_symbols) + 1;
     file_size += ARRLEN("FONT_PATH") + strlen(config->font_path) + 1;
     file_size += ARRLEN("FONT_BOLD_PATH") + strlen(config->font_bold_path) + 1;
     file_size += ARRLEN("FONT_MONO_PATH") + strlen(config->font_mono_path) + 1;
@@ -80,7 +84,6 @@ void save_config(Config* config) {
     cursor += sprintf(file_str + cursor, "SIDE_BAR_SIZE=%u\n", config->side_bar_size);
     cursor += sprintf(file_str + cursor, "FPS_LIMIT=%u\n", config->fps_limit);
     cursor += sprintf(file_str + cursor, "BLOCK_SIZE_THRESHOLD=%u\n", config->block_size_threshold);
-    cursor += sprintf(file_str + cursor, "FONT_SYMBOLS=%s\n", config->font_symbols);
     cursor += sprintf(file_str + cursor, "FONT_PATH=%s\n", config->font_path);
     cursor += sprintf(file_str + cursor, "FONT_BOLD_PATH=%s\n", config->font_bold_path);
     cursor += sprintf(file_str + cursor, "FONT_MONO_PATH=%s\n", config->font_mono_path);
@@ -129,8 +132,6 @@ void load_config(Config* config) {
         } else if (!strcmp(field, "BLOCK_SIZE_THRESHOLD")) {
             int val = atoi(value);
             config->block_size_threshold = val ? val : config->block_size_threshold;
-        } else if (!strcmp(field, "FONT_SYMBOLS")) {
-            strncpy(config->font_symbols, value, sizeof(config->font_symbols) - 1);
         } else if (!strcmp(field, "FONT_PATH")) {
             strncpy(config->font_path, value, sizeof(config->font_path) - 1);
         } else if (!strcmp(field, "FONT_BOLD_PATH")) {

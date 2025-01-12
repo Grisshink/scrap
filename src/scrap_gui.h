@@ -21,6 +21,7 @@
 #include <stddef.h>
 
 #define ELEMENT_STACK_SIZE 32768
+#define COMMAND_STACK_SIZE 8192
 typedef struct Gui Gui;
 typedef struct FlexElement FlexElement;
 
@@ -113,7 +114,7 @@ typedef GuiMeasurement (*MeasureTextFunc)(void* font, const char* text, int size
 typedef GuiMeasurement (*MeasureImageFunc)(void* image, int size);
 
 struct Gui {
-    DrawCommand command_stack[ELEMENT_STACK_SIZE];
+    DrawCommand command_stack[COMMAND_STACK_SIZE];
     size_t command_stack_len;
     size_t command_stack_iter;
 

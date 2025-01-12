@@ -33,3 +33,5 @@
 #define CONFIG_PATH "config.txt"
 
 #define LICENSE_URL "https://www.gnu.org/licenses/gpl-3.0.html"
+
+#define CODEPOINT_REGION_COUNT 2
