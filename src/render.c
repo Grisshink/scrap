@@ -797,13 +797,19 @@ void scrap_gui_draw_block(ScrBlock* block) {
 
                     gui_element_begin(gui);
                         gui_set_direction(gui, DIRECTION_HORIZONTAL);
-                        gui_set_min_size(gui, 0, conf.font_size - BLOCK_OUTLINE_SIZE * 4);
+                        gui_set_min_size(gui, conf.font_size - BLOCK_OUTLINE_SIZE * 4, conf.font_size - BLOCK_OUTLINE_SIZE * 4);
                         gui_set_align(gui, ALIGN_CENTER);
                         gui_set_padding(gui, BLOCK_STRING_PADDING / 2, 0);
                         gui_set_custom_data(gui, arg);
                         gui_on_hover(gui, argument_on_hover);
 
-                        gui_text(gui, &font_cond, arg->data.text, BLOCK_TEXT_SIZE, (GuiColor) { 0x00, 0x00, 0x00, 0xff });
+                        gui_element_begin(gui);
+                            gui_set_direction(gui, DIRECTION_VERTICAL);
+                            gui_set_align(gui, ALIGN_CENTER);
+                            gui_set_grow(gui, DIRECTION_HORIZONTAL);
+
+                            gui_text(gui, &font_cond, arg->data.text, BLOCK_TEXT_SIZE, (GuiColor) { 0x00, 0x00, 0x00, 0xff });
+                        gui_element_end(gui);
                     gui_element_end(gui);
                 gui_element_end(gui);
                 break;

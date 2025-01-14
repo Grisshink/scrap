@@ -225,12 +225,12 @@ static void gui_element_advance(Gui* gui, GuiMeasurement ms) {
 
     if (DIRECTION(el) == DIRECTION_HORIZONTAL) {
         el->cursor_x += ms.w + el->gap;
-        if (SIZING_X(el) != SIZING_FIXED) el->w += ms.w + el->gap;
+        if (SIZING_X(el) != SIZING_FIXED) el->w = MAX(el->w, el->cursor_x + el->pad_w);
         if (SIZING_Y(el) != SIZING_FIXED) el->h = MAX(el->h, ms.h + el->pad_h * 2);
     } else {
         el->cursor_y += ms.h + el->gap;
         if (SIZING_X(el) != SIZING_FIXED) el->w = MAX(el->w, ms.w + el->pad_w * 2);
-        if (SIZING_Y(el) != SIZING_FIXED) el->h += ms.h + el->gap;
+        if (SIZING_Y(el) != SIZING_FIXED) el->h = MAX(el->h, el->cursor_y + el->pad_h);
     }
 }
 
@@ -249,6 +249,13 @@ void gui_element_end(Gui* gui) {
     gui_element_advance(gui, (GuiMeasurement) { el->w, el->h });
     if ((SIZING_X(el) == SIZING_FIXED && SIZING_Y(el) != SIZING_GROW) || (SIZING_Y(el) == SIZING_FIXED && SIZING_X(el) != SIZING_GROW)) {
         gui_element_resize(gui, el, el->w, el->h);
+    } else if ((SIZING_X(el) == SIZING_FIT && SIZING_Y(el) != SIZING_GROW) || (SIZING_Y(el) == SIZING_FIT && SIZING_X(el) != SIZING_GROW)) {
+        if (DIRECTION(el) == DIRECTION_HORIZONTAL) {
+            if (el->w > el->cursor_x + el->pad_w) gui_element_resize(gui, el, el->w, el->h);
+        } else {
+            if (el->h > el->cursor_y + el->pad_h) gui_element_resize(gui, el, el->w, el->h);
+        }
+        gui_element_realign(el);
     } else {
         gui_element_realign(el);
     }
