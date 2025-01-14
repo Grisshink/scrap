@@ -67,9 +67,9 @@ void editor_code_remove_blockdef(ScrBlockdef* blockdef) {
     }
 }
 
-bool edit_text(char** text) {
+void edit_text(char** text) {
     if (IsKeyPressed(KEY_BACKSPACE) || IsKeyPressedRepeat(KEY_BACKSPACE)) {
-        if (vector_size(*text) <= 1) return false;
+        if (vector_size(*text) <= 1) return;
 
         int remove_pos = vector_size(*text) - 2;
         int remove_size = 1;
@@ -80,10 +80,9 @@ bool edit_text(char** text) {
         }
 
         vector_erase(*text, remove_pos, remove_size);
-        return true;
+        return;
     }
 
-    bool typed = false;
     int char_val;
     while ((char_val = GetCharPressed())) {
         int utf_size = 0;
@@ -91,9 +90,7 @@ bool edit_text(char** text) {
         for (int i = 0; i < utf_size; i++) {
             vector_insert(text, vector_size(*text) - 1, utf_char[i]);
         }
-        typed = true;
     }
-    return typed;
 }
 
 bool start_vm(void) {
@@ -802,6 +799,7 @@ bool handle_mouse_click(void) {
     }
     if (hover_info.top_bars.handler) return hover_info.top_bars.handler();
     if (gui_window_is_shown()) {
+        if (hover_info.input != hover_info.select_input) hover_info.select_input = hover_info.input;
         return true;
     }
     if (current_tab != TAB_CODE) return true;
@@ -890,12 +888,9 @@ void handle_key_press(void) {
         }
         return;
     };
-    if (hover_info.select_block->blockdef->inputs[hover_info.select_argument->input_id].type == INPUT_DROPDOWN) return;
+    if (hover_info.select_block && hover_info.select_block->blockdef->inputs[hover_info.select_argument->input_id].type == INPUT_DROPDOWN) return;
 
-    if (edit_text(hover_info.select_input)) {
-        update_measurements(hover_info.select_block, PLACEMENT_HORIZONTAL);
-        return;
-    }
+    edit_text(hover_info.select_input);
 }
 
 void handle_mouse_wheel(void) {

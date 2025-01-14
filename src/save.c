@@ -50,14 +50,42 @@ bool load_block(SaveArena* save, ScrBlock* block);
 void save_blockdef(SaveArena* save, ScrBlockdef* blockdef);
 ScrBlockdef* load_blockdef(SaveArena* save);
 
+void vector_set_string(char** vec, char* str) {
+    vector_clear(*vec);
+    for (char* i = str; *i; i++) vector_add(vec, *i);
+    vector_add(vec, 0);
+}
+
+void config_new(Config* config) {
+    config->font_path = vector_create();
+    config->font_bold_path = vector_create();
+    config->font_mono_path = vector_create();
+}
+
+void config_free(Config* config) {
+    vector_free(config->font_path);
+    vector_free(config->font_bold_path);
+    vector_free(config->font_mono_path);
+}
+
+void config_copy(Config* dst, Config* src) {
+    dst->font_size = src->font_size;
+    dst->side_bar_size = src->side_bar_size;
+    dst->fps_limit = src->fps_limit;
+    dst->block_size_threshold = src->block_size_threshold;
+    dst->font_path = vector_copy(src->font_path);
+    dst->font_bold_path = vector_copy(src->font_bold_path);
+    dst->font_mono_path = vector_copy(src->font_mono_path);
+}
+
 void set_default_config(Config* config) {
     config->font_size = 32;
     config->side_bar_size = 300;
     config->fps_limit = 60;
     config->block_size_threshold = 1000;
-    strncpy(config->font_path, DATA_PATH "nk57-cond.otf", sizeof(config->font_path) - 1);
-    strncpy(config->font_bold_path, DATA_PATH "nk57-eb.otf", sizeof(config->font_bold_path) - 1);
-    strncpy(config->font_mono_path, DATA_PATH "nk57.otf", sizeof(config->font_mono_path) - 1);
+    vector_set_string(&config->font_path, DATA_PATH "nk57-cond.otf");
+    vector_set_string(&config->font_bold_path, DATA_PATH "nk57-eb.otf");
+    vector_set_string(&config->font_mono_path, DATA_PATH "nk57.otf");
 }
 
 void apply_config(Config* dst, Config* src) {
@@ -73,9 +101,9 @@ void save_config(Config* config) {
     file_size += ARRLEN("SIDE_BAR_SIZE") + 10 + 1;
     file_size += ARRLEN("FPS_LIMIT") + 10 + 1;
     file_size += ARRLEN("BLOCK_SIZE_THRESHOLD") + 10 + 1;
-    file_size += ARRLEN("FONT_PATH") + strlen(config->font_path) + 1;
-    file_size += ARRLEN("FONT_BOLD_PATH") + strlen(config->font_bold_path) + 1;
-    file_size += ARRLEN("FONT_MONO_PATH") + strlen(config->font_mono_path) + 1;
+    file_size += ARRLEN("FONT_PATH") + vector_size(config->font_path);
+    file_size += ARRLEN("FONT_BOLD_PATH") + vector_size(config->font_bold_path);
+    file_size += ARRLEN("FONT_MONO_PATH") + vector_size(config->font_mono_path);
     
     char* file_str = malloc(sizeof(char) * file_size);
     int cursor = 0;
@@ -133,11 +161,11 @@ void load_config(Config* config) {
             int val = atoi(value);
             config->block_size_threshold = val ? val : config->block_size_threshold;
         } else if (!strcmp(field, "FONT_PATH")) {
-            strncpy(config->font_path, value, sizeof(config->font_path) - 1);
+            vector_set_string(&config->font_path, value);
         } else if (!strcmp(field, "FONT_BOLD_PATH")) {
-            strncpy(config->font_bold_path, value, sizeof(config->font_bold_path) - 1);
+            vector_set_string(&config->font_bold_path, value);
         } else if (!strcmp(field, "FONT_MONO_PATH")) {
-            strncpy(config->font_mono_path, value, sizeof(config->font_mono_path) - 1);
+            vector_set_string(&config->font_mono_path, value);
         } else {
             TraceLog(LOG_WARNING, "Unknown key: %s", field);
         }

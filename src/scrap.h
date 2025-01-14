@@ -28,9 +28,9 @@ typedef struct {
     int side_bar_size;
     int fps_limit;
     int block_size_threshold;
-    char font_path[FONT_PATH_MAX_SIZE];
-    char font_bold_path[FONT_PATH_MAX_SIZE];
-    char font_mono_path[FONT_PATH_MAX_SIZE];
+    char* font_path;
+    char* font_bold_path;
+    char* font_mono_path;
 } Config;
 
 typedef bool (*ButtonClickHandler)(void);
@@ -244,6 +244,9 @@ void save_config(Config* config);
 void load_config(Config* config);
 void save_code(const char* file_path, ScrBlockChain* code);
 ScrBlockChain* load_code(const char* file_path);
+void config_new(Config* config);
+void config_free(Config* config);
+void config_copy(Config* dst, Config* src);
 
 // gui.c
 void init_gui_window(void);

@@ -284,6 +284,8 @@ void setup(void) {
 }
 
 int main(void) {
+    config_new(&conf);
+    config_new(&window_conf);
     set_default_config(&conf);
     load_config(&conf);
 
@@ -344,6 +346,8 @@ int main(void) {
     vector_free(sidebar.blocks);
     vm_free(&vm);
     free(gui);
+    config_free(&conf);
+    config_free(&window_conf);
     CloseWindow();
 
     return 0;

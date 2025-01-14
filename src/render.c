@@ -1105,7 +1105,8 @@ void scrap_gui_process_render(void) {
                 "Sidebar scroll: %d, Max: %d\n"
                 "Editor: %d, Editing: %p, Blockdef: %p, input: %zu\n"
                 "Elements: %zu/%zu, Draw: %zu/%zu\n"
-                "Slider: %p, min: %d, max: %d",
+                "Slider: %p, min: %d, max: %d\n"
+                "Input: %p, Select: %p\n",
                 hover_info.blockchain,
                 hover_info.blockchain_layer,
                 hover_info.block,
@@ -1126,7 +1127,8 @@ void scrap_gui_process_render(void) {
                 sidebar.scroll_amount, sidebar.max_y,
                 hover_info.editor.part, hover_info.editor.edit_blockdef, hover_info.editor.blockdef, hover_info.editor.blockdef_input,
                 gui->element_stack_len, ELEMENT_STACK_SIZE, gui->command_stack_len, COMMAND_STACK_SIZE,
-                hover_info.hover_slider.value, hover_info.hover_slider.min, hover_info.hover_slider.max
+                hover_info.hover_slider.value, hover_info.hover_slider.min, hover_info.hover_slider.max,
+                hover_info.input, hover_info.select_input
             ), 
             (Vector2){ 
                 conf.side_bar_size + 5, 

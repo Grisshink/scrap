@@ -59,7 +59,8 @@ WindowGuiType gui_window_get_type(void) {
 }
 
 void gui_window_show(WindowGuiType type) {
-    window_conf = conf;
+    config_free(&window_conf); // Drop old strings and replace with new
+    config_copy(&window_conf, &conf);
     window.is_fading = false;
     window.type = type;
     window.pos = hover_info.top_bars.pos;
@@ -218,6 +219,27 @@ static void scrap_gui_end_setting(void) {
     gui_element_end(gui);
 }
 
+void text_input_on_hover(FlexElement* el) {
+    hover_info.input = el->custom_data;
+    if (hover_info.input == hover_info.select_input) return;
+    el->color = (GuiColor) { 0x40, 0x40, 0x40, 0xff };
+}
+
+void scrap_gui_text_input(char** input) {
+    gui_on_hover(gui, text_input_on_hover);
+    gui_set_custom_data(gui, input);
+    if (input == hover_info.select_input) gui_set_rect(gui, (GuiColor) { 0x2b, 0x2b, 0x2b, 0xff });
+
+    gui_spacer(gui, WINDOW_ELEMENT_PADDING, 0);
+    gui_text(gui, &font_cond, *input, conf.font_size * 0.6, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+    if (input == hover_info.select_input) {
+        gui_element_begin(gui);
+            gui_set_min_size(gui, 2, conf.font_size * 0.6);
+            gui_set_rect(gui, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+        gui_element_end(gui);
+    }
+}
+
 void handle_gui(void) {
     if (window.is_hiding) {
         window.shown = false;
@@ -251,18 +273,15 @@ void handle_gui(void) {
             scrap_gui_end_setting();
 
             scrap_gui_begin_setting("Font path", true);
-                gui_spacer(gui, WINDOW_ELEMENT_PADDING, 0);
-                gui_text(gui, &font_cond, window_conf.font_path, conf.font_size * 0.6, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+                scrap_gui_text_input(&window_conf.font_path);
             scrap_gui_end_setting();
 
             scrap_gui_begin_setting("Bold font path", true);
-                gui_spacer(gui, WINDOW_ELEMENT_PADDING, 0);
-                gui_text(gui, &font_cond, window_conf.font_bold_path, conf.font_size * 0.6, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+                scrap_gui_text_input(&window_conf.font_bold_path);
             scrap_gui_end_setting();
 
             scrap_gui_begin_setting("Monospaced font path", true);
-                gui_spacer(gui, WINDOW_ELEMENT_PADDING, 0);
-                gui_text(gui, &font_cond, window_conf.font_mono_path, conf.font_size * 0.6, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+                scrap_gui_text_input(&window_conf.font_mono_path);
             scrap_gui_end_setting();
 
             gui_grow(gui, DIRECTION_VERTICAL);
