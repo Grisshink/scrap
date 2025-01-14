@@ -30,7 +30,7 @@
 #define SET_SIZING_Y(el, size) (el->sizing = (el->sizing & 0x0f) | (size << 4))
 #define ALIGN(el) (AlignmentType)((el->flags >> 1) & 3)
 #define DIRECTION(el) (FlexDirection)(el->flags & 1)
-#define SET_ALIGN(el, ali) (el->flags = (el->flags & 1) | (ali << 1))
+#define SET_ALIGN(el, ali) (el->flags = (el->flags & 0xf9) | (ali << 1))
 #define SET_DIRECTION(el, dir) (el->flags = (el->flags & 0xfe) | dir)
 
 void gui_render(Gui* gui, FlexElement* el, int pos_x, int pos_y);
