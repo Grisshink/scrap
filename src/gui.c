@@ -192,7 +192,7 @@ static void scrap_gui_begin_setting(const char* name, bool warning) {
 }
 
 static void slider_on_hover(FlexElement* el) {
-    unsigned int len;
+    unsigned short len;
     hover_info.hover_slider = *(SliderHoverInfo*)gui_get_state(el, &len);
     el->color = hover_info.hover_slider.value == hover_info.dragged_slider.value ? (GuiColor) { 0x2b, 0x2b, 0x2b, 0xff } : (GuiColor) { 0x40, 0x40, 0x40, 0xff };
 }

@@ -159,7 +159,7 @@ const char* get_font_path(char* font_path) {
     return font_path[0] != '/' && font_path[1] != ':' ? into_data_path(font_path) : font_path;
 }
 
-GuiMeasurement scrap_gui_measure_image(void* image, int size) {
+GuiMeasurement scrap_gui_measure_image(void* image, unsigned short size) {
     Texture2D* img = image;
     return (GuiMeasurement) { img->width * ((float)size / (float)img->height), size };
 }
@@ -201,7 +201,7 @@ GuiMeasurement custom_measure(Font font, const char *text, float font_size) {
     return ms;
 }
 
-GuiMeasurement scrap_gui_measure_text(void* font, const char* text, int size) {
+GuiMeasurement scrap_gui_measure_text(void* font, const char* text, unsigned short size) {
     return custom_measure(*(Font*)font, text, size);
 }
 

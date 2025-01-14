@@ -27,7 +27,7 @@ typedef struct Gui Gui;
 typedef struct FlexElement FlexElement;
 
 typedef struct {
-    int w, h;
+    unsigned short w, h;
 } GuiMeasurement;
 
 typedef struct {
@@ -53,13 +53,13 @@ typedef union {
     GuiTextData text;
     void* image;
     void* custom_data;
-    int border_width;
+    unsigned int border_width;
 } DrawData;
 
 typedef struct {
     unsigned char type; // DrawType
     int pos_x, pos_y;
-    int width, height;
+    unsigned short width, height;
     GuiColor color;
     DrawData data;
 } DrawCommand;
@@ -86,10 +86,11 @@ typedef enum {
 typedef void (*HoverHandler)(FlexElement* el);
 
 struct FlexElement {
-    int x, y, w, h;
+    int x, y;
+    unsigned short w, h;
     int cursor_x, cursor_y;
-    int pad_w, pad_h;
-    int gap;
+    unsigned short pad_w, pad_h;
+    unsigned short gap;
     float scaling;
     unsigned char draw_type; // DrawType
     DrawData data;
@@ -110,13 +111,13 @@ struct FlexElement {
     HoverHandler handle_hover;
     void* custom_data;
     void* custom_state;
-    unsigned int state_len;
-    int element_count;
+    unsigned short state_len;
+    unsigned short element_count;
     struct FlexElement* next;
 };
 
-typedef GuiMeasurement (*MeasureTextFunc)(void* font, const char* text, int size);
-typedef GuiMeasurement (*MeasureImageFunc)(void* image, int size);
+typedef GuiMeasurement (*MeasureTextFunc)(void* font, const char* text, unsigned short size);
+typedef GuiMeasurement (*MeasureImageFunc)(void* image, unsigned short size);
 
 struct Gui {
     DrawCommand command_stack[COMMAND_STACK_SIZE];
@@ -135,8 +136,8 @@ struct Gui {
     MeasureTextFunc measure_text;
     MeasureImageFunc measure_image;
 
-    int win_w, win_h;
-    int mouse_x, mouse_y;
+    unsigned short win_w, win_h;
+    unsigned short mouse_x, mouse_y;
 };
 
 #define GUI_GET_COMMANDS(gui, command) while (gui->command_stack_iter < gui->command_stack_len && (command = &gui->command_stack[gui->command_stack_iter++]))
@@ -147,38 +148,38 @@ struct Gui {
 void gui_init(Gui* gui);
 void gui_begin(Gui* gui);
 void gui_end(Gui* gui);
-void gui_update_window_size(Gui* gui, int win_w, int win_h);
-void gui_update_mouse_pos(Gui* gui, int mouse_x, int mouse_y);
+void gui_update_window_size(Gui* gui, unsigned short win_w, unsigned short win_h);
+void gui_update_mouse_pos(Gui* gui, unsigned short mouse_x, unsigned short mouse_y);
 void gui_set_measure_text_func(Gui* gui, MeasureTextFunc measure_text);
 void gui_set_measure_image_func(Gui* gui, MeasureImageFunc measure_image);
 
 FlexElement* gui_element_begin(Gui* gui);
 void gui_element_end(Gui* gui);
 
-void gui_set_fixed(Gui* gui, int w, int h);
+void gui_set_fixed(Gui* gui, unsigned short w, unsigned short h);
 void gui_set_fit(Gui* gui);
 void gui_set_grow(Gui* gui, FlexDirection direction);
 void gui_set_rect(Gui* gui, GuiColor color);
 void gui_set_direction(Gui* gui, FlexDirection direction);
-void gui_set_border(Gui* gui, GuiColor color, int border_width);
-void gui_set_text(Gui* gui, void* font, const char* text, int size, GuiColor color);
-void gui_set_image(Gui* gui, void* image, int size, GuiColor color);
-void gui_set_min_size(Gui* gui, int min_w, int min_h);
+void gui_set_border(Gui* gui, GuiColor color, unsigned int border_width);
+void gui_set_text(Gui* gui, void* font, const char* text, unsigned short size, GuiColor color);
+void gui_set_image(Gui* gui, void* image, unsigned short size, GuiColor color);
+void gui_set_min_size(Gui* gui, unsigned short min_w, unsigned short min_h);
 void gui_set_align(Gui* gui, AlignmentType align);
-void gui_set_padding(Gui* gui, int pad_w, int pad_h);
-void gui_set_gap(Gui* gui, int gap);
+void gui_set_padding(Gui* gui, unsigned short pad_w, unsigned short pad_h);
+void gui_set_gap(Gui* gui, unsigned short gap);
 void gui_set_custom_data(Gui* gui, void* custom_data);
 void gui_set_floating(Gui* gui);
 void gui_set_position(Gui* gui, int x, int y);
 void gui_scale_element(Gui* gui, float scaling);
-void* gui_set_state(Gui* gui, void* state, unsigned int state_len);
-void* gui_get_state(FlexElement* el, unsigned int* state_len);
+void* gui_set_state(Gui* gui, void* state, unsigned short state_len);
+void* gui_get_state(FlexElement* el, unsigned short* state_len);
 
 void gui_on_hover(Gui* gui, HoverHandler handler);
 
-void gui_text(Gui* gui, void* font, const char* text, int size, GuiColor color);
-void gui_image(Gui* gui, void* image, int size, GuiColor color);
+void gui_text(Gui* gui, void* font, const char* text, unsigned short size, GuiColor color);
+void gui_image(Gui* gui, void* image, unsigned short size, GuiColor color);
 void gui_grow(Gui* gui, FlexDirection direction);
-void gui_spacer(Gui* gui, int w, int h);
+void gui_spacer(Gui* gui, unsigned short w, unsigned short h);
 
 #endif // SCRAP_GUI_H
