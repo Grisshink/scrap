@@ -22,6 +22,7 @@
 
 #define ELEMENT_STACK_SIZE 32768
 #define COMMAND_STACK_SIZE 8192
+#define STATE_STACK_SIZE 32768
 typedef struct Gui Gui;
 typedef struct FlexElement FlexElement;
 
@@ -96,6 +97,7 @@ struct FlexElement {
     int cursor_x, cursor_y;
     int pad_w, pad_h;
     int gap;
+    float scaling;
     DrawType draw_type;
     DrawData data;
     GuiColor color;
@@ -106,6 +108,8 @@ struct FlexElement {
     HoverHandler handle_hover;
     unsigned char is_floating;
     void* custom_data;
+    void* custom_state;
+    unsigned int state_len;
     int element_count;
     struct FlexElement* next;
 };
@@ -123,6 +127,9 @@ struct Gui {
 
     FlexElement* element_ptr_stack[ELEMENT_STACK_SIZE];
     size_t element_ptr_stack_len;
+
+    void* state_stack[STATE_STACK_SIZE];
+    size_t state_stack_len;
 
     MeasureTextFunc measure_text;
     MeasureImageFunc measure_image;
@@ -162,6 +169,9 @@ void gui_set_gap(Gui* gui, int gap);
 void gui_set_custom_data(Gui* gui, void* custom_data);
 void gui_set_floating(Gui* gui);
 void gui_set_position(Gui* gui, int x, int y);
+void gui_scale_element(Gui* gui, float scaling);
+void* gui_set_state(Gui* gui, void* state, unsigned int state_len);
+void* gui_get_state(FlexElement* el, unsigned int* state_len);
 
 void gui_on_hover(Gui* gui, HoverHandler handler);
 

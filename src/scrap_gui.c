@@ -19,6 +19,7 @@
 
 #include <assert.h>
 #include <stdbool.h>
+#include <string.h>
 
 #define MAX(x, y) ((x) > (y) ? (x) : (y))
 #define MIN(x, y) ((x) < (y) ? (x) : (y))
@@ -52,6 +53,7 @@ void gui_begin(Gui* gui) {
     gui->command_stack_iter = 0;
     gui->element_stack_len = 0;
     gui->element_ptr_stack_len = 0;
+    gui->state_stack_len = 0;
     gui_element_begin(gui);
     gui_set_fixed(gui, gui->win_w, gui->win_h);
 }
@@ -80,13 +82,13 @@ void gui_update_window_size(Gui* gui, int win_w, int win_h) {
 }
 
 void gui_render(Gui* gui, FlexElement* el, int pos_x, int pos_y) {
-    if (el->handle_hover && mouse_inside(gui, el->x + pos_x, el->y + pos_y, el->w, el->h)) el->handle_hover(el);
+    if (el->handle_hover && mouse_inside(gui, el->x * el->scaling + pos_x, el->y * el->scaling + pos_y, el->w * el->scaling, el->h * el->scaling)) el->handle_hover(el);
     if (el->draw_type != DRAWTYPE_UNKNOWN) {
         DrawCommand* command = &gui->command_stack[gui->command_stack_len++];
-        command->pos_x = pos_x + el->x;
-        command->pos_y = pos_y + el->y;
-        command->width = el->w;
-        command->height = el->h;
+        command->pos_x = pos_x + el->x * el->scaling;
+        command->pos_y = pos_y + el->y * el->scaling;
+        command->width = el->w * el->scaling;
+        command->height = el->h * el->scaling;
         command->type = el->draw_type;
         command->color = el->color;
         command->data = el->data;
@@ -95,7 +97,7 @@ void gui_render(Gui* gui, FlexElement* el, int pos_x, int pos_y) {
     
     FlexElement* iter = el + 1;
     for (int i = 0; i < el->element_count; i++) {
-        gui_render(gui, iter, pos_x + el->x, pos_y + el->y);
+        gui_render(gui, iter, pos_x + el->x * el->scaling, pos_y + el->y * el->scaling);
         iter = iter->next;
     }
 }
@@ -111,6 +113,7 @@ FlexElement* gui_element_begin(Gui* gui) {
     el->is_floating = 0;
     el->x = prev ? prev->cursor_x : 0;
     el->y = prev ? prev->cursor_y : 0;
+    el->scaling = prev ? prev->scaling : 1.0;
     el->element_count = 0;
     el->cursor_x = 0;
     el->cursor_y = 0;
@@ -126,6 +129,8 @@ FlexElement* gui_element_begin(Gui* gui) {
     el->next = NULL;
     el->handle_hover = NULL;
     el->custom_data = NULL;
+    el->custom_state = NULL;
+    el->state_len = 0;
     return el;
 }
 
@@ -188,13 +193,13 @@ void gui_element_resize(Gui* gui, FlexElement* el, int new_w, int new_h) {
             int size_w = iter->w;
             int size_h = iter->h;
             if (el->direction == DIRECTION_VERTICAL) {
-                if (iter->sizing_x == SIZING_GROW) size_w = el->w;
+                if (iter->sizing_x == SIZING_GROW) size_w = el->w - el->pad_w * 2;
                 if (iter->sizing_y == SIZING_GROW) size_h = left_h / grow_elements;
                 if (iter->sizing_x == SIZING_GROW || iter->sizing_y == SIZING_GROW) gui_element_resize(gui, iter, size_w, size_h);
                 cursor_y += iter->h + el->gap;
             } else {
                 if (iter->sizing_x == SIZING_GROW) size_w = left_w / grow_elements;
-                if (iter->sizing_y == SIZING_GROW) size_h = el->h;
+                if (iter->sizing_y == SIZING_GROW) size_h = el->h - el->pad_h * 2;
                 if (iter->sizing_x == SIZING_GROW || iter->sizing_y == SIZING_GROW) gui_element_resize(gui, iter, size_w, size_h);
                 cursor_x += iter->w + el->gap;
             }
@@ -243,6 +248,27 @@ void gui_element_end(Gui* gui) {
 void gui_on_hover(Gui* gui, HoverHandler handler) {
     FlexElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
     el->handle_hover = handler;
+}
+
+void gui_scale_element(Gui* gui, float scaling) {
+    FlexElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
+    el->scaling *= scaling;
+}
+
+void* gui_set_state(Gui* gui, void* state, unsigned int state_len) {
+    FlexElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
+    if (el->custom_state) return el->custom_state;
+    assert(gui->state_stack_len + state_len <= STATE_STACK_SIZE);
+
+    memcpy(&gui->state_stack[gui->state_stack_len], state, state_len);
+    el->custom_state = &gui->state_stack[gui->state_stack_len];
+    gui->state_stack_len += state_len;
+    return el->custom_state;
+}
+
+void* gui_get_state(FlexElement* el, unsigned int* state_len) {
+    *state_len = el->state_len;
+    return el->custom_state;
 }
 
 void gui_set_floating(Gui* gui) {

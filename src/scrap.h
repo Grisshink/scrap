@@ -33,16 +33,11 @@ typedef struct {
     char font_mono_path[FONT_PATH_MAX_SIZE];
 } Config;
 
-typedef enum {
-    TOPBAR_TOP,
-    TOPBAR_TABS,
-    TOPBAR_RUN_BUTTON,
-} TopBarType;
+typedef bool (*ButtonClickHandler)(void);
 
 typedef struct {
-    TopBarType type;
+    ButtonClickHandler handler;
     Vector2 pos;
-    int ind;
 } TopBars;
 
 typedef enum {
@@ -61,6 +56,13 @@ typedef struct {
     ScrBlockdef* blockdef;
     size_t blockdef_input;
 } EditorHoverInfo;
+
+typedef struct {
+    int min;
+    int max;
+    int* value;
+    char value_str[16]; // Used to store value as string as gui does not store strings
+} SliderHoverInfo;
 
 typedef struct {
     bool sidebar;
@@ -93,6 +95,10 @@ typedef struct {
 
     TopBars top_bars;
     EditorHoverInfo editor;
+
+    SliderHoverInfo hover_slider;
+    SliderHoverInfo dragged_slider;
+    int slider_last_val;
 } HoverInfo;
 
 typedef enum {
@@ -125,7 +131,7 @@ typedef enum {
     GUI_TYPE_SETTINGS,
     GUI_TYPE_ABOUT,
     GUI_TYPE_FILE,
-} NuklearGuiType;
+} WindowGuiType;
 
 typedef struct {
     ScrVec pos;
@@ -138,6 +144,7 @@ typedef struct {
 } Timer;
 
 extern Config conf;
+extern Config window_conf;
 extern HoverInfo hover_info;
 extern Shader line_shader;
 
@@ -160,6 +167,8 @@ extern Texture2D del_arg_tex;
 extern Texture2D add_text_tex;
 extern Texture2D special_tex;
 extern Texture2D list_tex;
+extern Texture2D arrow_left_tex;
+extern Texture2D arrow_right_tex;
 
 extern TabType current_tab;
 extern ScrVm vm;
@@ -202,6 +211,16 @@ void scrap_gui_process(void);
 // input.c
 void process_input(void);
 void scrap_gui_process_input(void);
+bool handle_file_button_click(void);
+bool handle_settings_button_click(void);
+bool handle_about_button_click(void);
+bool handle_run_button_click(void);
+bool handle_stop_button_click(void);
+bool handle_code_tab_click(void);
+bool handle_output_tab_click(void);
+bool handle_window_gui_close_button_click(void);
+bool handle_settings_reset_button_click(void);
+bool handle_settings_apply_button_click(void);
 
 // util.c
 ScrVec as_scr_vec(Vector2 vec);
@@ -227,14 +246,13 @@ void save_code(const char* file_path, ScrBlockChain* code);
 ScrBlockChain* load_code(const char* file_path);
 
 // gui.c
-// void init_gui(void);
-// void gui_show(NuklearGuiType type);
-// void gui_hide_immediate(void);
-// NuklearGuiType gui_get_type(void);
-// bool gui_is_shown(void);
-// void update_gui(void);
-// void draw_gui(void);
-// void gui_free(void);
+void init_gui_window(void);
+void gui_window_show(WindowGuiType type);
+void gui_window_hide(void);
+void gui_window_hide_immediate(void);
+WindowGuiType gui_window_get_type(void);
+bool gui_window_is_shown(void);
+void handle_gui(void);
 
 // blocks.c
 void load_blocks(ScrVm* vm);

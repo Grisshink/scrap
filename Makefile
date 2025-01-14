@@ -22,7 +22,7 @@ else
 	CFLAGS += -fmax-errors=5
 endif
 
-OBJFILES := $(addprefix src/,filedialogs.o render.o save.o term.o blocks.o scrap.o vec.o util.o input.o measure.o scrap_gui.o)
+OBJFILES := $(addprefix src/,filedialogs.o render.o save.o term.o blocks.o scrap.o vec.o util.o input.o measure.o scrap_gui.o gui.o)
 SCRAP_HEADERS := src/scrap.h src/vm.h src/config.h src/scrap_gui.h
 EXE_NAME := scrap
 

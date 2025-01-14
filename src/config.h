@@ -29,6 +29,8 @@
 #define BLOCK_CONTROL_INDENT (16.0 * (float)conf.font_size / 32.0)
 #define SIDE_BAR_PADDING (10.0 * (float)conf.font_size / 32.0)
 
+#define WINDOW_ELEMENT_PADDING (10.0 * (float)conf.font_size / 32.0)
+
 #define DATA_PATH "data/"
 #define CONFIG_PATH "config.txt"
 

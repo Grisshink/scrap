@@ -16,23 +16,17 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "raylib.h"
-#define RAYLIB_NUKLEAR_IMPLEMENTATION
-#include "../external/raylib-nuklear.h"
 #include "../external/tinyfiledialogs.h"
 #include "scrap.h"
 
 #include <stdbool.h>
 #include <stdlib.h>
 #include <math.h>
+#include <assert.h>
 
 #define ARRLEN(x) (sizeof(x)/sizeof(x[0]))
 #define MIN(x, y) ((x) < (y) ? (x) : (y))
 #define MAX(x, y) ((x) > (y) ? (x) : (y))
-
-struct nk_user_font* font_eb_nuc = NULL;
-struct nk_user_font* font_cond_nuc = NULL;
-struct nk_image logo_tex_nuc;
-struct nk_image warn_tex_nuc;
 
 typedef struct {
     bool shown;
@@ -40,400 +34,313 @@ typedef struct {
     bool is_fading;
     bool is_hiding;
     Vector2 pos;
-    NuklearGuiType type;
-    struct nk_context *ctx;
-} NuklearGui;
+    WindowGuiType type;
+} WindowGui;
 
-static Config gui_conf;
-static NuklearGui nk_gui = {0};
-
-void handle_gui(void);
-void apply_styles(void);
+Config window_conf;
+static WindowGui window = {0};
+static bool settings_tooltip = false;
 
 // https://easings.net/#easeOutExpo
 float ease_out_expo(float x) {
     return x == 1.0 ? 1.0 : 1 - powf(2.0, -10.0 * x);
 }
 
-void init_gui(void) {
-    nk_gui.is_fading = true;
-    logo_tex_nuc = TextureToNuklear(logo_tex);
-    warn_tex_nuc = TextureToNuklear(warn_tex);
-    font_eb_nuc = LoadFontIntoNuklear(font_eb, conf.font_size);
-    font_cond_nuc = LoadFontIntoNuklear(font_cond, conf.font_size * 0.6);
-    nk_gui.ctx = InitNuklearEx(font_cond_nuc, &line_shader, &shader_time);
-    apply_styles();
+void init_gui_window(void) {
+    window.is_fading = true;
 }
 
-bool gui_is_shown(void) {
-    return nk_gui.shown;
+bool gui_window_is_shown(void) {
+    return window.shown;
 }
 
-NuklearGuiType gui_get_type(void) {
-    return nk_gui.type;
+WindowGuiType gui_window_get_type(void) {
+    return window.type;
 }
 
-void update_gui(void) {
-    if (gui_is_shown()) UpdateNuklear(nk_gui.ctx);
-    handle_gui();
-}
-
-void draw_gui(void) {
-    if (!nk_gui.shown) return;
-
-    float animation_ease = ease_out_expo(nk_gui.animation_time);
-    DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), (Color) { 0x00, 0x00, 0x00, 0x44 * animation_ease });
-    DrawNuklear(nk_gui.ctx);
-}
-
-void gui_free(void) {
-    UnloadNuklear(nk_gui.ctx);
-}
-
-void apply_styles(void) {
-    nk_gui.ctx->style.text.color = nk_rgb(0xff, 0xff, 0xff);
-
-    nk_gui.ctx->style.window.fixed_background.type = NK_STYLE_ITEM_COLOR;
-    nk_gui.ctx->style.window.fixed_background.data.color = nk_rgb(0x20, 0x20, 0x20);
-    nk_gui.ctx->style.window.background = nk_rgb(0x20, 0x20, 0x20);
-    nk_gui.ctx->style.window.border_color = nk_rgb(0x60, 0x60, 0x60);
-    nk_gui.ctx->style.window.padding = nk_vec2(0, 0);
-
-    nk_gui.ctx->style.button.text_normal = nk_rgb(0xff, 0xff, 0xff);
-    nk_gui.ctx->style.button.text_hover = nk_rgb(0xff, 0xff, 0xff);
-    nk_gui.ctx->style.button.text_active = nk_rgb(0xff, 0xff, 0xff);
-    nk_gui.ctx->style.button.rounding = 0.0;
-    nk_gui.ctx->style.button.border = 1.0;
-    nk_gui.ctx->style.button.border_color = nk_rgb(0x60, 0x60, 0x60);
-    nk_gui.ctx->style.button.normal.type = NK_STYLE_ITEM_COLOR;
-    nk_gui.ctx->style.button.normal.data.color = nk_rgb(0x30, 0x30, 0x30);
-    nk_gui.ctx->style.button.hover.type = NK_STYLE_ITEM_COLOR;
-    nk_gui.ctx->style.button.hover.data.color = nk_rgb(0x40, 0x40, 0x40);
-    nk_gui.ctx->style.button.active.type = NK_STYLE_ITEM_COLOR;
-    nk_gui.ctx->style.button.active.data.color = nk_rgb(0x20, 0x20, 0x20);
-
-    nk_gui.ctx->style.slider.bar_normal = nk_rgb(0x30, 0x30, 0x30);
-    nk_gui.ctx->style.slider.bar_hover = nk_rgb(0x30, 0x30, 0x30);
-    nk_gui.ctx->style.slider.bar_active = nk_rgb(0x30, 0x30, 0x30);
-    nk_gui.ctx->style.slider.bar_filled = nk_rgb(0xaa, 0xaa, 0xaa);
-    nk_gui.ctx->style.slider.cursor_normal.type = NK_STYLE_ITEM_COLOR;
-    nk_gui.ctx->style.slider.cursor_normal.data.color = nk_rgb(0xaa, 0xaa, 0xaa);
-    nk_gui.ctx->style.slider.cursor_hover.type = NK_STYLE_ITEM_COLOR;
-    nk_gui.ctx->style.slider.cursor_hover.data.color = nk_rgb(0xdd, 0xdd, 0xdd);
-    nk_gui.ctx->style.slider.cursor_active.type = NK_STYLE_ITEM_COLOR;
-    nk_gui.ctx->style.slider.cursor_active.data.color = nk_rgb(0xff, 0xff, 0xff);
-
-    nk_gui.ctx->style.edit.normal.type = NK_STYLE_ITEM_COLOR;
-    nk_gui.ctx->style.edit.normal.data.color = nk_rgb(0x30, 0x30, 0x30);
-    nk_gui.ctx->style.edit.hover.type = NK_STYLE_ITEM_COLOR;
-    nk_gui.ctx->style.edit.hover.data.color = nk_rgb(0x40, 0x40, 0x40);
-    nk_gui.ctx->style.edit.active.type = NK_STYLE_ITEM_COLOR;
-    nk_gui.ctx->style.edit.active.data.color = nk_rgb(0x28, 0x28, 0x28);
-    nk_gui.ctx->style.edit.rounding = 0.0;
-    nk_gui.ctx->style.edit.border = 1.0;
-    nk_gui.ctx->style.edit.border_color = nk_rgb(0x60, 0x60, 0x60);
-    nk_gui.ctx->style.edit.text_normal = nk_rgb(0xff, 0xff, 0xff);
-    nk_gui.ctx->style.edit.text_hover = nk_rgb(0xff, 0xff, 0xff);
-    nk_gui.ctx->style.edit.text_active = nk_rgb(0xff, 0xff, 0xff);
-    nk_gui.ctx->style.edit.selected_normal = nk_rgb(0xff, 0xff, 0xff);
-    nk_gui.ctx->style.edit.selected_hover = nk_rgb(0xff, 0xff, 0xff);
-    nk_gui.ctx->style.edit.selected_text_normal = nk_rgb(0xff, 0xff, 0xff);
-    nk_gui.ctx->style.edit.selected_text_hover = nk_rgb(0x20, 0x20, 0x20);
-    nk_gui.ctx->style.edit.cursor_normal = nk_rgb(0xff, 0xff, 0xff);
-    nk_gui.ctx->style.edit.cursor_hover = nk_rgb(0xff, 0xff, 0xff);
-    nk_gui.ctx->style.edit.cursor_text_normal = nk_rgb(0xff, 0xff, 0xff);
-    nk_gui.ctx->style.edit.cursor_text_hover = nk_rgb(0x20, 0x20, 0x20);
-
-    nk_gui.ctx->style.property.normal.type = NK_STYLE_ITEM_COLOR;
-    nk_gui.ctx->style.property.normal.data.color = nk_rgb(0x30, 0x30, 0x30);
-    nk_gui.ctx->style.property.hover.type = NK_STYLE_ITEM_COLOR;
-    nk_gui.ctx->style.property.hover.data.color = nk_rgb(0x40, 0x40, 0x40);
-    nk_gui.ctx->style.property.active.type = NK_STYLE_ITEM_COLOR;
-    nk_gui.ctx->style.property.active.data.color = nk_rgb(0x40, 0x40, 0x40);
-    nk_gui.ctx->style.property.label_normal = nk_rgb(0xff, 0xff, 0xff);
-    nk_gui.ctx->style.property.label_hover = nk_rgb(0xff, 0xff, 0xff);
-    nk_gui.ctx->style.property.label_active = nk_rgb(0xff, 0xff, 0xff);
-    nk_gui.ctx->style.property.rounding = 0.0;
-    nk_gui.ctx->style.property.border = 1.0;
-    nk_gui.ctx->style.property.border_color = nk_rgb(0x60, 0x60, 0x60);
-
-    nk_gui.ctx->style.property.inc_button.normal.type = NK_STYLE_ITEM_COLOR;
-    nk_gui.ctx->style.property.inc_button.normal.data.color = nk_rgba(0x00, 0x00, 0x00, 0x00);
-    nk_gui.ctx->style.property.inc_button.text_normal = nk_rgb(0xff, 0xff, 0xff);
-    nk_gui.ctx->style.property.inc_button.text_hover = nk_rgb(0xff, 0xff, 0xff);
-    nk_gui.ctx->style.property.inc_button.text_active = nk_rgb(0xff, 0xff, 0xff);
-
-    nk_gui.ctx->style.property.dec_button.normal.type = NK_STYLE_ITEM_COLOR;
-    nk_gui.ctx->style.property.dec_button.normal.data.color = nk_rgba(0x00, 0x00, 0x00, 0x00);
-    nk_gui.ctx->style.property.dec_button.text_normal = nk_rgb(0xff, 0xff, 0xff);
-    nk_gui.ctx->style.property.dec_button.text_hover = nk_rgb(0xff, 0xff, 0xff);
-    nk_gui.ctx->style.property.dec_button.text_active = nk_rgb(0xff, 0xff, 0xff);
-
-    nk_gui.ctx->style.property.edit.rounding = 0.0;
-    nk_gui.ctx->style.property.edit.normal.type = NK_STYLE_ITEM_COLOR;
-    nk_gui.ctx->style.property.edit.normal.data.color = nk_rgba(0x00, 0x00, 0x00, 0x00);
-    nk_gui.ctx->style.property.edit.hover.type = NK_STYLE_ITEM_COLOR;
-    nk_gui.ctx->style.property.edit.hover.data.color = nk_rgba(0x00, 0x00, 0x00, 0x00);
-    nk_gui.ctx->style.property.edit.active.type = NK_STYLE_ITEM_COLOR;
-    nk_gui.ctx->style.property.edit.active.data.color = nk_rgba(0x00, 0x00, 0x00, 0x00);
-    nk_gui.ctx->style.property.edit.text_normal = nk_rgb(0xff, 0xff, 0xff);
-    nk_gui.ctx->style.property.edit.text_hover = nk_rgb(0xff, 0xff, 0xff);
-    nk_gui.ctx->style.property.edit.text_active = nk_rgb(0xff, 0xff, 0xff);
-    nk_gui.ctx->style.property.edit.selected_normal = nk_rgb(0xff, 0xff, 0xff);
-    nk_gui.ctx->style.property.edit.selected_hover = nk_rgb(0xff, 0xff, 0xff);
-    nk_gui.ctx->style.property.edit.selected_text_normal = nk_rgb(0xff, 0xff, 0xff);
-    nk_gui.ctx->style.property.edit.selected_text_hover = nk_rgb(0x20, 0x20, 0x20);
-    nk_gui.ctx->style.property.edit.cursor_normal = nk_rgb(0xff, 0xff, 0xff);
-    nk_gui.ctx->style.property.edit.cursor_hover = nk_rgb(0xff, 0xff, 0xff);
-    nk_gui.ctx->style.property.edit.cursor_text_normal = nk_rgb(0xff, 0xff, 0xff);
-    nk_gui.ctx->style.property.edit.cursor_text_hover = nk_rgb(0x20, 0x20, 0x20);
-}
-
-void nk_draw_rectangle(struct nk_context *ctx, struct nk_color color)
-{
-    struct nk_command_buffer *canvas;
-    canvas = nk_window_get_canvas(ctx);
-
-    struct nk_rect space;
-    enum nk_widget_layout_states state;
-    state = nk_widget(&space, ctx);
-    if (!state) return;
-
-    nk_fill_rect(canvas, space, 0, color);
-}
-
-void gui_show(NuklearGuiType type) {
-    gui_conf = conf;
-    nk_gui.is_fading = false;
-    nk_gui.type = type;
-    nk_gui.pos = hover_info.top_bars.pos;
+void gui_window_show(WindowGuiType type) {
+    window_conf = conf;
+    window.is_fading = false;
+    window.type = type;
+    window.pos = hover_info.top_bars.pos;
     shader_time = -0.2;
 }
 
-void gui_hide(void) {
-    nk_gui.is_fading = true;
+void gui_window_hide(void) {
+    window.is_fading = true;
 }
 
-void gui_hide_immediate(void) {
-    nk_gui.is_fading = true;
-    nk_gui.is_hiding = true;
+void gui_window_hide_immediate(void) {
+    window.is_fading = true;
+    window.is_hiding = true;
 }
 
-void gui_show_title(char* name) {
-    nk_layout_space_begin(nk_gui.ctx, NK_DYNAMIC, conf.font_size, 100);
-
-    struct nk_rect layout_size = nk_layout_space_bounds(nk_gui.ctx);
-
-    nk_layout_space_push(nk_gui.ctx, nk_rect(0.0, 0.0, 1.0, 1.0));
-    nk_draw_rectangle(nk_gui.ctx, nk_rgb(0x30, 0x30, 0x30));
-    nk_layout_space_push(nk_gui.ctx, nk_rect(0.0, 0.0, 1.0, 1.0));
-    nk_style_set_font(nk_gui.ctx, font_eb_nuc);
-    nk_label(nk_gui.ctx, name, NK_TEXT_CENTERED);
-    nk_style_set_font(nk_gui.ctx, font_cond_nuc);
-
-    nk_layout_space_push(nk_gui.ctx, nk_rect(1.0 - conf.font_size / layout_size.w, 0.0, conf.font_size / layout_size.w, 1.0));
-    if (nk_button_label(nk_gui.ctx, "X")) {
-        gui_hide();
-    }
-    nk_layout_space_end(nk_gui.ctx);
+static void settings_button_on_hover(FlexElement* el) {
+    el->color = (GuiColor) { 0x40, 0x40, 0x40, 0xff };
+    hover_info.top_bars.handler = el->custom_data;
 }
 
-void gui_restart_warning(void) {
-    struct nk_rect bounds = nk_widget_bounds(nk_gui.ctx);
-    nk_image(nk_gui.ctx, warn_tex_nuc);
-    if (nk_input_is_mouse_hovering_rect(&nk_gui.ctx->input, bounds))
-        // For some reason tooltip crops last char so we add additional char at the end
-        nk_tooltip(nk_gui.ctx, "Needs restart for changes to take effect ");
+static void close_button_on_hover(FlexElement* el) {
+    if (el->draw_type == DRAWTYPE_RECT) return;
+    el->draw_type = DRAWTYPE_RECT;
+    el->color = (GuiColor) { 0x40, 0x40, 0x40, 0xff };
+    hover_info.top_bars.handler = handle_window_gui_close_button_click;
+}
+
+static void window_on_hover(FlexElement* el) {
+    (void) el;
+    hover_info.top_bars.handler = NULL;
+}
+
+static void scrap_gui_begin_window(const char* title, int w, int h, float scaling) {
+    hover_info.top_bars.handler = handle_window_gui_close_button_click;
+    gui_element_begin(gui);
+        gui_set_floating(gui);
+        gui_set_rect(gui, (GuiColor) { 0x00, 0x00, 0x00, 0x40 * scaling });
+        gui_set_position(gui, 0, 0);
+        gui_set_fixed(gui, gui->win_w, gui->win_h);
+    gui_element_end(gui);
+
+    gui_element_begin(gui);
+        gui_scale_element(gui, scaling);
+        gui_set_floating(gui);
+        gui_set_position(gui, (gui->win_w / 2) / scaling - w / 2, (gui->win_h / 2) / scaling - h / 2);
+        gui_set_fixed(gui, w, h);
+        gui_set_rect(gui, (GuiColor) { 0x20, 0x20, 0x20, 0xff });
+        gui_set_direction(gui, DIRECTION_VERTICAL);
+        gui_on_hover(gui, window_on_hover);
+
+        gui_element_begin(gui);
+            gui_set_grow(gui, DIRECTION_HORIZONTAL);
+            gui_set_min_size(gui, 0, conf.font_size * 1.2);
+            gui_set_rect(gui, (GuiColor) { 0x30, 0x30, 0x30, 0xff });
+            gui_set_direction(gui, DIRECTION_HORIZONTAL);
+            gui_set_align(gui, ALIGN_CENTER);
+
+            gui_grow(gui, DIRECTION_HORIZONTAL);
+            gui_text(gui, &font_eb, title, conf.font_size * 0.8, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+            gui_grow(gui, DIRECTION_HORIZONTAL);
+        gui_element_end(gui);
+
+        gui_element_begin(gui);
+            gui_set_floating(gui);
+            gui_set_position(gui, w - conf.font_size * 1.2, 0);
+            gui_set_fixed(gui, conf.font_size * 1.2, conf.font_size * 1.2);
+            gui_set_align(gui, ALIGN_CENTER);
+            gui_on_hover(gui, close_button_on_hover);
+            
+            gui_element_begin(gui);
+                gui_set_grow(gui, DIRECTION_VERTICAL);
+                gui_set_direction(gui, DIRECTION_HORIZONTAL);
+                gui_set_align(gui, ALIGN_CENTER);
+
+                gui_text(gui, &font_cond, "X", conf.font_size * 0.8, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+            gui_element_end(gui);
+        gui_element_end(gui);
+
+        gui_element_begin(gui);
+            gui_set_direction(gui, DIRECTION_VERTICAL);
+            gui_set_padding(gui, conf.font_size * 0.5, conf.font_size * 0.5);
+            gui_set_grow(gui, DIRECTION_HORIZONTAL);
+            gui_set_grow(gui, DIRECTION_VERTICAL);
+            gui_set_gap(gui, WINDOW_ELEMENT_PADDING);
+}
+
+static void scrap_gui_end_window(void) {
+    gui_element_end(gui);
+    gui_element_end(gui);
+}
+
+static void warning_on_hover(FlexElement* el) {
+    settings_tooltip = true;
+}
+
+static void scrap_gui_begin_setting(const char* name, bool warning) {
+    gui_element_begin(gui);
+        gui_set_grow(gui, DIRECTION_HORIZONTAL);
+        gui_set_direction(gui, DIRECTION_HORIZONTAL);
+        gui_set_gap(gui, WINDOW_ELEMENT_PADDING);
+        gui_set_min_size(gui, 0, conf.font_size);
+
+        gui_element_begin(gui);
+            gui_set_grow(gui, DIRECTION_HORIZONTAL);
+            gui_set_grow(gui, DIRECTION_VERTICAL);
+            gui_set_direction(gui, DIRECTION_HORIZONTAL);
+            gui_set_align(gui, ALIGN_CENTER);
+
+            gui_grow(gui, DIRECTION_HORIZONTAL);
+            gui_text(gui, &font_cond, name, conf.font_size * 0.6, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+        gui_element_end(gui);
+
+        if (warning) {
+            gui_element_begin(gui);
+                gui_set_image(gui, &warn_tex, conf.font_size, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+                gui_on_hover(gui, warning_on_hover);
+            gui_element_end(gui);
+        } else {
+            gui_spacer(gui, conf.font_size, conf.font_size);
+        }
+
+        gui_element_begin(gui);
+            gui_set_grow(gui, DIRECTION_HORIZONTAL);
+            gui_set_grow(gui, DIRECTION_VERTICAL);
+            gui_set_direction(gui, DIRECTION_HORIZONTAL);
+            gui_set_align(gui, ALIGN_CENTER);
+            gui_set_rect(gui, (GuiColor) { 0x30, 0x30, 0x30, 0xff });
+}
+
+static void slider_on_hover(FlexElement* el) {
+    unsigned int len;
+    hover_info.hover_slider = *(SliderHoverInfo*)gui_get_state(el, &len);
+    el->color = hover_info.hover_slider.value == hover_info.dragged_slider.value ? (GuiColor) { 0x2b, 0x2b, 0x2b, 0xff } : (GuiColor) { 0x40, 0x40, 0x40, 0xff };
+}
+
+static void scrap_gui_slider(int min, int max, int* value) {
+    SliderHoverInfo info = (SliderHoverInfo) {
+        .min = min,
+        .max = max,
+        .value = value,
+    };
+    gui_on_hover(gui, slider_on_hover);
+    SliderHoverInfo* state = gui_set_state(gui, &info, sizeof(info));
+    snprintf(state->value_str, 16, "%d", *state->value);
+
+    gui_image(gui, &arrow_left_tex, BLOCK_IMAGE_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+    gui_grow(gui, DIRECTION_HORIZONTAL);
+    gui_text(gui, &font_cond, state->value_str, conf.font_size * 0.6, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+    gui_grow(gui, DIRECTION_HORIZONTAL);
+    gui_image(gui, &arrow_right_tex, BLOCK_IMAGE_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+}
+
+static void scrap_gui_end_setting(void) {
+    gui_element_end(gui);
+    gui_element_end(gui);
 }
 
 void handle_gui(void) {
-    if (nk_gui.is_hiding) {
-        nk_gui.shown = false;
-        nk_gui.is_hiding = false;
+    if (window.is_hiding) {
+        window.shown = false;
+        window.is_hiding = false;
     }
-    if (nk_gui.is_fading) {
-        nk_gui.animation_time = MAX(nk_gui.animation_time - GetFrameTime() * 2.0, 0.0);
-        if (nk_gui.animation_time == 0.0) nk_gui.shown = false;
+    if (window.is_fading) {
+        window.animation_time = MAX(window.animation_time - GetFrameTime() * 2.0, 0.0);
+        if (window.animation_time == 0.0) window.shown = false;
     } else {
-        nk_gui.shown = true;
-        nk_gui.animation_time = MIN(nk_gui.animation_time + GetFrameTime() * 2.0, 1.0);
+        window.shown = true;
+        window.animation_time = MIN(window.animation_time + GetFrameTime() * 2.0, 1.0);
     }
 
-    if (!nk_gui.shown) return;
+    if (!window.shown) return;
 
-    float animation_ease = ease_out_expo(nk_gui.animation_time);
-    nk_gui.ctx->style.window.spacing = nk_vec2(10, 10);
-    nk_gui.ctx->style.button.text_alignment = NK_TEXT_CENTERED;
+    float animation_ease = ease_out_expo(window.animation_time);
 
-    Vector2 gui_size;
-    switch (nk_gui.type) {
+    switch (window.type) {
     case GUI_TYPE_SETTINGS:
-        gui_size.x = 0.6 * GetScreenWidth() * animation_ease;
-        gui_size.y = 0.8 * GetScreenHeight() * animation_ease;
+        scrap_gui_begin_window("Settings", 0.6 * gui->win_w, 0.8 * gui->win_h, animation_ease);
+            scrap_gui_begin_setting("UI size", true);
+                scrap_gui_slider(8, 64, &window_conf.font_size);
+            scrap_gui_end_setting();
 
-        if (nk_begin(
-                nk_gui.ctx, 
-                "Settings", 
-                nk_rect(
-                    GetScreenWidth() / 2 - gui_size.x / 2, 
-                    GetScreenHeight() / 2 - gui_size.y / 2, 
-                    gui_size.x, 
-                    gui_size.y
-                ), 
-                NK_WINDOW_BORDER | NK_WINDOW_NO_SCROLLBAR)
-        ) {
-            gui_show_title("Settings");
+            scrap_gui_begin_setting("Side bar size", false);
+                scrap_gui_slider(10, 500, &window_conf.side_bar_size);
+            scrap_gui_end_setting();
 
-            nk_layout_row_dynamic(nk_gui.ctx, 10, 1);
-            nk_spacer(nk_gui.ctx);
+            scrap_gui_begin_setting("FPS Limit", false);
+                scrap_gui_slider(0, 240, &window_conf.fps_limit);
+            scrap_gui_end_setting();
 
-            nk_layout_row_dynamic(nk_gui.ctx, conf.font_size, 1);
-            nk_style_set_font(nk_gui.ctx, font_eb_nuc);
-            nk_label(nk_gui.ctx, "Interface", NK_TEXT_CENTERED);
-            nk_style_set_font(nk_gui.ctx, font_cond_nuc);
+            scrap_gui_begin_setting("Font path", true);
+                gui_spacer(gui, WINDOW_ELEMENT_PADDING, 0);
+                gui_text(gui, &font_cond, window_conf.font_path, conf.font_size * 0.6, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+            scrap_gui_end_setting();
 
-            nk_layout_row_template_begin(nk_gui.ctx, conf.font_size);
-            nk_layout_row_template_push_static(nk_gui.ctx, 10);
-            nk_layout_row_template_push_dynamic(nk_gui.ctx);
-            nk_layout_row_template_push_static(nk_gui.ctx, conf.font_size);
-            nk_layout_row_template_push_dynamic(nk_gui.ctx);
-            nk_layout_row_template_push_static(nk_gui.ctx, 10);
-            nk_layout_row_template_end(nk_gui.ctx);
+            scrap_gui_begin_setting("Bold font path", true);
+                gui_spacer(gui, WINDOW_ELEMENT_PADDING, 0);
+                gui_text(gui, &font_cond, window_conf.font_bold_path, conf.font_size * 0.6, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+            scrap_gui_end_setting();
 
-            nk_spacer(nk_gui.ctx);
-            nk_label(nk_gui.ctx, "UI Size", NK_TEXT_RIGHT);
-            gui_restart_warning();
-            nk_property_int(nk_gui.ctx, "#", 8, &gui_conf.font_size, 64, 1, 1.0);
-            nk_spacer(nk_gui.ctx);
+            scrap_gui_begin_setting("Monospaced font path", true);
+                gui_spacer(gui, WINDOW_ELEMENT_PADDING, 0);
+                gui_text(gui, &font_cond, window_conf.font_mono_path, conf.font_size * 0.6, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+            scrap_gui_end_setting();
 
-            nk_spacer(nk_gui.ctx);
-            nk_label(nk_gui.ctx, "Side bar size", NK_TEXT_RIGHT);
-            nk_spacer(nk_gui.ctx);
-            nk_property_int(nk_gui.ctx, "#", 10, &gui_conf.side_bar_size, 500, 1, 1.0);
-            nk_spacer(nk_gui.ctx);
+            gui_grow(gui, DIRECTION_VERTICAL);
 
-            nk_spacer(nk_gui.ctx);
-            nk_label(nk_gui.ctx, "FPS limit", NK_TEXT_RIGHT);
-            nk_spacer(nk_gui.ctx);
-            nk_property_int(nk_gui.ctx, "#", 0, &gui_conf.fps_limit, 240, 1, 1.0);
-            nk_spacer(nk_gui.ctx);
+            gui_element_begin(gui);
+                gui_set_grow(gui, DIRECTION_HORIZONTAL);
+                gui_set_direction(gui, DIRECTION_HORIZONTAL);
+                gui_set_gap(gui, WINDOW_ELEMENT_PADDING);
 
-            nk_spacer(nk_gui.ctx);
-            nk_label(nk_gui.ctx, "Block size threshold", NK_TEXT_RIGHT);
-            nk_spacer(nk_gui.ctx);
-            nk_property_int(nk_gui.ctx, "#", 200, &gui_conf.block_size_threshold, 8000, 10, 10.0);
-            nk_spacer(nk_gui.ctx);
+                gui_grow(gui, DIRECTION_HORIZONTAL);
 
-            nk_spacer(nk_gui.ctx);
-            nk_label(nk_gui.ctx, "Font path", NK_TEXT_RIGHT);
-            gui_restart_warning();
-            nk_edit_string_zero_terminated(nk_gui.ctx, NK_EDIT_FIELD, gui_conf.font_path, FONT_PATH_MAX_SIZE, nk_filter_default);
-            nk_spacer(nk_gui.ctx);
+                gui_element_begin(gui);
+                    gui_set_min_size(gui, 0, conf.font_size);
+                    gui_set_padding(gui, WINDOW_ELEMENT_PADDING, WINDOW_ELEMENT_PADDING);
+                    gui_set_rect(gui, (GuiColor) { 0x30, 0x30, 0x30, 0xff });
+                    gui_set_align(gui, ALIGN_CENTER);
+                    gui_set_direction(gui, DIRECTION_HORIZONTAL);
+                    gui_on_hover(gui, settings_button_on_hover);
+                    gui_set_custom_data(gui, handle_settings_reset_button_click);
 
-            nk_spacer(nk_gui.ctx);
-            nk_label(nk_gui.ctx, "Bold font path", NK_TEXT_RIGHT);
-            gui_restart_warning();
-            nk_edit_string_zero_terminated(nk_gui.ctx, NK_EDIT_FIELD, gui_conf.font_bold_path, FONT_PATH_MAX_SIZE, nk_filter_default);
-            nk_spacer(nk_gui.ctx);
+                    gui_text(gui, &font_cond, "Reset", conf.font_size * 0.6, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+                gui_element_end(gui);
 
-            nk_spacer(nk_gui.ctx);
-            nk_label(nk_gui.ctx, "Monospaced font path", NK_TEXT_RIGHT);
-            gui_restart_warning();
-            nk_edit_string_zero_terminated(nk_gui.ctx, NK_EDIT_FIELD, gui_conf.font_mono_path, FONT_PATH_MAX_SIZE, nk_filter_default);
-            nk_spacer(nk_gui.ctx);
+                gui_element_begin(gui);
+                    gui_set_min_size(gui, 0, conf.font_size);
+                    gui_set_padding(gui, WINDOW_ELEMENT_PADDING, WINDOW_ELEMENT_PADDING);
+                    gui_set_rect(gui, (GuiColor) { 0x30, 0x30, 0x30, 0xff });
+                    gui_set_align(gui, ALIGN_CENTER);
+                    gui_set_direction(gui, DIRECTION_HORIZONTAL);
+                    gui_on_hover(gui, settings_button_on_hover);
+                    gui_set_custom_data(gui, handle_settings_apply_button_click);
 
-            nk_layout_row_template_begin(nk_gui.ctx, conf.font_size);
-            nk_layout_row_template_push_dynamic(nk_gui.ctx);
-            nk_layout_row_template_push_static(nk_gui.ctx, conf.font_size * 3);
-            nk_layout_row_template_push_static(nk_gui.ctx, conf.font_size * 3);
-            nk_layout_row_template_push_static(nk_gui.ctx, 10);
-            nk_layout_row_template_end(nk_gui.ctx);
-            nk_spacer(nk_gui.ctx);
-            if (nk_button_label(nk_gui.ctx, "Reset")) {
-                set_default_config(&gui_conf);
-            }
-            if (nk_button_label(nk_gui.ctx, "Apply")) {
-                apply_config(&conf, &gui_conf);
-                save_config(&gui_conf);
-            }
-            nk_spacer(nk_gui.ctx);
-        }
-        nk_end(nk_gui.ctx);
+                    gui_text(gui, &font_cond, "Apply", conf.font_size * 0.6, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+                gui_element_end(gui);
+            gui_element_end(gui);
+        scrap_gui_end_window();
         break;
     case GUI_TYPE_ABOUT:
-        gui_size.x = 500 * conf.font_size / 32.0 * animation_ease;
-        gui_size.y = 250 * conf.font_size / 32.0 * animation_ease;
-
-        if (nk_begin(
-                nk_gui.ctx, 
-                "About", 
-                nk_rect(
-                    GetScreenWidth() / 2 - gui_size.x / 2, 
-                    GetScreenHeight() / 2 - gui_size.y / 2, 
-                    gui_size.x, 
-                    gui_size.y
-                ), 
-                NK_WINDOW_BORDER | NK_WINDOW_NO_SCROLLBAR)
-        ) {
-            gui_show_title("About");
-
-            nk_layout_row_dynamic(nk_gui.ctx, 10 * conf.font_size / 32.0, 1);
-            nk_spacer(nk_gui.ctx);
-
-            nk_layout_row_template_begin(nk_gui.ctx, conf.font_size);
-            nk_layout_row_template_push_static(nk_gui.ctx, 10 * conf.font_size / 32.0);
-            nk_layout_row_template_push_static(nk_gui.ctx, conf.font_size);
-            nk_layout_row_template_push_dynamic(nk_gui.ctx);
-            nk_layout_row_template_push_static(nk_gui.ctx, 10 * conf.font_size / 32.0);
-            nk_layout_row_template_end(nk_gui.ctx);
-
-            nk_spacer(nk_gui.ctx);
-            nk_image(nk_gui.ctx, logo_tex_nuc);
-            nk_style_set_font(nk_gui.ctx, font_eb_nuc);
-            nk_label(nk_gui.ctx, "Scrap v" SCRAP_VERSION, NK_TEXT_LEFT);
-            nk_style_set_font(nk_gui.ctx, font_cond_nuc);
-            nk_spacer(nk_gui.ctx);
-
-            nk_layout_row_template_begin(nk_gui.ctx, conf.font_size * 1.9);
-            nk_layout_row_template_push_static(nk_gui.ctx, 10 * conf.font_size / 32.0);
-            nk_layout_row_template_push_dynamic(nk_gui.ctx);
-            nk_layout_row_template_push_static(nk_gui.ctx, 10 * conf.font_size / 32.0);
-            nk_layout_row_template_end(nk_gui.ctx);
-
-            nk_spacer(nk_gui.ctx);
-            nk_label_wrap(nk_gui.ctx, "Scrap is a project that allows anyone to build software using simple, block based interface.");
-            nk_spacer(nk_gui.ctx);
-
-            nk_layout_row_template_begin(nk_gui.ctx, conf.font_size);
-            nk_layout_row_template_push_static(nk_gui.ctx, 10 * conf.font_size / 32.0);
-            nk_layout_row_template_push_static(nk_gui.ctx, conf.font_size * 3);
-            nk_layout_row_template_end(nk_gui.ctx);
-            nk_spacer(nk_gui.ctx);
-            if (nk_button_label(nk_gui.ctx, "License")) {
-                OpenURL(LICENSE_URL);
-            }
-        }
-        nk_end(nk_gui.ctx);
+        scrap_gui_begin_window("About", 500 * conf.font_size / 32.0, 250 * conf.font_size / 32.0, animation_ease);
+            gui_text(gui, &font_cond, "About page", conf.font_size * 0.6, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+        scrap_gui_end_window();
         break;
-    case GUI_TYPE_FILE:
+    default:
+        assert(false && "Unhandled window draw");
+        break;
+    }
+
+    if (settings_tooltip) {
+        gui_element_begin(gui);
+            gui_set_floating(gui);
+            gui_set_rect(gui, (GuiColor) { 0x00, 0x00, 0x00, 0x80 });
+            gui_set_position(gui, gui->mouse_x + 10, gui->mouse_y + 10);
+            gui_set_padding(gui, WINDOW_ELEMENT_PADDING * 0.5, WINDOW_ELEMENT_PADDING * 0.5);
+
+            gui_text(gui, &font_cond, "Needs restart for changes to take effect", conf.font_size * 0.6, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+        gui_element_end(gui);
+    }
+
+    settings_tooltip = false;
+
+    /*case GUI_TYPE_FILE:
         gui_size.x = 150 * conf.font_size / 32.0;
         gui_size.y = conf.font_size * 2;
-        nk_gui.ctx->style.window.spacing = nk_vec2(0, 0);
-        nk_gui.ctx->style.button.text_alignment = NK_TEXT_LEFT;
+        window.ctx->style.window.spacing = nk_vec2(0, 0);
+        window.ctx->style.button.text_alignment = NK_TEXT_LEFT;
 
         if (nk_begin(
-                nk_gui.ctx, 
+                window.ctx, 
                 "File", 
-                nk_rect(nk_gui.pos.x, nk_gui.pos.y + conf.font_size * 1.2, gui_size.x, gui_size.y), 
+                nk_rect(window.pos.x, window.pos.y + conf.font_size * 1.2, gui_size.x, gui_size.y), 
                 NK_WINDOW_NO_SCROLLBAR)
         ) {
-            nk_layout_row_dynamic(nk_gui.ctx, conf.font_size, 1);
-            if (nk_button_label(nk_gui.ctx, "Save project")) {
+            nk_layout_row_dynamic(window.ctx, conf.font_size, 1);
+            if (nk_button_label(window.ctx, "Save project")) {
                 char const* filters[] = {"*.scrp"};
                 char* save_path = tinyfd_saveFileDialog(NULL, "project.scrp", ARRLEN(filters), filters, "Scrap project files (.scrp)"); 
                 if (save_path) save_code(save_path, editor_code);
             }
-            if (nk_button_label(nk_gui.ctx, "Load project")) {
+            if (nk_button_label(window.ctx, "Load project")) {
                 char const* filters[] = {"*.scrp"};
                 char* files = tinyfd_openFileDialog(NULL, "project.scrp", ARRLEN(filters), filters, "Scrap project files (.scrp)", 0);
 
@@ -455,9 +362,9 @@ void handle_gui(void) {
                 }
             }
         }
-        nk_end(nk_gui.ctx);
+        nk_end(window.ctx);
         break;
     default:
         break;
-    }
+    }*/
 }

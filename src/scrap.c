@@ -55,6 +55,8 @@ Texture2D del_arg_tex;
 Texture2D add_text_tex;
 Texture2D special_tex;
 Texture2D list_tex;
+Texture2D arrow_left_tex;
+Texture2D arrow_right_tex;
 
 TabType current_tab = TAB_CODE;
 ScrVm vm;
@@ -233,6 +235,8 @@ void setup(void) {
     add_text_tex = load_svg(into_data_path(DATA_PATH "add_text.svg"));
     special_tex = load_svg(into_data_path(DATA_PATH "special.svg"));
     list_tex = load_svg(into_data_path(DATA_PATH "list.svg"));
+    arrow_left_tex = load_svg(into_data_path(DATA_PATH "arrow_left.svg"));
+    arrow_right_tex = load_svg(into_data_path(DATA_PATH "arrow_right.svg"));
 
     int* codepoints = vector_create();
     for (int i = 0; i < CODEPOINT_REGION_COUNT; i++) {
@@ -276,6 +280,7 @@ void setup(void) {
     gui_set_measure_image_func(gui, scrap_gui_measure_image);
     gui_update_window_size(gui, GetScreenWidth(), GetScreenHeight());
     TraceLog(LOG_INFO, "Allocated %.2f KiB for gui", (float)sizeof(Gui) / 1024.0f);
+    init_gui_window();
 }
 
 int main(void) {

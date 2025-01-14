@@ -89,8 +89,7 @@ void draw_input_box(Vector2 position, ScrMeasurement ms, char** input, bool roun
     }
 
     position.x += rect.width * 0.5 - MeasureTextEx(font_cond, *input, BLOCK_TEXT_SIZE, 0.0).x * 0.5;
-    position.y += rect.height * 0.5 - BLOCK_TEXT_SIZE * 0.5;
-    DrawTextEx(font_cond, *input, position, BLOCK_TEXT_SIZE, 0.0, BLACK);
+    position.y += rect.height * 0.5 - BLOCK_TEXT_SIZE * 0.5; DrawTextEx(font_cond, *input, position, BLOCK_TEXT_SIZE, 0.0, BLACK);
 }
 
 void draw_block_base(Rectangle block_size, ScrBlockdef* blockdef, Color block_color, Color outline_color) {
@@ -515,49 +514,6 @@ void draw_button(Vector2* position, char* text, float button_scale, float side_p
     position->x += rect.width + side_margin;
 }
 
-#define COLLISION_AT(bar_type, index) (hover_info.top_bars.type == (bar_type) && hover_info.top_bars.ind == (int)(index))
-void draw_tab_buttons(int sw) {
-    Vector2 pos = (Vector2){ 0.0, conf.font_size * 1.2 };
-    for (vec_size_t i = 0; i < ARRLEN(tab_bar_buttons_text); i++) {
-        draw_button(&pos, tab_bar_buttons_text[i], 1.0, 0.3, 0, i == current_tab, COLLISION_AT(TOPBAR_TABS, i));
-    }
-
-    Vector2 run_pos = (Vector2){ sw - conf.font_size * 2.0, conf.font_size * 1.2 };
-    Vector2 run_pos_copy = run_pos;
-    draw_button(&run_pos_copy, NULL, 1.0, 0.5, 0, false, COLLISION_AT(TOPBAR_RUN_BUTTON, 0));
-    draw_button(&run_pos_copy, NULL, 1.0, 0.5, 0, vm.is_running, COLLISION_AT(TOPBAR_RUN_BUTTON, 1));
-    DrawTextureEx(stop_tex, run_pos, 0, (float)conf.font_size / (float)stop_tex.width, WHITE);
-    run_pos.x += conf.font_size;
-    DrawTextureEx(run_tex, run_pos, 0, (float)conf.font_size / (float)run_tex.width, vm.is_running ? BLACK : WHITE);
-}
-
-void draw_top_bar(void) {
-    DrawTexture(logo_tex, 5, conf.font_size * 0.1, WHITE);
-
-    int width = MeasureTextEx(font_eb, "Scrap", conf.font_size * 0.8, 0.0).x;
-    DrawTextEx(font_eb, "Scrap", (Vector2){ 10 + conf.font_size, conf.font_size * 0.2 }, conf.font_size * 0.8, 0.0, WHITE);
-
-    Vector2 pos = { 20 + conf.font_size + width, 0 };
-
-    for (vec_size_t i = 0; i < ARRLEN(top_bar_buttons_text); i++) {
-        draw_button(&pos, top_bar_buttons_text[i], 1.2, 0.3, 0, false, COLLISION_AT(TOPBAR_TOP, i));
-    }
-}
-#undef COLLISION_AT
-
-void draw_tooltip(void) {
-    if (hover_info.time_at_last_pos < 0.5 || !hover_info.block) return;
-
-    Vector2 pos = GetMousePosition();
-    pos.x += 10.0;
-    pos.y += 10.0;
-
-    char* text = "Amog";
-    Vector2 ms = MeasureTextEx(font_cond, text, conf.font_size * 0.5, 0);   
-    DrawRectangle(pos.x - 5, pos.y - 5, ms.x + 10, ms.y + 10, (Color) { 0x00, 0x00, 0x00, 0x80 });
-    DrawTextEx(font_cond, text, pos, conf.font_size * 0.5, 0, WHITE);
-}
-
 void draw_dropdown_list(void) {
     if (!hover_info.select_argument) return;
 
@@ -775,11 +731,13 @@ void scrap_gui_draw_blockdef(ScrBlockdef* blockdef) {
 }
 
 void block_border_on_hover(FlexElement* el) {
+    if (gui_window_is_shown()) return;
     Color new_col = ColorBrightness(CONVERT_COLOR(el->color, Color), 0.5);
     el->color = CONVERT_COLOR(new_col, GuiColor);
 }
 
 void block_on_hover(FlexElement* el) {
+    if (gui_window_is_shown()) return;
     Color new_col = ColorBrightness(CONVERT_COLOR(el->color, Color), 0.3);
     el->color = CONVERT_COLOR(new_col, GuiColor);
     hover_info.block = el->custom_data;
@@ -790,6 +748,7 @@ void block_argument_on_hover(FlexElement* el) {
 }
 
 void argument_on_hover(FlexElement* el) {
+    if (gui_window_is_shown()) return;
     el->draw_type = DRAWTYPE_BORDER;
     el->color = (GuiColor) { 0xa0, 0xa0, 0xa0, 0xff };
     el->data.border_width = BLOCK_OUTLINE_SIZE;
@@ -912,12 +871,14 @@ void scrap_gui_draw_block(ScrBlock* block) {
 }
 
 void button_on_hover(FlexElement* el) {
+    if (gui_window_is_shown()) return;
     if (el->draw_type == DRAWTYPE_RECT) return;
     el->draw_type = DRAWTYPE_RECT;
     el->color = (GuiColor) { 0x40, 0x40, 0x40, 0xff };
+    hover_info.top_bars.handler = el->custom_data;
 }
 
-void scrap_gui_draw_button(const char* text, int size, bool selected) {
+void scrap_gui_draw_button(const char* text, int size, bool selected, ButtonClickHandler handler) {
     gui_element_begin(gui);
         gui_set_direction(gui, DIRECTION_HORIZONTAL);
         gui_set_align(gui, ALIGN_CENTER);
@@ -925,6 +886,7 @@ void scrap_gui_draw_button(const char* text, int size, bool selected) {
         gui_set_padding(gui, conf.font_size * 0.3, 0);
         if (selected) gui_set_rect(gui, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
         gui_on_hover(gui, button_on_hover);
+        gui_set_custom_data(gui, handler);
 
         gui_text(gui, &font_cond, text, BLOCK_TEXT_SIZE, selected ? (GuiColor) { 0x00, 0x00, 0x00, 0xff } : (GuiColor) { 0xff, 0xff, 0xff, 0xff });
     gui_element_end(gui);
@@ -945,9 +907,9 @@ void scrap_gui_draw_top_bar(void) {
         gui_text(gui, &font_eb, "Scrap", conf.font_size * 0.8, CONVERT_COLOR(WHITE, GuiColor));
         gui_spacer(gui, 10, 0);
 
-        scrap_gui_draw_button("File", top_bar_size, false);
-        scrap_gui_draw_button("Settings", top_bar_size, false);
-        scrap_gui_draw_button("About", top_bar_size, false);
+        scrap_gui_draw_button("File", top_bar_size, false, handle_file_button_click);
+        scrap_gui_draw_button("Settings", top_bar_size, false, handle_settings_button_click);
+        scrap_gui_draw_button("About", top_bar_size, false, handle_about_button_click);
     gui_element_end(gui);
 }
 
@@ -960,8 +922,8 @@ void scrap_gui_draw_tab_bar(void) {
         gui_set_min_size(gui, 0, tab_bar_size);
         gui_set_align(gui, ALIGN_CENTER);
 
-        scrap_gui_draw_button("Code", tab_bar_size, current_tab == TAB_CODE);
-        scrap_gui_draw_button("Output", tab_bar_size, current_tab == TAB_OUTPUT);
+        scrap_gui_draw_button("Code", tab_bar_size, current_tab == TAB_CODE, handle_code_tab_click);
+        scrap_gui_draw_button("Output", tab_bar_size, current_tab == TAB_OUTPUT, handle_output_tab_click);
 
         gui_grow(gui, DIRECTION_HORIZONTAL);
         gui_text(gui, &font_cond, "Project.scrp", BLOCK_TEXT_SIZE, (GuiColor) { 0x80, 0x80, 0x80, 0xff });
@@ -1023,29 +985,35 @@ void scrap_gui_draw_sidebar(void) {
     gui_element_end(gui);
 }
 
+void scrap_gui_draw_code(void) {
+    for (size_t i = 0; i < vector_size(editor_code); i++) {
+        Vector2 chain_pos = (Vector2) {
+            editor_code[i].pos.x - camera_pos.x, 
+            editor_code[i].pos.y - camera_pos.y,
+        };
+        if (chain_pos.x > gui->win_w || chain_pos.y > gui->win_h) continue;
+        if (editor_code[i].ms.size.x > 0 && editor_code[i].ms.size.y > 0 && 
+            (chain_pos.x + editor_code[i].ms.size.x < 0 || chain_pos.y + editor_code[i].ms.size.y < 0)) continue;
+        gui_element_begin(gui);
+            gui_set_floating(gui);
+            gui_set_position(gui, chain_pos.x, chain_pos.y);
+
+            scrap_gui_draw_blockchain(&editor_code[i]);
+        gui_element_end(gui);
+        FlexElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len];
+        editor_code[i].ms.size.x = el->w;
+        editor_code[i].ms.size.y = el->h;
+    }
+}
+
 void scrap_gui_process(void) {
     // Gui
     gui_begin(gui);
-        for (size_t i = 0; i < vector_size(editor_code); i++) {
-            Vector2 chain_pos = (Vector2) {
-                editor_code[i].pos.x - camera_pos.x, 
-                editor_code[i].pos.y - camera_pos.y,
-            };
-            if (chain_pos.x > gui->win_w || chain_pos.y > gui->win_h) continue;
-            if (editor_code[i].ms.size.x > 0 && editor_code[i].ms.size.y > 0 && (chain_pos.x + editor_code[i].ms.size.x < 0 || chain_pos.y + editor_code[i].ms.size.y < 0)) continue;
-            gui_element_begin(gui);
-                gui_set_floating(gui);
-                gui_set_position(gui, chain_pos.x, chain_pos.y);
-
-                scrap_gui_draw_blockchain(&editor_code[i]);
-            gui_element_end(gui);
-            FlexElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len];
-            editor_code[i].ms.size.x = el->w;
-            editor_code[i].ms.size.y = el->h;
-        }
+        scrap_gui_draw_code();
         scrap_gui_draw_top_bar();
         scrap_gui_draw_tab_bar();
         scrap_gui_draw_sidebar();
+        handle_gui();
         gui_element_begin(gui);
             gui_set_floating(gui);
             gui_set_position(gui, gui->mouse_x, gui->mouse_y);
@@ -1118,6 +1086,7 @@ void scrap_gui_process_render(void) {
     scrap_gui_render();
 
 #ifdef DEBUG
+        if (IsKeyDown(KEY_F4))
         DrawTextEx(
             font_cond, 
             TextFormat(
@@ -1132,11 +1101,11 @@ void scrap_gui_process_render(void) {
                 "Camera: (%.3f, %.3f), Click: (%.3f, %.3f)\n"
                 "Dropdown ind: %d, Scroll: %d\n"
                 "Drag cancelled: %d\n"
-                "Bar: %d, Ind: %d\n"
                 "Min: (%.3f, %.3f), Max: (%.3f, %.3f)\n"
                 "Sidebar scroll: %d, Max: %d\n"
                 "Editor: %d, Editing: %p, Blockdef: %p, input: %zu\n"
-                "Elements: %zu/%zu, Draw: %zu/%zu",
+                "Elements: %zu/%zu, Draw: %zu/%zu\n"
+                "Slider: %p, min: %d, max: %d",
                 hover_info.blockchain,
                 hover_info.blockchain_layer,
                 hover_info.block,
@@ -1153,11 +1122,11 @@ void scrap_gui_process_render(void) {
                 camera_pos.x, camera_pos.y, camera_click_pos.x, camera_click_pos.y,
                 hover_info.dropdown_hover_ind, dropdown.scroll_amount,
                 hover_info.drag_cancelled,
-                hover_info.top_bars.type, hover_info.top_bars.ind,
                 block_code.min_pos.x, block_code.min_pos.y, block_code.max_pos.x, block_code.max_pos.y,
                 sidebar.scroll_amount, sidebar.max_y,
                 hover_info.editor.part, hover_info.editor.edit_blockdef, hover_info.editor.blockdef, hover_info.editor.blockdef_input,
-                gui->element_stack_len, ELEMENT_STACK_SIZE, gui->command_stack_len, COMMAND_STACK_SIZE
+                gui->element_stack_len, ELEMENT_STACK_SIZE, gui->command_stack_len, COMMAND_STACK_SIZE,
+                hover_info.hover_slider.value, hover_info.hover_slider.min, hover_info.hover_slider.max
             ), 
             (Vector2){ 
                 conf.side_bar_size + 5, 
@@ -1190,34 +1159,4 @@ void scrap_gui_process_render(void) {
         );
 #endif
 
-}
-
-void process_render(void) {
-    ClearBackground(GetColor(0x202020ff));
-
-    int sw = GetScreenWidth();
-    int sh = GetScreenHeight();
-
-    if (current_tab == TAB_CODE) {
-        BeginScissorMode(0, conf.font_size * 2.2, sw, sh - conf.font_size * 2.2);
-            for (vec_size_t i = 0; i < vector_size(editor_code); i++) {
-                draw_block_chain(&editor_code[i], camera_pos, hover_info.exec_chain == &editor_code[i]);
-            }
-        EndScissorMode();
-
-        draw_scrollbars();
-
-        BeginScissorMode(0, conf.font_size * 2.2, sw, sh - conf.font_size * 2.2);
-            draw_block_chain(&mouse_blockchain, (Vector2) {0}, false);
-        EndScissorMode();
-
-        draw_action_bar();
-    } else if (current_tab == TAB_OUTPUT) {
-        draw_term();
-    }
-
-    scrap_gui_render();
-
-    draw_dropdown_list();
-    draw_tooltip();
 }

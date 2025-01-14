@@ -25,6 +25,7 @@
 #define ARRLEN(x) (sizeof(x)/sizeof(x[0]))
 #define MAX(x, y) ((x) > (y) ? (x) : (y))
 #define MIN(x, y) ((x) < (y) ? (x) : (y))
+#define CLAMP(x, min, max) (MIN(MAX(min, x), max))
 
 void block_delete_blockdef(ScrBlock* block, ScrBlockdef* blockdef) {
     for (size_t i = 0; i < vector_size(block->arguments); i++) {
@@ -423,59 +424,6 @@ void blockchain_check_collisions(ScrBlockChain* chain, Vector2 camera_pos) {
     }
 }
 
-bool button_check_collisions(Vector2* position, char* text, float button_scale, float side_padding, float side_margin) {
-    side_padding *= conf.font_size;
-    side_margin *= conf.font_size;
-
-    int text_size = conf.font_size * 0.6;
-    int text_width = text ? MeasureTextEx(font_cond, text, text_size, 0.0).x : 0;
-    Rectangle rect = {
-        .x = position->x,
-        .y = position->y,
-        .width = text_width + side_padding * 2,
-        .height = conf.font_size * button_scale,
-    };
-
-    position->x += rect.width + side_margin;
-    return CheckCollisionPointRec(GetMousePosition(), rect) && vector_size(mouse_blockchain.blocks) == 0;
-}
-
-void bars_check_collisions(void) {
-    Vector2 pos = (Vector2){ 0.0, conf.font_size * 1.2 };
-    for (vec_size_t i = 0; i < ARRLEN(tab_bar_buttons_text); i++) {
-        Vector2 last_pos = pos;
-        if (button_check_collisions(&pos, tab_bar_buttons_text[i], 1.0, 0.3, 0)) {
-            hover_info.top_bars.type = TOPBAR_TABS;
-            hover_info.top_bars.pos = last_pos;
-            hover_info.top_bars.ind = i;
-            return;
-        }
-    }
-
-    Vector2 run_pos = (Vector2){ GetScreenWidth() - conf.font_size * 2.0, conf.font_size * 1.2 };
-    for (int i = 0; i < 2; i++) {
-        Vector2 last_pos = run_pos;
-        if (button_check_collisions(&run_pos, NULL, 1.0, 0.5, 0)) {
-            hover_info.top_bars.type = TOPBAR_RUN_BUTTON;
-            hover_info.top_bars.pos = last_pos;
-            hover_info.top_bars.ind = i;
-            return;
-        }
-    }
-
-    int width = MeasureTextEx(font_eb, "Scrap", conf.font_size * 0.8, 0.0).x;
-    pos = (Vector2){ 20 + conf.font_size + width, 0 };
-    for (vec_size_t i = 0; i < ARRLEN(top_bar_buttons_text); i++) {
-        Vector2 last_pos = pos;
-        if (button_check_collisions(&pos, top_bar_buttons_text[i], 1.2, 0.3, 0)) {
-            hover_info.top_bars.type = TOPBAR_TOP;
-            hover_info.top_bars.pos = last_pos;
-            hover_info.top_bars.ind = i;
-            return;
-        }
-    }
-}
-
 void dropdown_check_collisions(void) {
     if (!hover_info.select_argument) return;
 
@@ -535,33 +483,56 @@ void check_block_collisions(void) {
     }
 }
 
-bool handle_top_bar_click(void) {
-    if (hover_info.top_bars.type == TOPBAR_TOP) {
-        switch (hover_info.top_bars.ind) {
-        case 0:
-            //if (!vm.is_running) gui_show(GUI_TYPE_FILE);
-            break;
-        case 1:
-            //gui_show(GUI_TYPE_SETTINGS);
-            break;
-        case 2:
-            //gui_show(GUI_TYPE_ABOUT);
-            break;
-        default:
-            break;
-        }
-    } else if (hover_info.top_bars.type == TOPBAR_TABS) {
-        if (current_tab != (TabType)hover_info.top_bars.ind) {
-            shader_time = 0.0;
-            current_tab = hover_info.top_bars.ind;
-        }
-    } else if (hover_info.top_bars.type == TOPBAR_RUN_BUTTON) {
-        if (hover_info.top_bars.ind == 1) {
-            start_vm();
-        } else if (hover_info.top_bars.ind == 0) {
-            stop_vm();
-        }
-    }
+bool handle_file_button_click(void) {
+    //if (!vm.is_running) gui_show(GUI_TYPE_FILE);
+    return true;
+}
+
+bool handle_settings_button_click(void) {
+    gui_window_show(GUI_TYPE_SETTINGS);
+    return true;
+}
+
+bool handle_about_button_click(void) {
+    gui_window_show(GUI_TYPE_ABOUT);
+    return true;
+}
+
+bool handle_run_button_click(void) {
+    start_vm();
+    return true;
+}
+
+bool handle_stop_button_click(void) {
+    stop_vm();
+    return true;
+}
+
+bool handle_code_tab_click(void) {
+    if (current_tab != TAB_CODE) shader_time = 0.0;
+    current_tab = TAB_CODE;
+    return true;
+}
+
+bool handle_output_tab_click(void) {
+    if (current_tab != TAB_OUTPUT) shader_time = 0.0;
+    current_tab = TAB_OUTPUT;
+    return true;
+}
+
+bool handle_window_gui_close_button_click(void) {
+    gui_window_hide();
+    return true;
+}
+
+bool handle_settings_reset_button_click(void) {
+    set_default_config(&window_conf);
+    return true;
+}
+
+bool handle_settings_apply_button_click(void) {
+    apply_config(&conf, &window_conf);
+    save_config(&window_conf);
     return true;
 }
 
@@ -822,12 +793,17 @@ bool handle_code_editor_click(bool mouse_empty) {
 bool handle_mouse_click(void) {
     hover_info.mouse_click_pos = GetMousePosition();
     camera_click_pos = camera_pos;
+    hover_info.dragged_slider.value = NULL;
 
-    /*if (gui_is_shown()) {
-        if (gui_get_type() == GUI_TYPE_FILE) gui_hide_immediate();
+    if (hover_info.hover_slider.value) {
+        hover_info.dragged_slider = hover_info.hover_slider;
+        hover_info.slider_last_val = *hover_info.dragged_slider.value;
+        return false;
+    }
+    if (hover_info.top_bars.handler) return hover_info.top_bars.handler();
+    if (gui_window_is_shown()) {
         return true;
-    }*/
-    //if (hover_info.top_bars.ind != -1) return handle_top_bar_click();
+    }
     if (current_tab != TAB_CODE) return true;
     if (vm.is_running) return false;
 
@@ -942,6 +918,15 @@ void handle_mouse_drag(void) {
 
     Vector2 mouse_pos = GetMousePosition();
 
+    if (hover_info.dragged_slider.value) {
+        *hover_info.dragged_slider.value = CLAMP(
+            hover_info.slider_last_val + (mouse_pos.x - hover_info.mouse_click_pos.x) / 2, 
+            hover_info.dragged_slider.min, 
+            hover_info.dragged_slider.max
+        );
+        return;
+    }
+
     camera_pos.x = camera_click_pos.x - (mouse_pos.x - hover_info.mouse_click_pos.x);
     camera_pos.y = camera_click_pos.y - (mouse_pos.y - hover_info.mouse_click_pos.y);
 }
@@ -957,12 +942,13 @@ void scrap_gui_process_input(void) {
     hover_info.blockchain = NULL;
     hover_info.blockchain_layer = 0;
     hover_info.dropdown_hover_ind = -1;
-    hover_info.top_bars.ind = -1;
     hover_info.exec_ind = -1;
     hover_info.exec_chain = NULL;
     hover_info.editor.part = EDITOR_NONE;
     hover_info.editor.blockdef = NULL;
     hover_info.editor.blockdef_input = -1;
+    hover_info.top_bars.handler = NULL;
+    hover_info.hover_slider.value = NULL;
 
     //Timer t = start_timer("gui process");
     scrap_gui_process();
@@ -987,6 +973,7 @@ void scrap_gui_process_input(void) {
         handle_mouse_drag();
     } else {
         hover_info.drag_cancelled = false;
+        hover_info.dragged_slider.value = NULL;
         handle_key_press();
     }
 
