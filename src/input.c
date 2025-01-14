@@ -888,7 +888,7 @@ void handle_key_press(void) {
         }
         return;
     };
-    if (hover_info.select_block && hover_info.select_block->blockdef->inputs[hover_info.select_argument->input_id].type == INPUT_DROPDOWN) return;
+    if (hover_info.select_block && hover_info.select_argument && hover_info.select_block->blockdef->inputs[hover_info.select_argument->input_id].type == INPUT_DROPDOWN) return;
 
     edit_text(hover_info.select_input);
 }
