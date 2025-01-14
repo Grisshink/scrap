@@ -152,6 +152,7 @@ static void scrap_gui_end_window(void) {
 }
 
 static void warning_on_hover(FlexElement* el) {
+    (void) el;
     settings_tooltip = true;
 }
 
