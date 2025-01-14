@@ -26,10 +26,13 @@
 
 #define SIZING_X(el) (ElementSizing)(el->sizing & 0x0f)
 #define SIZING_Y(el) (ElementSizing)((el->sizing >> 4) & 0x0f)
-#define SET_SIZING_X(el, size) (el->sizing = (el->sizing & 0xf0) | size)
-#define SET_SIZING_Y(el, size) (el->sizing = (el->sizing & 0x0f) | (size << 4))
+#define FLOATING(el) ((el->flags >> 3) & 1)
 #define ALIGN(el) (AlignmentType)((el->flags >> 1) & 3)
 #define DIRECTION(el) (FlexDirection)(el->flags & 1)
+
+#define SET_SIZING_X(el, size) (el->sizing = (el->sizing & 0xf0) | size)
+#define SET_SIZING_Y(el, size) (el->sizing = (el->sizing & 0x0f) | (size << 4))
+#define SET_FLOATING(el, floating) (el->flags = (el->flags & ~(1 << 3)) | ((floating & 1) << 3))
 #define SET_ALIGN(el, ali) (el->flags = (el->flags & 0xf9) | (ali << 1))
 #define SET_DIRECTION(el, dir) (el->flags = (el->flags & 0xfe) | dir)
 
@@ -119,7 +122,6 @@ FlexElement* gui_element_begin(Gui* gui) {
     FlexElement* el = &gui->element_stack[gui->element_stack_len++];
     gui->element_ptr_stack[gui->element_ptr_stack_len++] = el;
     el->draw_type = DRAWTYPE_UNKNOWN;
-    el->is_floating = 0;
     el->x = prev ? prev->cursor_x : 0;
     el->y = prev ? prev->cursor_y : 0;
     el->scaling = prev ? prev->scaling : 1.0;
@@ -132,7 +134,7 @@ FlexElement* gui_element_begin(Gui* gui) {
     el->gap = 0;
     el->w = 0;
     el->h = 0;
-    el->flags = 0; // direction = DIRECTION_VERTICAL, align = ALIGN_TOP | ALIGN_LEFT
+    el->flags = 0; // direction = DIRECTION_VERTICAL, align = ALIGN_TOP | ALIGN_LEFT, is_floating = false
     el->next = NULL;
     el->handle_hover = NULL;
     el->custom_data = NULL;
@@ -147,7 +149,7 @@ void gui_element_realign(FlexElement* el) {
     int align_div = ALIGN(el) == ALIGN_CENTER ? 2 : 1;
     FlexElement *iter = el + 1;
     for (int i = 0; i < el->element_count; i++) {
-        if (!iter->is_floating) {
+        if (!FLOATING(iter)) {
             if (DIRECTION(el) == DIRECTION_VERTICAL) {
                 iter->x = (el->w - iter->w) / align_div;
             } else {
@@ -168,7 +170,7 @@ void gui_element_resize(Gui* gui, FlexElement* el, int new_w, int new_h) {
 
     FlexElement* iter = el + 1;
     for (int i = 0; i < el->element_count; i++) {
-        if (!iter->is_floating) {
+        if (!FLOATING(iter)) {
             if (DIRECTION(el) == DIRECTION_VERTICAL) {
                 if (SIZING_Y(iter) == SIZING_GROW) {
                     grow_elements++;
@@ -193,7 +195,7 @@ void gui_element_resize(Gui* gui, FlexElement* el, int new_w, int new_h) {
 
     iter = el + 1;
     for (int i = 0; i < el->element_count; i++) {
-        if (!iter->is_floating) {
+        if (!FLOATING(iter)) {
             iter->x = cursor_x;
             iter->y = cursor_y;
 
@@ -280,7 +282,7 @@ void* gui_get_state(FlexElement* el, unsigned int* state_len) {
 
 void gui_set_floating(Gui* gui) {
     FlexElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
-    el->is_floating = 1;
+    SET_FLOATING(el, 1);
 }
 
 void gui_set_position(Gui* gui, int x, int y) {

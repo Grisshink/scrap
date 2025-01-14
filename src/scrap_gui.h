@@ -101,13 +101,13 @@ struct FlexElement {
     //   Y - ElementSizing for element height
     unsigned char sizing;
     // Flags layout:
-    // 00000AAD
+    // 0000FAAD
     // Where: 
     //   D - FlexDirection
     //   A - AlignmentType
+    //   F - Is floating element
     unsigned char flags;
     HoverHandler handle_hover;
-    unsigned char is_floating;
     void* custom_data;
     void* custom_state;
     unsigned int state_len;
