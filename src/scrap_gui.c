@@ -24,6 +24,15 @@
 #define MAX(x, y) ((x) > (y) ? (x) : (y))
 #define MIN(x, y) ((x) < (y) ? (x) : (y))
 
+#define SIZING_X(el) (ElementSizing)(el->sizing & 0x0f)
+#define SIZING_Y(el) (ElementSizing)((el->sizing >> 4) & 0x0f)
+#define SET_SIZING_X(el, size) (el->sizing = (el->sizing & 0xf0) | size)
+#define SET_SIZING_Y(el, size) (el->sizing = (el->sizing & 0x0f) | (size << 4))
+#define ALIGN(el) (AlignmentType)((el->flags >> 1) & 3)
+#define DIRECTION(el) (FlexDirection)(el->flags & 1)
+#define SET_ALIGN(el, ali) (el->flags = (el->flags & 1) | (ali << 1))
+#define SET_DIRECTION(el, dir) (el->flags = (el->flags & 0xfe) | dir)
+
 void gui_render(Gui* gui, FlexElement* el, int pos_x, int pos_y);
 
 static bool inside_window(Gui* gui, DrawCommand* command) {
@@ -117,15 +126,13 @@ FlexElement* gui_element_begin(Gui* gui) {
     el->element_count = 0;
     el->cursor_x = 0;
     el->cursor_y = 0;
-    el->sizing_x = SIZING_FIT;
-    el->sizing_y = SIZING_FIT;
+    el->sizing = 0; // sizing_x = SIZING_FIT, sizing_y = SIZING_FIT
     el->pad_w = 0;
     el->pad_h = 0;
     el->gap = 0;
     el->w = 0;
     el->h = 0;
-    el->direction = DIRECTION_VERTICAL;
-    el->align = ALIGN_TOP;
+    el->flags = 0; // direction = DIRECTION_VERTICAL, align = ALIGN_TOP | ALIGN_LEFT
     el->next = NULL;
     el->handle_hover = NULL;
     el->custom_data = NULL;
@@ -135,13 +142,13 @@ FlexElement* gui_element_begin(Gui* gui) {
 }
 
 void gui_element_realign(FlexElement* el) {
-    if (el->align == ALIGN_TOP) return;
+    if (ALIGN(el) == ALIGN_TOP) return;
 
-    int align_div = el->align == ALIGN_CENTER ? 2 : 1;
+    int align_div = ALIGN(el) == ALIGN_CENTER ? 2 : 1;
     FlexElement *iter = el + 1;
     for (int i = 0; i < el->element_count; i++) {
         if (!iter->is_floating) {
-            if (el->direction == DIRECTION_VERTICAL) {
+            if (DIRECTION(el) == DIRECTION_VERTICAL) {
                 iter->x = (el->w - iter->w) / align_div;
             } else {
                 iter->y = (el->h - iter->h) / align_div;
@@ -162,15 +169,15 @@ void gui_element_resize(Gui* gui, FlexElement* el, int new_w, int new_h) {
     FlexElement* iter = el + 1;
     for (int i = 0; i < el->element_count; i++) {
         if (!iter->is_floating) {
-            if (el->direction == DIRECTION_VERTICAL) {
-                if (iter->sizing_y == SIZING_GROW) {
+            if (DIRECTION(el) == DIRECTION_VERTICAL) {
+                if (SIZING_Y(iter) == SIZING_GROW) {
                     grow_elements++;
                 } else {
                     left_h -= iter->h;
                 }
                 left_h -= el->gap;
             } else {
-                if (iter->sizing_x == SIZING_GROW) {
+                if (SIZING_X(iter) == SIZING_GROW) {
                     grow_elements++;
                 } else {
                     left_w -= iter->w;
@@ -192,15 +199,15 @@ void gui_element_resize(Gui* gui, FlexElement* el, int new_w, int new_h) {
 
             int size_w = iter->w;
             int size_h = iter->h;
-            if (el->direction == DIRECTION_VERTICAL) {
-                if (iter->sizing_x == SIZING_GROW) size_w = el->w - el->pad_w * 2;
-                if (iter->sizing_y == SIZING_GROW) size_h = left_h / grow_elements;
-                if (iter->sizing_x == SIZING_GROW || iter->sizing_y == SIZING_GROW) gui_element_resize(gui, iter, size_w, size_h);
+            if (DIRECTION(el) == DIRECTION_VERTICAL) {
+                if (SIZING_X(iter) == SIZING_GROW) size_w = el->w - el->pad_w * 2;
+                if (SIZING_Y(iter) == SIZING_GROW) size_h = left_h / grow_elements;
+                if (SIZING_X(iter) == SIZING_GROW || SIZING_Y(iter) == SIZING_GROW) gui_element_resize(gui, iter, size_w, size_h);
                 cursor_y += iter->h + el->gap;
             } else {
-                if (iter->sizing_x == SIZING_GROW) size_w = left_w / grow_elements;
-                if (iter->sizing_y == SIZING_GROW) size_h = el->h - el->pad_h * 2;
-                if (iter->sizing_x == SIZING_GROW || iter->sizing_y == SIZING_GROW) gui_element_resize(gui, iter, size_w, size_h);
+                if (SIZING_X(iter) == SIZING_GROW) size_w = left_w / grow_elements;
+                if (SIZING_Y(iter) == SIZING_GROW) size_h = el->h - el->pad_h * 2;
+                if (SIZING_X(iter) == SIZING_GROW || SIZING_Y(iter) == SIZING_GROW) gui_element_resize(gui, iter, size_w, size_h);
                 cursor_x += iter->w + el->gap;
             }
         }
@@ -214,21 +221,21 @@ void gui_element_advance(Gui* gui, GuiMeasurement ms) {
     FlexElement* el = gui->element_ptr_stack_len > 0 ? gui->element_ptr_stack[gui->element_ptr_stack_len - 1] : NULL;
     if (!el) return;
 
-    if (el->direction == DIRECTION_HORIZONTAL) {
+    if (DIRECTION(el) == DIRECTION_HORIZONTAL) {
         el->cursor_x += ms.w + el->gap;
-        if (el->sizing_x != SIZING_FIXED) el->w += ms.w + el->gap;
-        if (el->sizing_y != SIZING_FIXED) el->h = MAX(el->h, ms.h + el->pad_h * 2);
+        if (SIZING_X(el) != SIZING_FIXED) el->w += ms.w + el->gap;
+        if (SIZING_Y(el) != SIZING_FIXED) el->h = MAX(el->h, ms.h + el->pad_h * 2);
     } else {
         el->cursor_y += ms.h + el->gap;
-        if (el->sizing_x != SIZING_FIXED) el->w = MAX(el->w, ms.w + el->pad_w * 2);
-        if (el->sizing_y != SIZING_FIXED) el->h += ms.h + el->gap;
+        if (SIZING_X(el) != SIZING_FIXED) el->w = MAX(el->w, ms.w + el->pad_w * 2);
+        if (SIZING_Y(el) != SIZING_FIXED) el->h += ms.h + el->gap;
     }
 }
 
 void gui_element_end(Gui* gui) {
     FlexElement* el = gui->element_ptr_stack[--gui->element_ptr_stack_len];
     FlexElement* prev = gui->element_ptr_stack_len > 0 ? gui->element_ptr_stack[gui->element_ptr_stack_len - 1] : NULL;
-    if (el->direction == DIRECTION_VERTICAL) {
+    if (DIRECTION(el) == DIRECTION_VERTICAL) {
         el->h -= el->gap;
     } else {
         el->w -= el->gap;
@@ -238,7 +245,7 @@ void gui_element_end(Gui* gui) {
         prev->element_count++;
     }
     gui_element_advance(gui, (GuiMeasurement) { el->w, el->h });
-    if ((el->sizing_x == SIZING_FIXED && el->sizing_y != SIZING_GROW) || (el->sizing_y == SIZING_FIXED && el->sizing_x != SIZING_GROW)) {
+    if ((SIZING_X(el) == SIZING_FIXED && SIZING_Y(el) != SIZING_GROW) || (SIZING_Y(el) == SIZING_FIXED && SIZING_X(el) != SIZING_GROW)) {
         gui_element_resize(gui, el, el->w, el->h);
     } else {
         gui_element_realign(el);
@@ -289,16 +296,14 @@ void gui_set_custom_data(Gui* gui, void* custom_data) {
 
 void gui_set_fixed(Gui* gui, int w, int h) {
     FlexElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
-    el->sizing_x = SIZING_FIXED;
-    el->sizing_y = SIZING_FIXED;
+    el->sizing = SIZING_FIXED | (SIZING_FIXED << 4); // This sets both dimensions to SIZING_FIXED
     el->w = w;
     el->h = h;
 }
 
 void gui_set_fit(Gui* gui) {
     FlexElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
-    el->sizing_x = SIZING_FIT;
-    el->sizing_y = SIZING_FIT;
+    el->sizing = SIZING_FIT | (SIZING_FIT << 4); // This sets both dimensions to SIZING_FIT
     el->w = 0;
     el->h = 0;
 }
@@ -321,17 +326,17 @@ void gui_set_gap(Gui* gui, int gap) {
 void gui_set_grow(Gui* gui, FlexDirection direction) {
     FlexElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
     if (direction == DIRECTION_VERTICAL) {
-        el->sizing_y = SIZING_GROW;
+        SET_SIZING_Y(el, SIZING_GROW);
         el->h = 0;
     } else {
-        el->sizing_x = SIZING_GROW;
+        SET_SIZING_X(el, SIZING_GROW);
         el->w = 0;
     }
 }
 
 void gui_set_direction(Gui* gui, FlexDirection direction) {
     FlexElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
-    el->direction = direction;
+    SET_DIRECTION(el, direction);
 }
 
 void gui_set_rect(Gui* gui, GuiColor color) {
@@ -370,7 +375,7 @@ void gui_set_image(Gui* gui, void* image, int size, GuiColor color) {
 
 void gui_set_align(Gui* gui, AlignmentType align) {
     FlexElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
-    el->align = align;
+    SET_ALIGN(el, align);
 }
 
 void gui_text(Gui* gui, void* font, const char* text, int size, GuiColor color) {

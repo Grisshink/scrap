@@ -57,7 +57,7 @@ typedef union {
 } DrawData;
 
 typedef struct {
-    DrawType type;
+    unsigned char type; // DrawType
     int pos_x, pos_y;
     int width, height;
     GuiColor color;
@@ -73,21 +73,14 @@ typedef enum {
 } AlignmentType;
 
 typedef enum {
-    LAYOUT_STATIC,
-    LAYOUT_VERTICAL,
-    LAYOUT_HORIZONTAL,
-    LAYOUT_FIXED,
-} LayoutType;
-
-typedef enum {
+    SIZING_FIT = 0,
     SIZING_FIXED,
-    SIZING_FIT,
     SIZING_GROW,
 } ElementSizing;
 
 typedef enum {
+    DIRECTION_VERTICAL = 0,
     DIRECTION_HORIZONTAL,
-    DIRECTION_VERTICAL,
 } FlexDirection;
 
 typedef void (*HoverHandler)(FlexElement* el);
@@ -98,13 +91,21 @@ struct FlexElement {
     int pad_w, pad_h;
     int gap;
     float scaling;
-    DrawType draw_type;
+    unsigned char draw_type; // DrawType
     DrawData data;
     GuiColor color;
-    ElementSizing sizing_x;
-    ElementSizing sizing_y;
-    FlexDirection direction;
-    AlignmentType align;
+    // Sizing layout:
+    // YYYYXXXX
+    // Where:
+    //   X - ElementSizing for element width
+    //   Y - ElementSizing for element height
+    unsigned char sizing;
+    // Flags layout:
+    // 00000AAD
+    // Where: 
+    //   D - FlexDirection
+    //   A - AlignmentType
+    unsigned char flags;
     HoverHandler handle_hover;
     unsigned char is_floating;
     void* custom_data;
