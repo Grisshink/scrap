@@ -18,6 +18,7 @@
 #include "scrap.h"
 #include "term.h"
 #include "blocks.h"
+#include "../external/tinyfiledialogs.h"
 
 #include <assert.h>
 #include <math.h>
@@ -26,6 +27,16 @@
 #define MAX(x, y) ((x) > (y) ? (x) : (y))
 #define MIN(x, y) ((x) < (y) ? (x) : (y))
 #define CLAMP(x, min, max) (MIN(MAX(min, x), max))
+
+typedef enum {
+    FILE_MENU_SAVE_PROJECT = 0,
+    FILE_MENU_LOAD_PROJECT,
+} FileMenuInds;
+
+char* file_menu_list[] = {
+    "Save project",
+    "Load project",
+};
 
 void block_delete_blockdef(ScrBlock* block, ScrBlockdef* blockdef) {
     for (size_t i = 0; i < vector_size(block->arguments); i++) {
@@ -127,8 +138,63 @@ void deselect_all(void) {
     dropdown.scroll_amount = 0;
 }
 
+void show_dropdown(void* location, char** list, int list_len, ButtonClickHandler handler) {
+    hover_info.dropdown.location = location;
+    hover_info.dropdown.list = list;
+    hover_info.dropdown.list_len = list_len;
+    hover_info.dropdown.handler = handler;
+    hover_info.dropdown.select_ind = 0;
+}
+
+bool handle_dropdown_close(void) {
+    hover_info.dropdown.location = NULL;
+    hover_info.dropdown.list = NULL;
+    hover_info.dropdown.list_len = 0;
+    hover_info.dropdown.handler = NULL;
+    hover_info.dropdown.select_ind = 0;
+    return true;
+}
+
+bool handle_file_menu_click(void) {
+    char const* filters[] = {"*.scrp"};
+    char* path;
+
+    switch (hover_info.dropdown.select_ind) {
+    case FILE_MENU_SAVE_PROJECT:
+        path = tinyfd_saveFileDialog(NULL, "project.scrp", ARRLEN(filters), filters, "Scrap project files (.scrp)"); 
+        if (!path) break;
+        save_code(path, editor_code);
+        break;
+    case FILE_MENU_LOAD_PROJECT:
+        path = tinyfd_openFileDialog(NULL, "project.scrp", ARRLEN(filters), filters, "Scrap project files (.scrp)", 0);
+        if (!path) break;
+
+        ScrBlockChain* chain = load_code(path);
+        if (!chain) {
+            actionbar_show("File load failed :(");
+            break;
+        }
+
+        for (size_t i = 0; i < vector_size(editor_code); i++) blockchain_free(&editor_code[i]);
+        vector_free(editor_code);
+        editor_code = chain;
+
+        blockchain_select_counter = 0;
+        camera_pos.x = editor_code[blockchain_select_counter].pos.x - ((GetScreenWidth() - conf.side_bar_size) / 2 + conf.side_bar_size);
+        camera_pos.y = editor_code[blockchain_select_counter].pos.y - ((GetScreenHeight() - conf.font_size * 2.2) / 2 + conf.font_size * 2.2);
+
+        actionbar_show("File load succeeded!");
+        break;
+    default:
+        printf("idk\n");
+        break;
+    }
+    return handle_dropdown_close();
+}
+
 bool handle_file_button_click(void) {
-    //if (!vm.is_running) gui_show(GUI_TYPE_FILE);
+    if (vm.is_running) return true;
+    show_dropdown((void*)LOCATION_FILE_MENU, file_menu_list, ARRLEN(file_menu_list), handle_file_menu_click);
     return true;
 }
 

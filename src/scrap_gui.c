@@ -250,15 +250,15 @@ void gui_element_end(Gui* gui) {
     if ((SIZING_X(el) == SIZING_FIXED && SIZING_Y(el) != SIZING_GROW) || (SIZING_Y(el) == SIZING_FIXED && SIZING_X(el) != SIZING_GROW)) {
         gui_element_resize(gui, el, el->w, el->h);
     } else if ((SIZING_X(el) == SIZING_FIT && SIZING_Y(el) != SIZING_GROW) || (SIZING_Y(el) == SIZING_FIT && SIZING_X(el) != SIZING_GROW)) {
-        if (DIRECTION(el) == DIRECTION_HORIZONTAL) {
-            if (el->w > el->cursor_x + el->pad_w) gui_element_resize(gui, el, el->w, el->h);
-        } else {
-            if (el->h > el->cursor_y + el->pad_h) gui_element_resize(gui, el, el->w, el->h);
-        }
+        gui_element_resize(gui, el, el->w, el->h);
         gui_element_realign(el);
     } else {
         gui_element_realign(el);
     }
+}
+
+FlexElement* gui_get_element(Gui* gui) {
+    return gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
 }
 
 void gui_on_hover(Gui* gui, HoverHandler handler) {

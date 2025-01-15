@@ -29,6 +29,8 @@
 #define UNLERP(min, max, v) (((float)(v) - (float)(min)) / ((float)(max) - (float)(min)))
 #define CONVERT_COLOR(color, type) (type) { color.r, color.g, color.b, color.a }
 
+FlexElement* file_button;
+
 void sidebar_init(void) {
     sidebar.blocks = vector_create();
     for (vec_size_t i = 0; i < vector_size(vm.blockdefs); i++) {
@@ -575,13 +577,15 @@ void scrap_gui_draw_block(ScrBlock* block) {
 
 void button_on_hover(FlexElement* el) {
     if (gui_window_is_shown()) return;
+    if (hover_info.top_bars.handler) return;
     if (el->draw_type == DRAWTYPE_RECT) return;
     el->draw_type = DRAWTYPE_RECT;
     el->color = (GuiColor) { 0x40, 0x40, 0x40, 0xff };
     hover_info.top_bars.handler = el->custom_data;
 }
 
-void scrap_gui_draw_button(const char* text, int size, bool selected, ButtonClickHandler handler) {
+FlexElement* scrap_gui_draw_button(const char* text, int size, bool selected, ButtonClickHandler handler) {
+    FlexElement* el;
     gui_element_begin(gui);
         gui_set_direction(gui, DIRECTION_HORIZONTAL);
         gui_set_align(gui, ALIGN_CENTER);
@@ -590,9 +594,11 @@ void scrap_gui_draw_button(const char* text, int size, bool selected, ButtonClic
         if (selected) gui_set_rect(gui, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
         gui_on_hover(gui, button_on_hover);
         gui_set_custom_data(gui, handler);
+        el = gui_get_element(gui);
 
         gui_text(gui, &font_cond, text, BLOCK_TEXT_SIZE, selected ? (GuiColor) { 0x00, 0x00, 0x00, 0xff } : (GuiColor) { 0xff, 0xff, 0xff, 0xff });
     gui_element_end(gui);
+    return el;
 }
 
 void scrap_gui_draw_top_bar(void) {
@@ -610,7 +616,7 @@ void scrap_gui_draw_top_bar(void) {
         gui_text(gui, &font_eb, "Scrap", conf.font_size * 0.8, CONVERT_COLOR(WHITE, GuiColor));
         gui_spacer(gui, 10, 0);
 
-        scrap_gui_draw_button("File", top_bar_size, false, handle_file_button_click);
+        file_button = scrap_gui_draw_button("File", top_bar_size, false, handle_file_button_click);
         scrap_gui_draw_button("Settings", top_bar_size, false, handle_settings_button_click);
         scrap_gui_draw_button("About", top_bar_size, false, handle_about_button_click);
     gui_element_end(gui);
@@ -709,6 +715,47 @@ void scrap_gui_draw_code(void) {
     }
 }
 
+void dropdown_on_hover(FlexElement* el) {
+    el->draw_type = DRAWTYPE_RECT;
+    el->color = (GuiColor) { 0x40, 0x40, 0x40, 0xff };
+    // Double cast to avoid warning. In our case this operation is safe because el->custom_data currently stores a value of type int
+    hover_info.dropdown.select_ind = (int)(size_t)el->custom_data;
+
+    if (hover_info.dropdown.location == (void*)LOCATION_FILE_MENU) {
+        hover_info.top_bars.handler = handle_file_menu_click;
+    }
+}
+
+void scrap_gui_draw_dropdown(void) {
+    if (!hover_info.dropdown.handler) return;
+    hover_info.top_bars.handler = handle_dropdown_close;
+    gui_element_begin(gui);
+        gui_set_floating(gui);
+        gui_set_rect(gui, (GuiColor) { 0x40, 0x40, 0x40, 0xff });
+        gui_set_gap(gui, 2);
+        gui_set_padding(gui, 2, 2);
+
+        if (hover_info.dropdown.location == (void*)LOCATION_FILE_MENU) {
+            gui_set_position(gui, file_button->x, file_button->y + file_button->h);
+        }
+
+        for (int i = 0; i < hover_info.dropdown.list_len; i++) {
+            gui_element_begin(gui);
+                gui_set_grow(gui, DIRECTION_HORIZONTAL);
+                gui_set_direction(gui, DIRECTION_HORIZONTAL);
+                gui_set_align(gui, ALIGN_CENTER);
+                gui_set_min_size(gui, 0, conf.font_size);
+                gui_set_padding(gui, conf.font_size * 0.3, 0);
+                gui_set_rect(gui, (GuiColor) { 0x2b, 0x2b, 0x2b, 0xff });
+                gui_on_hover(gui, dropdown_on_hover);
+                gui_set_custom_data(gui, (void*)(size_t)i);
+
+                gui_text(gui, &font_cond, hover_info.dropdown.list[i], BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+            gui_element_end(gui);
+        }
+    gui_element_end(gui);
+}
+
 void scrap_gui_process(void) {
     // Gui
     gui_begin(gui);
@@ -723,6 +770,8 @@ void scrap_gui_process(void) {
 
             scrap_gui_draw_blockchain(&mouse_blockchain);
         gui_element_end(gui);
+
+        scrap_gui_draw_dropdown();
     gui_end(gui);
 }
 

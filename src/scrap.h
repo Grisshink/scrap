@@ -49,6 +49,10 @@ typedef enum {
     EDITOR_ADD_TEXT,
 } EditorHoverPart;
 
+typedef enum {
+    LOCATION_FILE_MENU = 1,
+} DropdownLocations;
+
 typedef struct {
     EditorHoverPart part;
     ScrBlockdef* edit_blockdef;
@@ -56,6 +60,14 @@ typedef struct {
     ScrBlockdef* blockdef;
     size_t blockdef_input;
 } EditorHoverInfo;
+
+typedef struct {
+    void* location;
+    ButtonClickHandler handler;
+    char** list;
+    int list_len;
+    int select_ind;
+} DropdownHoverInfo;
 
 typedef struct {
     int min;
@@ -96,6 +108,7 @@ typedef struct {
     TopBars top_bars;
     EditorHoverInfo editor;
 
+    DropdownHoverInfo dropdown;
     SliderHoverInfo hover_slider;
     SliderHoverInfo dragged_slider;
     int slider_last_val;
@@ -222,6 +235,8 @@ bool handle_window_gui_close_button_click(void);
 bool handle_settings_reset_button_click(void);
 bool handle_settings_apply_button_click(void);
 bool handle_about_license_button_click(void);
+bool handle_dropdown_close(void);
+bool handle_file_menu_click(void);
 
 // util.c
 ScrVec as_scr_vec(Vector2 vec);

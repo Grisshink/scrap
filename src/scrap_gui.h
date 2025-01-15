@@ -174,6 +174,7 @@ void gui_set_position(Gui* gui, int x, int y);
 void gui_scale_element(Gui* gui, float scaling);
 void* gui_set_state(Gui* gui, void* state, unsigned short state_len);
 void* gui_get_state(FlexElement* el, unsigned short* state_len);
+FlexElement* gui_get_element(Gui* gui);
 
 void gui_on_hover(Gui* gui, HoverHandler handler);
 

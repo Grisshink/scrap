@@ -16,7 +16,6 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "raylib.h"
-#include "../external/tinyfiledialogs.h"
 #include "scrap.h"
 
 #include <stdbool.h>
