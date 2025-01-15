@@ -36,7 +36,7 @@
 #define SET_ALIGN(el, ali) (el->flags = (el->flags & 0xf9) | (ali << 1))
 #define SET_DIRECTION(el, dir) (el->flags = (el->flags & 0xfe) | dir)
 
-static void gui_render(Gui* gui, FlexElement* el, int pos_x, int pos_y);
+static void gui_render(Gui* gui, FlexElement* el, float pos_x, float pos_y);
 
 static bool inside_window(Gui* gui, DrawCommand* command) {
     return (command->pos_x + command->width  > 0) && (command->pos_x < gui->win_w) && 
@@ -93,14 +93,14 @@ void gui_update_window_size(Gui* gui, unsigned short win_w, unsigned short win_h
     gui->win_h = win_h;
 }
 
-static void gui_render(Gui* gui, FlexElement* el, int pos_x, int pos_y) {
+static void gui_render(Gui* gui, FlexElement* el, float pos_x, float pos_y) {
     if (el->handle_hover && mouse_inside(gui, el->x * el->scaling + pos_x, el->y * el->scaling + pos_y, el->w * el->scaling, el->h * el->scaling)) el->handle_hover(el);
     if (el->draw_type != DRAWTYPE_UNKNOWN) {
         DrawCommand* command = &gui->command_stack[gui->command_stack_len++];
-        command->pos_x = pos_x + el->x * el->scaling;
-        command->pos_y = pos_y + el->y * el->scaling;
-        command->width = el->w * el->scaling;
-        command->height = el->h * el->scaling;
+        command->pos_x = pos_x + (float)el->x * el->scaling;
+        command->pos_y = pos_y + (float)el->y * el->scaling;
+        command->width = (float)el->w * el->scaling;
+        command->height = (float)el->h * el->scaling;
         command->type = el->draw_type;
         command->color = el->color;
         command->data = el->data;
@@ -109,7 +109,7 @@ static void gui_render(Gui* gui, FlexElement* el, int pos_x, int pos_y) {
     
     FlexElement* iter = el + 1;
     for (int i = 0; i < el->element_count; i++) {
-        gui_render(gui, iter, pos_x + el->x * el->scaling, pos_y + el->y * el->scaling);
+        gui_render(gui, iter, pos_x + (float)el->x * el->scaling, pos_y + (float)el->y * el->scaling);
         iter = iter->next;
     }
 }

@@ -58,8 +58,8 @@ typedef union {
 
 typedef struct {
     unsigned char type; // DrawType
-    int pos_x, pos_y;
-    unsigned short width, height;
+    float pos_x, pos_y;
+    float width, height;
     GuiColor color;
     DrawData data;
 } DrawCommand;
