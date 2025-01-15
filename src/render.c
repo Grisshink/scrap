@@ -122,256 +122,6 @@ void draw_block_base(Rectangle block_size, ScrBlockdef* blockdef, Color block_co
     }
 }
 
-void draw_blockdef(Vector2 position, ScrBlockdef* blockdef, bool editing) {
-    bool collision = hover_info.editor.blockdef == blockdef;
-
-    Color color = as_rl_color(blockdef->color);
-    Color block_color = ColorBrightness(color, collision ? 0.3 : 0.0);
-    Color outline_color = ColorBrightness(color, collision ? 0.5 : -0.2);
-
-    Vector2 cursor = position;
-
-    Rectangle block_size;
-    block_size.x = position.x;
-    block_size.y = position.y;
-    block_size.width = blockdef->ms.size.x;
-    block_size.height = blockdef->ms.size.y;
-
-    if (!CheckCollisionRecs(block_size, (Rectangle) { 0, 0, GetScreenWidth(), GetScreenHeight() })) return;
-
-    draw_block_base(block_size, blockdef, block_color, outline_color);
-
-    cursor.x += BLOCK_PADDING;
-
-    for (size_t i = 0; i < vector_size(blockdef->inputs); i++) {
-        int width = 0;
-        ScrInput* cur = &blockdef->inputs[i];
-        Vector2 arg_pos = cursor;
-
-        switch (cur->type) {
-        case INPUT_TEXT_DISPLAY:
-            width = cur->data.stext.editor_ms.size.x;
-            arg_pos.y += block_size.height * 0.5 - cur->data.stext.editor_ms.size.y * 0.5;
-
-            if (editing) {
-                ScrMeasurement input_ms = cur->data.stext.editor_ms;
-                input_ms.size.x -= conf.font_size + BLOCK_PADDING;
-                input_ms.size.y = conf.font_size - BLOCK_OUTLINE_SIZE * 4;
-                draw_input_box((Vector2) { arg_pos.x, cursor.y + block_size.height * 0.5 - input_ms.size.y * 0.5}, input_ms, &cur->data.stext.text, false);
-                arg_pos.x += input_ms.size.x + BLOCK_PADDING * 0.5;
-                draw_block_button(arg_pos, del_arg_tex, hover_info.editor.part == EDITOR_DEL_ARG && hover_info.editor.blockdef == blockdef);
-            } else {
-                DrawTextEx(font_cond_shadow, cur->data.stext.text, (Vector2) { floorf(arg_pos.x), floorf(arg_pos.y) }, BLOCK_TEXT_SIZE, 0.0, WHITE);
-            }
-            break;
-        case INPUT_IMAGE_DISPLAY:
-            width = cur->data.simage.ms.size.x;
-            arg_pos.y += block_size.height * 0.5 - cur->data.simage.ms.size.y * 0.5;
-
-            draw_image(arg_pos, cur->data.simage.image, BLOCK_IMAGE_SIZE);
-            break;
-        case INPUT_ARGUMENT:
-            width = cur->data.arg.blockdef->ms.size.x;
-            arg_pos.y += block_size.height * 0.5 - cur->data.arg.blockdef->ms.size.y * 0.5;
-
-            draw_blockdef(arg_pos, cur->data.arg.blockdef, editing);
-            break;
-        case INPUT_BLOCKDEF_EDITOR:
-            assert(false && "Unimplemented");
-            break;
-        default:
-            width = MeasureTextEx(font_cond, "NODEF", BLOCK_TEXT_SIZE, 0.0).x;
-            arg_pos.y += block_size.height * 0.5 - BLOCK_TEXT_SIZE * 0.5;
-
-            DrawTextEx(font_cond, "NODEF", arg_pos, BLOCK_TEXT_SIZE, 0.0, RED);
-            break;
-        }
-
-        cursor.x += width + BLOCK_PADDING;
-    }
-}
-
-void draw_block(Vector2 position, ScrBlock* block, bool force_outline, bool force_collision) {
-    ScrBlockdef* blockdef = block->blockdef;
-    bool collision = (hover_info.block == block && hover_info.editor.part == EDITOR_NONE) || force_collision;
-    Color color = as_rl_color(blockdef->color);
-    Color outline_color = force_collision ? YELLOW : ColorBrightness(color, collision ? 0.5 : -0.2);
-    Color block_color = ColorBrightness(color, collision ? 0.3 : 0.0);
-
-    Vector2 cursor = position;
-
-    Rectangle block_size;
-    block_size.x = position.x;
-    block_size.y = position.y;
-    block_size.width = block->ms.size.x;
-    block_size.height = block->ms.size.y;
-
-    if (!CheckCollisionRecs(block_size, (Rectangle) { 0, 0, GetScreenWidth(), GetScreenHeight() })) return;
-
-    draw_block_base(block_size, blockdef, block_color, 
-        force_outline || (blockdef->type != BLOCKTYPE_CONTROL && blockdef->type != BLOCKTYPE_CONTROLEND) ? outline_color : (Color) {0});
-
-    cursor.x += BLOCK_PADDING;
-    if (block->ms.placement == PLACEMENT_VERTICAL) cursor.y += BLOCK_OUTLINE_SIZE * 2;
-
-    int arg_id = 0;
-    for (vec_size_t i = 0; i < vector_size(blockdef->inputs); i++) {
-        int width = 0;
-        int height = 0;
-        ScrInput cur = blockdef->inputs[i];
-        Vector2 arg_pos = cursor;
-
-        switch (cur.type) {
-        case INPUT_TEXT_DISPLAY:
-            width = cur.data.stext.ms.size.x;
-            height = cur.data.stext.ms.size.y;
-            arg_pos.y += block->ms.placement == PLACEMENT_VERTICAL ? 0 : block_size.height * 0.5 - BLOCK_TEXT_SIZE * 0.5;
-
-            DrawTextEx(font_cond_shadow, cur.data.stext.text, (Vector2) { floorf(arg_pos.x), floorf(arg_pos.y) }, BLOCK_TEXT_SIZE, 0.0, WHITE);
-            break;
-        case INPUT_IMAGE_DISPLAY:
-            width = cur.data.simage.ms.size.x;
-            height = cur.data.simage.ms.size.y;
-            arg_pos.y += block->ms.placement == PLACEMENT_VERTICAL ? 0 : block_size.height * 0.5 - cur.data.simage.ms.size.y * 0.5;
-
-            draw_image(arg_pos, cur.data.simage.image, BLOCK_IMAGE_SIZE);
-            break;
-        case INPUT_ARGUMENT:
-            width = block->arguments[arg_id].ms.size.x;
-            height = block->arguments[arg_id].ms.size.y;
-            arg_pos.y += block->ms.placement == PLACEMENT_VERTICAL ? 0 : block_size.height * 0.5 - block->arguments[arg_id].ms.size.y * 0.5;
-
-            switch (block->arguments[arg_id].type) {
-            case ARGUMENT_CONST_STRING:
-            case ARGUMENT_TEXT: draw_input_box(arg_pos, block->arguments[arg_id].ms, &block->arguments[arg_id].data.text, block->arguments[arg_id].type == ARGUMENT_CONST_STRING); break; case ARGUMENT_BLOCK:
-                draw_block(arg_pos, &block->arguments[arg_id].data.block, true, force_collision);
-                break;
-            default:
-                assert(false && "Unimplemented argument draw");
-                break;
-            }
-            arg_id++;
-            break;
-        case INPUT_DROPDOWN:
-            assert(block->arguments[arg_id].type == ARGUMENT_CONST_STRING);
-            width = block->arguments[arg_id].ms.size.x;
-            height = conf.font_size - BLOCK_OUTLINE_SIZE * 4;
-
-            Rectangle arg_size;
-            arg_size.x = cursor.x;
-            arg_size.y = cursor.y + (block->ms.placement == PLACEMENT_VERTICAL ? 0 : block_size.height * 0.5 - (conf.font_size - BLOCK_OUTLINE_SIZE * 4) * 0.5);
-            arg_size.width = width;
-            arg_size.height = conf.font_size - BLOCK_OUTLINE_SIZE * 4;
-
-            DrawRectangleRounded(arg_size, 0.5, 4, ColorBrightness(color, collision ? 0.0 : -0.3));
-
-            if (&block->arguments[arg_id] == hover_info.argument || &block->arguments[arg_id] == hover_info.select_argument) {
-                DrawRectangleRoundedLinesEx(arg_size, 0.5, 4, BLOCK_OUTLINE_SIZE, ColorBrightness(color, &block->arguments[arg_id] == hover_info.select_argument ? -0.5 : 0.5));
-            }
-            Vector2 ms = MeasureTextEx(font_cond, block->arguments[arg_id].data.text, BLOCK_TEXT_SIZE, 0);
-            DrawTextEx(
-                font_cond_shadow, 
-                block->arguments[arg_id].data.text,
-                (Vector2) { 
-                    cursor.x + BLOCK_STRING_PADDING * 0.5, 
-                    cursor.y + (block->ms.placement == PLACEMENT_VERTICAL ? BLOCK_OUTLINE_SIZE : block_size.height * 0.5 - BLOCK_TEXT_SIZE * 0.5),
-                },
-                BLOCK_TEXT_SIZE,
-                0.0,
-                WHITE
-            );
-
-            draw_image(
-                (Vector2) { 
-                    cursor.x + ms.x + BLOCK_STRING_PADDING * 0.5,
-                    cursor.y + (block->ms.placement == PLACEMENT_VERTICAL ? BLOCK_OUTLINE_SIZE : block_size.height * 0.5 - BLOCK_IMAGE_SIZE * 0.5),
-                }, 
-                (ScrImage) {
-                    .image_ptr = &drop_tex,
-                },
-                BLOCK_IMAGE_SIZE
-            );
-            arg_id++;
-            break;
-        case INPUT_BLOCKDEF_EDITOR:
-            assert(block->arguments[arg_id].type == ARGUMENT_BLOCKDEF);
-            width = block->arguments[arg_id].ms.size.x;
-            height = block->arguments[arg_id].ms.size.y;
-            arg_pos.y += block->ms.placement == PLACEMENT_VERTICAL ? 0 : block_size.height * 0.5 - height * 0.5;
-
-            DrawRectangle(arg_pos.x, arg_pos.y, width, height, (Color) { 0x00, 0x00, 0x00, 0x40 });
-
-            Vector2 blockdef_size = as_rl_vec(block->arguments[arg_id].data.blockdef->ms.size);
-            ScrBlockdef* editor_blockdef = block->arguments[arg_id].data.blockdef;
-            draw_blockdef(
-                (Vector2) {
-                    arg_pos.x, 
-                    arg_pos.y + height * 0.5 - blockdef_size.y * 0.5,
-                },
-                editor_blockdef,
-                hover_info.editor.edit_blockdef == editor_blockdef
-            );
-            arg_pos.x += blockdef_size.x + BLOCK_PADDING * 0.5;
-
-            if (hover_info.editor.edit_blockdef == block->arguments[arg_id].data.blockdef) {
-                draw_block_button(
-                    (Vector2) {
-                        arg_pos.x,
-                        arg_pos.y + height * 0.5 - conf.font_size * 0.5,
-                    }, 
-                    add_arg_tex,
-                    hover_info.editor.part == EDITOR_ADD_ARG && hover_info.block == block
-                );
-                arg_pos.x += conf.font_size + BLOCK_PADDING * 0.5;
-
-                draw_block_button(
-                    (Vector2) {
-                        arg_pos.x,
-                        arg_pos.y + height * 0.5 - conf.font_size * 0.5,
-                    }, 
-                    add_text_tex,
-                    hover_info.editor.part == EDITOR_ADD_TEXT && hover_info.block == block
-                );
-                arg_pos.x += conf.font_size + BLOCK_PADDING * 0.5;
-            }
-
-            draw_block_button(
-                (Vector2) {
-                    arg_pos.x,
-                    arg_pos.y + height * 0.5 - conf.font_size * 0.5,
-                }, 
-                hover_info.editor.edit_blockdef == block->arguments[arg_id].data.blockdef ? close_tex : edit_tex,
-                hover_info.editor.part == EDITOR_EDIT && hover_info.block == block
-            );
-
-            arg_id++;
-            break;
-        default: ; // This fixes gcc-9 error
-            Vector2 size = MeasureTextEx(font_cond, "NODEF", BLOCK_TEXT_SIZE, 0.0);
-            width = size.x;
-            height = size.y;
-            DrawTextEx(
-                font_cond, 
-                "NODEF",
-                (Vector2) { 
-                    cursor.x, 
-                    cursor.y + (block->ms.placement == PLACEMENT_VERTICAL ? 0 : block_size.height * 0.5 - BLOCK_TEXT_SIZE * 0.5), 
-                },
-                BLOCK_TEXT_SIZE, 
-                0.0, 
-                RED
-            );
-            break;
-        }
-
-        if (block->ms.placement == PLACEMENT_VERTICAL) {
-            cursor.y += height + BLOCK_OUTLINE_SIZE * 2;
-        } else {
-            cursor.x += width + BLOCK_PADDING;
-        }
-    }
-}
-
 // Draw order for draw_control_outline() and draw_controlend_outline()
 //         1    12
 //   +-----|---------+ 
@@ -451,13 +201,13 @@ void draw_block_chain(ScrBlockChain* chain, Vector2 camera_pos, bool chain_highl
                 DrawRectangle(pos.x, pos.y, prev_block.block->ms.size.x, conf.font_size, end_color);
                 draw_control_outline(&prev_block, pos, outline_color, true);
             } else if (blockdef->type == BLOCKTYPE_CONTROLEND) {
-                draw_block(pos, &chain->blocks[i], false, exec_highlight);
+                //draw_block(pos, &chain->blocks[i], false, exec_highlight);
                 draw_controlend_outline(&prev_block, pos, outline_color);
             }
 
             vector_pop(draw_stack);
         } else {
-            draw_block(pos, &chain->blocks[i], false, exec_highlight);
+            //draw_block(pos, &chain->blocks[i], false, exec_highlight);
         }
         if (blockdef->type == BLOCKTYPE_CONTROL || blockdef->type == BLOCKTYPE_CONTROLEND) {
             DrawStack stack_item;
@@ -485,33 +235,6 @@ void draw_block_chain(ScrBlockChain* chain, Vector2 camera_pos, bool chain_highl
         DrawRectangleRec(rect, as_rl_color(prev_blockdef->color));
         draw_control_outline(&prev_block, pos, ColorBrightness(as_rl_color(prev_blockdef->color), hover_info.block == prev_block.block ? 0.5 : -0.2), false);
     }
-}
-
-void draw_button(Vector2* position, char* text, float button_scale, float side_padding, float side_margin, bool selected, bool hovered) {
-    side_padding *= conf.font_size;
-    side_margin *= conf.font_size;
-
-    int text_size = conf.font_size * 0.6;
-    int text_width = text ? MeasureTextEx(font_cond, text, text_size, 0.0).x : 0;
-    Rectangle rect = {
-        .x = position->x,
-        .y = position->y,
-        .width = text_width + side_padding * 2,
-        .height = conf.font_size * button_scale,
-    };
-
-    if (selected || hovered) {
-        Color select_color = selected ? (Color){ 0xFF, 0xFF, 0xFF, 0xFF } :
-                                        (Color){ 0x40, 0x40, 0x40, 0xFF };
-        DrawRectangleRec(rect, select_color);
-    }
-    if (text) {
-        Color text_select_color = selected ? (Color){ 0x00, 0x00, 0x00, 0xFF } :
-                                             (Color){ 0xFF, 0xFF, 0xFF, 0xFF };
-        DrawTextEx(font_cond, text, (Vector2){ rect.x + side_padding, rect.y + rect.height * 0.5 - text_size * 0.5 }, text_size, 0.0, text_select_color);
-    }
-
-    position->x += rect.width + side_margin;
 }
 
 void draw_dropdown_list(void) {
@@ -609,32 +332,6 @@ void draw_scrollbars(void) {
         );
         EndScissorMode();
     }
-}
-
-void draw_sidebar(void) {
-    BeginScissorMode(0, conf.font_size * 2.2, conf.side_bar_size, GetScreenHeight() - conf.font_size * 2.2);
-    DrawRectangle(0, conf.font_size * 2.2, conf.side_bar_size, GetScreenHeight() - conf.font_size * 2.2, (Color){ 0, 0, 0, 0x60 });
-
-    int pos_y = conf.font_size * 2.2 + SIDE_BAR_PADDING - sidebar.scroll_amount;
-    for (vec_size_t i = 0; i < vector_size(sidebar.blocks); i++) {
-        draw_block((Vector2){ SIDE_BAR_PADDING, pos_y }, &sidebar.blocks[i], true, false);
-        pos_y += sidebar.blocks[i].ms.size.y + SIDE_BAR_PADDING;
-    }
-
-    if (sidebar.max_y > GetScreenHeight()) {
-        float size = (GetScreenHeight() - conf.font_size * 2.2) / (sidebar.max_y - conf.font_size * 2.2);
-        size *= GetScreenHeight() - conf.font_size * 2.2;
-        float t = UNLERP(0, sidebar.max_y - GetScreenHeight(), sidebar.scroll_amount);
-
-        DrawRectangle(
-            conf.side_bar_size - conf.font_size / 6, 
-            LERP(conf.font_size * 2.2, GetScreenHeight() - size, t), 
-            conf.font_size / 6,
-            size,
-            (Color) { 0xff, 0xff, 0xff, 0x80 }
-        );
-    }
-    EndScissorMode();
 }
 
 void draw_term(void) {
