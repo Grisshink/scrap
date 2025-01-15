@@ -533,6 +533,11 @@ bool handle_settings_apply_button_click(void) {
     return true;
 }
 
+bool handle_about_license_button_click(void) {
+    OpenURL(LICENSE_URL);
+    return true;
+}
+
 bool handle_sidebar_click(bool mouse_empty) {
     if (hover_info.select_argument) {
         deselect_all();

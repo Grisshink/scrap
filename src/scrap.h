@@ -221,6 +221,7 @@ bool handle_output_tab_click(void);
 bool handle_window_gui_close_button_click(void);
 bool handle_settings_reset_button_click(void);
 bool handle_settings_apply_button_click(void);
+bool handle_about_license_button_click(void);
 
 // util.c
 ScrVec as_scr_vec(Vector2 vec);

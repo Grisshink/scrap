@@ -240,6 +240,20 @@ void scrap_gui_text_input(char** input) {
     }
 }
 
+void scrap_gui_button(const char* label, ButtonClickHandler handler) {
+    gui_element_begin(gui);
+        gui_set_min_size(gui, 0, conf.font_size);
+        gui_set_padding(gui, WINDOW_ELEMENT_PADDING, 0);
+        gui_set_rect(gui, (GuiColor) { 0x30, 0x30, 0x30, 0xff });
+        gui_set_align(gui, ALIGN_CENTER);
+        gui_set_direction(gui, DIRECTION_HORIZONTAL);
+        gui_on_hover(gui, settings_button_on_hover);
+        gui_set_custom_data(gui, handler);
+
+        gui_text(gui, &font_cond, label, conf.font_size * 0.6, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+    gui_element_end(gui);
+}
+
 void handle_gui(void) {
     if (window.is_hiding) {
         window.shown = false;
@@ -292,36 +306,37 @@ void handle_gui(void) {
                 gui_set_gap(gui, WINDOW_ELEMENT_PADDING);
 
                 gui_grow(gui, DIRECTION_HORIZONTAL);
-
-                gui_element_begin(gui);
-                    gui_set_min_size(gui, 0, conf.font_size);
-                    gui_set_padding(gui, WINDOW_ELEMENT_PADDING, WINDOW_ELEMENT_PADDING);
-                    gui_set_rect(gui, (GuiColor) { 0x30, 0x30, 0x30, 0xff });
-                    gui_set_align(gui, ALIGN_CENTER);
-                    gui_set_direction(gui, DIRECTION_HORIZONTAL);
-                    gui_on_hover(gui, settings_button_on_hover);
-                    gui_set_custom_data(gui, handle_settings_reset_button_click);
-
-                    gui_text(gui, &font_cond, "Reset", conf.font_size * 0.6, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
-                gui_element_end(gui);
-
-                gui_element_begin(gui);
-                    gui_set_min_size(gui, 0, conf.font_size);
-                    gui_set_padding(gui, WINDOW_ELEMENT_PADDING, WINDOW_ELEMENT_PADDING);
-                    gui_set_rect(gui, (GuiColor) { 0x30, 0x30, 0x30, 0xff });
-                    gui_set_align(gui, ALIGN_CENTER);
-                    gui_set_direction(gui, DIRECTION_HORIZONTAL);
-                    gui_on_hover(gui, settings_button_on_hover);
-                    gui_set_custom_data(gui, handle_settings_apply_button_click);
-
-                    gui_text(gui, &font_cond, "Apply", conf.font_size * 0.6, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
-                gui_element_end(gui);
+                scrap_gui_button("Reset", handle_settings_reset_button_click);
+                scrap_gui_button("Apply", handle_settings_apply_button_click);
             gui_element_end(gui);
         scrap_gui_end_window();
         break;
     case GUI_TYPE_ABOUT:
-        scrap_gui_begin_window("About", 500 * conf.font_size / 32.0, 250 * conf.font_size / 32.0, animation_ease);
-            gui_text(gui, &font_cond, "About page", conf.font_size * 0.6, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+        scrap_gui_begin_window("About", 500 * conf.font_size / 32.0, 220 * conf.font_size / 32.0, animation_ease);
+            gui_element_begin(gui);
+                gui_set_direction(gui, DIRECTION_HORIZONTAL);
+                gui_set_align(gui, ALIGN_CENTER);
+                gui_set_gap(gui, WINDOW_ELEMENT_PADDING);
+
+                gui_image(gui, &logo_tex, conf.font_size, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+                gui_text(gui, &font_eb, "Scrap v" SCRAP_VERSION, conf.font_size * 0.8, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+            gui_element_end(gui);
+
+            gui_element_begin(gui);
+                gui_text(gui, &font_cond, "Scrap is a project that allows anyone to build", conf.font_size * 0.6, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+                gui_text(gui, &font_cond, "software using simple, block based interface.", conf.font_size * 0.6, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+            gui_element_end(gui);
+
+            gui_grow(gui, DIRECTION_VERTICAL);
+
+            gui_element_begin(gui);
+                gui_set_grow(gui, DIRECTION_HORIZONTAL);
+                gui_set_direction(gui, DIRECTION_HORIZONTAL);
+                gui_set_gap(gui, WINDOW_ELEMENT_PADDING);
+
+                gui_grow(gui, DIRECTION_HORIZONTAL);
+                scrap_gui_button("License", handle_about_license_button_click);
+            gui_element_end(gui);
         scrap_gui_end_window();
         break;
     default:
