@@ -662,6 +662,7 @@ void scrap_gui_process_input(void) {
     hover_info.top_bars.handler = NULL;
     hover_info.hover_slider.value = NULL;
 
+    gui_update_mouse_scroll(gui, GetMouseWheelMove());
     //Timer t = start_timer("gui process");
     scrap_gui_process();
     //end_timer(t);

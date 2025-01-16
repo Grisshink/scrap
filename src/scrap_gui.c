@@ -23,6 +23,7 @@
 
 #define MAX(x, y) ((x) > (y) ? (x) : (y))
 #define MIN(x, y) ((x) < (y) ? (x) : (y))
+#define CLAMP(x, min, max) (MIN(MAX(min, x), max))
 
 #define SIZING_X(el) (ElementSizing)(el->sizing & 0x0f)
 #define SIZING_Y(el) (ElementSizing)((el->sizing >> 4) & 0x0f)
@@ -59,6 +60,7 @@ void gui_init(Gui* gui) {
     gui->win_h = 0;
     gui->mouse_x = 0;
     gui->mouse_y = 0;
+    gui->mouse_scroll = 0;
     gui->command_stack_iter = 0;
 }
 
@@ -91,6 +93,10 @@ void gui_update_mouse_pos(Gui* gui, unsigned short mouse_x, unsigned short mouse
     gui->mouse_y = mouse_y;
 }
 
+void gui_update_mouse_scroll(Gui* gui, int mouse_scroll) {
+    gui->mouse_scroll = mouse_scroll;
+}
+
 void gui_update_window_size(Gui* gui, unsigned short win_w, unsigned short win_h) {
     gui->win_w = win_w;
     gui->win_h = win_h;
@@ -116,6 +122,10 @@ static GuiBounds scissor_rect(GuiBounds rect, GuiBounds scissor) {
 }
 
 static void gui_render(Gui* gui, FlexElement* el, float pos_x, float pos_y) {
+    if (el->scroll_value) {
+        int max = DIRECTION(el) == DIRECTION_HORIZONTAL ? el->cursor_x - el->w : el->cursor_y - el->h;
+        *el->scroll_value = CLAMP(*el->scroll_value + gui->mouse_scroll * el->scroll_scaling, -max, 0);
+    }
     GuiBounds scissor = gui->scissor_stack_len > 0 ? gui->scissor_stack[gui->scissor_stack_len - 1] : (GuiBounds) { 0, 0, gui->win_w, gui->win_h };
 
     if (el->handle_hover && mouse_inside(gui, scissor_rect((GuiBounds) { 
@@ -196,8 +206,19 @@ FlexElement* gui_element_begin(Gui* gui) {
     el->handle_hover = NULL;
     el->custom_data = NULL;
     el->custom_state = NULL;
+    el->scroll_value = NULL;
+    el->scroll_scaling = 64;
     el->state_len = 0;
     return el;
+}
+
+static void gui_element_offset(FlexElement* el, int offset_x, int offset_y) {
+    FlexElement *iter = el + 1;
+    for (int i = 0; i < el->element_count; i++) {
+        iter->x += offset_x;
+        iter->y += offset_y;
+        iter = iter->next;
+    }
 }
 
 static void gui_element_realign(FlexElement* el) {
@@ -218,8 +239,8 @@ static void gui_element_realign(FlexElement* el) {
 }
 
 static void gui_element_resize(Gui* gui, FlexElement* el, unsigned short new_w, unsigned short new_h) {
-    el->w = MAX(new_w, el->w);
-    el->h = MAX(new_h, el->h);
+    el->w = new_w;
+    el->h = new_h;
 
     int left_w = el->w - el->pad_w * 2 + el->gap;
     int left_h = el->h - el->pad_h * 2 + el->gap;
@@ -247,14 +268,14 @@ static void gui_element_resize(Gui* gui, FlexElement* el, unsigned short new_w, 
         iter = iter->next;
     }
 
-    int cursor_x = el->pad_w;
-    int cursor_y = el->pad_h;
+    el->cursor_x = el->pad_w;
+    el->cursor_y = el->pad_h;
 
     iter = el + 1;
     for (int i = 0; i < el->element_count; i++) {
         if (!FLOATING(iter)) {
-            iter->x = cursor_x;
-            iter->y = cursor_y;
+            iter->x = el->cursor_x;
+            iter->y = el->cursor_y;
 
             int size_w = iter->w;
             int size_h = iter->h;
@@ -262,18 +283,25 @@ static void gui_element_resize(Gui* gui, FlexElement* el, unsigned short new_w, 
                 if (SIZING_X(iter) == SIZING_GROW) size_w = el->w - el->pad_w * 2;
                 if (SIZING_Y(iter) == SIZING_GROW) size_h = left_h / grow_elements;
                 if (SIZING_X(iter) == SIZING_GROW || SIZING_Y(iter) == SIZING_GROW) gui_element_resize(gui, iter, size_w, size_h);
-                cursor_y += iter->h + el->gap;
+                el->cursor_y += iter->h + el->gap;
             } else {
                 if (SIZING_X(iter) == SIZING_GROW) size_w = left_w / grow_elements;
                 if (SIZING_Y(iter) == SIZING_GROW) size_h = el->h - el->pad_h * 2;
                 if (SIZING_X(iter) == SIZING_GROW || SIZING_Y(iter) == SIZING_GROW) gui_element_resize(gui, iter, size_w, size_h);
-                cursor_x += iter->w + el->gap;
+                el->cursor_x += iter->w + el->gap;
             }
         }
         iter = iter->next;
     }
 
     gui_element_realign(el);
+    if (el->scroll_value) {
+        if (DIRECTION(el) == DIRECTION_HORIZONTAL) {
+            gui_element_offset(el, *el->scroll_value, 0);
+        } else {
+            gui_element_offset(el, 0, *el->scroll_value);
+        }
+    }
 }
 
 static void gui_element_advance(Gui* gui, GuiMeasurement ms) {
@@ -303,14 +331,21 @@ void gui_element_end(Gui* gui) {
     if (prev) {
         prev->element_count++;
     }
+
     gui_element_advance(gui, (GuiMeasurement) { el->w, el->h });
     if ((SIZING_X(el) == SIZING_FIXED && SIZING_Y(el) != SIZING_GROW) || (SIZING_Y(el) == SIZING_FIXED && SIZING_X(el) != SIZING_GROW)) {
         gui_element_resize(gui, el, el->w, el->h);
     } else if ((SIZING_X(el) == SIZING_FIT && SIZING_Y(el) != SIZING_GROW) || (SIZING_Y(el) == SIZING_FIT && SIZING_X(el) != SIZING_GROW)) {
         gui_element_resize(gui, el, el->w, el->h);
-        gui_element_realign(el);
     } else {
         gui_element_realign(el);
+        if (el->scroll_value) {
+            if (DIRECTION(el) == DIRECTION_HORIZONTAL) {
+                gui_element_offset(el, *el->scroll_value, 0);
+            } else {
+                gui_element_offset(el, 0, *el->scroll_value);
+            }
+        }
     }
 }
 
@@ -321,6 +356,16 @@ FlexElement* gui_get_element(Gui* gui) {
 void gui_on_hover(Gui* gui, HoverHandler handler) {
     FlexElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
     el->handle_hover = handler;
+}
+
+void gui_set_scroll_scaling(Gui* gui, int scroll_scaling) {
+    FlexElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
+    el->scroll_scaling = scroll_scaling;
+}
+
+void gui_set_scroll(Gui* gui, int* scroll_value) {
+    FlexElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
+    el->scroll_value = scroll_value;
 }
 
 void gui_set_scissor(Gui* gui) {

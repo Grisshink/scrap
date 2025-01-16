@@ -679,6 +679,8 @@ void scrap_gui_draw_sidebar(void) {
             gui_set_padding(gui, SIDE_BAR_PADDING, SIDE_BAR_PADDING);
             gui_set_gap(gui, SIDE_BAR_PADDING);
             gui_on_hover(gui, sidebar_on_hover);
+            gui_set_scroll(gui, &sidebar.scroll_amount);
+            gui_set_scroll_scaling(gui, conf.font_size * 4);
             gui_set_scissor(gui);
 
             for (size_t i = dropdown.scroll_amount; i < vector_size(sidebar.blocks); i++) {

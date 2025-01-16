@@ -115,6 +115,8 @@ struct FlexElement {
     //   S - Is scissoring on
     unsigned char flags;
     HoverHandler handle_hover;
+    int* scroll_value;
+    short scroll_scaling;
     void* custom_data;
     void* custom_state;
     unsigned short state_len;
@@ -147,6 +149,7 @@ struct Gui {
 
     unsigned short win_w, win_h;
     unsigned short mouse_x, mouse_y;
+    int mouse_scroll;
 };
 
 #define GUI_GET_COMMANDS(gui, command) while (gui->command_stack_iter < gui->command_stack_len && (command = &gui->command_stack[gui->command_stack_iter++]))
@@ -159,6 +162,7 @@ void gui_begin(Gui* gui);
 void gui_end(Gui* gui);
 void gui_update_window_size(Gui* gui, unsigned short win_w, unsigned short win_h);
 void gui_update_mouse_pos(Gui* gui, unsigned short mouse_x, unsigned short mouse_y);
+void gui_update_mouse_scroll(Gui* gui, int mouse_scroll);
 void gui_set_measure_text_func(Gui* gui, MeasureTextFunc measure_text);
 void gui_set_measure_image_func(Gui* gui, MeasureImageFunc measure_image);
 
@@ -181,6 +185,8 @@ void gui_set_custom_data(Gui* gui, void* custom_data);
 void gui_set_floating(Gui* gui);
 void gui_set_scissor(Gui* gui);
 void gui_set_position(Gui* gui, int x, int y);
+void gui_set_scroll(Gui* gui, int* scroll_value);
+void gui_set_scroll_scaling(Gui* gui, int scroll_scaling);
 void gui_scale_element(Gui* gui, float scaling);
 void* gui_set_state(Gui* gui, void* state, unsigned short state_len);
 void* gui_get_state(FlexElement* el, unsigned short* state_len);
