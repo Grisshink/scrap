@@ -98,18 +98,18 @@ void gui_update_window_size(Gui* gui, unsigned short win_w, unsigned short win_h
 
 static GuiBounds scissor_rect(GuiBounds rect, GuiBounds scissor) {
     if (rect.x < scissor.x) {
-        rect.w -= scissor.x - rect.x;
+        rect.w = MAX(0, rect.w - (scissor.x - rect.x));
         rect.x = scissor.x;
     }
     if (rect.y < scissor.y) {
-        rect.h -= scissor.y - rect.y;
+        rect.h = MAX(0, rect.h - (scissor.y - rect.y));
         rect.y = scissor.y;
     }
     if (rect.x + rect.w > scissor.x + scissor.w) {
-        rect.w -= (rect.x + rect.w) - (scissor.x + scissor.w);
+        rect.w = MAX(0, rect.w - ((rect.x + rect.w) - (scissor.x + scissor.w)));
     }
     if (rect.y + rect.h > scissor.y + scissor.h) {
-        rect.h -= (rect.y + rect.h) - (scissor.y + scissor.h);
+        rect.h = MAX(0, rect.h - ((rect.y + rect.h) - (scissor.y + scissor.h)));
     }
 
     return rect;
