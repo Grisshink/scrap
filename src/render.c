@@ -429,10 +429,6 @@ void scrap_gui_draw_blockdef(ScrBlockdef* blockdef) {
     gui_element_end(gui);
 }
 
-void block_border_on_hover(FlexElement* el) {
-    if (gui_window_is_shown()) return;
-}
-
 void block_on_hover(FlexElement* el) {
     if (gui_window_is_shown()) return;
     hover_info.block = el->custom_data;
@@ -470,7 +466,6 @@ void scrap_gui_draw_block(ScrBlock* block) {
         gui_set_min_size(gui, 0, conf.font_size);
         gui_set_padding(gui, BLOCK_OUTLINE_SIZE * 2, BLOCK_OUTLINE_SIZE * 2);
         gui_set_gap(gui, BLOCK_PADDING);
-        gui_on_hover(gui, block_border_on_hover);
     
     size_t arg_id = 0;
     for (size_t i = 0; i < vector_size(block->blockdef->inputs); i++) {
@@ -683,6 +678,7 @@ void scrap_gui_draw_sidebar(void) {
             gui_set_padding(gui, SIDE_BAR_PADDING, SIDE_BAR_PADDING);
             gui_set_gap(gui, SIDE_BAR_PADDING);
             gui_on_hover(gui, sidebar_on_hover);
+            gui_set_scissor(gui);
 
             for (size_t i = dropdown.scroll_amount; i < vector_size(sidebar.blocks); i++) {
                 scrap_gui_draw_block(&sidebar.blocks[i]);

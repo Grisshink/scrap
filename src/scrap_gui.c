@@ -26,12 +26,14 @@
 
 #define SIZING_X(el) (ElementSizing)(el->sizing & 0x0f)
 #define SIZING_Y(el) (ElementSizing)((el->sizing >> 4) & 0x0f)
+#define SCISSOR(el) ((el->flags >> 4) & 1)
 #define FLOATING(el) ((el->flags >> 3) & 1)
 #define ALIGN(el) (AlignmentType)((el->flags >> 1) & 3)
 #define DIRECTION(el) (FlexDirection)(el->flags & 1)
 
 #define SET_SIZING_X(el, size) (el->sizing = (el->sizing & 0xf0) | size)
 #define SET_SIZING_Y(el, size) (el->sizing = (el->sizing & 0x0f) | (size << 4))
+#define SET_SCISSOR(el, scissor) (el->flags = (el->flags & ~(1 << 4)) | ((scissor & 1) << 4))
 #define SET_FLOATING(el, floating) (el->flags = (el->flags & ~(1 << 3)) | ((floating & 1) << 3))
 #define SET_ALIGN(el, ali) (el->flags = (el->flags & 0xf9) | (ali << 1))
 #define SET_DIRECTION(el, dir) (el->flags = (el->flags & 0xfe) | dir)
@@ -43,9 +45,9 @@ static bool inside_window(Gui* gui, DrawCommand* command) {
            (command->pos_y + command->height > 0) && (command->pos_y < gui->win_h);
 }
 
-static bool mouse_inside(Gui* gui, int x, int y, int w, int h) {
-    return ((gui->mouse_x > x) && (gui->mouse_x < x + w) && 
-            (gui->mouse_y > y) && (gui->mouse_y < y + h));
+static bool mouse_inside(Gui* gui, GuiBounds rect) {
+    return ((gui->mouse_x > rect.x) && (gui->mouse_x < rect.x + rect.w) && 
+            (gui->mouse_y > rect.y) && (gui->mouse_y < rect.y + rect.h));
 }
 
 void gui_init(Gui* gui) {
@@ -65,6 +67,7 @@ void gui_begin(Gui* gui) {
     gui->command_stack_iter = 0;
     gui->element_stack_len = 0;
     gui->element_ptr_stack_len = 0;
+    gui->scissor_stack_len = 0;
     gui->state_stack_len = 0;
     gui_element_begin(gui);
     gui_set_fixed(gui, gui->win_w, gui->win_h);
@@ -93,8 +96,51 @@ void gui_update_window_size(Gui* gui, unsigned short win_w, unsigned short win_h
     gui->win_h = win_h;
 }
 
+static GuiBounds scissor_rect(GuiBounds rect, GuiBounds scissor) {
+    if (rect.x < scissor.x) {
+        rect.w -= scissor.x - rect.x;
+        rect.x = scissor.x;
+    }
+    if (rect.y < scissor.y) {
+        rect.h -= scissor.y - rect.y;
+        rect.y = scissor.y;
+    }
+    if (rect.x + rect.w > scissor.x + scissor.w) {
+        rect.w -= (rect.x + rect.w) - (scissor.x + scissor.w);
+    }
+    if (rect.y + rect.h > scissor.y + scissor.h) {
+        rect.h -= (rect.y + rect.h) - (scissor.y + scissor.h);
+    }
+
+    return rect;
+}
+
 static void gui_render(Gui* gui, FlexElement* el, float pos_x, float pos_y) {
-    if (el->handle_hover && mouse_inside(gui, el->x * el->scaling + pos_x, el->y * el->scaling + pos_y, el->w * el->scaling, el->h * el->scaling)) el->handle_hover(el);
+    GuiBounds scissor = gui->scissor_stack_len > 0 ? gui->scissor_stack[gui->scissor_stack_len - 1] : (GuiBounds) { 0, 0, gui->win_w, gui->win_h };
+
+    if (el->handle_hover && mouse_inside(gui, scissor_rect((GuiBounds) { 
+        el->x * el->scaling + pos_x, 
+        el->y * el->scaling + pos_y, 
+        el->w * el->scaling, 
+        el->h * el->scaling }, scissor))) 
+    {
+        el->handle_hover(el);
+    }
+    if (SCISSOR(el)) {
+        DrawCommand* command = &gui->command_stack[gui->command_stack_len++];
+        command->pos_x = pos_x + (float)el->x * el->scaling;
+        command->pos_y = pos_y + (float)el->y * el->scaling;
+        command->width = (float)el->w * el->scaling;
+        command->height = (float)el->h * el->scaling;
+        command->type = DRAWTYPE_SCISSOR_BEGIN;
+
+        gui->scissor_stack[gui->scissor_stack_len++] = (GuiBounds) {
+            .x = pos_x + el->x * el->scaling,
+            .y = pos_y + el->y * el->scaling,
+            .w = el->w * el->scaling,
+            .h = el->h * el->scaling,
+        };
+    }
     if (el->draw_type != DRAWTYPE_UNKNOWN) {
         DrawCommand* command = &gui->command_stack[gui->command_stack_len++];
         command->pos_x = pos_x + (float)el->x * el->scaling;
@@ -111,6 +157,17 @@ static void gui_render(Gui* gui, FlexElement* el, float pos_x, float pos_y) {
     for (int i = 0; i < el->element_count; i++) {
         gui_render(gui, iter, pos_x + (float)el->x * el->scaling, pos_y + (float)el->y * el->scaling);
         iter = iter->next;
+    }
+
+    if (SCISSOR(el)) {
+        DrawCommand* command = &gui->command_stack[gui->command_stack_len++];
+        command->pos_x = pos_x + (float)el->x * el->scaling;
+        command->pos_y = pos_y + (float)el->y * el->scaling;
+        command->width = (float)el->w * el->scaling;
+        command->height = (float)el->h * el->scaling;
+        command->type = DRAWTYPE_SCISSOR_END;
+
+        gui->scissor_stack_len--;
     }
 }
 
@@ -264,6 +321,11 @@ FlexElement* gui_get_element(Gui* gui) {
 void gui_on_hover(Gui* gui, HoverHandler handler) {
     FlexElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
     el->handle_hover = handler;
+}
+
+void gui_set_scissor(Gui* gui) {
+    FlexElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
+    SET_SCISSOR(el, 1);
 }
 
 void gui_scale_element(Gui* gui, float scaling) {

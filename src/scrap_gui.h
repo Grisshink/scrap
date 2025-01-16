@@ -31,6 +31,11 @@ typedef struct {
 } GuiMeasurement;
 
 typedef struct {
+    int x, y;
+    unsigned short w, h;
+} GuiBounds;
+
+typedef struct {
     unsigned char r, g, b, a;
 } GuiColor;
 
@@ -102,11 +107,12 @@ struct FlexElement {
     //   Y - ElementSizing for element height
     unsigned char sizing;
     // Flags layout:
-    // 0000FAAD
+    // 000SFAAD
     // Where: 
     //   D - FlexDirection
     //   A - AlignmentType
     //   F - Is floating element
+    //   S - Is scissoring on
     unsigned char flags;
     HoverHandler handle_hover;
     void* custom_data;
@@ -132,6 +138,9 @@ struct Gui {
 
     void* state_stack[STATE_STACK_SIZE];
     size_t state_stack_len;
+
+    GuiBounds scissor_stack[COMMAND_STACK_SIZE];
+    size_t scissor_stack_len;
 
     MeasureTextFunc measure_text;
     MeasureImageFunc measure_image;
@@ -170,6 +179,7 @@ void gui_set_padding(Gui* gui, unsigned short pad_w, unsigned short pad_h);
 void gui_set_gap(Gui* gui, unsigned short gap);
 void gui_set_custom_data(Gui* gui, void* custom_data);
 void gui_set_floating(Gui* gui);
+void gui_set_scissor(Gui* gui);
 void gui_set_position(Gui* gui, int x, int y);
 void gui_scale_element(Gui* gui, float scaling);
 void* gui_set_state(Gui* gui, void* state, unsigned short state_len);
