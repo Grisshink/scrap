@@ -124,6 +124,14 @@ static void scrap_gui_begin_window(const char* title, int w, int h, float scalin
 
         gui_element_begin(gui);
             gui_set_floating(gui);
+            gui_set_border(gui, (GuiColor) { 0x60, 0x60, 0x60, 0xff }, 2);
+            gui_set_position(gui, 0, 0);
+            gui_set_fixed(gui, w, h);
+            gui_set_shader(gui, &line_shader);
+        gui_element_end(gui);
+
+        gui_element_begin(gui);
+            gui_set_floating(gui);
             gui_set_position(gui, w - conf.font_size * 1.2, 0);
             gui_set_fixed(gui, conf.font_size * 1.2, conf.font_size * 1.2);
             gui_set_align(gui, ALIGN_CENTER);
@@ -182,12 +190,6 @@ static void scrap_gui_begin_setting(const char* name, bool warning) {
             gui_spacer(gui, conf.font_size, conf.font_size);
         }
 
-        gui_element_begin(gui);
-            gui_set_grow(gui, DIRECTION_HORIZONTAL);
-            gui_set_grow(gui, DIRECTION_VERTICAL);
-            gui_set_direction(gui, DIRECTION_HORIZONTAL);
-            gui_set_align(gui, ALIGN_CENTER);
-            gui_set_rect(gui, (GuiColor) { 0x30, 0x30, 0x30, 0xff });
 }
 
 static void slider_on_hover(FlexElement* el) {
@@ -197,24 +199,40 @@ static void slider_on_hover(FlexElement* el) {
 }
 
 static void scrap_gui_slider(int min, int max, int* value) {
-    SliderHoverInfo info = (SliderHoverInfo) {
-        .min = min,
-        .max = max,
-        .value = value,
-    };
-    gui_on_hover(gui, slider_on_hover);
-    SliderHoverInfo* state = gui_set_state(gui, &info, sizeof(info));
-    snprintf(state->value_str, 16, "%d", *state->value);
+    gui_element_begin(gui);
+        gui_set_grow(gui, DIRECTION_HORIZONTAL);
+        gui_set_grow(gui, DIRECTION_VERTICAL);
+        gui_set_direction(gui, DIRECTION_HORIZONTAL);
+        gui_set_rect(gui, (GuiColor) { 0x30, 0x30, 0x30, 0xff });
+        gui_on_hover(gui, slider_on_hover);
 
-    gui_image(gui, &arrow_left_tex, BLOCK_IMAGE_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
-    gui_grow(gui, DIRECTION_HORIZONTAL);
-    gui_text(gui, &font_cond, state->value_str, conf.font_size * 0.6, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
-    gui_grow(gui, DIRECTION_HORIZONTAL);
-    gui_image(gui, &arrow_right_tex, BLOCK_IMAGE_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+        SliderHoverInfo info = (SliderHoverInfo) {
+            .min = min,
+            .max = max,
+            .value = value,
+        };
+        SliderHoverInfo* state = gui_set_state(gui, &info, sizeof(info));
+
+        gui_element_begin(gui);
+            gui_set_grow(gui, DIRECTION_HORIZONTAL);
+            gui_set_grow(gui, DIRECTION_VERTICAL);
+            gui_set_direction(gui, DIRECTION_HORIZONTAL);
+            gui_set_align(gui, ALIGN_CENTER);
+            gui_set_border(gui, (GuiColor) { 0x60, 0x60, 0x60, 0xff }, 2);
+            gui_set_shader(gui, &line_shader);
+
+            snprintf(state->value_str, 16, "%d", *state->value);
+
+            gui_image(gui, &arrow_left_tex, BLOCK_IMAGE_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+            gui_grow(gui, DIRECTION_HORIZONTAL);
+            gui_text(gui, &font_cond, state->value_str, conf.font_size * 0.6, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+            gui_grow(gui, DIRECTION_HORIZONTAL);
+            gui_image(gui, &arrow_right_tex, BLOCK_IMAGE_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+        gui_element_end(gui);
+    gui_element_end(gui);
 }
 
 static void scrap_gui_end_setting(void) {
-    gui_element_end(gui);
     gui_element_end(gui);
 }
 
@@ -225,31 +243,54 @@ void text_input_on_hover(FlexElement* el) {
 }
 
 void scrap_gui_text_input(char** input) {
-    gui_on_hover(gui, text_input_on_hover);
-    gui_set_custom_data(gui, input);
-    if (input == hover_info.select_input) gui_set_rect(gui, (GuiColor) { 0x2b, 0x2b, 0x2b, 0xff });
+    gui_element_begin(gui);
+        gui_set_grow(gui, DIRECTION_HORIZONTAL);
+        gui_set_grow(gui, DIRECTION_VERTICAL);
+        gui_set_direction(gui, DIRECTION_HORIZONTAL);
+        gui_set_rect(gui, (GuiColor) { 0x30, 0x30, 0x30, 0xff });
+        gui_on_hover(gui, text_input_on_hover);
+        gui_set_custom_data(gui, input);
 
-    gui_spacer(gui, WINDOW_ELEMENT_PADDING, 0);
-    gui_text(gui, &font_cond, *input, conf.font_size * 0.6, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
-    if (input == hover_info.select_input) {
+        if (input == hover_info.select_input) gui_set_rect(gui, (GuiColor) { 0x2b, 0x2b, 0x2b, 0xff });
+
         gui_element_begin(gui);
-            gui_set_min_size(gui, 2, conf.font_size * 0.6);
-            gui_set_rect(gui, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+            gui_set_grow(gui, DIRECTION_HORIZONTAL);
+            gui_set_grow(gui, DIRECTION_VERTICAL);
+            gui_set_direction(gui, DIRECTION_HORIZONTAL);
+            gui_set_align(gui, ALIGN_CENTER);
+            gui_set_border(gui, (GuiColor) { 0x60, 0x60, 0x60, 0xff }, 2);
+            gui_set_shader(gui, &line_shader);
+
+            gui_spacer(gui, WINDOW_ELEMENT_PADDING, 0);
+            gui_text(gui, &font_cond, *input, conf.font_size * 0.6, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+            if (input == hover_info.select_input) {
+                gui_element_begin(gui);
+                    gui_set_min_size(gui, 2, conf.font_size * 0.6);
+                    gui_set_rect(gui, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+                gui_element_end(gui);
+            }
         gui_element_end(gui);
-    }
+    gui_element_end(gui);
 }
 
 void scrap_gui_button(const char* label, ButtonClickHandler handler) {
     gui_element_begin(gui);
         gui_set_min_size(gui, 0, conf.font_size);
-        gui_set_padding(gui, WINDOW_ELEMENT_PADDING, 0);
         gui_set_rect(gui, (GuiColor) { 0x30, 0x30, 0x30, 0xff });
-        gui_set_align(gui, ALIGN_CENTER);
-        gui_set_direction(gui, DIRECTION_HORIZONTAL);
         gui_on_hover(gui, settings_button_on_hover);
         gui_set_custom_data(gui, handler);
 
-        gui_text(gui, &font_cond, label, conf.font_size * 0.6, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+        gui_element_begin(gui);
+            gui_set_grow(gui, DIRECTION_HORIZONTAL);
+            gui_set_grow(gui, DIRECTION_VERTICAL);
+            gui_set_padding(gui, WINDOW_ELEMENT_PADDING, 0);
+            gui_set_border(gui, (GuiColor) { 0x60, 0x60, 0x60, 0xff }, 2);
+            gui_set_direction(gui, DIRECTION_HORIZONTAL);
+            gui_set_align(gui, ALIGN_CENTER);
+            gui_set_shader(gui, &line_shader);
+            
+            gui_text(gui, &font_cond, label, conf.font_size * 0.6, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+        gui_element_end(gui);
     gui_element_end(gui);
 }
 

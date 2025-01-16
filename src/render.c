@@ -818,6 +818,12 @@ void scrap_gui_render(void) {
         case DRAWTYPE_SCISSOR_END:
             EndScissorMode();
             break;
+        case DRAWTYPE_SHADER_BEGIN:
+            BeginShaderMode(*(Shader*)command->data.shader);
+            break;
+        case DRAWTYPE_SHADER_END:
+            EndShaderMode();
+            break;
         default:
             assert(false && "Unimplemented command render");
             break;

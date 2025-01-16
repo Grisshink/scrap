@@ -36,6 +36,10 @@ typedef struct {
 } GuiBounds;
 
 typedef struct {
+    float x, y, w, h;
+} GuiDrawBounds;
+
+typedef struct {
     unsigned char r, g, b, a;
 } GuiColor;
 
@@ -52,12 +56,15 @@ typedef enum {
     DRAWTYPE_IMAGE,
     DRAWTYPE_SCISSOR_BEGIN,
     DRAWTYPE_SCISSOR_END,
+    DRAWTYPE_SHADER_BEGIN,
+    DRAWTYPE_SHADER_END,
 } DrawType;
 
 typedef union {
     GuiTextData text;
     void* image;
     void* custom_data;
+    void* shader;
     unsigned int border_width;
 } DrawData;
 
@@ -119,6 +126,7 @@ struct FlexElement {
     short scroll_scaling;
     void* custom_data;
     void* custom_state;
+    void* shader;
     unsigned short state_len;
     unsigned short element_count;
     struct FlexElement* next;
@@ -187,6 +195,7 @@ void gui_set_scissor(Gui* gui);
 void gui_set_position(Gui* gui, int x, int y);
 void gui_set_scroll(Gui* gui, int* scroll_value);
 void gui_set_scroll_scaling(Gui* gui, int scroll_scaling);
+void gui_set_shader(Gui* gui, void* shader);
 void gui_scale_element(Gui* gui, float scaling);
 void* gui_set_state(Gui* gui, void* state, unsigned short state_len);
 void* gui_get_state(FlexElement* el, unsigned short* state_len);

@@ -102,6 +102,18 @@ void gui_update_window_size(Gui* gui, unsigned short win_w, unsigned short win_h
     gui->win_h = win_h;
 }
 
+static DrawCommand* new_draw_command(Gui* gui, GuiDrawBounds bounds, DrawType draw_type, DrawData data, GuiColor color) {
+    DrawCommand* command = &gui->command_stack[gui->command_stack_len++];
+    command->pos_x = bounds.x;
+    command->pos_y = bounds.y;
+    command->width = bounds.w;
+    command->height = bounds.h;
+    command->type = draw_type;
+    command->data = data;
+    command->color = color;
+    return command;
+}
+
 static GuiBounds scissor_rect(GuiBounds rect, GuiBounds scissor) {
     if (rect.x < scissor.x) {
         rect.w = MAX(0, rect.w - (scissor.x - rect.x));
@@ -135,7 +147,7 @@ static void gui_render(Gui* gui, FlexElement* el, float pos_x, float pos_y) {
         hover = true;
     }
 
-    struct { float x, y, w, h; } el_bounds = { 
+    GuiDrawBounds el_bounds = (GuiDrawBounds) { 
         pos_x + (float)el->x * el->scaling, 
         pos_y + (float)el->y * el->scaling, 
         (float)el->w * el->scaling, 
@@ -143,27 +155,17 @@ static void gui_render(Gui* gui, FlexElement* el, float pos_x, float pos_y) {
     };
 
     if (SCISSOR(el)) {
-        DrawCommand* command = &gui->command_stack[gui->command_stack_len++];
-        command->pos_x = el_bounds.x;
-        command->pos_y = el_bounds.y;
-        command->width = el_bounds.w;
-        command->height = el_bounds.h;
-        command->type = DRAWTYPE_SCISSOR_BEGIN;
-
+        new_draw_command(gui, el_bounds, DRAWTYPE_SCISSOR_BEGIN, (DrawData) {0}, (GuiColor) {0});
         gui->scissor_stack[gui->scissor_stack_len++] = (GuiBounds) { el_bounds.x, el_bounds.y, el_bounds.w, el_bounds.h };
     }
+    if (el->shader) new_draw_command(gui, el_bounds, DRAWTYPE_SHADER_BEGIN, (DrawData) { .shader = el->shader }, (GuiColor) {0});
 
     if (el->draw_type != DRAWTYPE_UNKNOWN) {
-        DrawCommand* command = &gui->command_stack[gui->command_stack_len++];
-        command->pos_x = el_bounds.x;
-        command->pos_y = el_bounds.y;
-        command->width = el_bounds.w;
-        command->height = el_bounds.h;
-        command->type = el->draw_type;
-        command->color = el->color;
-        command->data = el->data;
+        DrawCommand* command = new_draw_command(gui, el_bounds, el->draw_type, el->data, el->color);
         if (!inside_window(gui, command)) gui->command_stack_len--;
     }
+
+    if (el->shader) new_draw_command(gui, el_bounds, DRAWTYPE_SHADER_END, (DrawData) { .shader = el->shader }, (GuiColor) {0});
     
     FlexElement* iter = el + 1;
     for (int i = 0; i < el->element_count; i++) {
@@ -200,13 +202,7 @@ static void gui_render(Gui* gui, FlexElement* el, float pos_x, float pos_y) {
     }
 
     if (SCISSOR(el)) {
-        DrawCommand* command = &gui->command_stack[gui->command_stack_len++];
-        command->pos_x = el_bounds.x;
-        command->pos_y = el_bounds.y;
-        command->width = el_bounds.w;
-        command->height = el_bounds.h;
-        command->type = DRAWTYPE_SCISSOR_END;
-
+        new_draw_command(gui, el_bounds, DRAWTYPE_SCISSOR_END, (DrawData) {0}, (GuiColor) {0});
         gui->scissor_stack_len--;
     }
 }
@@ -237,6 +233,7 @@ FlexElement* gui_element_begin(Gui* gui) {
     el->custom_data = NULL;
     el->custom_state = NULL;
     el->scroll_value = NULL;
+    el->shader = NULL;
     el->scroll_scaling = 64;
     el->state_len = 0;
     return el;
@@ -386,6 +383,11 @@ FlexElement* gui_get_element(Gui* gui) {
 void gui_on_hover(Gui* gui, HoverHandler handler) {
     FlexElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
     el->handle_hover = handler;
+}
+
+void gui_set_shader(Gui* gui, void* shader) {
+    FlexElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
+    el->shader = shader;
 }
 
 void gui_set_scroll_scaling(Gui* gui, int scroll_scaling) {
