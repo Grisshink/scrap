@@ -388,7 +388,6 @@ bool handle_blockdef_editor_click(void) {
 }
 
 bool handle_code_editor_click(bool mouse_empty) {
-    TraceLog(LOG_INFO, "Handle editor");
     if (!mouse_empty) {
         mouse_blockchain.pos = as_scr_vec(GetMousePosition());
         if (hover_info.argument || hover_info.prev_argument) {
@@ -698,6 +697,8 @@ void scrap_gui_process_input(void) {
 
     gui_update_mouse_pos(gui, GetMouseX(), GetMouseY());
     mouse_blockchain.pos = as_scr_vec(GetMousePosition());
+
+    hover_info.prev_block = hover_info.block;
 }
 
 void process_input(void) {

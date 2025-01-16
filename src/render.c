@@ -431,14 +431,10 @@ void scrap_gui_draw_blockdef(ScrBlockdef* blockdef) {
 
 void block_border_on_hover(FlexElement* el) {
     if (gui_window_is_shown()) return;
-    Color new_col = ColorBrightness(CONVERT_COLOR(el->color, Color), 0.5);
-    el->color = CONVERT_COLOR(new_col, GuiColor);
 }
 
 void block_on_hover(FlexElement* el) {
     if (gui_window_is_shown()) return;
-    Color new_col = ColorBrightness(CONVERT_COLOR(el->color, Color), 0.3);
-    el->color = CONVERT_COLOR(new_col, GuiColor);
     hover_info.block = el->custom_data;
 }
 
@@ -455,10 +451,11 @@ void argument_on_hover(FlexElement* el) {
 }
 
 void scrap_gui_draw_block(ScrBlock* block) {
-    bool collision = false;
-    Color block_color = CONVERT_COLOR(block->blockdef->color, Color);
-    Color dropdown_color = ColorBrightness(block_color, collision ? 0.0 : -0.3);
-    Color outline_color = ColorBrightness(block_color, collision ? 0.5 : -0.2);
+    bool collision = hover_info.prev_block == block;
+    Color color = CONVERT_COLOR(block->blockdef->color, Color);
+    Color block_color = ColorBrightness(color, collision ? 0.3 : 0.0);
+    Color dropdown_color = ColorBrightness(color, collision ? 0.0 : -0.3);
+    Color outline_color = ColorBrightness(color, collision ? 0.5 : -0.2);
 
     gui_element_begin(gui);
         gui_set_direction(gui, DIRECTION_HORIZONTAL);

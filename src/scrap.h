@@ -84,6 +84,7 @@ typedef struct {
     //size_t blockchain_index;
     int blockchain_layer;
 
+    ScrBlock* prev_block;
     ScrBlock* block;
     ScrArgument* argument;
     Vector2 argument_pos;
