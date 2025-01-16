@@ -536,7 +536,6 @@ void scrap_gui_draw_block(ScrBlock* block) {
             assert(arg->type == ARGUMENT_BLOCKDEF);
             gui_element_begin(gui);
                 gui_set_direction(gui, DIRECTION_HORIZONTAL);
-                gui_set_padding(gui, BLOCK_OUTLINE_SIZE * 2, BLOCK_OUTLINE_SIZE * 2);
                 gui_set_rect(gui, CONVERT_COLOR(dropdown_color, GuiColor));
                 gui_set_align(gui, ALIGN_CENTER);
                 gui_set_gap(gui, BLOCK_PADDING);
@@ -554,6 +553,8 @@ void scrap_gui_draw_block(ScrBlock* block) {
 
                     gui_image(gui, &close_tex, BLOCK_IMAGE_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
                 gui_element_end(gui);
+
+                gui_spacer(gui, 0, BLOCK_OUTLINE_SIZE * 2);
             gui_element_end(gui);
             arg_id++;
             break;
