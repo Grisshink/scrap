@@ -122,11 +122,8 @@ static GuiBounds scissor_rect(GuiBounds rect, GuiBounds scissor) {
 }
 
 static void gui_render(Gui* gui, FlexElement* el, float pos_x, float pos_y) {
-    if (el->scroll_value) {
-        int max = DIRECTION(el) == DIRECTION_HORIZONTAL ? el->cursor_x - el->w : el->cursor_y - el->h;
-        *el->scroll_value = CLAMP(*el->scroll_value + gui->mouse_scroll * el->scroll_scaling, -max, 0);
-    }
     GuiBounds scissor = gui->scissor_stack_len > 0 ? gui->scissor_stack[gui->scissor_stack_len - 1] : (GuiBounds) { 0, 0, gui->win_w, gui->win_h };
+    bool hover = false;
 
     if (el->handle_hover && mouse_inside(gui, scissor_rect((GuiBounds) { 
         el->x * el->scaling + pos_x, 
@@ -135,28 +132,33 @@ static void gui_render(Gui* gui, FlexElement* el, float pos_x, float pos_y) {
         el->h * el->scaling }, scissor))) 
     {
         el->handle_hover(el);
+        hover = true;
     }
+
+    struct { float x, y, w, h; } el_bounds = { 
+        pos_x + (float)el->x * el->scaling, 
+        pos_y + (float)el->y * el->scaling, 
+        (float)el->w * el->scaling, 
+        (float)el->h * el->scaling,
+    };
+
     if (SCISSOR(el)) {
         DrawCommand* command = &gui->command_stack[gui->command_stack_len++];
-        command->pos_x = pos_x + (float)el->x * el->scaling;
-        command->pos_y = pos_y + (float)el->y * el->scaling;
-        command->width = (float)el->w * el->scaling;
-        command->height = (float)el->h * el->scaling;
+        command->pos_x = el_bounds.x;
+        command->pos_y = el_bounds.y;
+        command->width = el_bounds.w;
+        command->height = el_bounds.h;
         command->type = DRAWTYPE_SCISSOR_BEGIN;
 
-        gui->scissor_stack[gui->scissor_stack_len++] = (GuiBounds) {
-            .x = pos_x + el->x * el->scaling,
-            .y = pos_y + el->y * el->scaling,
-            .w = el->w * el->scaling,
-            .h = el->h * el->scaling,
-        };
+        gui->scissor_stack[gui->scissor_stack_len++] = (GuiBounds) { el_bounds.x, el_bounds.y, el_bounds.w, el_bounds.h };
     }
+
     if (el->draw_type != DRAWTYPE_UNKNOWN) {
         DrawCommand* command = &gui->command_stack[gui->command_stack_len++];
-        command->pos_x = pos_x + (float)el->x * el->scaling;
-        command->pos_y = pos_y + (float)el->y * el->scaling;
-        command->width = (float)el->w * el->scaling;
-        command->height = (float)el->h * el->scaling;
+        command->pos_x = el_bounds.x;
+        command->pos_y = el_bounds.y;
+        command->width = el_bounds.w;
+        command->height = el_bounds.h;
         command->type = el->draw_type;
         command->color = el->color;
         command->data = el->data;
@@ -169,12 +171,40 @@ static void gui_render(Gui* gui, FlexElement* el, float pos_x, float pos_y) {
         iter = iter->next;
     }
 
+    if (el->scroll_value) {
+        int el_size = DIRECTION(el) == DIRECTION_HORIZONTAL ? el->w : el->h;
+        int content_size = DIRECTION(el) == DIRECTION_HORIZONTAL ? el->cursor_x : el->cursor_y;
+        int max = content_size - el_size;
+
+        if (hover) *el->scroll_value = CLAMP(*el->scroll_value + gui->mouse_scroll * el->scroll_scaling, -max, 0);
+
+        if (max > 0) {
+            DrawCommand* command = &gui->command_stack[gui->command_stack_len++];
+            command->type = DRAWTYPE_RECT;
+            command->color = (GuiColor) { 0xff, 0xff, 0xff, 0x80 };
+
+            float scroll_size = (float)el_size / ((float)content_size / (float)el_size);
+            float scroll_pos = (-(float)*el->scroll_value / (float)max) * ((float)el_size - scroll_size);
+            if (DIRECTION(el) == DIRECTION_HORIZONTAL) {
+                command->width = scroll_size * el->scaling;
+                command->height = 5 * el->scaling;
+                command->pos_x = scroll_pos * el->scaling;
+                command->pos_y = el_bounds.h - command->height;
+            } else {
+                command->width = 5 * el->scaling;
+                command->height = scroll_size * el->scaling;
+                command->pos_x = el_bounds.x + el_bounds.w - command->width;
+                command->pos_y = el_bounds.y + scroll_pos * el->scaling;
+            }
+        }
+    }
+
     if (SCISSOR(el)) {
         DrawCommand* command = &gui->command_stack[gui->command_stack_len++];
-        command->pos_x = pos_x + (float)el->x * el->scaling;
-        command->pos_y = pos_y + (float)el->y * el->scaling;
-        command->width = (float)el->w * el->scaling;
-        command->height = (float)el->h * el->scaling;
+        command->pos_x = el_bounds.x;
+        command->pos_y = el_bounds.y;
+        command->width = el_bounds.w;
+        command->height = el_bounds.h;
         command->type = DRAWTYPE_SCISSOR_END;
 
         gui->scissor_stack_len--;
