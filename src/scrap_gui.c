@@ -497,7 +497,14 @@ void gui_set_border(Gui* gui, GuiColor color, unsigned int border_width) {
     FlexElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
     el->draw_type = DRAWTYPE_BORDER;
     el->color = color;
-    el->data.border_width = border_width;
+    el->data.border.width = border_width;
+    el->data.border.type = BORDER_NORMAL;
+}
+
+void gui_set_border_type(Gui* gui, GuiBorderType type) {
+    FlexElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
+    if (el->draw_type != DRAWTYPE_BORDER) return;
+    el->data.border.type = type;
 }
 
 void gui_set_text(Gui* gui, void* font, const char* text, unsigned short size, GuiColor color) {

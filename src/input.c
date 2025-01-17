@@ -663,9 +663,14 @@ void scrap_gui_process_input(void) {
     hover_info.hover_slider.value = NULL;
 
     gui_update_mouse_scroll(gui, GetMouseWheelMove());
-    //Timer t = start_timer("gui process");
+
+#ifdef DEBUG
+    Timer t = start_timer("gui process");
+#endif
     scrap_gui_process();
-    //end_timer(t);
+#ifdef DEBUG
+    ui_time = end_timer(t);
+#endif
 
     if (hover_info.block && hover_info.argument) {
         int ind = hover_info.argument - hover_info.block->arguments;

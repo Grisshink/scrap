@@ -70,6 +70,10 @@ DrawStack* draw_stack = NULL;
 ScrBlockChain mouse_blockchain = {0};
 Gui* gui = NULL;
 
+#ifdef DEBUG
+double ui_time = 0.0;
+#endif
+
 float shader_time = 0.0;
 int blockchain_select_counter = -1;
 

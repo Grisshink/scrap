@@ -196,6 +196,9 @@ extern DrawStack* draw_stack;
 extern ScrBlockChain mouse_blockchain;
 extern ScrExec exec;
 extern Gui* gui;
+#ifdef DEBUG
+extern double ui_time;
+#endif
 
 extern Vector2 camera_click_pos;
 extern Vector2 camera_pos;
@@ -247,7 +250,7 @@ int leading_ones(unsigned char byte);
 const char* into_data_path(const char* path);
 ScrBlock block_new_ms(ScrBlockdef* blockdef);
 Timer start_timer(const char* name);
-void end_timer(Timer timer);
+double end_timer(Timer timer);
 
 // measure.c
 void blockdef_update_measurements(ScrBlockdef* blockdef, bool editing);

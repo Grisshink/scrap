@@ -49,6 +49,19 @@ typedef struct {
 } GuiTextData;
 
 typedef enum {
+    BORDER_NORMAL,
+    BORDER_CONTROL,
+    BORDER_CONTROL_BODY,
+    BORDER_END,
+    BORDER_CONTROL_END,
+} GuiBorderType;
+
+typedef struct {
+    unsigned int width;
+    GuiBorderType type;
+} GuiBorderData;
+
+typedef enum {
     DRAWTYPE_UNKNOWN = 0,
     DRAWTYPE_RECT,
     DRAWTYPE_TEXT,
@@ -65,7 +78,7 @@ typedef union {
     void* image;
     void* custom_data;
     void* shader;
-    unsigned int border_width;
+    GuiBorderData border;
 } DrawData;
 
 typedef struct {
@@ -183,6 +196,7 @@ void gui_set_grow(Gui* gui, FlexDirection direction);
 void gui_set_rect(Gui* gui, GuiColor color);
 void gui_set_direction(Gui* gui, FlexDirection direction);
 void gui_set_border(Gui* gui, GuiColor color, unsigned int border_width);
+void gui_set_border_type(Gui* gui, GuiBorderType type);
 void gui_set_text(Gui* gui, void* font, const char* text, unsigned short size, GuiColor color);
 void gui_set_image(Gui* gui, void* image, unsigned short size, GuiColor color);
 void gui_set_min_size(Gui* gui, unsigned short min_w, unsigned short min_h);

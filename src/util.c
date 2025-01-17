@@ -26,12 +26,12 @@ Timer start_timer(const char* name) {
     return timer;
 }
 
-void end_timer(Timer timer) {
+double end_timer(Timer timer) {
     struct timespec end;
     clock_gettime(CLOCK_MONOTONIC, &end);
  
     double time_taken = (end.tv_sec - timer.start.tv_sec) * 1e+6 + (end.tv_nsec - timer.start.tv_nsec) * 1e-3;
-    printf("Timer \"%s\": %.3f us\n", timer.name, time_taken);
+    return time_taken;
 }
 
 ScrVec as_scr_vec(Vector2 vec) {

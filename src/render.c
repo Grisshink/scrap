@@ -50,50 +50,6 @@ void actionbar_show(const char* text) {
     actionbar.show_time = 3.0;
 }
 
-void draw_image(Vector2 position, ScrImage image, float size) {
-    Texture2D* img = image.image_ptr;
-    DrawTextureEx(*img, (Vector2) { position.x + SHADOW_DISTANCE, position.y + SHADOW_DISTANCE }, 0.0, size / (float)img->height, (Color) { 0x00, 0x00, 0x00, 0x80 });
-    DrawTextureEx(*img, position, 0.0, size / (float)img->height, WHITE);
-}
-
-void draw_block_button(Vector2 position, Texture2D image, bool hovered) {
-    Rectangle rect;
-    rect.x = position.x + conf.font_size * 0.1;
-    rect.y = position.y + conf.font_size * 0.1;
-    rect.width = conf.font_size * 0.8;
-    rect.height = conf.font_size * 0.8;
-    DrawRectangleRec(rect, (Color) { 0xff, 0xff, 0xff, hovered ? 0x80 : 0x40 });
-    DrawTextureEx(image, (Vector2) { rect.x, rect.y }, 0.0, 0.8, WHITE);
-}
-
-void draw_input_box(Vector2 position, ScrMeasurement ms, char** input, bool rounded) {
-    Rectangle rect;
-    rect.x = position.x;
-    rect.y = position.y;
-    rect.width = ms.size.x;
-    rect.height = conf.font_size - BLOCK_OUTLINE_SIZE * 4;
-
-    bool hovered = input == hover_info.input;
-    bool selected = input == hover_info.select_input;
-    Color hovered_color = (Color) { 0x80, 0x80, 0x80, 0xff };
-    Color selected_color = (Color) { 0x00, 0x00, 0x00, 0xff };
-
-    if (rounded) {
-        DrawRectangleRounded(rect, 0.5, 5, WHITE);
-        if (hovered || selected) {
-            DrawRectangleRoundedLinesEx(rect, 0.5, 5, BLOCK_OUTLINE_SIZE, selected ? selected_color : hovered_color);
-        }
-    } else {
-        DrawRectangleRec(rect, WHITE);
-        if (hovered || selected) {
-            DrawRectangleLinesEx(rect, BLOCK_OUTLINE_SIZE, selected ? selected_color : hovered_color);
-        }
-    }
-
-    position.x += rect.width * 0.5 - MeasureTextEx(font_cond, *input, BLOCK_TEXT_SIZE, 0.0).x * 0.5;
-    position.y += rect.height * 0.5 - BLOCK_TEXT_SIZE * 0.5; DrawTextEx(font_cond, *input, position, BLOCK_TEXT_SIZE, 0.0, BLACK);
-}
-
 void draw_block_base(Rectangle block_size, ScrBlockdef* blockdef, Color block_color, Color outline_color) {
     if (blockdef->type == BLOCKTYPE_HAT) {
         DrawRectangle(block_size.x, block_size.y, block_size.width - conf.font_size / 4.0, block_size.height, block_color);
@@ -121,121 +77,6 @@ void draw_block_base(Rectangle block_size, ScrBlockdef* blockdef, Color block_co
         }, (Vector2) {0}, 45.0, outline_color);
     } else {
         DrawRectangleLinesEx(block_size, BLOCK_OUTLINE_SIZE, outline_color);
-    }
-}
-
-// Draw order for draw_control_outline() and draw_controlend_outline()
-//         1    12
-//   +-----|---------+ 
-//   |               | 2
-//   |     +---------+
-//   | 10  |    3
-// 4 |     | 8
-//   |-----|    7
-//   |  9  +---------+
-//   | 11            |
-//   |               | 6
-//   +---------------+ 5
-void draw_controlend_outline(DrawStack* block, Vector2 end_pos, Color color) {
-    ScrBlockdefType blocktype = block->block->blockdef->type;
-    Vector2 block_size = as_rl_vec(block->block->ms.size);
-    
-    if (blocktype == BLOCKTYPE_CONTROL) {
-        /* 1 */ DrawRectangle(block->pos.x, block->pos.y, block_size.x, BLOCK_OUTLINE_SIZE, color);
-    } else if (blocktype == BLOCKTYPE_CONTROLEND) {
-        /* 12 */ DrawRectangle(block->pos.x + BLOCK_CONTROL_INDENT - BLOCK_OUTLINE_SIZE, block->pos.y, block_size.x - BLOCK_CONTROL_INDENT + BLOCK_OUTLINE_SIZE, BLOCK_OUTLINE_SIZE, color);
-    }
-    /* 2 */ DrawRectangle(block->pos.x + block_size.x - BLOCK_OUTLINE_SIZE, block->pos.y, BLOCK_OUTLINE_SIZE, block_size.y, color);
-    /* 3 */ DrawRectangle(block->pos.x + BLOCK_CONTROL_INDENT - BLOCK_OUTLINE_SIZE, block->pos.y + block_size.y - BLOCK_OUTLINE_SIZE, block_size.x - BLOCK_CONTROL_INDENT + BLOCK_OUTLINE_SIZE, BLOCK_OUTLINE_SIZE, color);
-    /* 8 */ DrawRectangle(block->pos.x + BLOCK_CONTROL_INDENT - BLOCK_OUTLINE_SIZE, block->pos.y + block_size.y, BLOCK_OUTLINE_SIZE, end_pos.y - (block->pos.y + block_size.y), color);
-    /* 10 */ DrawRectangle(block->pos.x, block->pos.y, BLOCK_OUTLINE_SIZE, end_pos.y - block->pos.y, color);
-}
-
-void draw_control_outline(DrawStack* block, Vector2 end_pos, Color color, bool draw_end) {
-    ScrBlockdefType blocktype = block->block->blockdef->type;
-    Vector2 block_size = as_rl_vec(block->block->ms.size);
-
-    if (blocktype == BLOCKTYPE_CONTROL) {
-        /* 1 */ DrawRectangle(block->pos.x, block->pos.y, block_size.x, BLOCK_OUTLINE_SIZE, color);
-    } else if (blocktype == BLOCKTYPE_CONTROLEND) {
-        /* 12 */ DrawRectangle(block->pos.x + BLOCK_CONTROL_INDENT - BLOCK_OUTLINE_SIZE, block->pos.y, block_size.x - BLOCK_CONTROL_INDENT + BLOCK_OUTLINE_SIZE, BLOCK_OUTLINE_SIZE, color);
-    }
-    /* 2 */ DrawRectangle(block->pos.x + block_size.x - BLOCK_OUTLINE_SIZE, block->pos.y, BLOCK_OUTLINE_SIZE, block_size.y, color);
-    /* 3 */ DrawRectangle(block->pos.x + BLOCK_CONTROL_INDENT - BLOCK_OUTLINE_SIZE, block->pos.y + block_size.y - BLOCK_OUTLINE_SIZE, block_size.x - BLOCK_CONTROL_INDENT + BLOCK_OUTLINE_SIZE, BLOCK_OUTLINE_SIZE, color);
-    if (draw_end) {
-        /* 4 */ DrawRectangle(block->pos.x, block->pos.y, BLOCK_OUTLINE_SIZE, end_pos.y + conf.font_size - block->pos.y, color);
-        /* 5 */ DrawRectangle(end_pos.x, end_pos.y + conf.font_size - BLOCK_OUTLINE_SIZE, block_size.x, BLOCK_OUTLINE_SIZE, color);
-        /* 6 */ DrawRectangle(end_pos.x + block_size.x - BLOCK_OUTLINE_SIZE, end_pos.y, BLOCK_OUTLINE_SIZE, conf.font_size, color);
-        /* 7 */ DrawRectangle(end_pos.x + BLOCK_CONTROL_INDENT - BLOCK_OUTLINE_SIZE, end_pos.y, block_size.x - BLOCK_CONTROL_INDENT + BLOCK_OUTLINE_SIZE, BLOCK_OUTLINE_SIZE, color);
-    } else {
-        /* 9 */ DrawRectangle(end_pos.x, end_pos.y - BLOCK_OUTLINE_SIZE, BLOCK_CONTROL_INDENT, BLOCK_OUTLINE_SIZE, color);
-        /* 10 */ DrawRectangle(block->pos.x, block->pos.y, BLOCK_OUTLINE_SIZE, end_pos.y - block->pos.y, color);
-    }
-    /* 8 */ DrawRectangle(block->pos.x + BLOCK_CONTROL_INDENT - BLOCK_OUTLINE_SIZE, block->pos.y + block_size.y, BLOCK_OUTLINE_SIZE, end_pos.y - (block->pos.y + block_size.y), color);
-}
-
-void draw_block_chain(ScrBlockChain* chain, Vector2 camera_pos, bool chain_highlight) {
-    vector_clear(draw_stack);
-
-    Vector2 pos = as_rl_vec(chain->pos);
-    pos.x -= camera_pos.x;
-    pos.y -= camera_pos.y;
-    for (vec_size_t i = 0; i < vector_size(chain->blocks); i++) {
-        bool exec_highlight = hover_info.exec_ind == i && chain_highlight;
-        ScrBlockdef* blockdef = chain->blocks[i].blockdef;
-
-        if ((blockdef->type == BLOCKTYPE_END || blockdef->type == BLOCKTYPE_CONTROLEND) && vector_size(draw_stack) > 0) {
-            pos.x -= BLOCK_CONTROL_INDENT;
-            DrawStack prev_block = draw_stack[vector_size(draw_stack) - 1];
-            ScrBlockdef* prev_blockdef = prev_block.block->blockdef;
-
-            Rectangle rect;
-            rect.x = prev_block.pos.x;
-            rect.y = prev_block.pos.y + prev_block.block->ms.size.y;
-            rect.width = BLOCK_CONTROL_INDENT;
-            rect.height = pos.y - (prev_block.pos.y + prev_block.block->ms.size.y);
-            DrawRectangleRec(rect, as_rl_color(prev_blockdef->color));
-
-            bool touching_block = hover_info.block == &chain->blocks[i];
-            Color outline_color = ColorBrightness(as_rl_color(prev_blockdef->color), hover_info.block == prev_block.block || touching_block ? 0.5 : -0.2);
-            if (blockdef->type == BLOCKTYPE_END) {
-                Color end_color = ColorBrightness(as_rl_color(prev_blockdef->color), exec_highlight || touching_block ? 0.3 : 0.0);
-                DrawRectangle(pos.x, pos.y, prev_block.block->ms.size.x, conf.font_size, end_color);
-                draw_control_outline(&prev_block, pos, outline_color, true);
-            } else if (blockdef->type == BLOCKTYPE_CONTROLEND) {
-                //draw_block(pos, &chain->blocks[i], false, exec_highlight);
-                draw_controlend_outline(&prev_block, pos, outline_color);
-            }
-
-            vector_pop(draw_stack);
-        } else {
-            //draw_block(pos, &chain->blocks[i], false, exec_highlight);
-        }
-        if (blockdef->type == BLOCKTYPE_CONTROL || blockdef->type == BLOCKTYPE_CONTROLEND) {
-            DrawStack stack_item;
-            stack_item.pos = as_scr_vec(pos);
-            stack_item.block = &chain->blocks[i];
-            vector_add(&draw_stack, stack_item);
-            pos.x += BLOCK_CONTROL_INDENT;
-        }
-        pos.y += chain->blocks[i].ms.size.y;
-    }
-
-    pos.y += conf.font_size;
-    Rectangle rect;
-    for (vec_size_t i = 0; i < vector_size(draw_stack); i++) {
-        DrawStack prev_block = draw_stack[i];
-        ScrBlockdef* prev_blockdef = prev_block.block->blockdef;
-
-        pos.x = prev_block.pos.x;
-
-        rect.x = prev_block.pos.x;
-        rect.y = prev_block.pos.y + prev_block.block->ms.size.y;
-        rect.width = BLOCK_CONTROL_INDENT;
-        rect.height = pos.y - (prev_block.pos.y + prev_block.block->ms.size.y);
-
-        DrawRectangleRec(rect, as_rl_color(prev_blockdef->color));
-        draw_control_outline(&prev_block, pos, ColorBrightness(as_rl_color(prev_blockdef->color), hover_info.block == prev_block.block ? 0.5 : -0.2), false);
     }
 }
 
@@ -442,7 +283,8 @@ void argument_on_hover(FlexElement* el) {
     if (gui_window_is_shown()) return;
     el->draw_type = DRAWTYPE_BORDER;
     el->color = (GuiColor) { 0xa0, 0xa0, 0xa0, 0xff };
-    el->data.border_width = BLOCK_OUTLINE_SIZE;
+    el->data.border.width = BLOCK_OUTLINE_SIZE;
+    el->data.border.type = BORDER_NORMAL;
     hover_info.argument = el->custom_data;
 }
 
@@ -466,6 +308,11 @@ void scrap_gui_draw_block(ScrBlock* block) {
         gui_set_min_size(gui, 0, conf.font_size);
         gui_set_padding(gui, BLOCK_OUTLINE_SIZE * 2, BLOCK_OUTLINE_SIZE * 2);
         gui_set_gap(gui, BLOCK_PADDING);
+        if (block->blockdef->type == BLOCKTYPE_CONTROL) {
+            gui_set_border_type(gui, BORDER_CONTROL);
+        } else if (block->blockdef->type == BLOCKTYPE_CONTROLEND) {
+            gui_set_border_type(gui, BORDER_CONTROL_END);
+        }
     
     size_t arg_id = 0;
     for (size_t i = 0; i < vector_size(block->blockdef->inputs); i++) {
@@ -647,6 +494,8 @@ void blockchain_on_hover(FlexElement* el) {
 }
 
 void scrap_gui_draw_blockchain(ScrBlockChain* chain) {
+    int layer = 0;
+
     gui_element_begin(gui);
         gui_set_direction(gui, DIRECTION_VERTICAL);
         gui_set_border(gui, CONVERT_COLOR(YELLOW, GuiColor), BLOCK_OUTLINE_SIZE);
@@ -655,7 +504,97 @@ void scrap_gui_draw_blockchain(ScrBlockChain* chain) {
         gui_set_padding(gui, 5, 5);
 
     for (size_t i = 0; i < vector_size(chain->blocks); i++) {
-        scrap_gui_draw_block(&chain->blocks[i]);
+        ScrBlockdef* blockdef = chain->blocks[i].blockdef;
+
+        if (blockdef->type == BLOCKTYPE_END) {
+            gui_element_end(gui);
+            gui_element_end(gui);
+
+            FlexElement* el = gui_get_element(gui);
+
+            ScrBlock* block = el->custom_data;
+
+            bool collision = hover_info.prev_block == &chain->blocks[i];
+            Color color = CONVERT_COLOR(block->blockdef->color, Color);
+            Color block_color = ColorBrightness(color, collision ? 0.3 : 0.0);
+            Color outline_color = ColorBrightness(block_color, collision ? 0.5 : -0.2);
+
+            gui_element_begin(gui);
+                gui_set_min_size(gui, block->ms.size.x, conf.font_size);
+                gui_set_rect(gui, CONVERT_COLOR(block_color, GuiColor));
+                gui_on_hover(gui, block_on_hover);
+                gui_set_custom_data(gui, &chain->blocks[i]);
+
+                gui_element_begin(gui);
+                    gui_set_grow(gui, DIRECTION_VERTICAL);
+                    gui_set_grow(gui, DIRECTION_HORIZONTAL);
+                    gui_set_border(gui, CONVERT_COLOR(outline_color, GuiColor), BLOCK_OUTLINE_SIZE);
+                    gui_set_border_type(gui, BORDER_END);
+                gui_element_end(gui);
+            gui_element_end(gui);
+
+            layer--;
+            gui_element_end(gui);
+        } else if (blockdef->type == BLOCKTYPE_CONTROLEND) {
+            if (layer > 0) {
+                gui_element_end(gui);
+                gui_element_end(gui);
+                gui_element_end(gui);
+                layer--;
+            }
+            gui_element_begin(gui);
+                gui_set_direction(gui, DIRECTION_VERTICAL);
+                gui_set_custom_data(gui, &chain->blocks[i]);
+
+                scrap_gui_draw_block(&chain->blocks[i]);
+        } else {
+            if (blockdef->type == BLOCKTYPE_CONTROL) {
+                gui_element_begin(gui);
+                    gui_set_direction(gui, DIRECTION_VERTICAL);
+                    gui_set_custom_data(gui, &chain->blocks[i]);
+            }
+            scrap_gui_draw_block(&chain->blocks[i]);
+        }
+
+        if (blockdef->type == BLOCKTYPE_CONTROL || blockdef->type == BLOCKTYPE_CONTROLEND) {
+            layer++;
+
+            FlexElement* el = gui_get_element(gui);
+            chain->blocks[i].ms.size.x = el->w;
+
+            bool collision = hover_info.prev_block == &chain->blocks[i];
+            Color color = CONVERT_COLOR(blockdef->color, Color);
+            Color block_color = ColorBrightness(color, collision ? 0.3 : 0.0);
+            Color outline_color = ColorBrightness(block_color, collision ? 0.5 : -0.2);
+
+            gui_element_begin(gui);
+                gui_set_direction(gui, DIRECTION_HORIZONTAL);
+
+                gui_element_begin(gui);
+                    gui_set_grow(gui, DIRECTION_VERTICAL);
+                    gui_set_min_size(gui, BLOCK_CONTROL_INDENT, conf.font_size / 2);
+                    gui_set_rect(gui, CONVERT_COLOR(block_color, GuiColor));
+                    gui_on_hover(gui, block_on_hover);
+                    gui_set_custom_data(gui, &chain->blocks[i]);
+
+                    gui_element_begin(gui);
+                        gui_set_grow(gui, DIRECTION_VERTICAL);
+                        gui_set_grow(gui, DIRECTION_HORIZONTAL);
+                        gui_set_border(gui, CONVERT_COLOR(outline_color, GuiColor), BLOCK_OUTLINE_SIZE);
+                        gui_set_border_type(gui, BORDER_CONTROL_BODY);
+                    gui_element_end(gui);
+                gui_element_end(gui);
+
+                gui_element_begin(gui);
+                    gui_set_direction(gui, DIRECTION_VERTICAL);
+        }
+    }
+
+    while (layer > 0) {
+        gui_element_end(gui);
+        gui_element_end(gui);
+        gui_element_end(gui);
+        layer--;
     }
 
     gui_element_end(gui);
@@ -771,6 +710,74 @@ void scrap_gui_process(void) {
     gui_end(gui);
 }
 
+
+// Draw order for scrap_gui_render_border_control()
+//
+//           1
+//   +---------------+ 
+// 4 |               | 2
+//   +     +---------+
+//             3
+//
+void scrap_gui_render_border_control(DrawCommand* cmd) {
+    unsigned short border_w = cmd->data.border.width;
+    Color color = CONVERT_COLOR(cmd->color, Color);
+
+    /* 1 */ DrawRectangle(cmd->pos_x, cmd->pos_y, cmd->width, border_w, color);
+    /* 2 */ DrawRectangle(cmd->pos_x + cmd->width - border_w, cmd->pos_y, border_w, cmd->height, color);
+    /* 3 */ DrawRectangle(cmd->pos_x + BLOCK_CONTROL_INDENT - border_w, cmd->pos_y + cmd->height - border_w, cmd->width - BLOCK_CONTROL_INDENT, border_w, color);
+    /* 4 */ DrawRectangle(cmd->pos_x, cmd->pos_y, border_w, cmd->height, color);
+}
+
+// Draw order for scrap_gui_render_border_control_body()
+//
+//   +     +
+// 1 |     | 2
+//   +     +
+//
+void scrap_gui_render_border_control_body(DrawCommand* cmd) {
+    unsigned short border_w = cmd->data.border.width;
+    Color color = CONVERT_COLOR(cmd->color, Color);
+
+    /* 1 */ DrawRectangle(cmd->pos_x, cmd->pos_y, border_w, cmd->height, color);
+    /* 2 */ DrawRectangle(cmd->pos_x + cmd->width - border_w, cmd->pos_y, border_w, cmd->height, color);
+}
+
+// Draw order for scrap_gui_render_border_control_end()
+//
+//              1
+//   +     +---------+
+// 4 |               | 2
+//   +     +---------+
+//              3
+//
+void scrap_gui_render_border_control_end(DrawCommand* cmd) {
+    unsigned short border_w = cmd->data.border.width;
+    Color color = CONVERT_COLOR(cmd->color, Color);
+
+    /* 1 */ DrawRectangle(cmd->pos_x + BLOCK_CONTROL_INDENT - border_w, cmd->pos_y, cmd->width - BLOCK_CONTROL_INDENT, border_w, color);
+    /* 2 */ DrawRectangle(cmd->pos_x + cmd->width - border_w, cmd->pos_y, border_w, cmd->height, color);
+    /* 3 */ DrawRectangle(cmd->pos_x + BLOCK_CONTROL_INDENT - border_w, cmd->pos_y + cmd->height - border_w, cmd->width - BLOCK_CONTROL_INDENT, border_w, color);
+    /* 4 */ DrawRectangle(cmd->pos_x, cmd->pos_y, border_w, cmd->height, color);
+}
+
+// Draw order for scrap_gui_render_border_end()
+//
+//              1
+//   +     +---------+
+// 4 |               | 2
+//   +---------------+ 
+//           3
+void scrap_gui_render_border_end(DrawCommand* cmd) {
+    unsigned short border_w = cmd->data.border.width;
+    Color color = CONVERT_COLOR(cmd->color, Color);
+
+    /* 1 */ DrawRectangle(cmd->pos_x + BLOCK_CONTROL_INDENT - border_w, cmd->pos_y, cmd->width - BLOCK_CONTROL_INDENT, border_w, color);
+    /* 2 */ DrawRectangle(cmd->pos_x + cmd->width - border_w, cmd->pos_y, border_w, cmd->height, color);
+    /* 3 */ DrawRectangle(cmd->pos_x, cmd->pos_y + cmd->height - border_w, cmd->width, border_w, color);
+    /* 4 */ DrawRectangle(cmd->pos_x, cmd->pos_y, border_w, cmd->height, color);
+}
+
 void scrap_gui_render(void) {
     DrawCommand* command;
     GUI_GET_COMMANDS(gui, command) {
@@ -781,7 +788,30 @@ void scrap_gui_render(void) {
             assert(false && "Got unknown draw type");
             break;
         case DRAWTYPE_BORDER:
-            DrawRectangleLinesEx((Rectangle) { command->pos_x, command->pos_y, command->width, command->height }, command->data.border_width, CONVERT_COLOR(command->color, Color));
+            switch (command->data.border.type) {
+            case BORDER_NORMAL:
+                DrawRectangleLinesEx(
+                    (Rectangle) { command->pos_x, command->pos_y, command->width, command->height }, 
+                    command->data.border.width, 
+                    CONVERT_COLOR(command->color, Color)
+                );
+                break;
+            case BORDER_CONTROL:
+                scrap_gui_render_border_control(command);
+                break;
+            case BORDER_CONTROL_BODY:
+                scrap_gui_render_border_control_body(command);
+                break;
+            case BORDER_END:
+                scrap_gui_render_border_end(command);
+                break;
+            case BORDER_CONTROL_END:
+                scrap_gui_render_border_control_end(command);
+                break;
+            default:
+                assert(false && "Unhandled draw border type");
+                break;
+            }
             break;
         case DRAWTYPE_RECT:
             DrawRectangle(command->pos_x, command->pos_y, command->width, command->height, CONVERT_COLOR(command->color, Color));
@@ -840,7 +870,6 @@ void scrap_gui_process_render(void) {
     scrap_gui_render();
 
 #ifdef DEBUG
-        if (IsKeyDown(KEY_F4))
         DrawTextEx(
             font_cond, 
             TextFormat(
@@ -860,7 +889,8 @@ void scrap_gui_process_render(void) {
                 "Editor: %d, Editing: %p, Blockdef: %p, input: %zu\n"
                 "Elements: %zu/%zu, Draw: %zu/%zu\n"
                 "Slider: %p, min: %d, max: %d\n"
-                "Input: %p, Select: %p\n",
+                "Input: %p, Select: %p\n"
+                "UI time: %.3f",
                 hover_info.blockchain,
                 hover_info.blockchain_layer,
                 hover_info.block,
@@ -882,7 +912,8 @@ void scrap_gui_process_render(void) {
                 hover_info.editor.part, hover_info.editor.edit_blockdef, hover_info.editor.blockdef, hover_info.editor.blockdef_input,
                 gui->element_stack_len, ELEMENT_STACK_SIZE, gui->command_stack_len, COMMAND_STACK_SIZE,
                 hover_info.hover_slider.value, hover_info.hover_slider.min, hover_info.hover_slider.max,
-                hover_info.input, hover_info.select_input
+                hover_info.input, hover_info.select_input,
+                ui_time
             ), 
             (Vector2){ 
                 conf.side_bar_size + 5, 
