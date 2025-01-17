@@ -273,10 +273,12 @@ void scrap_gui_draw_blockdef(ScrBlockdef* blockdef) {
 void block_on_hover(FlexElement* el) {
     if (gui_window_is_shown()) return;
     hover_info.block = el->custom_data;
+    hover_info.blockchain = hover_info.prev_blockchain;
 }
 
 void block_argument_on_hover(FlexElement* el) {
     hover_info.prev_argument = el->custom_data;
+    hover_info.blockchain = hover_info.prev_blockchain;
 }
 
 void argument_on_hover(FlexElement* el) {
@@ -286,6 +288,7 @@ void argument_on_hover(FlexElement* el) {
     el->data.border.width = BLOCK_OUTLINE_SIZE;
     el->data.border.type = BORDER_NORMAL;
     hover_info.argument = el->custom_data;
+    hover_info.blockchain = hover_info.prev_blockchain;
 }
 
 void scrap_gui_draw_block(ScrBlock* block) {
@@ -490,7 +493,7 @@ void scrap_gui_draw_tab_bar(void) {
 }
 
 void blockchain_on_hover(FlexElement* el) {
-    hover_info.blockchain = el->custom_data;
+    hover_info.prev_blockchain = el->custom_data;
 }
 
 void scrap_gui_draw_blockchain(ScrBlockChain* chain) {

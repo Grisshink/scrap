@@ -80,8 +80,8 @@ typedef struct {
     bool sidebar;
     bool drag_cancelled;
 
+    ScrBlockChain* prev_blockchain;
     ScrBlockChain* blockchain;
-    //size_t blockchain_index;
     int blockchain_layer;
 
     ScrBlock* prev_block;
