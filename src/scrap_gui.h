@@ -54,7 +54,13 @@ typedef enum {
     BORDER_CONTROL_BODY,
     BORDER_END,
     BORDER_CONTROL_END,
+    BORDER_NOTCHED,
 } GuiBorderType;
+
+typedef enum {
+    RECT_NORMAL = 0,
+    RECT_NOTCHED,
+} GuiRectType;
 
 typedef struct {
     unsigned int width;
@@ -79,6 +85,7 @@ typedef union {
     void* custom_data;
     void* shader;
     GuiBorderData border;
+    GuiRectType rect_type;
 } DrawData;
 
 typedef struct {
@@ -196,6 +203,7 @@ void gui_set_fixed(Gui* gui, unsigned short w, unsigned short h);
 void gui_set_fit(Gui* gui);
 void gui_set_grow(Gui* gui, FlexDirection direction);
 void gui_set_rect(Gui* gui, GuiColor color);
+void gui_set_rect_type(Gui* gui, GuiRectType type);
 void gui_set_direction(Gui* gui, FlexDirection direction);
 void gui_set_border(Gui* gui, GuiColor color, unsigned int border_width);
 void gui_set_border_type(Gui* gui, GuiBorderType type);

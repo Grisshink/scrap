@@ -191,6 +191,7 @@ static void gui_render(Gui* gui, FlexElement* el, float pos_x, float pos_y) {
         if (max > 0) {
             DrawCommand* command = &gui->command_stack[gui->command_stack_len++];
             command->type = DRAWTYPE_RECT;
+            command->data.rect_type = RECT_NORMAL;
             command->color = (GuiColor) { 0xff, 0xff, 0xff, 0x80 };
 
             float scroll_size = (float)el_size / ((float)content_size / (float)el_size);
@@ -223,6 +224,7 @@ FlexElement* gui_element_begin(Gui* gui) {
     FlexElement* el = &gui->element_stack[gui->element_stack_len++];
     gui->element_ptr_stack[gui->element_ptr_stack_len++] = el;
     el->draw_type = DRAWTYPE_UNKNOWN;
+    el->data = (DrawData) {0};
     el->x = prev ? prev->cursor_x : 0;
     el->y = prev ? prev->cursor_y : 0;
     el->abs_x = 0;
@@ -507,6 +509,13 @@ void gui_set_rect(Gui* gui, GuiColor color) {
     FlexElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
     el->draw_type = DRAWTYPE_RECT;
     el->color = color;
+    el->data.rect_type = RECT_NORMAL;
+}
+
+void gui_set_rect_type(Gui* gui, GuiRectType type) {
+    FlexElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
+    if (el->draw_type != DRAWTYPE_RECT) return;
+    el->data.rect_type = type;
 }
 
 void gui_set_border(Gui* gui, GuiColor color, unsigned int border_width) {

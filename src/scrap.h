@@ -214,6 +214,8 @@ extern int blockchain_select_counter;
 extern char* top_bar_buttons_text[3];
 extern char* tab_bar_buttons_text[2];
 
+extern char project_name[1024];
+
 extern const int codepoint_regions[CODEPOINT_REGION_COUNT][2];
 extern int codepoint_start_ranges[CODEPOINT_REGION_COUNT];
 

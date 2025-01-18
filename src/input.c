@@ -160,18 +160,34 @@ bool handle_dropdown_close(void) {
     return true;
 }
 
+char* basename(char* path) {
+    char* base_name = path;
+    for (char* str = path; *str; str++) {
+        if (*str == '/' || *str == '\\') {
+            base_name = str + 1;
+        }
+    }
+    return base_name;
+}
+
 bool handle_file_menu_click(void) {
     char const* filters[] = {"*.scrp"};
     char* path;
+    char* base_path;
+    int i;
 
     switch (hover_info.dropdown.select_ind) {
     case FILE_MENU_SAVE_PROJECT:
-        path = tinyfd_saveFileDialog(NULL, "project.scrp", ARRLEN(filters), filters, "Scrap project files (.scrp)"); 
+        path = tinyfd_saveFileDialog(NULL, project_name, ARRLEN(filters), filters, "Scrap project files (.scrp)"); 
         if (!path) break;
         save_code(path, editor_code);
+
+        base_path = basename(path);
+        for (i = 0; base_path[i]; i++) project_name[i] = base_path[i]; 
+        project_name[i] = 0;
         break;
     case FILE_MENU_LOAD_PROJECT:
-        path = tinyfd_openFileDialog(NULL, "project.scrp", ARRLEN(filters), filters, "Scrap project files (.scrp)", 0);
+        path = tinyfd_openFileDialog(NULL, project_name, ARRLEN(filters), filters, "Scrap project files (.scrp)", 0);
         if (!path) break;
 
         ScrBlockChain* chain = load_code(path);
@@ -187,6 +203,10 @@ bool handle_file_menu_click(void) {
         blockchain_select_counter = 0;
         camera_pos.x = editor_code[blockchain_select_counter].pos.x - ((GetScreenWidth() - conf.side_bar_size) / 2 + conf.side_bar_size);
         camera_pos.y = editor_code[blockchain_select_counter].pos.y - ((GetScreenHeight() - conf.font_size * 2.2) / 2 + conf.font_size * 2.2);
+
+        base_path = basename(path);
+        for (i = 0; base_path[i]; i++) project_name[i] = base_path[i]; 
+        project_name[i] = 0;
 
         actionbar_show("File load succeeded!");
         break;

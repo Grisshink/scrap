@@ -249,6 +249,7 @@ void editor_del_button_on_hover(FlexElement* el) {
     if (gui_window_is_shown()) return;
     if (hover_info.top_bars.handler) return;
     el->draw_type = DRAWTYPE_RECT;
+    el->data.rect_type = RECT_NORMAL;
     el->color = (GuiColor) { 0xff, 0xff, 0xff, 0x80 };
     hover_info.editor.blockdef_input = (size_t)el->custom_data;
     hover_info.top_bars.handler = handle_editor_del_arg_button;
@@ -258,6 +259,7 @@ void editor_button_on_hover(FlexElement* el) {
     if (gui_window_is_shown()) return;
     if (hover_info.top_bars.handler) return;
     el->draw_type = DRAWTYPE_RECT;
+    el->data.rect_type = RECT_NORMAL;
     el->color = (GuiColor) { 0xff, 0xff, 0xff, 0x80 };
     hover_info.top_bars.handler = el->custom_data;
 }
@@ -394,6 +396,7 @@ void scrap_gui_draw_block(ScrBlock* block) {
         gui_set_direction(gui, DIRECTION_HORIZONTAL);
         gui_set_rect(gui, CONVERT_COLOR(block_color, GuiColor));
         gui_set_custom_data(gui, block);
+        if (block->blockdef->type == BLOCKTYPE_HAT) gui_set_rect_type(gui, RECT_NOTCHED);
         gui_on_hover(gui, block_on_hover);
 
     gui_element_begin(gui);
@@ -407,6 +410,8 @@ void scrap_gui_draw_block(ScrBlock* block) {
             gui_set_border_type(gui, BORDER_CONTROL);
         } else if (block->blockdef->type == BLOCKTYPE_CONTROLEND) {
             gui_set_border_type(gui, BORDER_CONTROL_END);
+        } else if (block->blockdef->type == BLOCKTYPE_HAT) {
+            gui_set_border_type(gui, BORDER_NOTCHED);
         }
     
     size_t arg_id = 0;
@@ -524,6 +529,7 @@ void button_on_hover(FlexElement* el) {
     if (hover_info.top_bars.handler) return;
     if (el->draw_type == DRAWTYPE_RECT) return;
     el->draw_type = DRAWTYPE_RECT;
+    el->data.rect_type = RECT_NORMAL;
     el->color = (GuiColor) { 0x40, 0x40, 0x40, 0xff };
     hover_info.top_bars.handler = el->custom_data;
 }
@@ -580,7 +586,7 @@ void scrap_gui_draw_tab_bar(void) {
         scrap_gui_draw_button("Output", tab_bar_size, current_tab == TAB_OUTPUT, handle_output_tab_click);
 
         gui_grow(gui, DIRECTION_HORIZONTAL);
-        gui_text(gui, &font_cond, "Project.scrp", BLOCK_TEXT_SIZE, (GuiColor) { 0x80, 0x80, 0x80, 0xff });
+        gui_text(gui, &font_cond, project_name, BLOCK_TEXT_SIZE, (GuiColor) { 0x80, 0x80, 0x80, 0xff });
         gui_grow(gui, DIRECTION_HORIZONTAL);
         
         gui_element_begin(gui);
@@ -603,7 +609,7 @@ void scrap_gui_draw_blockchain(ScrBlockChain* chain) {
 
     gui_element_begin(gui);
         gui_set_direction(gui, DIRECTION_VERTICAL);
-        gui_set_border(gui, CONVERT_COLOR(YELLOW, GuiColor), BLOCK_OUTLINE_SIZE);
+        //gui_set_border(gui, CONVERT_COLOR(YELLOW, GuiColor), BLOCK_OUTLINE_SIZE);
         gui_on_hover(gui, blockchain_on_hover);
         gui_set_custom_data(gui, chain);
         gui_set_padding(gui, 5, 5);
@@ -757,6 +763,7 @@ void scrap_gui_draw_code(void) {
 
 void dropdown_on_hover(FlexElement* el) {
     el->draw_type = DRAWTYPE_RECT;
+    el->data.rect_type = RECT_NORMAL;
     el->color = (GuiColor) { 0x40, 0x40, 0x40, 0xff };
     // Double cast to avoid warning. In our case this operation is safe because el->custom_data currently stores a value of type int
     hover_info.dropdown.select_ind = (int)(size_t)el->custom_data;
@@ -889,6 +896,45 @@ void scrap_gui_render_border_end(DrawCommand* cmd) {
     /* 4 */ DrawRectangle(cmd->pos_x, cmd->pos_y, border_w, cmd->height, color);
 }
 
+// Draw order for scrap_gui_render_border_notched() and scrap_gui_render_rect_notched()
+//
+//           1
+//   +--------------+ 2
+//   |               +
+// 5 |               | 3
+//   +---------------+ 
+//           4
+void scrap_gui_render_border_notched(DrawCommand* cmd) {
+    unsigned short border_w = cmd->data.border.width;
+    Color color = CONVERT_COLOR(cmd->color, Color);
+    int notch_size = conf.font_size / 4;
+
+    /* 1 */ DrawRectangle(cmd->pos_x, cmd->pos_y, cmd->width - notch_size, border_w, color);
+    /* 2 */ DrawRectanglePro((Rectangle) {
+        cmd->pos_x + cmd->width - notch_size,
+        cmd->pos_y,
+        sqrtf((notch_size * notch_size) * 2),
+        border_w,
+    }, (Vector2) {0}, 45.0, color);
+    /* 3 */ DrawRectangle(cmd->pos_x + cmd->width - border_w, cmd->pos_y + notch_size, border_w, cmd->height - notch_size, color);
+    /* 4 */ DrawRectangle(cmd->pos_x, cmd->pos_y + cmd->height - border_w, cmd->width, border_w, color);
+    /* 5 */ DrawRectangle(cmd->pos_x, cmd->pos_y, border_w, cmd->height, color);
+}
+
+void scrap_gui_render_rect_notched(DrawCommand* cmd) {
+    Color color = CONVERT_COLOR(cmd->color, Color);
+    int notch_size = conf.font_size / 4;
+
+    DrawRectangle(cmd->pos_x, cmd->pos_y, cmd->width - notch_size, cmd->height, color);
+    DrawRectangle(cmd->pos_x, cmd->pos_y + notch_size, cmd->width, cmd->height - notch_size, color);
+    DrawTriangle(
+        (Vector2) { cmd->pos_x + cmd->width - notch_size - 1, cmd->pos_y }, 
+        (Vector2) { cmd->pos_x + cmd->width - notch_size - 1, cmd->pos_y + notch_size }, 
+        (Vector2) { cmd->pos_x + cmd->width, cmd->pos_y + notch_size }, 
+        color
+    );
+}
+
 void scrap_gui_render(void) {
     DrawCommand* command;
     GUI_GET_COMMANDS(gui, command) {
@@ -919,13 +965,26 @@ void scrap_gui_render(void) {
             case BORDER_CONTROL_END:
                 scrap_gui_render_border_control_end(command);
                 break;
+            case BORDER_NOTCHED:
+                scrap_gui_render_border_notched(command);
+                break;
             default:
                 assert(false && "Unhandled draw border type");
                 break;
             }
             break;
         case DRAWTYPE_RECT:
-            DrawRectangle(command->pos_x, command->pos_y, command->width, command->height, CONVERT_COLOR(command->color, Color));
+            switch (command->data.rect_type) {
+            case RECT_NORMAL:
+                DrawRectangle(command->pos_x, command->pos_y, command->width, command->height, CONVERT_COLOR(command->color, Color));
+                break;
+            case RECT_NOTCHED:
+                scrap_gui_render_rect_notched(command);
+                break;
+            default:
+                assert(false && "Unhandled draw rect type");
+                break;
+            }
             break;
         case DRAWTYPE_TEXT:
             DrawTextEx(

@@ -70,6 +70,8 @@ DrawStack* draw_stack = NULL;
 ScrBlockChain mouse_blockchain = {0};
 Gui* gui = NULL;
 
+char project_name[1024] = "project.scrp";
+
 #ifdef DEBUG
 double ui_time = 0.0;
 #endif

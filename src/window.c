@@ -83,6 +83,7 @@ static void settings_button_on_hover(FlexElement* el) {
 static void close_button_on_hover(FlexElement* el) {
     if (el->draw_type == DRAWTYPE_RECT) return;
     el->draw_type = DRAWTYPE_RECT;
+    el->data.rect_type = RECT_NORMAL;
     el->color = (GuiColor) { 0x40, 0x40, 0x40, 0xff };
     hover_info.top_bars.handler = handle_window_gui_close_button_click;
 }
