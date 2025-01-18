@@ -152,6 +152,9 @@ bool handle_dropdown_close(void) {
     hover_info.dropdown.list_len = 0;
     hover_info.dropdown.handler = NULL;
     hover_info.dropdown.select_ind = 0;
+    hover_info.select_block = NULL;
+    hover_info.select_input = NULL;
+    hover_info.select_argument = NULL;
     return true;
 }
 
@@ -194,9 +197,6 @@ bool handle_file_menu_click(void) {
 
 bool handle_block_dropdown_click(void) {
     argument_set_const_string(hover_info.select_argument, hover_info.dropdown.list[hover_info.dropdown.select_ind]);
-    hover_info.select_block = NULL;
-    hover_info.select_input = NULL;
-    hover_info.select_argument = NULL;
     return handle_dropdown_close();
 }
 
