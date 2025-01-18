@@ -316,6 +316,7 @@ void scrap_gui_draw_blockdef(ScrBlockdef* blockdef, bool editing) {
                         gui_set_min_size(gui, conf.font_size - BLOCK_OUTLINE_SIZE * 4, conf.font_size - BLOCK_OUTLINE_SIZE * 4);
                         gui_set_align(gui, ALIGN_CENTER);
                         gui_set_padding(gui, BLOCK_STRING_PADDING / 2, 0);
+                        if (hover_info.select_input == &input->data.stext.text) gui_set_border(gui, (GuiColor) { 0x30, 0x30, 0x30, 0xff }, BLOCK_OUTLINE_SIZE);
                         gui_set_custom_data(gui, &input->data.stext.text);
                         gui_on_hover(gui, input_on_hover);
 
@@ -432,6 +433,7 @@ void scrap_gui_draw_block(ScrBlock* block) {
                         gui_set_min_size(gui, conf.font_size - BLOCK_OUTLINE_SIZE * 4, conf.font_size - BLOCK_OUTLINE_SIZE * 4);
                         gui_set_align(gui, ALIGN_CENTER);
                         gui_set_padding(gui, BLOCK_STRING_PADDING / 2, 0);
+                        if (hover_info.select_argument == arg) gui_set_border(gui, (GuiColor) { 0x30, 0x30, 0x30, 0xff }, BLOCK_OUTLINE_SIZE);
                         gui_set_custom_data(gui, arg);
                         gui_on_hover(gui, argument_on_hover);
 
@@ -462,20 +464,24 @@ void scrap_gui_draw_block(ScrBlock* block) {
         case INPUT_DROPDOWN:
             assert(arg->type == ARGUMENT_CONST_STRING);
             gui_element_begin(gui);
-                gui_set_direction(gui, DIRECTION_HORIZONTAL);
-                gui_set_min_size(gui, 0, conf.font_size - BLOCK_OUTLINE_SIZE * 4);
-                gui_set_padding(gui, BLOCK_STRING_PADDING / 2, 0);
-                gui_set_align(gui, ALIGN_CENTER);
                 gui_set_rect(gui, CONVERT_COLOR(dropdown_color, GuiColor));
-                gui_set_custom_data(gui, arg);
-                gui_on_hover(gui, argument_on_hover);
 
                 if (hover_info.select_argument == arg && hover_info.dropdown.location == LOCATION_BLOCK_DROPDOWN) {
                     hover_info.dropdown.element = gui_get_element(gui);
                 }
 
-                gui_text(gui, &font_cond_shadow, arg->data.text, BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
-                gui_image(gui, &drop_tex, BLOCK_IMAGE_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+                gui_element_begin(gui);
+                    gui_set_min_size(gui, 0, conf.font_size - BLOCK_OUTLINE_SIZE * 4);
+                    gui_set_align(gui, ALIGN_CENTER);
+                    gui_set_padding(gui, BLOCK_STRING_PADDING / 2, 0);
+                    gui_set_direction(gui, DIRECTION_HORIZONTAL);
+                    if (hover_info.select_argument == arg) gui_set_border(gui, (GuiColor) { 0x30, 0x30, 0x30, 0xff }, BLOCK_OUTLINE_SIZE);
+                    gui_on_hover(gui, argument_on_hover);
+                    gui_set_custom_data(gui, arg);
+
+                    gui_text(gui, &font_cond_shadow, arg->data.text, BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+                    gui_image(gui, &drop_tex, BLOCK_IMAGE_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+                gui_element_end(gui);
             gui_element_end(gui);
             arg_id++;
             break;
