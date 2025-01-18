@@ -261,6 +261,109 @@ bool handle_about_license_button_click(void) {
     return true;
 }
 
+bool handle_editor_add_arg_button(void) {
+    ScrBlockdef* blockdef = hover_info.argument->data.blockdef;
+    size_t last_input = vector_size(blockdef->inputs);
+    char str[32];
+
+    // TODO: Update block arguments when new argument is added
+    if (blockdef->ref_count > 1) {
+        deselect_all();
+        return true;
+    }
+    for (size_t i = 0; i < vector_size(blockdef->inputs); i++) {
+        if (blockdef->inputs[i].type != INPUT_ARGUMENT) continue;
+        if (blockdef->inputs[i].data.arg.blockdef->ref_count > 1) {
+            deselect_all();
+            return true;
+        }
+    }
+
+    blockdef_add_argument(blockdef, "", BLOCKCONSTR_UNLIMITED);
+
+    sprintf(str, "arg%zu", last_input);
+    ScrBlockdef* arg_blockdef = blockdef->inputs[last_input].data.arg.blockdef;
+    blockdef_add_text(arg_blockdef, str);
+    arg_blockdef->func = block_custom_arg;
+
+    int arg_count = 0;
+    for (size_t i = 0; i < vector_size(blockdef->inputs); i++) {
+        if (blockdef->inputs[i].type == INPUT_ARGUMENT) arg_count++;
+    }
+    arg_blockdef->arg_id = arg_count - 1;
+
+    deselect_all();
+    return true;
+}
+
+bool handle_editor_add_text_button(void) {
+    ScrBlockdef* blockdef = hover_info.argument->data.blockdef;
+    size_t last_input = vector_size(blockdef->inputs);
+    char str[32];
+
+    // TODO: Update block arguments when new argument is added
+    if (blockdef->ref_count > 1) {
+        deselect_all();
+        return true;
+    }
+    for (size_t i = 0; i < vector_size(blockdef->inputs); i++) {
+        if (blockdef->inputs[i].type != INPUT_ARGUMENT) continue;
+        if (blockdef->inputs[i].data.arg.blockdef->ref_count > 1) {
+            deselect_all();
+            return true;
+        }
+    }
+
+    sprintf(str, "text%zu", last_input);
+    blockdef_add_text(blockdef, str);
+
+    deselect_all();
+    return true;
+}
+
+bool handle_editor_del_arg_button(void) {
+    ScrBlockdef* blockdef = hover_info.argument->data.blockdef;
+
+    assert(hover_info.editor.blockdef_input != (size_t)-1);
+    if (blockdef->ref_count > 1) {
+        deselect_all();
+        return true;
+    }
+    for (size_t i = 0; i < vector_size(blockdef->inputs); i++) {
+        if (blockdef->inputs[i].type != INPUT_ARGUMENT) continue;
+        if (blockdef->inputs[i].data.arg.blockdef->ref_count > 1) {
+            deselect_all();
+            return true;
+        }
+    }
+
+    bool is_arg = blockdef->inputs[hover_info.editor.blockdef_input].type == INPUT_ARGUMENT;
+    blockdef_delete_input(blockdef, hover_info.editor.blockdef_input);
+    if (is_arg) {
+        for (size_t i = hover_info.editor.blockdef_input; i < vector_size(blockdef->inputs); i++) {
+            if (blockdef->inputs[i].type != INPUT_ARGUMENT) continue;
+            blockdef->inputs[i].data.arg.blockdef->arg_id--;
+        }
+    }
+
+    deselect_all();
+    return true;
+}
+
+bool handle_editor_edit_button(void) {
+    hover_info.editor.edit_blockdef = hover_info.argument->data.blockdef;
+    hover_info.editor.edit_block = hover_info.block;
+    deselect_all();
+    return true;
+}
+
+bool handle_editor_close_button(void) {
+    hover_info.editor.edit_blockdef = NULL;
+    hover_info.editor.edit_block = NULL;
+    deselect_all();
+    return true;
+}
+
 bool handle_sidebar_click(bool mouse_empty) {
     if (hover_info.select_argument) {
         deselect_all();
@@ -299,102 +402,11 @@ bool handle_sidebar_click(bool mouse_empty) {
 }
 
 bool handle_blockdef_editor_click(void) {
-    ScrBlockdef* blockdef = hover_info.argument->data.blockdef;
-    size_t last_input = vector_size(blockdef->inputs);
-    char str[32];
-    switch (hover_info.editor.part) {
-    case EDITOR_ADD_ARG:
-        // TODO: Update block arguments when new argument is added
-        if (blockdef->ref_count > 1) {
-            deselect_all();
-            return true;
-        }
-        for (size_t i = 0; i < vector_size(blockdef->inputs); i++) {
-            if (blockdef->inputs[i].type != INPUT_ARGUMENT) continue;
-            if (blockdef->inputs[i].data.arg.blockdef->ref_count > 1) {
-                deselect_all();
-                return true;
-            }
-        }
-        blockdef_add_argument(hover_info.argument->data.blockdef, "", BLOCKCONSTR_UNLIMITED);
-        sprintf(str, "arg%zu", last_input);
-        ScrBlockdef* arg_blockdef = hover_info.argument->data.blockdef->inputs[last_input].data.arg.blockdef;
-        blockdef_add_text(arg_blockdef, str);
-        arg_blockdef->func = block_custom_arg;
-
-        int arg_count = 0;
-        for (size_t i = 0; i < vector_size(hover_info.argument->data.blockdef->inputs); i++) {
-            if (hover_info.argument->data.blockdef->inputs[i].type == INPUT_ARGUMENT) arg_count++;
-        }
-        arg_blockdef->arg_id = arg_count - 1;
-
-        update_measurements(hover_info.block, PLACEMENT_HORIZONTAL);
-        deselect_all();
-        return true;
-    case EDITOR_ADD_TEXT:
-        // TODO: Update block arguments when new argument is added
-        if (blockdef->ref_count > 1) {
-            deselect_all();
-            return true;
-        }
-        for (size_t i = 0; i < vector_size(blockdef->inputs); i++) {
-            if (blockdef->inputs[i].type != INPUT_ARGUMENT) continue;
-            if (blockdef->inputs[i].data.arg.blockdef->ref_count > 1) {
-                deselect_all();
-                return true;
-            }
-        }
-        sprintf(str, "text%zu", last_input);
-        blockdef_add_text(hover_info.argument->data.blockdef, str);
-        update_measurements(hover_info.block, PLACEMENT_HORIZONTAL);
-        deselect_all();
-        return true;
-    case EDITOR_DEL_ARG:
-        assert(hover_info.editor.blockdef_input != (size_t)-1);
-        if (blockdef->ref_count > 1) {
-            deselect_all();
-            return true;
-        }
-        for (size_t i = 0; i < vector_size(blockdef->inputs); i++) {
-            if (blockdef->inputs[i].type != INPUT_ARGUMENT) continue;
-            if (blockdef->inputs[i].data.arg.blockdef->ref_count > 1) {
-                deselect_all();
-                return true;
-            }
-        }
-
-        bool is_arg = blockdef->inputs[hover_info.editor.blockdef_input].type == INPUT_ARGUMENT;
-        blockdef_delete_input(blockdef, hover_info.editor.blockdef_input);
-        if (is_arg) {
-            for (size_t i = hover_info.editor.blockdef_input; i < vector_size(blockdef->inputs); i++) {
-                if (blockdef->inputs[i].type != INPUT_ARGUMENT) continue;
-                blockdef->inputs[i].data.arg.blockdef->arg_id--;
-            }
-        }
-
-        update_measurements(hover_info.block, PLACEMENT_HORIZONTAL);
-        deselect_all();
-        return true;
-    case EDITOR_EDIT:
-        if (hover_info.editor.edit_blockdef == hover_info.argument->data.blockdef) {
-            hover_info.editor.edit_blockdef = NULL;
-            hover_info.editor.edit_block = NULL;
-        } else {
-            hover_info.editor.edit_blockdef = hover_info.argument->data.blockdef;
-            if (hover_info.editor.edit_block) update_measurements(hover_info.editor.edit_block, PLACEMENT_HORIZONTAL);
-            hover_info.editor.edit_block = hover_info.block;
-        }
-        update_measurements(hover_info.block, PLACEMENT_HORIZONTAL);
-        deselect_all();
-        return true;
-    case EDITOR_BLOCKDEF:
-        if (hover_info.editor.edit_blockdef == hover_info.argument->data.blockdef) return false;
-        blockchain_add_block(&mouse_blockchain, block_new_ms(hover_info.editor.blockdef));
-        deselect_all();
-        return true;
-    default:
-        return false;
-    }
+    if (!hover_info.editor.blockdef) return true;
+    if (hover_info.editor.edit_blockdef == hover_info.argument->data.blockdef) return false;
+    blockchain_add_block(&mouse_blockchain, block_new_ms(hover_info.editor.blockdef));
+    deselect_all();
+    return true;
 }
 
 bool handle_code_editor_click(bool mouse_empty) {
@@ -713,6 +725,7 @@ void scrap_gui_process_input(void) {
     mouse_blockchain.pos = as_scr_vec(GetMousePosition());
 
     hover_info.prev_block = hover_info.block;
+    hover_info.editor.prev_blockdef = hover_info.editor.blockdef;
 }
 
 void process_input(void) {

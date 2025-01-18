@@ -59,6 +59,7 @@ typedef struct {
     EditorHoverPart part;
     ScrBlockdef* edit_blockdef;
     ScrBlock* edit_block;
+    ScrBlockdef* prev_blockdef;
     ScrBlockdef* blockdef;
     size_t blockdef_input;
 } EditorHoverInfo;
@@ -245,6 +246,11 @@ bool handle_settings_apply_button_click(void);
 bool handle_about_license_button_click(void);
 bool handle_dropdown_close(void);
 bool handle_file_menu_click(void);
+bool handle_editor_close_button(void);
+bool handle_editor_edit_button(void);
+bool handle_editor_add_arg_button(void);
+bool handle_editor_add_text_button(void);
+bool handle_editor_del_arg_button(void);
 
 // util.c
 ScrVec as_scr_vec(Vector2 vec);
