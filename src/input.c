@@ -192,6 +192,14 @@ bool handle_file_menu_click(void) {
     return handle_dropdown_close();
 }
 
+bool handle_block_dropdown_click(void) {
+    argument_set_const_string(hover_info.select_argument, hover_info.dropdown.list[hover_info.dropdown.select_ind]);
+    hover_info.select_block = NULL;
+    hover_info.select_input = NULL;
+    hover_info.select_argument = NULL;
+    return handle_dropdown_close();
+}
+
 bool handle_file_button_click(void) {
     if (vm.is_running) return true;
     show_dropdown((void*)LOCATION_FILE_MENU, file_menu_list, ARRLEN(file_menu_list), handle_file_menu_click);
@@ -531,17 +539,14 @@ bool handle_mouse_click(void) {
     }
 
     if (mouse_empty) {
-        if (hover_info.dropdown_hover_ind != -1) {
-            ScrInput block_input = hover_info.select_block->blockdef->inputs[hover_info.select_argument->input_id];
-            assert(block_input.type == INPUT_DROPDOWN);
-            
-            size_t list_len = 0;
-            char** list = block_input.data.drop.list(hover_info.select_block, &list_len);
-            assert((size_t)hover_info.dropdown_hover_ind < list_len);
-
-            argument_set_const_string(hover_info.select_argument, list[hover_info.dropdown_hover_ind]);
-            hover_info.select_argument->ms.size = as_scr_vec(MeasureTextEx(font_cond, list[hover_info.dropdown_hover_ind], BLOCK_TEXT_SIZE, 0.0));
-            update_measurements(hover_info.select_block, PLACEMENT_HORIZONTAL);
+        if (hover_info.block && hover_info.argument) {
+            ScrInput block_input = hover_info.block->blockdef->inputs[hover_info.argument->input_id];
+            if (block_input.type == INPUT_DROPDOWN) {
+                size_t list_len = 0;
+                char** list = block_input.data.drop.list(hover_info.block, &list_len);
+                
+                show_dropdown((void*)LOCATION_BLOCK_DROPDOWN, list, list_len, handle_block_dropdown_click);
+            }
         }
 
         if (hover_info.block != hover_info.select_block) hover_info.select_block = hover_info.block;

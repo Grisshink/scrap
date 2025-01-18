@@ -30,6 +30,7 @@
 #define CONVERT_COLOR(color, type) (type) { color.r, color.g, color.b, color.a }
 
 FlexElement* file_button;
+FlexElement* select_dropdown_el;
 
 void sidebar_init(void) {
     sidebar.blocks = vector_create();
@@ -288,6 +289,7 @@ void argument_on_hover(FlexElement* el) {
     el->data.border.width = BLOCK_OUTLINE_SIZE;
     el->data.border.type = BORDER_NORMAL;
     hover_info.argument = el->custom_data;
+    hover_info.input = &hover_info.argument->data.text;
     hover_info.blockchain = hover_info.prev_blockchain;
 }
 
@@ -376,6 +378,10 @@ void scrap_gui_draw_block(ScrBlock* block) {
                 gui_set_padding(gui, BLOCK_STRING_PADDING / 2, 0);
                 gui_set_align(gui, ALIGN_CENTER);
                 gui_set_rect(gui, CONVERT_COLOR(dropdown_color, GuiColor));
+                gui_set_custom_data(gui, arg);
+                gui_on_hover(gui, argument_on_hover);
+
+                if (hover_info.select_argument == arg) select_dropdown_el = gui_get_element(gui);
 
                 gui_text(gui, &font_cond_shadow, arg->data.text, BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
                 gui_image(gui, &drop_tex, BLOCK_IMAGE_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
@@ -659,9 +665,7 @@ void dropdown_on_hover(FlexElement* el) {
     // Double cast to avoid warning. In our case this operation is safe because el->custom_data currently stores a value of type int
     hover_info.dropdown.select_ind = (int)(size_t)el->custom_data;
 
-    if (hover_info.dropdown.location == (void*)LOCATION_FILE_MENU) {
-        hover_info.top_bars.handler = handle_file_menu_click;
-    }
+    hover_info.top_bars.handler = hover_info.dropdown.handler;
 }
 
 void scrap_gui_draw_dropdown(void) {
@@ -674,7 +678,12 @@ void scrap_gui_draw_dropdown(void) {
         gui_set_padding(gui, 2, 2);
 
         if (hover_info.dropdown.location == (void*)LOCATION_FILE_MENU) {
-            gui_set_position(gui, file_button->x, file_button->y + file_button->h);
+            gui_set_anchor(gui, file_button);
+            gui_set_position(gui, 0, file_button->h);
+        } else if (hover_info.dropdown.location == (void*)LOCATION_BLOCK_DROPDOWN) {
+            gui_set_anchor(gui, select_dropdown_el);
+            gui_set_position(gui, 0, select_dropdown_el->h);
+            gui_set_min_size(gui, select_dropdown_el->w, 0);
         }
 
         for (int i = 0; i < hover_info.dropdown.list_len; i++) {

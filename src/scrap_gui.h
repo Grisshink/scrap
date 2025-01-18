@@ -113,6 +113,7 @@ typedef void (*HoverHandler)(FlexElement* el);
 struct FlexElement {
     int x, y;
     unsigned short w, h;
+    int abs_x, abs_y;
     int cursor_x, cursor_y;
     unsigned short pad_w, pad_h;
     unsigned short gap;
@@ -142,6 +143,7 @@ struct FlexElement {
     void* shader;
     unsigned short state_len;
     unsigned short element_count;
+    struct FlexElement* parent_anchor;
     struct FlexElement* next;
 };
 
@@ -207,6 +209,7 @@ void gui_set_custom_data(Gui* gui, void* custom_data);
 void gui_set_floating(Gui* gui);
 void gui_set_scissor(Gui* gui);
 void gui_set_position(Gui* gui, int x, int y);
+void gui_set_anchor(Gui* gui, FlexElement* anchor);
 void gui_set_scroll(Gui* gui, int* scroll_value);
 void gui_set_scroll_scaling(Gui* gui, int scroll_scaling);
 void gui_set_shader(Gui* gui, void* shader);

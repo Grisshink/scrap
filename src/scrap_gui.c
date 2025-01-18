@@ -137,6 +137,11 @@ static void gui_render(Gui* gui, FlexElement* el, float pos_x, float pos_y) {
     GuiBounds scissor = gui->scissor_stack_len > 0 ? gui->scissor_stack[gui->scissor_stack_len - 1] : (GuiBounds) { 0, 0, gui->win_w, gui->win_h };
     bool hover = false;
 
+    if (el->parent_anchor && el->parent_anchor < el) {
+        pos_x = el->parent_anchor->abs_x;
+        pos_y = el->parent_anchor->abs_y;
+    }
+
     if (el->handle_hover && mouse_inside(gui, scissor_rect((GuiBounds) { 
         el->x * el->scaling + pos_x, 
         el->y * el->scaling + pos_y, 
@@ -166,6 +171,9 @@ static void gui_render(Gui* gui, FlexElement* el, float pos_x, float pos_y) {
     }
 
     if (el->shader) new_draw_command(gui, el_bounds, DRAWTYPE_SHADER_END, (DrawData) { .shader = el->shader }, (GuiColor) {0});
+
+    el->abs_x = el_bounds.x;
+    el->abs_y = el_bounds.y;
     
     FlexElement* iter = el + 1;
     for (int i = 0; i < el->element_count; i++) {
@@ -217,6 +225,8 @@ FlexElement* gui_element_begin(Gui* gui) {
     el->draw_type = DRAWTYPE_UNKNOWN;
     el->x = prev ? prev->cursor_x : 0;
     el->y = prev ? prev->cursor_y : 0;
+    el->abs_x = 0;
+    el->abs_y = 0;
     el->scaling = prev ? prev->scaling : 1.0;
     el->element_count = 0;
     el->cursor_x = 0;
@@ -229,6 +239,7 @@ FlexElement* gui_element_begin(Gui* gui) {
     el->h = 0;
     el->flags = 0; // direction = DIRECTION_VERTICAL, align = ALIGN_TOP | ALIGN_LEFT, is_floating = false
     el->next = NULL;
+    el->parent_anchor = NULL;
     el->handle_hover = NULL;
     el->custom_data = NULL;
     el->custom_state = NULL;
@@ -383,6 +394,11 @@ FlexElement* gui_get_element(Gui* gui) {
 void gui_on_hover(Gui* gui, HoverHandler handler) {
     FlexElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
     el->handle_hover = handler;
+}
+
+void gui_set_anchor(Gui* gui, FlexElement* anchor) {
+    FlexElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
+    el->parent_anchor = anchor;
 }
 
 void gui_set_shader(Gui* gui, void* shader) {

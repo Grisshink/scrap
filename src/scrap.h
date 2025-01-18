@@ -51,6 +51,7 @@ typedef enum {
 
 typedef enum {
     LOCATION_FILE_MENU = 1,
+    LOCATION_BLOCK_DROPDOWN,
 } DropdownLocations;
 
 typedef struct {
