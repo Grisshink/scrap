@@ -138,7 +138,7 @@ void deselect_all(void) {
     dropdown.scroll_amount = 0;
 }
 
-void show_dropdown(void* location, char** list, int list_len, ButtonClickHandler handler) {
+void show_dropdown(DropdownLocations location, char** list, int list_len, ButtonClickHandler handler) {
     hover_info.dropdown.location = location;
     hover_info.dropdown.list = list;
     hover_info.dropdown.list_len = list_len;
@@ -147,7 +147,7 @@ void show_dropdown(void* location, char** list, int list_len, ButtonClickHandler
 }
 
 bool handle_dropdown_close(void) {
-    hover_info.dropdown.location = NULL;
+    hover_info.dropdown.location = LOCATION_NONE;
     hover_info.dropdown.list = NULL;
     hover_info.dropdown.list_len = 0;
     hover_info.dropdown.handler = NULL;
@@ -202,7 +202,7 @@ bool handle_block_dropdown_click(void) {
 
 bool handle_file_button_click(void) {
     if (vm.is_running) return true;
-    show_dropdown((void*)LOCATION_FILE_MENU, file_menu_list, ARRLEN(file_menu_list), handle_file_menu_click);
+    show_dropdown(LOCATION_FILE_MENU, file_menu_list, ARRLEN(file_menu_list), handle_file_menu_click);
     return true;
 }
 
@@ -545,7 +545,7 @@ bool handle_mouse_click(void) {
                 size_t list_len = 0;
                 char** list = block_input.data.drop.list(hover_info.block, &list_len);
                 
-                show_dropdown((void*)LOCATION_BLOCK_DROPDOWN, list, list_len, handle_block_dropdown_click);
+                show_dropdown(LOCATION_BLOCK_DROPDOWN, list, list_len, handle_block_dropdown_click);
             }
         }
 

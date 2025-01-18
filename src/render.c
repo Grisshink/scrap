@@ -29,9 +29,6 @@
 #define UNLERP(min, max, v) (((float)(v) - (float)(min)) / ((float)(max) - (float)(min)))
 #define CONVERT_COLOR(color, type) (type) { color.r, color.g, color.b, color.a }
 
-FlexElement* file_button;
-FlexElement* select_dropdown_el;
-
 void sidebar_init(void) {
     sidebar.blocks = vector_create();
     for (vec_size_t i = 0; i < vector_size(vm.blockdefs); i++) {
@@ -381,7 +378,9 @@ void scrap_gui_draw_block(ScrBlock* block) {
                 gui_set_custom_data(gui, arg);
                 gui_on_hover(gui, argument_on_hover);
 
-                if (hover_info.select_argument == arg) select_dropdown_el = gui_get_element(gui);
+                if (hover_info.select_argument == arg && hover_info.dropdown.location == LOCATION_BLOCK_DROPDOWN) {
+                    hover_info.dropdown.element = gui_get_element(gui);
+                }
 
                 gui_text(gui, &font_cond_shadow, arg->data.text, BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
                 gui_image(gui, &drop_tex, BLOCK_IMAGE_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
@@ -465,7 +464,8 @@ void scrap_gui_draw_top_bar(void) {
         gui_text(gui, &font_eb, "Scrap", conf.font_size * 0.8, CONVERT_COLOR(WHITE, GuiColor));
         gui_spacer(gui, 10, 0);
 
-        file_button = scrap_gui_draw_button("File", top_bar_size, false, handle_file_button_click);
+        FlexElement* el = scrap_gui_draw_button("File", top_bar_size, false, handle_file_button_click);
+        if (hover_info.dropdown.location == LOCATION_FILE_MENU) hover_info.dropdown.element = el;
         scrap_gui_draw_button("Settings", top_bar_size, false, handle_settings_button_click);
         scrap_gui_draw_button("About", top_bar_size, false, handle_about_button_click);
     gui_element_end(gui);
@@ -669,22 +669,16 @@ void dropdown_on_hover(FlexElement* el) {
 }
 
 void scrap_gui_draw_dropdown(void) {
-    if (!hover_info.dropdown.handler) return;
+    if (!hover_info.dropdown.location) return;
     hover_info.top_bars.handler = handle_dropdown_close;
     gui_element_begin(gui);
         gui_set_floating(gui);
         gui_set_rect(gui, (GuiColor) { 0x40, 0x40, 0x40, 0xff });
         gui_set_gap(gui, 2);
         gui_set_padding(gui, 2, 2);
-
-        if (hover_info.dropdown.location == (void*)LOCATION_FILE_MENU) {
-            gui_set_anchor(gui, file_button);
-            gui_set_position(gui, 0, file_button->h);
-        } else if (hover_info.dropdown.location == (void*)LOCATION_BLOCK_DROPDOWN) {
-            gui_set_anchor(gui, select_dropdown_el);
-            gui_set_position(gui, 0, select_dropdown_el->h);
-            gui_set_min_size(gui, select_dropdown_el->w, 0);
-        }
+        gui_set_anchor(gui, hover_info.dropdown.element);
+        gui_set_position(gui, 0, hover_info.dropdown.element->h);
+        gui_set_min_size(gui, hover_info.dropdown.element->w, 0);
 
         for (int i = 0; i < hover_info.dropdown.list_len; i++) {
             gui_element_begin(gui);

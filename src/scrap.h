@@ -50,7 +50,8 @@ typedef enum {
 } EditorHoverPart;
 
 typedef enum {
-    LOCATION_FILE_MENU = 1,
+    LOCATION_NONE = 0,
+    LOCATION_FILE_MENU,
     LOCATION_BLOCK_DROPDOWN,
 } DropdownLocations;
 
@@ -63,7 +64,8 @@ typedef struct {
 } EditorHoverInfo;
 
 typedef struct {
-    void* location;
+    DropdownLocations location;
+    FlexElement* element;
     ButtonClickHandler handler;
     char** list;
     int list_len;
