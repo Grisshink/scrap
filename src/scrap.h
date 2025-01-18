@@ -70,6 +70,7 @@ typedef struct {
     char** list;
     int list_len;
     int select_ind;
+    int scroll_amount;
 } DropdownHoverInfo;
 
 typedef struct {

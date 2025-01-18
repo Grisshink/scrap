@@ -144,6 +144,7 @@ void show_dropdown(DropdownLocations location, char** list, int list_len, Button
     hover_info.dropdown.list_len = list_len;
     hover_info.dropdown.handler = handler;
     hover_info.dropdown.select_ind = 0;
+    hover_info.dropdown.scroll_amount = 0;
 }
 
 bool handle_dropdown_close(void) {
@@ -152,6 +153,7 @@ bool handle_dropdown_close(void) {
     hover_info.dropdown.list_len = 0;
     hover_info.dropdown.handler = NULL;
     hover_info.dropdown.select_ind = 0;
+    hover_info.dropdown.scroll_amount = 0;
     hover_info.select_block = NULL;
     hover_info.select_input = NULL;
     hover_info.select_argument = NULL;

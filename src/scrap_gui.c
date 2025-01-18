@@ -142,13 +142,13 @@ static void gui_render(Gui* gui, FlexElement* el, float pos_x, float pos_y) {
         pos_y = el->parent_anchor->abs_y;
     }
 
-    if (el->handle_hover && mouse_inside(gui, scissor_rect((GuiBounds) { 
+    if (mouse_inside(gui, scissor_rect((GuiBounds) { 
         el->x * el->scaling + pos_x, 
         el->y * el->scaling + pos_y, 
         el->w * el->scaling, 
         el->h * el->scaling }, scissor))) 
     {
-        el->handle_hover(el);
+        if (el->handle_hover) el->handle_hover(el);
         hover = true;
     }
 

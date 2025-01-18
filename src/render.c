@@ -669,6 +669,8 @@ void dropdown_on_hover(FlexElement* el) {
 }
 
 void scrap_gui_draw_dropdown(void) {
+    const int max_list_size = 10;
+
     if (!hover_info.dropdown.location) return;
     hover_info.top_bars.handler = handle_dropdown_close;
     gui_element_begin(gui);
@@ -678,7 +680,14 @@ void scrap_gui_draw_dropdown(void) {
         gui_set_padding(gui, 2, 2);
         gui_set_anchor(gui, hover_info.dropdown.element);
         gui_set_position(gui, 0, hover_info.dropdown.element->h);
-        gui_set_min_size(gui, hover_info.dropdown.element->w, 0);
+        if (hover_info.dropdown.list_len > max_list_size) {
+            gui_set_scissor(gui);
+            gui_set_fixed(gui, hover_info.dropdown.element->w + 5, max_list_size * (conf.font_size + 2) + 4);
+            gui_set_scroll(gui, &hover_info.dropdown.scroll_amount);
+            gui_set_scroll_scaling(gui, (conf.font_size + 2) * 2);
+        } else {
+            gui_set_min_size(gui, hover_info.dropdown.element->w, 0);
+        }
 
         for (int i = 0; i < hover_info.dropdown.list_len; i++) {
             gui_element_begin(gui);
