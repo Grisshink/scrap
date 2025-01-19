@@ -74,6 +74,8 @@ void term_scroll_down(void) {
 
 int term_print_str(const char* str) {
     int len = 0;
+    if (!term.buffer) return len;
+
     pthread_mutex_lock(&term.lock);
     while (*str) {
         if (term.cursor_pos >= term.char_w * term.char_h) {
