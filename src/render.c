@@ -485,11 +485,20 @@ void scrap_gui_draw_tab_bar(void) {
         
         gui_element_begin(gui);
             gui_on_hover(gui, button_on_hover);
+            gui_set_custom_data(gui, handle_stop_button_click);
+
             gui_image(gui, &stop_tex, tab_bar_size, CONVERT_COLOR(WHITE, GuiColor));
         gui_element_end(gui);
         gui_element_begin(gui);
             gui_on_hover(gui, button_on_hover);
-            gui_image(gui, &run_tex, tab_bar_size, CONVERT_COLOR(WHITE, GuiColor));
+            gui_set_custom_data(gui, handle_run_button_click);
+
+            if (vm.is_running) {
+                gui_set_rect(gui, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+                gui_image(gui, &run_tex, tab_bar_size, (GuiColor) { 0x00, 0x00, 0x00, 0xff });
+            } else {
+                gui_image(gui, &run_tex, tab_bar_size, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+            }
         gui_element_end(gui);
     gui_element_end(gui);
 }
