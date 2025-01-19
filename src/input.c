@@ -651,17 +651,12 @@ void handle_key_press(void) {
 
 void handle_mouse_wheel(void) {
     if (current_tab != TAB_CODE) return;
+    if (hover_info.sidebar) return;
+    if (hover_info.select_argument) return;
 
     Vector2 wheel = GetMouseWheelMoveV();
-
-    dropdown.scroll_amount = MAX(dropdown.scroll_amount - wheel.y, 0);
-    if (hover_info.sidebar) {
-        sidebar.scroll_amount = MAX(sidebar.scroll_amount - wheel.y * (conf.font_size + SIDE_BAR_PADDING) * 6, 0);
-    } else {
-        if (hover_info.select_argument) return;
-        camera_pos.x -= wheel.x * conf.font_size * 2;
-        camera_pos.y -= wheel.y * conf.font_size * 2;
-    }
+    camera_pos.x -= wheel.x * conf.font_size * 2;
+    camera_pos.y -= wheel.y * conf.font_size * 2;
 }
 
 void handle_mouse_drag(void) {
@@ -710,6 +705,10 @@ void scrap_gui_process_input(void) {
     ui_time = end_timer(t);
 #endif
 
+    if (GetMouseWheelMove() != 0.0) {
+        handle_mouse_wheel();
+    }
+
     if (hover_info.block && hover_info.argument) {
         int ind = hover_info.argument - hover_info.block->arguments;
         if (ind < 0 || ind > (int)vector_size(hover_info.block->arguments)) hover_info.argument = NULL;
@@ -743,25 +742,4 @@ void scrap_gui_process_input(void) {
 
     hover_info.prev_block = hover_info.block;
     hover_info.editor.prev_blockdef = hover_info.editor.blockdef;
-}
-
-void process_input(void) {
-    Vector2 mouse_pos = GetMousePosition();
-    if ((int)hover_info.last_mouse_pos.x == (int)mouse_pos.x && (int)hover_info.last_mouse_pos.y == (int)mouse_pos.y) {
-        hover_info.time_at_last_pos += GetFrameTime();
-    } else {
-        hover_info.last_mouse_pos = mouse_pos;
-        hover_info.time_at_last_pos = 0;
-    }
-
-    if (GetMouseWheelMove() != 0.0) {
-        handle_mouse_wheel();
-    }
-
-
-    if (sidebar.max_y > GetScreenHeight()) {
-        sidebar.scroll_amount = MIN(sidebar.scroll_amount, sidebar.max_y - GetScreenHeight());
-    } else {
-        sidebar.scroll_amount = 0;
-    }
 }
