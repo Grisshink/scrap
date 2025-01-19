@@ -323,7 +323,11 @@ void scrap_gui_draw_block(ScrBlock* block, bool highlight) {
             case ARGUMENT_CONST_STRING:
             case ARGUMENT_TEXT:
                 gui_element_begin(gui);
-                    gui_set_rect(gui, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+                    if (arg->type == ARGUMENT_TEXT) {
+                        gui_set_rect(gui, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+                    } else {
+                        gui_set_rect(gui, CONVERT_COLOR(dropdown_color, GuiColor));
+                    }
 
                     gui_element_begin(gui);
                         gui_set_direction(gui, DIRECTION_HORIZONTAL);
@@ -339,7 +343,11 @@ void scrap_gui_draw_block(ScrBlock* block, bool highlight) {
                             gui_set_align(gui, ALIGN_CENTER);
                             gui_set_grow(gui, DIRECTION_HORIZONTAL);
 
-                            gui_text(gui, &font_cond, arg->data.text, BLOCK_TEXT_SIZE, (GuiColor) { 0x00, 0x00, 0x00, 0xff });
+                            if (arg->type == ARGUMENT_TEXT) {
+                                gui_text(gui, &font_cond, arg->data.text, BLOCK_TEXT_SIZE, (GuiColor) { 0x00, 0x00, 0x00, 0xff });
+                            } else {
+                                gui_text(gui, &font_cond_shadow, arg->data.text, BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+                            }
                         gui_element_end(gui);
                     gui_element_end(gui);
                 gui_element_end(gui);
