@@ -600,7 +600,7 @@ bool load_blockchain(SaveArena* save, ScrBlockChain* chain) {
         if (!pos) return false;   
         pos_x = pos->x;
         pos_y = pos->y;
-    } else if (ver == 2) {
+    } else {
         int* pos = save_read_item(save, sizeof(int));          
         if (!pos) return false;
         pos_x = *pos;
