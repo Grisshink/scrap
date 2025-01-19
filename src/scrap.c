@@ -66,7 +66,6 @@ BlockCode block_code = {0};
 Dropdown dropdown = {0};
 Sidebar sidebar = {0};
 ScrBlockChain* editor_code = {0};
-DrawStack* draw_stack = NULL;
 ScrBlockChain mouse_blockchain = {0};
 Gui* gui = NULL;
 
@@ -118,16 +117,6 @@ char* tab_bar_buttons_text[2] = {
     "Code",
     "Output",
 };
-
-void blockcode_add_blockchain(BlockCode* blockcode, ScrBlockChain chain) {
-    vector_add(&editor_code, chain);
-    blockcode_update_measurments(blockcode);
-}
-
-void blockcode_remove_blockchain(BlockCode* blockcode, size_t ind) {
-    vector_remove(editor_code, ind);
-    blockcode_update_measurments(blockcode);
-}
 
 void sanitize_block(ScrBlock* block) {
     for (vec_size_t i = 0; i < vector_size(block->arguments); i++) {
@@ -212,14 +201,6 @@ GuiMeasurement scrap_gui_measure_text(void* font, const char* text, unsigned sho
     return custom_measure(*(Font*)font, text, size);
 }
 
-GuiColor as_gui_color(Color color) {
-    return (GuiColor) { color.r, color.g, color.b, color.a };
-}
-
-Color as_gui_rl_color(GuiColor color) {
-    return (Color) { color.r, color.g, color.b, color.a };
-}
-
 void setup(void) {
     run_tex = LoadTexture(into_data_path(DATA_PATH "run.png"));
     SetTextureFilter(run_tex, TEXTURE_FILTER_BILINEAR);
@@ -274,7 +255,6 @@ void setup(void) {
     load_blocks(&vm);
 
     mouse_blockchain = blockchain_new();
-    draw_stack = vector_create();
     editor_code = vector_create();
 
     sidebar_init();
@@ -344,7 +324,6 @@ int main(void) {
         exec_free(&exec);
     }
     term_free();
-    vector_free(draw_stack);
     blockchain_free(&mouse_blockchain);
     for (vec_size_t i = 0; i < vector_size(editor_code); i++) {
         blockchain_free(&editor_code[i]);

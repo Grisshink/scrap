@@ -32,11 +32,8 @@
 #define VM_VARIABLE_STACK_SIZE 1024
 #define VM_CHAIN_STACK_SIZE 1024
 
-typedef struct ScrVec ScrVec;
 typedef struct ScrColor ScrColor;
 typedef struct ScrImage ScrImage;
-typedef enum ScrPlacementStrategy ScrPlacementStrategy;
-typedef struct ScrMeasurement ScrMeasurement;
 
 typedef enum ScrArgumentType ScrArgumentType;
 typedef union ScrArgumentData ScrArgumentData;
@@ -45,8 +42,6 @@ typedef struct ScrBlock ScrBlock;
 
 typedef enum ScrInputArgumentConstraint ScrInputArgumentConstraint;
 typedef enum ScrInputDropdownSource ScrInputDropdownSource;
-typedef struct ScrInputStaticText ScrInputStaticText;
-typedef struct ScrInputStaticImage ScrInputStaticImage;
 typedef struct ScrInputArgument ScrInputArgument;
 typedef struct ScrInputDropdown ScrInputDropdown;
 typedef enum ScrInputType ScrInputType;
@@ -73,37 +68,12 @@ typedef struct ScrChainStackData ScrChainStackData;
 typedef char** (*ScrListAccessor)(ScrBlock* block, size_t* list_len);
 typedef ScrData (*ScrBlockFunc)(ScrExec* exec, int argc, ScrData* argv);
 
-struct ScrVec {
-    float x, y;
-};
-
 struct ScrColor {
     unsigned char r, g, b, a;
 };
 
 struct ScrImage {
     void* image_ptr;
-};
-
-enum ScrPlacementStrategy {
-    PLACEMENT_HORIZONTAL = 0,
-    PLACEMENT_VERTICAL,
-};
-
-struct ScrMeasurement {
-    ScrVec size;
-    ScrPlacementStrategy placement;
-};
-
-struct ScrInputStaticText {
-    ScrMeasurement ms;
-    ScrMeasurement editor_ms;
-    char* text;
-};
-
-struct ScrInputStaticImage {
-    ScrMeasurement ms;
-    ScrImage image;
 };
 
 enum ScrInputArgumentConstraint {
@@ -114,7 +84,6 @@ enum ScrInputArgumentConstraint {
 struct ScrInputArgument {
     ScrBlockdef* blockdef;
     ScrInputArgumentConstraint constr;
-    ScrMeasurement ms;
     char* text;
 };
 
@@ -128,8 +97,8 @@ struct ScrInputDropdown {
 };
 
 union ScrInputData {
-    ScrInputStaticText stext;
-    ScrInputStaticImage simage;
+    char* text;
+    ScrImage image;
     ScrInputArgument arg;
     ScrInputDropdown drop;
 };
@@ -164,7 +133,6 @@ struct ScrBlockdef {
     ScrBlockdefType type;
     // TODO: Maybe remove hidden from here
     bool hidden;
-    ScrMeasurement ms;
     ScrInput* inputs;
     ScrBlockFunc func;
 };
@@ -172,7 +140,7 @@ struct ScrBlockdef {
 struct ScrBlock {
     ScrBlockdef* blockdef;
     struct ScrArgument* arguments;
-    ScrMeasurement ms;
+    int width;
     struct ScrBlock* parent;
 };
 
@@ -190,7 +158,6 @@ enum ScrArgumentType {
 };
 
 struct ScrArgument {
-    ScrMeasurement ms;
     int input_id;
     ScrArgumentType type;
     ScrArgumentData data;
@@ -251,8 +218,8 @@ struct ScrData {
 };
 
 struct ScrBlockChain {
-    ScrVec pos;
-    ScrMeasurement ms;
+    int x, y;
+    int width, height;
     ScrBlock* blocks;
     int custom_argc;
     ScrData* custom_argv;
@@ -930,7 +897,7 @@ const char* data_to_str(ScrData arg) {
 ScrBlock block_new(ScrBlockdef* blockdef) {
     ScrBlock block;
     block.blockdef = blockdef;
-    block.ms = (ScrMeasurement) {0};
+    block.width = 0;
     block.arguments = vector_create();
     block.parent = NULL;
     blockdef->ref_count++;
@@ -944,7 +911,6 @@ ScrBlock block_new(ScrBlockdef* blockdef) {
 
         switch (blockdef->inputs[i].type) {
         case INPUT_ARGUMENT:
-            arg->ms = blockdef->inputs[i].data.arg.ms;
             switch (blockdef->inputs[i].data.arg.constr) {
             case BLOCKCONSTR_UNLIMITED:
                 arg->type = ARGUMENT_TEXT;
@@ -965,7 +931,6 @@ ScrBlock block_new(ScrBlockdef* blockdef) {
             break;
         case INPUT_DROPDOWN:
             arg->type = ARGUMENT_CONST_STRING;
-            arg->ms = (ScrMeasurement) {0};
 
             size_t list_len = 0;
             char** list = blockdef->inputs[i].data.drop.list(&block, &list_len);
@@ -979,7 +944,6 @@ ScrBlock block_new(ScrBlockdef* blockdef) {
             break;
         case INPUT_BLOCKDEF_EDITOR:
             arg->type = ARGUMENT_BLOCKDEF;
-            arg->ms = (ScrMeasurement) {0};
             arg->data.blockdef = blockdef_new("custom", BLOCKTYPE_NORMAL, blockdef->color, NULL);
             arg->data.blockdef->ref_count++;
             blockdef_add_text(arg->data.blockdef, "My block");
@@ -997,14 +961,13 @@ ScrBlock block_copy(ScrBlock* block, ScrBlock* parent) {
 
     ScrBlock new;
     new.blockdef = block->blockdef;
-    new.ms = block->ms;
+    new.width = block->width;
     new.parent = parent;
     new.arguments = vector_create();
     new.blockdef->ref_count++;
 
     for (size_t i = 0; i < vector_size(block->arguments); i++) {
         ScrArgument* arg = vector_add_dst((ScrArgument**)&new.arguments);
-        arg->ms = block->arguments[i].ms;
         arg->type = block->arguments[i].type;
         arg->input_id = block->arguments[i].input_id;
         switch (block->arguments[i].type) {
@@ -1073,9 +1036,11 @@ void block_update_parent_links(ScrBlock* block) {
 
 ScrBlockChain blockchain_new(void) {
     ScrBlockChain chain;
-    chain.pos = (ScrVec) {0};
+    chain.x = 0;
+    chain.y = 0;
     chain.blocks = vector_create();
-    chain.ms = (ScrMeasurement) {0};
+    chain.width = 0;
+    chain.height = 0;
 
     return chain;
 }
@@ -1084,7 +1049,8 @@ ScrBlockChain blockchain_copy_single(ScrBlockChain* chain, size_t pos) {
     assert(pos < vector_size(chain->blocks) || pos == 0);
 
     ScrBlockChain new;
-    new.pos = chain->pos;
+    new.x = chain->x;
+    new.y = chain->y;
     new.blocks = vector_create();
 
     ScrBlockdefType block_type = chain->blocks[pos].blockdef->type;
@@ -1114,7 +1080,8 @@ ScrBlockChain blockchain_copy(ScrBlockChain* chain, size_t pos) {
     assert(pos < vector_size(chain->blocks) || pos == 0);
 
     ScrBlockChain new;
-    new.pos = chain->pos;
+    new.x = chain->x;
+    new.y = chain->y;
     new.blocks = vector_create();
 
     int pos_layer = 0;
@@ -1287,7 +1254,6 @@ ScrBlockdef* blockdef_new(const char* id, ScrBlockdefType type, ScrColor color, 
     blockdef->id = strcpy(malloc((strlen(id) + 1) * sizeof(char)), id);
     blockdef->color = color;
     blockdef->type = type;
-    blockdef->ms = (ScrMeasurement) {0};
     blockdef->hidden = false;
     blockdef->ref_count = 0;
     blockdef->inputs = vector_create();
@@ -1303,7 +1269,6 @@ ScrBlockdef* blockdef_copy(ScrBlockdef* blockdef) {
     new->id = strcpy(malloc((strlen(blockdef->id) + 1) * sizeof(char)), blockdef->id);
     new->color = blockdef->color;
     new->type = blockdef->type;
-    new->ms = blockdef->ms;
     new->hidden = blockdef->hidden;
     new->ref_count = blockdef->ref_count;
     new->inputs = vector_create();
@@ -1315,10 +1280,7 @@ ScrBlockdef* blockdef_copy(ScrBlockdef* blockdef) {
         switch (blockdef->inputs[i].type) {
         case INPUT_TEXT_DISPLAY:
             input->data = (ScrInputData) {
-                .stext = {
-                    .text = vector_copy(blockdef->inputs[i].data.stext.text),
-                    .ms = blockdef->inputs[i].data.stext.ms,
-                },
+                .text = vector_copy(blockdef->inputs[i].data.text),
             };
             break;
         case INPUT_ARGUMENT:
@@ -1327,16 +1289,12 @@ ScrBlockdef* blockdef_copy(ScrBlockdef* blockdef) {
                     .blockdef = blockdef_copy(blockdef->inputs[i].data.arg.blockdef),
                     .text = blockdef->inputs[i].data.arg.text,
                     .constr = blockdef->inputs[i].data.arg.constr,
-                    .ms = blockdef->inputs[i].data.arg.ms,
                 },
             };
             break;
         case INPUT_IMAGE_DISPLAY:
             input->data = (ScrInputData) {
-                .simage = {
-                    .image = blockdef->inputs[i].data.simage.image,
-                    .ms = blockdef->inputs[i].data.simage.ms,
-                }
+                .image = blockdef->inputs[i].data.image,
             };
             break;
         case INPUT_DROPDOWN:
@@ -1374,29 +1332,23 @@ size_t blockdef_register(ScrVm* vm, ScrBlockdef* blockdef) {
 
 void blockdef_add_text(ScrBlockdef* blockdef, char* text) {
     ScrInput* input = vector_add_dst(&blockdef->inputs);
-    ScrMeasurement ms = (ScrMeasurement) {0};
     input->type = INPUT_TEXT_DISPLAY;
     input->data = (ScrInputData) {
-        .stext = {
-            .text = vector_create(),
-            .ms = ms,
-        },
+        .text = vector_create(),
     };
 
-    for (char* str = text; *str; str++) vector_add(&input->data.stext.text, *str);
-    vector_add(&input->data.stext.text, 0);
+    for (char* str = text; *str; str++) vector_add(&input->data.text, *str);
+    vector_add(&input->data.text, 0);
 }
 
 void blockdef_add_argument(ScrBlockdef* blockdef, char* defualt_data, ScrInputArgumentConstraint constraint) {
     ScrInput* input = vector_add_dst(&blockdef->inputs);
-    ScrMeasurement ms = (ScrMeasurement) {0};
     input->type = INPUT_ARGUMENT;
     input->data = (ScrInputData) {
         .arg = {
             .blockdef = blockdef_new("custom_arg", BLOCKTYPE_NORMAL, blockdef->color, NULL),
             .text = defualt_data,
             .constr = constraint,
-            .ms = ms,
         },
     };
     input->data.arg.blockdef->ref_count++;
@@ -1421,13 +1373,9 @@ void blockdef_add_dropdown(ScrBlockdef* blockdef, ScrInputDropdownSource dropdow
 
 void blockdef_add_image(ScrBlockdef* blockdef, ScrImage image) {
     ScrInput* input = vector_add_dst(&blockdef->inputs);
-    ScrMeasurement ms = (ScrMeasurement) {0};
     input->type = INPUT_IMAGE_DISPLAY;
     input->data = (ScrInputData) {
-        .simage = {
-            .image = image,
-            .ms = ms,
-        }
+        .image = image,
     };
 }
 
@@ -1441,7 +1389,7 @@ void blockdef_delete_input(ScrBlockdef* blockdef, size_t input) {
 
     switch (blockdef->inputs[input].type) {
     case INPUT_TEXT_DISPLAY:
-        vector_free(blockdef->inputs[input].data.stext.text);
+        vector_free(blockdef->inputs[input].data.text);
         break;
     case INPUT_ARGUMENT:
         blockdef_free(blockdef->inputs[input].data.arg.blockdef);
@@ -1459,7 +1407,7 @@ void blockdef_free(ScrBlockdef* blockdef) {
     for (vec_size_t i = 0; i < vector_size(blockdef->inputs); i++) {
         switch (blockdef->inputs[i].type) {
         case INPUT_TEXT_DISPLAY:
-            vector_free(blockdef->inputs[i].data.stext.text);
+            vector_free(blockdef->inputs[i].data.text);
             break;
         case INPUT_ARGUMENT:
             blockdef_free(blockdef->inputs[i].data.arg.blockdef);

@@ -22,7 +22,7 @@ else
 	CFLAGS += -fmax-errors=5
 endif
 
-OBJFILES := $(addprefix src/,filedialogs.o render.o save.o term.o blocks.o scrap.o vec.o util.o input.o measure.o scrap_gui.o window.o)
+OBJFILES := $(addprefix src/,filedialogs.o render.o save.o term.o blocks.o scrap.o vec.o util.o input.o scrap_gui.o window.o)
 SCRAP_HEADERS := src/scrap.h src/vm.h src/config.h src/scrap_gui.h
 EXE_NAME := scrap
 
@@ -93,8 +93,6 @@ src/vec.o: src/vec.c
 src/util.o: src/util.c $(SCRAP_HEADERS)
 	$(CC) $(CFLAGS) -c -o $@ $<
 src/input.o: src/input.c $(SCRAP_HEADERS)
-	$(CC) $(CFLAGS) -c -o $@ $<
-src/measure.o: src/measure.c $(SCRAP_HEADERS)
 	$(CC) $(CFLAGS) -c -o $@ $<
 src/filedialogs.o: external/tinyfiledialogs.c
 	$(CC) $(CFLAGS) -c -o $@ $<

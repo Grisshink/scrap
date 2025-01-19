@@ -87,26 +87,20 @@ typedef struct {
 
     ScrBlockChain* prev_blockchain;
     ScrBlockChain* blockchain;
-    int blockchain_layer;
 
     ScrBlock* prev_block;
     ScrBlock* block;
     ScrArgument* argument;
-    Vector2 argument_pos;
     ScrArgument* prev_argument;
 
     ScrBlock* select_block;
     ScrArgument* select_argument;
-    Vector2 select_argument_pos;
 
     char** input;
     char** select_input;
 
-    Vector2 last_mouse_pos;
     Vector2 mouse_click_pos;
     float time_at_last_pos;
-
-    int dropdown_hover_ind;
 
     ScrBlockChain* exec_chain;
     size_t exec_ind;
@@ -126,7 +120,6 @@ typedef enum {
 } TabType;
 
 typedef struct {
-    ScrMeasurement ms;
     int scroll_amount;
 } Dropdown;
 
@@ -142,7 +135,6 @@ typedef struct {
 
 typedef struct {
     int scroll_amount;
-    int max_y;
     ScrBlock* blocks;
 } Sidebar;
 
@@ -151,11 +143,6 @@ typedef enum {
     GUI_TYPE_ABOUT,
     GUI_TYPE_FILE,
 } WindowGuiType;
-
-typedef struct {
-    ScrVec pos;
-    ScrBlock* block;
-} DrawStack;
 
 typedef struct {
     struct timespec start;
@@ -197,7 +184,6 @@ extern BlockCode block_code;
 extern Dropdown dropdown;
 extern Sidebar sidebar;
 extern ScrBlockChain* editor_code;
-extern DrawStack* draw_stack;
 extern ScrBlockChain mouse_blockchain;
 extern ScrExec exec;
 extern Gui* gui;
@@ -222,8 +208,6 @@ extern const int codepoint_regions[CODEPOINT_REGION_COUNT][2];
 extern int codepoint_start_ranges[CODEPOINT_REGION_COUNT];
 
 // scrap.c
-void blockcode_add_blockchain(BlockCode* blockcode, ScrBlockChain chain);
-void blockcode_remove_blockchain(BlockCode* blockcode, size_t ind);
 void sanitize_links(void);
 GuiMeasurement custom_measure(Font font, const char *text, float font_size);
 
@@ -258,19 +242,11 @@ bool handle_editor_add_text_button(void);
 bool handle_editor_del_arg_button(void);
 
 // util.c
-ScrVec as_scr_vec(Vector2 vec);
-Vector2 as_rl_vec(ScrVec vec);
-Color as_rl_color(ScrColor color);
 int leading_ones(unsigned char byte);
 const char* into_data_path(const char* path);
 ScrBlock block_new_ms(ScrBlockdef* blockdef);
 Timer start_timer(const char* name);
 double end_timer(Timer timer);
-
-// measure.c
-void blockdef_update_measurements(ScrBlockdef* blockdef, bool editing);
-void update_measurements(ScrBlock* block, ScrPlacementStrategy placement);
-void blockcode_update_measurments(BlockCode* blockcode);
 
 // save.c
 void set_default_config(Config* config);

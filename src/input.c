@@ -49,7 +49,6 @@ void block_delete_blockdef(ScrBlock* block, ScrBlockdef* blockdef) {
         }
         block_delete_blockdef(&block->arguments[i].data.block, blockdef);
     }
-    update_measurements(block, PLACEMENT_HORIZONTAL);
 }
 
 void blockchain_delete_blockdef(ScrBlockChain* chain, ScrBlockdef* blockdef) {
@@ -72,7 +71,7 @@ void editor_code_remove_blockdef(ScrBlockdef* blockdef) {
         blockchain_delete_blockdef(&editor_code[i], blockdef);
         if (vector_size(editor_code[i].blocks) == 0) {
             blockchain_free(&editor_code[i]);
-            blockcode_remove_blockchain(&block_code, i);
+            vector_remove(editor_code, i);
             i--;
         }
     }
@@ -133,8 +132,6 @@ bool stop_vm(void) {
 void deselect_all(void) {
     hover_info.select_argument = NULL;
     hover_info.select_input = NULL;
-    hover_info.select_argument_pos.x = 0;
-    hover_info.select_argument_pos.y = 0;
     dropdown.scroll_amount = 0;
 }
 
@@ -201,8 +198,8 @@ bool handle_file_menu_click(void) {
         editor_code = chain;
 
         blockchain_select_counter = 0;
-        camera_pos.x = editor_code[blockchain_select_counter].pos.x - ((GetScreenWidth() - conf.side_bar_size) / 2 + conf.side_bar_size);
-        camera_pos.y = editor_code[blockchain_select_counter].pos.y - ((GetScreenHeight() - conf.font_size * 2.2) / 2 + conf.font_size * 2.2);
+        camera_pos.x = editor_code[blockchain_select_counter].x - ((GetScreenWidth() - conf.side_bar_size) / 2 + conf.side_bar_size);
+        camera_pos.y = editor_code[blockchain_select_counter].y - ((GetScreenHeight() - conf.font_size * 2.2) / 2 + conf.font_size * 2.2);
 
         base_path = basename(path);
         for (i = 0; base_path[i]; i++) project_name[i] = base_path[i]; 
@@ -431,7 +428,8 @@ bool handle_blockdef_editor_click(void) {
 
 bool handle_code_editor_click(bool mouse_empty) {
     if (!mouse_empty) {
-        mouse_blockchain.pos = as_scr_vec(GetMousePosition());
+        mouse_blockchain.x = GetMouseX();
+        mouse_blockchain.y = GetMouseY();
         if (hover_info.argument || hover_info.prev_argument) {
             if (vector_size(mouse_blockchain.blocks) > 1) return true;
             if (mouse_blockchain.blocks[0].blockdef->type == BLOCKTYPE_CONTROLEND) return true;
@@ -443,7 +441,6 @@ bool handle_code_editor_click(bool mouse_empty) {
                 if (hover_info.argument->type != ARGUMENT_TEXT) return true;
                 mouse_blockchain.blocks[0].parent = hover_info.block;
                 argument_set_block(hover_info.argument, mouse_blockchain.blocks[0]);
-                update_measurements(&hover_info.argument->data.block, PLACEMENT_HORIZONTAL);
                 vector_clear(mouse_blockchain.blocks);
             } else if (hover_info.prev_argument) {
                 // Swap argument
@@ -455,7 +452,6 @@ bool handle_code_editor_click(bool mouse_empty) {
                 mouse_blockchain.blocks[0].parent = NULL;
                 block_update_parent_links(&mouse_blockchain.blocks[0]);
                 argument_set_block(hover_info.prev_argument, temp);
-                update_measurements(temp.parent, PLACEMENT_HORIZONTAL);
             }
         } else if (
             hover_info.block && 
@@ -473,9 +469,9 @@ bool handle_code_editor_click(bool mouse_empty) {
         } else {
             // Put block
             TraceLog(LOG_INFO, "Put block");
-            mouse_blockchain.pos.x += camera_pos.x;
-            mouse_blockchain.pos.y += camera_pos.y;
-            blockcode_add_blockchain(&block_code, mouse_blockchain);
+            mouse_blockchain.x += camera_pos.x;
+            mouse_blockchain.y += camera_pos.y;
+            vector_add(&editor_code, mouse_blockchain);
             mouse_blockchain = blockchain_new();
         }
         return true;
@@ -493,10 +489,7 @@ bool handle_code_editor_click(bool mouse_empty) {
                 blockchain_add_block(&mouse_blockchain, *hover_info.block);
                 mouse_blockchain.blocks[0].parent = NULL;
 
-                ScrBlock* parent = hover_info.prev_argument->data.block.parent;
                 argument_set_text(hover_info.prev_argument, "");
-                hover_info.prev_argument->ms.size = as_scr_vec(MeasureTextEx(font_cond, "", BLOCK_TEXT_SIZE, 0.0));
-                update_measurements(parent, PLACEMENT_HORIZONTAL);
             }
         } else if (hover_info.blockchain) {
             int ind = hover_info.block - hover_info.blockchain->blocks;
@@ -516,7 +509,6 @@ bool handle_code_editor_click(bool mouse_empty) {
                 }
             } else {
                 hover_info.editor.edit_blockdef = NULL;
-                if (hover_info.editor.edit_block) update_measurements(hover_info.editor.edit_block, PLACEMENT_HORIZONTAL);
                 hover_info.editor.edit_block = NULL;
                 if (IsKeyDown(KEY_LEFT_CONTROL) || IsKeyDown(KEY_RIGHT_CONTROL)) {
                     // Detach block
@@ -524,7 +516,7 @@ bool handle_code_editor_click(bool mouse_empty) {
                     blockchain_detach_single(&mouse_blockchain, hover_info.blockchain, ind);
                     if (vector_size(hover_info.blockchain->blocks) == 0) {
                         blockchain_free(hover_info.blockchain);
-                        blockcode_remove_blockchain(&block_code, hover_info.blockchain - editor_code);
+                        vector_remove(editor_code, hover_info.blockchain - editor_code);
                         hover_info.block = NULL;
                     }
                 } else {
@@ -534,7 +526,7 @@ bool handle_code_editor_click(bool mouse_empty) {
                     blockchain_detach(&mouse_blockchain, hover_info.blockchain, ind);
                     if (ind == 0) {
                         blockchain_free(hover_info.blockchain);
-                        blockcode_remove_blockchain(&block_code, hover_info.blockchain - editor_code);
+                        vector_remove(editor_code, hover_info.blockchain - editor_code);
                         hover_info.block = NULL;
                     }
                 }
@@ -587,7 +579,6 @@ bool handle_mouse_click(void) {
         if (hover_info.input != hover_info.select_input) hover_info.select_input = hover_info.input;
         if (hover_info.argument != hover_info.select_argument) {
             hover_info.select_argument = hover_info.argument;
-            hover_info.select_argument_pos = hover_info.argument_pos;
             dropdown.scroll_amount = 0;
             return true;
         }
@@ -637,8 +628,8 @@ void handle_key_press(void) {
             blockchain_select_counter++;
             if ((vec_size_t)blockchain_select_counter >= vector_size(editor_code)) blockchain_select_counter = 0;
 
-            camera_pos.x = editor_code[blockchain_select_counter].pos.x - ((GetScreenWidth() - conf.side_bar_size) / 2 + conf.side_bar_size);
-            camera_pos.y = editor_code[blockchain_select_counter].pos.y - ((GetScreenHeight() - conf.font_size * 2.2) / 2 + conf.font_size * 2.2);
+            camera_pos.x = editor_code[blockchain_select_counter].x - ((GetScreenWidth() - conf.side_bar_size) / 2 + conf.side_bar_size);
+            camera_pos.y = editor_code[blockchain_select_counter].y - ((GetScreenHeight() - conf.font_size * 2.2) / 2 + conf.font_size * 2.2);
             actionbar_show(TextFormat("Jump to chain (%d/%d)", blockchain_select_counter + 1, vector_size(editor_code)));
             return;
         }
@@ -682,13 +673,9 @@ void scrap_gui_process_input(void) {
     hover_info.block = NULL;
     hover_info.argument = NULL;
     hover_info.input = NULL;
-    hover_info.argument_pos.x = 0;
-    hover_info.argument_pos.y = 0;
     hover_info.prev_argument = NULL;
     hover_info.prev_blockchain = NULL;
     hover_info.blockchain = NULL;
-    hover_info.blockchain_layer = 0;
-    hover_info.dropdown_hover_ind = -1;
     hover_info.editor.part = EDITOR_NONE;
     hover_info.editor.blockdef = NULL;
     hover_info.editor.blockdef_input = -1;
@@ -738,7 +725,8 @@ void scrap_gui_process_input(void) {
     }
 
     gui_update_mouse_pos(gui, GetMouseX(), GetMouseY());
-    mouse_blockchain.pos = as_scr_vec(GetMousePosition());
+    mouse_blockchain.x = GetMouseX();
+    mouse_blockchain.y = GetMouseY();
 
     hover_info.prev_block = hover_info.block;
     hover_info.editor.prev_blockdef = hover_info.editor.blockdef;

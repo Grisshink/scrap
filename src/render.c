@@ -36,11 +36,6 @@ void sidebar_init(void) {
         if (vm.blockdefs[i]->hidden) continue;
         vector_add(&sidebar.blocks, block_new_ms(vm.blockdefs[i]));
     }
-
-    sidebar.max_y = conf.font_size * 2.2 + SIDE_BAR_PADDING;
-    for (vec_size_t i = 0; i < vector_size(sidebar.blocks); i++) {
-        sidebar.max_y += sidebar.blocks[i].ms.size.y + SIDE_BAR_PADDING;
-    }
 }
 
 void actionbar_show(const char* text) {
@@ -215,8 +210,8 @@ void scrap_gui_draw_blockdef(ScrBlockdef* blockdef, bool editing) {
                         gui_set_min_size(gui, conf.font_size - BLOCK_OUTLINE_SIZE * 4, conf.font_size - BLOCK_OUTLINE_SIZE * 4);
                         gui_set_align(gui, ALIGN_CENTER);
                         gui_set_padding(gui, BLOCK_STRING_PADDING / 2, 0);
-                        if (hover_info.select_input == &input->data.stext.text) gui_set_border(gui, (GuiColor) { 0x30, 0x30, 0x30, 0xff }, BLOCK_OUTLINE_SIZE);
-                        gui_set_custom_data(gui, &input->data.stext.text);
+                        if (hover_info.select_input == &input->data.text) gui_set_border(gui, (GuiColor) { 0x30, 0x30, 0x30, 0xff }, BLOCK_OUTLINE_SIZE);
+                        gui_set_custom_data(gui, &input->data.text);
                         gui_on_hover(gui, input_on_hover);
 
                         gui_element_begin(gui);
@@ -224,16 +219,16 @@ void scrap_gui_draw_blockdef(ScrBlockdef* blockdef, bool editing) {
                             gui_set_align(gui, ALIGN_CENTER);
                             gui_set_grow(gui, DIRECTION_HORIZONTAL);
 
-                            gui_text(gui, &font_cond, input->data.stext.text, BLOCK_TEXT_SIZE, (GuiColor) { 0x00, 0x00, 0x00, 0xff });
+                            gui_text(gui, &font_cond, input->data.text, BLOCK_TEXT_SIZE, (GuiColor) { 0x00, 0x00, 0x00, 0xff });
                         gui_element_end(gui);
                     gui_element_end(gui);
                 gui_element_end(gui);
             } else {
-                gui_text(gui, &font_cond_shadow, input->data.stext.text, BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+                gui_text(gui, &font_cond_shadow, input->data.text, BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
             }
             break;
         case INPUT_IMAGE_DISPLAY:
-            gui_image(gui, input->data.simage.image.image_ptr, BLOCK_IMAGE_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+            gui_image(gui, input->data.image.image_ptr, BLOCK_IMAGE_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
             break;
         case INPUT_ARGUMENT:
             scrap_gui_draw_blockdef(input->data.arg.blockdef, editing);
@@ -318,10 +313,10 @@ void scrap_gui_draw_block(ScrBlock* block, bool highlight) {
 
         switch (input->type) {
         case INPUT_TEXT_DISPLAY:
-            gui_text(gui, &font_cond_shadow, input->data.stext.text, BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+            gui_text(gui, &font_cond_shadow, input->data.text, BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
             break;
         case INPUT_IMAGE_DISPLAY:
-            gui_image(gui, input->data.simage.image.image_ptr, BLOCK_IMAGE_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+            gui_image(gui, input->data.image.image_ptr, BLOCK_IMAGE_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
             break;
         case INPUT_ARGUMENT:
             switch (arg->type) {
@@ -539,7 +534,7 @@ void scrap_gui_draw_blockchain(ScrBlockChain* chain) {
             Color outline_color = highlight && block_highlight ? YELLOW : ColorBrightness(block_color, collision ? 0.5 : -0.2);
 
             gui_element_begin(gui);
-                gui_set_min_size(gui, block->ms.size.x, conf.font_size);
+                gui_set_min_size(gui, block->width, conf.font_size);
                 gui_set_rect(gui, CONVERT_COLOR(block_color, GuiColor));
                 gui_on_hover(gui, block_on_hover);
                 gui_set_custom_data(gui, &chain->blocks[i]);
@@ -579,7 +574,7 @@ void scrap_gui_draw_blockchain(ScrBlockChain* chain) {
             layer++;
 
             FlexElement* el = gui_get_element(gui);
-            chain->blocks[i].ms.size.x = el->w;
+            chain->blocks[i].width = el->w;
 
             bool collision = hover_info.prev_block == &chain->blocks[i] || (highlight && block_highlight);
             Color color = CONVERT_COLOR(blockdef->color, Color);
@@ -674,12 +669,12 @@ void scrap_gui_draw_sidebar(void) {
 void scrap_gui_draw_code(void) {
     for (size_t i = 0; i < vector_size(editor_code); i++) {
         Vector2 chain_pos = (Vector2) {
-            editor_code[i].pos.x - camera_pos.x, 
-            editor_code[i].pos.y - camera_pos.y,
+            editor_code[i].x - camera_pos.x, 
+            editor_code[i].y - camera_pos.y,
         };
         if (chain_pos.x > gui->win_w || chain_pos.y > gui->win_h) continue;
-        if (editor_code[i].ms.size.x > 0 && editor_code[i].ms.size.y > 0 && 
-            (chain_pos.x + editor_code[i].ms.size.x < 0 || chain_pos.y + editor_code[i].ms.size.y < 0)) continue;
+        if (editor_code[i].width > 0 && editor_code[i].height > 0 && 
+            (chain_pos.x + editor_code[i].width < 0 || chain_pos.y + editor_code[i].height < 0)) continue;
         gui_element_begin(gui);
             gui_set_floating(gui);
             gui_set_position(gui, chain_pos.x, chain_pos.y);
@@ -687,8 +682,8 @@ void scrap_gui_draw_code(void) {
             scrap_gui_draw_blockchain(&editor_code[i]);
         gui_element_end(gui);
         FlexElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len];
-        editor_code[i].ms.size.x = el->w;
-        editor_code[i].ms.size.y = el->h;
+        editor_code[i].width = el->w;
+        editor_code[i].height = el->h;
     }
 }
 

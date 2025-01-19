@@ -41,6 +41,7 @@ int codepoint_start_ranges[CODEPOINT_REGION_COUNT] = {0};
 char scrap_ident[] = "SCRAP";
 const char** save_block_ids = NULL;
 ScrBlockdef** save_blockdefs = NULL;
+static unsigned int ver = 0;
 
 int save_find_id(const char* id);
 void save_code(const char* file_path, ScrBlockChain* code);
@@ -257,7 +258,7 @@ void save_blockdef_input(SaveArena* save, ScrInput* input) {
     save_add_varint(save, input->type);
     switch (input->type) {
     case INPUT_TEXT_DISPLAY:
-        save_add_array(save, input->data.stext.text, vector_size(input->data.stext.text), sizeof(input->data.stext.text[0]));
+        save_add_array(save, input->data.text, vector_size(input->data.text), sizeof(input->data.text[0]));
         break;
     case INPUT_ARGUMENT:
         save_add_varint(save, input->data.arg.constr);
@@ -321,7 +322,8 @@ void save_block(SaveArena* save, ScrBlock* block) {
 void save_blockchain(SaveArena* save, ScrBlockChain* chain) {
     int blocks_count = vector_size(chain->blocks);
 
-    save_add(save, chain->pos);
+    save_add(save, chain->x);
+    save_add(save, chain->y);
     save_add_varint(save, blocks_count);
     for (int i = 0; i < blocks_count; i++) save_block(save, &chain->blocks[i]);
 }
@@ -379,7 +381,7 @@ void collect_all_code_ids(ScrBlockChain* code) {
 
 void save_code(const char* file_path, ScrBlockChain* code) {
     SaveArena save = new_save(32768);
-    int save_ver = 1;
+    ver = 2;
     int chains_count = vector_size(code);
 
     ScrBlockdef** blockdefs = vector_create();
@@ -397,7 +399,7 @@ void save_code(const char* file_path, ScrBlockChain* code) {
 
     collect_all_code_ids(code);
 
-    save_add_varint(&save, save_ver);
+    save_add_varint(&save, ver);
     save_add_array(&save, scrap_ident, ARRLEN(scrap_ident), sizeof(scrap_ident[0]));
 
     save_add_varint(&save, vector_size(save_block_ids));
@@ -440,12 +442,10 @@ bool load_blockdef_input(SaveArena* save, ScrInput* input) {
         if (!text) return false;
         if (text[text_len - 1] != 0) return false;
 
-        input->data.stext.text = vector_create();
-        input->data.stext.ms = (ScrMeasurement) {0};
-        input->data.stext.editor_ms = (ScrMeasurement) {0};
+        input->data.text = vector_create();
 
-        for (char* str = text; *str; str++) vector_add(&input->data.stext.text, *str);
-        vector_add(&input->data.stext.text, 0);
+        for (char* str = text; *str; str++) vector_add(&input->data.text, *str);
+        vector_add(&input->data.text, 0);
         break;
     case INPUT_ARGUMENT:
         if (!save_read_varint(save, (unsigned int*)&constr)) return false;
@@ -455,7 +455,6 @@ bool load_blockdef_input(SaveArena* save, ScrInput* input) {
 
         input->data.arg.text = "";
         input->data.arg.constr = constr;
-        input->data.arg.ms = (ScrMeasurement) {0};
         input->data.arg.blockdef = blockdef;
         input->data.arg.blockdef->ref_count++;
         input->data.arg.blockdef->func = block_custom_arg;
@@ -492,7 +491,6 @@ ScrBlockdef* load_blockdef(SaveArena* save) {
     blockdef->id = strcpy(malloc(id_len * sizeof(char)), id);
     blockdef->color = *color;
     blockdef->type = type;
-    blockdef->ms = (ScrMeasurement) {0};
     blockdef->hidden = false;
     blockdef->ref_count = 0;
     blockdef->inputs = vector_create();
@@ -579,7 +577,7 @@ bool load_block(SaveArena* save, ScrBlock* block) {
 
     block->blockdef = blockdef;
     block->arguments = vector_create();
-    block->ms = (ScrMeasurement) {0};
+    block->width = 0;
     block->parent = NULL;
     blockdef->ref_count++;
 
@@ -592,19 +590,32 @@ bool load_block(SaveArena* save, ScrBlock* block) {
         vector_add(&block->arguments, arg);
     }
 
-    update_measurements(block, PLACEMENT_HORIZONTAL);
     return true;
 }
 
 bool load_blockchain(SaveArena* save, ScrBlockChain* chain) {
-    ScrVec* pos = save_read_item(save, sizeof(ScrVec));
-    if (!pos) return false;
+    int pos_x, pos_y;
+    if (ver == 1) {
+        struct { float x; float y; }* pos = save_read_item(save, sizeof(struct { float x; float y; }));
+        if (!pos) return false;   
+        pos_x = pos->x;
+        pos_y = pos->y;
+    } else if (ver == 2) {
+        int* pos = save_read_item(save, sizeof(int));          
+        if (!pos) return false;
+        pos_x = *pos;
+
+        pos = save_read_item(save, sizeof(int));          
+        if (!pos) return false;
+        pos_y = *pos;
+    }
 
     unsigned int blocks_count;
     if (!save_read_varint(save, &blocks_count)) return false;
 
     *chain = blockchain_new();
-    chain->pos = *pos;
+    chain->x = pos_x;
+    chain->y = pos_y;
 
     for (unsigned int i = 0; i < blocks_count; i++) {
         ScrBlock block;
@@ -634,10 +645,9 @@ ScrBlockChain* load_code(const char* file_path) {
     save.max_size = save_size;
     save.used_size = 0;
 
-    unsigned int ver;
     if (!save_read_varint(&save, &ver)) goto load_fail;
-    if (ver != 1) {
-        TraceLog(LOG_ERROR, "[LOAD] Unsupported version %d. Current scrap build expects save version 1", ver);
+    if (ver != 1 && ver != 2) {
+        TraceLog(LOG_ERROR, "[LOAD] Unsupported version %d. Current scrap build expects save versions 1 and 2", ver);
         goto load_fail;
     }
 
