@@ -49,7 +49,7 @@ int term_print_str(const char* str);
 int term_print_int(int value);
 int term_print_double(double value);
 void term_clear(void);
-void term_resize(void);
+void term_resize(float screen_w, float screen_h);
 void term_free(void);
 void term_restart(void);
 

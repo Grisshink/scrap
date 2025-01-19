@@ -295,7 +295,7 @@ void scrap_gui_button(const char* label, ButtonClickHandler handler) {
     gui_element_end(gui);
 }
 
-void handle_gui(void) {
+void handle_window(void) {
     if (window.is_hiding) {
         window.shown = false;
         window.is_hiding = false;

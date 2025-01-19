@@ -737,7 +737,6 @@ void scrap_gui_process_input(void) {
 
     if (IsWindowResized()) {
         shader_time = 0.0;
-        term_resize();
         gui_update_window_size(gui, GetScreenWidth(), GetScreenHeight());
     }
 

@@ -223,6 +223,7 @@ extern int codepoint_start_ranges[CODEPOINT_REGION_COUNT];
 void blockcode_add_blockchain(BlockCode* blockcode, ScrBlockChain chain);
 void blockcode_remove_blockchain(BlockCode* blockcode, size_t ind);
 void sanitize_links(void);
+GuiMeasurement custom_measure(Font font, const char *text, float font_size);
 
 // render.c
 void sidebar_init(void);
@@ -280,14 +281,14 @@ void config_new(Config* config);
 void config_free(Config* config);
 void config_copy(Config* dst, Config* src);
 
-// gui.c
+// window.c
 void init_gui_window(void);
 void gui_window_show(WindowGuiType type);
 void gui_window_hide(void);
 void gui_window_hide_immediate(void);
 WindowGuiType gui_window_get_type(void);
 bool gui_window_is_shown(void);
-void handle_gui(void);
+void handle_window(void);
 
 // blocks.c
 void load_blocks(ScrVm* vm);

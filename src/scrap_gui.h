@@ -60,6 +60,7 @@ typedef enum {
 typedef enum {
     RECT_NORMAL = 0,
     RECT_NOTCHED,
+    RECT_TERMINAL, // Terminal rendering is handled specially as it needs to synchronize with its buffer
 } GuiRectType;
 
 typedef struct {

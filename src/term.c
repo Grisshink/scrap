@@ -32,7 +32,7 @@ void term_init(void) {
     pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
     pthread_mutex_init(&term.lock, &attr);
     pthread_mutexattr_destroy(&attr);
-    term_resize();
+    term_resize(0, 0);
 }
 
 void term_restart(void) {
@@ -129,23 +129,24 @@ void term_clear(void) {
     pthread_mutex_unlock(&term.lock);
 }
 
-void term_resize(void) {
+void term_resize(float screen_w, float screen_h) {
     pthread_mutex_lock(&term.lock);
-    Vector2 screen_size = (Vector2) { GetScreenWidth() - 20, GetScreenHeight() - conf.font_size * 2.2 - 20 };
     term.size = (Rectangle) { 0, 0, 16, 9 };
-    if (term.size.width / term.size.height > screen_size.x / screen_size.y) {
-        term.size.height *= screen_size.x / term.size.width;
-        term.size.width  *= screen_size.x / term.size.width;
-        term.size.y = screen_size.y / 2 - term.size.height / 2;
+    if (screen_w == 0.0 || screen_h == 0.0) {
+        term.size.width = 0;
+        term.size.height = 0;
+    } else if (term.size.width / term.size.height > screen_w / screen_h) {
+        term.size.height *= screen_w / term.size.width;
+        term.size.width  *= screen_w / term.size.width;
+        term.size.y = screen_h / 2 - term.size.height / 2;
     } else {
-        term.size.width  *= screen_size.y / term.size.height;
-        term.size.height *= screen_size.y / term.size.height;
-        term.size.x = screen_size.x / 2 - term.size.width / 2;
+        term.size.width  *= screen_h / term.size.height;
+        term.size.height *= screen_h / term.size.height;
+        term.size.x = screen_w / 2 - term.size.width / 2;
     }
-    term.size.x += 10;
-    term.size.y += conf.font_size * 2.2 + 10;
 
-    term.char_size = MeasureTextEx(font_mono, "A", TERM_CHAR_SIZE, 0.0);
+    GuiMeasurement char_size = custom_measure(font_mono, "A", TERM_CHAR_SIZE);
+    term.char_size = (Vector2) { char_size.w, char_size.h };
     Vector2 new_buffer_size = { term.size.width / term.char_size.x, term.size.height / term.char_size.y };
 
     if (term.char_w != (int)new_buffer_size.x || term.char_h != (int)new_buffer_size.y) {

@@ -69,17 +69,19 @@ void draw_dots(void) {
     EndShaderMode();
 }
 
-void draw_term(void) {
+void draw_term(int x, int y) {
     pthread_mutex_lock(&term.lock);
-    DrawRectangleRec(term.size, BLACK);
+
+    Rectangle final_pos = { term.size.x + x, term.size.y + y, term.size.width, term.size.height };
+    DrawRectangleRec(final_pos, BLACK);
     BeginShaderMode(line_shader);
-    DrawRectangleLinesEx(term.size, 2.0, (Color) { 0x60, 0x60, 0x60, 0xff });
+    DrawRectangleLinesEx(final_pos, 2.0, (Color) { 0x60, 0x60, 0x60, 0xff });
     EndShaderMode();
 
     if (term.buffer) {
-        Vector2 pos = (Vector2) { term.size.x, term.size.y };
+        Vector2 pos = (Vector2) { final_pos.x, final_pos.y };
         for (int y = 0; y < term.char_h; y++) {
-            pos.x = term.size.x;
+            pos.x = final_pos.x;
             for (int x = 0; x < term.char_w; x++) {
                 DrawTextEx(font_mono, term.buffer[x + y*term.char_w], pos, TERM_CHAR_SIZE, 0.0, WHITE);
                 pos.x += term.char_size.x;
@@ -88,8 +90,8 @@ void draw_term(void) {
         }
         if (fmod(GetTime(), 1.0) <= 0.5) {
             Vector2 cursor_pos = (Vector2) {
-                term.size.x + (term.cursor_pos % term.char_w) * term.char_size.x,
-                term.size.y + (term.cursor_pos / term.char_w) * TERM_CHAR_SIZE,
+                final_pos.x + (term.cursor_pos % term.char_w) * term.char_size.x,
+                final_pos.y + (term.cursor_pos / term.char_w) * TERM_CHAR_SIZE,
             };
             DrawRectangle(cursor_pos.x, cursor_pos.y, BLOCK_OUTLINE_SIZE, TERM_CHAR_SIZE, WHITE);
         }
@@ -729,17 +731,35 @@ void scrap_gui_draw_dropdown(void) {
 void scrap_gui_process(void) {
     // Gui
     gui_begin(gui);
-        scrap_gui_draw_code();
+        if (current_tab == TAB_CODE) scrap_gui_draw_code();
         scrap_gui_draw_top_bar();
         scrap_gui_draw_tab_bar();
-        scrap_gui_draw_sidebar();
-        handle_gui();
-        gui_element_begin(gui);
-            gui_set_floating(gui);
-            gui_set_position(gui, gui->mouse_x, gui->mouse_y);
+        if (current_tab == TAB_CODE) {
+            scrap_gui_draw_sidebar();
+        } else if (current_tab == TAB_OUTPUT) {
+            gui_element_begin(gui);
+                gui_set_grow(gui, DIRECTION_HORIZONTAL);
+                gui_set_grow(gui, DIRECTION_VERTICAL);
+                gui_set_padding(gui, conf.font_size * 0.5, conf.font_size * 0.5);
+                gui_set_rect(gui, (GuiColor) { 0x20, 0x20, 0x20, 0xff });
 
-            scrap_gui_draw_blockchain(&mouse_blockchain);
-        gui_element_end(gui);
+                gui_element_begin(gui);
+                    gui_set_grow(gui, DIRECTION_HORIZONTAL);
+                    gui_set_grow(gui, DIRECTION_VERTICAL);
+                    gui_set_rect(gui, (GuiColor) { 0x00, 0x00, 0x00, 0xff });
+                    gui_set_rect_type(gui, RECT_TERMINAL);
+                gui_element_end(gui);
+            gui_element_end(gui);
+        }
+        handle_window();
+        if (current_tab == TAB_CODE) {
+            gui_element_begin(gui);
+                gui_set_floating(gui);
+                gui_set_position(gui, gui->mouse_x, gui->mouse_y);
+
+                scrap_gui_draw_blockchain(&mouse_blockchain);
+            gui_element_end(gui);
+        }
 
         scrap_gui_draw_dropdown();
     gui_end(gui);
@@ -897,6 +917,10 @@ void scrap_gui_render(void) {
                 break;
             case RECT_NOTCHED:
                 scrap_gui_render_rect_notched(command);
+                break;
+            case RECT_TERMINAL:
+                term_resize(command->width, command->height);
+                draw_term(command->pos_x, command->pos_y);
                 break;
             default:
                 assert(false && "Unhandled draw rect type");
