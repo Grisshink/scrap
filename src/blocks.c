@@ -401,7 +401,8 @@ ScrData block_cursor_x(ScrExec* exec, int argc, ScrData* argv) {
     (void) argv;
     (void) argc;
     pthread_mutex_lock(&term.lock);
-    int cur_x = term.cursor_pos % term.char_w;
+    int cur_x = 0;
+    if (term.char_w != 0) cur_x = term.cursor_pos % term.char_w;
     pthread_mutex_unlock(&term.lock);
     RETURN_INT(cur_x);
 }
@@ -411,7 +412,8 @@ ScrData block_cursor_y(ScrExec* exec, int argc, ScrData* argv) {
     (void) argv;
     (void) argc;
     pthread_mutex_lock(&term.lock);
-    int cur_y = term.cursor_pos / term.char_w;
+    int cur_y = 0;
+    if (term.char_w != 0) cur_y = term.cursor_pos / term.char_w;
     pthread_mutex_unlock(&term.lock);
     RETURN_INT(cur_y);
 }
