@@ -48,65 +48,6 @@ void actionbar_show(const char* text) {
     actionbar.show_time = 3.0;
 }
 
-void draw_block_base(Rectangle block_size, ScrBlockdef* blockdef, Color block_color, Color outline_color) {
-    if (blockdef->type == BLOCKTYPE_HAT) {
-        DrawRectangle(block_size.x, block_size.y, block_size.width - conf.font_size / 4.0, block_size.height, block_color);
-        DrawRectangle(block_size.x, block_size.y + conf.font_size / 4.0, block_size.width, block_size.height - conf.font_size / 4.0, block_color);
-        DrawTriangle(
-            (Vector2) { block_size.x + block_size.width - conf.font_size / 4.0 - 1, block_size.y }, 
-            (Vector2) { block_size.x + block_size.width - conf.font_size / 4.0 - 1, block_size.y + conf.font_size / 4.0 }, 
-            (Vector2) { block_size.x + block_size.width, block_size.y + conf.font_size / 4.0 }, 
-            block_color
-        );
-    } else {
-        DrawRectangleRec(block_size, block_color);
-    }
-
-    if (blockdef->type == BLOCKTYPE_HAT) {
-        DrawRectangle(block_size.x, block_size.y, block_size.width - conf.font_size / 4.0, BLOCK_OUTLINE_SIZE, outline_color);
-        DrawRectangle(block_size.x, block_size.y, BLOCK_OUTLINE_SIZE, block_size.height, outline_color);
-        DrawRectangle(block_size.x, block_size.y + block_size.height - BLOCK_OUTLINE_SIZE, block_size.width, BLOCK_OUTLINE_SIZE, outline_color);
-        DrawRectangle(block_size.x + block_size.width - BLOCK_OUTLINE_SIZE, block_size.y + conf.font_size / 4.0, BLOCK_OUTLINE_SIZE, block_size.height - conf.font_size / 4.0, outline_color);
-        DrawRectanglePro((Rectangle) {
-            block_size.x + block_size.width - conf.font_size / 4.0,
-            block_size.y,
-            sqrtf((conf.font_size / 4.0 * conf.font_size / 4.0) * 2),
-            BLOCK_OUTLINE_SIZE,
-        }, (Vector2) {0}, 45.0, outline_color);
-    } else {
-        DrawRectangleLinesEx(block_size, BLOCK_OUTLINE_SIZE, outline_color);
-    }
-}
-
-void draw_dropdown_list(void) {
-    if (!hover_info.select_argument) return;
-
-    ScrBlockdef* blockdef = hover_info.select_block->blockdef;
-    ScrInput block_input = blockdef->inputs[hover_info.select_argument->input_id];
-
-    if (block_input.type != INPUT_DROPDOWN) return;
-    
-    Vector2 pos;
-    pos = hover_info.select_argument_pos;
-    pos.y += hover_info.select_block->ms.size.y;
-
-    DrawRectangle(pos.x, pos.y, dropdown.ms.size.x, dropdown.ms.size.y, ColorBrightness(as_rl_color(blockdef->color), -0.3));
-    if (hover_info.dropdown_hover_ind != -1) {
-        DrawRectangle(pos.x, pos.y + (hover_info.dropdown_hover_ind - dropdown.scroll_amount) * conf.font_size, dropdown.ms.size.x, conf.font_size, as_rl_color(blockdef->color));
-    }
-
-    pos.x += 5.0;
-    pos.y += 5.0;
-
-    size_t list_len = 0;
-    char** list = block_input.data.drop.list(hover_info.select_block, &list_len);
-    for (size_t i = dropdown.scroll_amount; i < list_len; i++) {
-        if (pos.y > GetScreenHeight()) break;
-        DrawTextEx(font_cond_shadow, list[i], pos, BLOCK_TEXT_SIZE, 0, WHITE);
-        pos.y += conf.font_size;
-    }
-}
-
 void draw_dots(void) {
     int win_width = GetScreenWidth();
     int win_height = GetScreenHeight();
@@ -126,53 +67,6 @@ void draw_dots(void) {
         DrawRectangle(x, 0, 2, win_height, (Color) { 0x40, 0x40, 0x40, 0xff });
     }
     EndShaderMode();
-}
-
-void draw_action_bar(void) {
-    if (actionbar.show_time <= 0) return;
-
-    int width = MeasureTextEx(font_eb, actionbar.text, conf.font_size * 0.75, 0.0).x;
-    Vector2 pos;
-    pos.x = (GetScreenWidth() - conf.side_bar_size) / 2 - width / 2 + conf.side_bar_size;
-    pos.y = (GetScreenHeight() - conf.font_size * 2.2) * 0.15 + conf.font_size * 2.2;
-    Color color = YELLOW;
-    color.a = actionbar.show_time / 3.0 * 255.0;
-
-    DrawTextEx(font_eb, actionbar.text, pos, conf.font_size * 0.75, 0.0, color);
-}
-
-void draw_scrollbars(void) {
-    float size = GetScreenWidth() / (block_code.max_pos.x - block_code.min_pos.x);
-    if (size < 1) {
-        size *= GetScreenWidth() - conf.side_bar_size;
-        float t = UNLERP(block_code.min_pos.x, block_code.max_pos.x, camera_pos.x + GetScreenWidth() / 2);
-
-        BeginScissorMode(conf.side_bar_size, GetScreenHeight() - conf.font_size / 6, GetScreenWidth() - conf.side_bar_size, conf.font_size / 6);
-        DrawRectangle(
-            LERP(conf.side_bar_size, GetScreenWidth() - size, t), 
-            GetScreenHeight() - conf.font_size / 6, 
-            size, 
-            conf.font_size / 6, 
-            (Color) { 0xff, 0xff, 0xff, 0x80 }
-        );
-        EndScissorMode();
-    }
-
-    size = GetScreenHeight() / (block_code.max_pos.y - block_code.min_pos.y);
-    if (size < 1) {
-        size *= GetScreenHeight() - conf.font_size * 2.2;
-        float t = UNLERP(block_code.min_pos.y, block_code.max_pos.y, camera_pos.y + GetScreenHeight() / 2);
-
-        BeginScissorMode(GetScreenWidth() - conf.font_size / 6, conf.font_size * 2.2, conf.font_size / 6, GetScreenHeight() - conf.font_size * 2.2);
-        DrawRectangle(
-            GetScreenWidth() - conf.font_size / 6, 
-            LERP(conf.font_size * 2.2, GetScreenHeight() - size, t), 
-            conf.font_size / 6, 
-            size, 
-            (Color) { 0xff, 0xff, 0xff, 0x80 }
-        );
-        EndScissorMode();
-    }
 }
 
 void draw_term(void) {
@@ -737,6 +631,20 @@ void scrap_gui_draw_sidebar(void) {
                 scrap_gui_draw_block(&sidebar.blocks[i]);
             }
         gui_element_end(gui);
+
+        if (actionbar.show_time > 0) {
+            gui_element_begin(gui);
+                gui_set_grow(gui, DIRECTION_HORIZONTAL);
+                gui_set_grow(gui, DIRECTION_VERTICAL);
+                gui_set_direction(gui, DIRECTION_VERTICAL);
+                gui_set_padding(gui, 0, conf.font_size * 2);
+                gui_set_align(gui, ALIGN_CENTER);
+
+                Color color = YELLOW;
+                color.a = actionbar.show_time / 3.0 * 255.0;
+                gui_text(gui, &font_eb, actionbar.text, conf.font_size * 0.8, CONVERT_COLOR(color, GuiColor));
+            gui_element_end(gui);
+        }
     gui_element_end(gui);
 }
 
