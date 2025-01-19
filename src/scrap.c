@@ -305,14 +305,8 @@ int main(void) {
     SetWindowIcon(logo_img);
 
     while (!WindowShouldClose()) {
-        scrap_gui_process_input();
-
-        actionbar.show_time -= GetFrameTime();
-        if (actionbar.show_time < 0) actionbar.show_time = 0;
-
-        if (shader_time_loc != -1) SetShaderValue(line_shader, shader_time_loc, &shader_time, SHADER_UNIFORM_FLOAT);
-        shader_time += GetFrameTime() / 2.0;
-        if (shader_time >= 1.0) shader_time = 1.0;
+        hover_info.exec_ind = -1;
+        hover_info.exec_chain = NULL;
 
         size_t vm_return = -1;
         if (exec_try_join(&vm, &exec, &vm_return)) {
@@ -328,6 +322,15 @@ int main(void) {
             hover_info.exec_chain = exec.running_chain;
             hover_info.exec_ind = exec.chain_stack[exec.chain_stack_len - 1].running_ind;
         }
+
+        scrap_gui_process_input();
+
+        actionbar.show_time -= GetFrameTime();
+        if (actionbar.show_time < 0) actionbar.show_time = 0;
+
+        if (shader_time_loc != -1) SetShaderValue(line_shader, shader_time_loc, &shader_time, SHADER_UNIFORM_FLOAT);
+        shader_time += GetFrameTime() / 2.0;
+        if (shader_time >= 1.0) shader_time = 1.0;
 
         BeginDrawing();
         scrap_gui_process_render();

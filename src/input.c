@@ -694,8 +694,6 @@ void scrap_gui_process_input(void) {
     hover_info.blockchain = NULL;
     hover_info.blockchain_layer = 0;
     hover_info.dropdown_hover_ind = -1;
-    hover_info.exec_ind = -1;
-    hover_info.exec_chain = NULL;
     hover_info.editor.part = EDITOR_NONE;
     hover_info.editor.blockdef = NULL;
     hover_info.editor.blockdef_input = -1;

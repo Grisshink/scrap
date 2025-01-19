@@ -282,12 +282,12 @@ void argument_on_hover(FlexElement* el) {
     el->data.border.type = BORDER_NORMAL;
 }
 
-void scrap_gui_draw_block(ScrBlock* block) {
-    bool collision = hover_info.prev_block == block;
+void scrap_gui_draw_block(ScrBlock* block, bool highlight) {
+    bool collision = hover_info.prev_block == block || highlight;
     Color color = CONVERT_COLOR(block->blockdef->color, Color);
     Color block_color = ColorBrightness(color, collision ? 0.3 : 0.0);
     Color dropdown_color = ColorBrightness(color, collision ? 0.0 : -0.3);
-    Color outline_color = ColorBrightness(color, collision ? 0.5 : -0.2);
+    Color outline_color = highlight ? YELLOW : ColorBrightness(color, collision ? 0.5 : -0.2);
 
     gui_element_begin(gui);
         gui_set_direction(gui, DIRECTION_HORIZONTAL);
@@ -354,7 +354,7 @@ void scrap_gui_draw_block(ScrBlock* block) {
                     gui_on_hover(gui, block_argument_on_hover);
                     gui_set_custom_data(gui, arg);
 
-                    scrap_gui_draw_block(&arg->data.block);
+                    scrap_gui_draw_block(&arg->data.block, highlight);
                 gui_element_end(gui);
                 break;
             default:
@@ -512,6 +512,7 @@ void blockchain_on_hover(FlexElement* el) {
 
 void scrap_gui_draw_blockchain(ScrBlockChain* chain) {
     int layer = 0;
+    bool highlight = hover_info.exec_chain == chain;
 
     gui_element_begin(gui);
         gui_set_direction(gui, DIRECTION_VERTICAL);
@@ -522,6 +523,7 @@ void scrap_gui_draw_blockchain(ScrBlockChain* chain) {
 
     for (size_t i = 0; i < vector_size(chain->blocks); i++) {
         ScrBlockdef* blockdef = chain->blocks[i].blockdef;
+        bool block_highlight = hover_info.exec_ind == i;
 
         if (blockdef->type == BLOCKTYPE_END) {
             gui_element_end(gui);
@@ -531,10 +533,10 @@ void scrap_gui_draw_blockchain(ScrBlockChain* chain) {
 
             ScrBlock* block = el->custom_data;
 
-            bool collision = hover_info.prev_block == &chain->blocks[i];
+            bool collision = hover_info.prev_block == &chain->blocks[i] || (highlight && block_highlight);
             Color color = CONVERT_COLOR(block->blockdef->color, Color);
             Color block_color = ColorBrightness(color, collision ? 0.3 : 0.0);
-            Color outline_color = ColorBrightness(block_color, collision ? 0.5 : -0.2);
+            Color outline_color = highlight && block_highlight ? YELLOW : ColorBrightness(block_color, collision ? 0.5 : -0.2);
 
             gui_element_begin(gui);
                 gui_set_min_size(gui, block->ms.size.x, conf.font_size);
@@ -563,14 +565,14 @@ void scrap_gui_draw_blockchain(ScrBlockChain* chain) {
                 gui_set_direction(gui, DIRECTION_VERTICAL);
                 gui_set_custom_data(gui, &chain->blocks[i]);
 
-                scrap_gui_draw_block(&chain->blocks[i]);
+                scrap_gui_draw_block(&chain->blocks[i], highlight && block_highlight);
         } else {
             if (blockdef->type == BLOCKTYPE_CONTROL) {
                 gui_element_begin(gui);
                     gui_set_direction(gui, DIRECTION_VERTICAL);
                     gui_set_custom_data(gui, &chain->blocks[i]);
             }
-            scrap_gui_draw_block(&chain->blocks[i]);
+            scrap_gui_draw_block(&chain->blocks[i], highlight && block_highlight);
         }
 
         if (blockdef->type == BLOCKTYPE_CONTROL || blockdef->type == BLOCKTYPE_CONTROLEND) {
@@ -579,10 +581,10 @@ void scrap_gui_draw_blockchain(ScrBlockChain* chain) {
             FlexElement* el = gui_get_element(gui);
             chain->blocks[i].ms.size.x = el->w;
 
-            bool collision = hover_info.prev_block == &chain->blocks[i];
+            bool collision = hover_info.prev_block == &chain->blocks[i] || (highlight && block_highlight);
             Color color = CONVERT_COLOR(blockdef->color, Color);
             Color block_color = ColorBrightness(color, collision ? 0.3 : 0.0);
-            Color outline_color = ColorBrightness(block_color, collision ? 0.5 : -0.2);
+            Color outline_color = highlight && block_highlight ? YELLOW : ColorBrightness(block_color, collision ? 0.5 : -0.2);
 
             gui_element_begin(gui);
                 gui_set_direction(gui, DIRECTION_HORIZONTAL);
@@ -640,7 +642,7 @@ void scrap_gui_draw_sidebar(void) {
             gui_set_scissor(gui);
 
             for (size_t i = dropdown.scroll_amount; i < vector_size(sidebar.blocks); i++) {
-                scrap_gui_draw_block(&sidebar.blocks[i]);
+                scrap_gui_draw_block(&sidebar.blocks[i], false);
             }
         gui_element_end(gui);
 
@@ -1012,6 +1014,7 @@ void write_debug_buffer(void) {
     print_debug(&i, "Elements: %zu/%zu, Draw: %zu/%zu", gui->element_stack_len, ELEMENT_STACK_SIZE, gui->command_stack_len, COMMAND_STACK_SIZE);
     print_debug(&i, "Slider: %p, min: %d, max: %d", hover_info.hover_slider.value, hover_info.hover_slider.min, hover_info.hover_slider.max);
     print_debug(&i, "Input: %p, Select: %p", hover_info.input, hover_info.select_input);
+    print_debug(&i, "Exec chain: %p, ind: %zu", hover_info.exec_chain, hover_info.exec_ind);
     print_debug(&i, "UI time: %.3f", ui_time);
 #else
     print_debug(&i, "Scrap v" SCRAP_VERSION);
