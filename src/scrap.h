@@ -205,6 +205,8 @@ extern Gui* gui;
 extern double ui_time;
 #endif
 
+extern char debug_buffer[DEBUG_BUFFER_LINES][DEBUG_BUFFER_LINE_SIZE];
+
 extern Vector2 camera_click_pos;
 extern Vector2 camera_pos;
 

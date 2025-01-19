@@ -71,6 +71,7 @@ ScrBlockChain mouse_blockchain = {0};
 Gui* gui = NULL;
 
 char project_name[1024] = "project.scrp";
+char debug_buffer[DEBUG_BUFFER_LINES][DEBUG_BUFFER_LINE_SIZE] = {0};
 
 #ifdef DEBUG
 double ui_time = 0.0;

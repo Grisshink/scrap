@@ -22,6 +22,7 @@
 
 #include <assert.h>
 #include <math.h>
+#include <stdarg.h>
 
 #define ARRLEN(x) (sizeof(x)/sizeof(x[0]))
 #define MOD(x, y) (((x) % (y) + (y)) % (y))
@@ -643,6 +644,15 @@ void scrap_gui_draw_sidebar(void) {
             }
         gui_element_end(gui);
 
+        gui_element_begin(gui);
+            gui_set_floating(gui);
+            gui_set_padding(gui, conf.font_size * 0.2, conf.font_size * 0.2);
+
+            for (int i = 0; i < DEBUG_BUFFER_LINES; i++) {
+                gui_text(gui, &font_cond, debug_buffer[i], conf.font_size * 0.5, (GuiColor) { 0xff, 0xff, 0xff, 0x60 });
+            }
+        gui_element_end(gui);
+
         if (actionbar.show_time > 0) {
             gui_element_begin(gui);
                 gui_set_grow(gui, DIRECTION_HORIZONTAL);
@@ -975,86 +985,44 @@ void scrap_gui_render(void) {
     }
 }
 
+void print_debug(int* num, char* fmt, ...) {
+    va_list va;
+    va_start(va, fmt);
+    vsnprintf(debug_buffer[(*num)++], DEBUG_BUFFER_LINE_SIZE, fmt, va);
+    va_end(va);
+}
+
+void write_debug_buffer(void) {
+    int i = 0;
+#ifdef DEBUG
+    print_debug(&i, "Block: %p, Parent: %p", hover_info.block, hover_info.block ? hover_info.block->parent : NULL);
+    print_debug(&i, "Argument: %p, Pos: (%.3f, %.3f)", hover_info.argument, hover_info.argument_pos.x, hover_info.argument_pos.y);
+    print_debug(&i, "BlockChain: %p, Layer: %d", hover_info.blockchain, hover_info.blockchain_layer);
+    print_debug(&i, "Prev argument: %p", hover_info.prev_argument);
+    print_debug(&i, "Select block: %p", hover_info.select_block);
+    print_debug(&i, "Select arg: %p, Pos: (%.3f, %.3f)");
+    print_debug(&i, "Sidebar: %d", hover_info.sidebar);
+    print_debug(&i, "Mouse: %p, Time: %.3f, Pos: (%d, %d), Click: (%d, %d)", mouse_blockchain.blocks, hover_info.time_at_last_pos, GetMouseX(), GetMouseY(), (int)hover_info.mouse_click_pos.x, (int)hover_info.mouse_click_pos.y);
+    print_debug(&i, "Camera: (%.3f, %.3f), Click: (%.3f, %.3f)", camera_pos.x, camera_pos.y, camera_click_pos.x, camera_click_pos.y);
+    print_debug(&i, "Dropdown ind: %d, Scroll: %d", hover_info.dropdown_hover_ind, dropdown.scroll_amount);
+    print_debug(&i, "Drag cancelled: %d", hover_info.drag_cancelled);
+    print_debug(&i, "Min: (%.3f, %.3f), Max: (%.3f, %.3f)", block_code.min_pos.x, block_code.min_pos.y, block_code.max_pos.x, block_code.max_pos.y);
+    print_debug(&i, "Sidebar scroll: %d, Max: %d", sidebar.scroll_amount, sidebar.max_y);
+    print_debug(&i, "Editor: %d, Editing: %p, Blockdef: %p, input: %zu", hover_info.editor.part, hover_info.editor.edit_blockdef, hover_info.editor.blockdef, hover_info.editor.blockdef_input);
+    print_debug(&i, "Elements: %zu/%zu, Draw: %zu/%zu", gui->element_stack_len, ELEMENT_STACK_SIZE, gui->command_stack_len, COMMAND_STACK_SIZE);
+    print_debug(&i, "Slider: %p, min: %d, max: %d", hover_info.hover_slider.value, hover_info.hover_slider.min, hover_info.hover_slider.max);
+    print_debug(&i, "Input: %p, Select: %p", hover_info.input, hover_info.select_input);
+    print_debug(&i, "UI time: %.3f", ui_time);
+#else
+    print_debug(&i, "Scrap v" SCRAP_VERSION);
+    print_debug(&i, "FPS: %d, Frame time: %.3f", GetFPS(), GetFrameTime());
+#endif
+}
+
 void scrap_gui_process_render(void) {
     ClearBackground(GetColor(0x202020ff));
     draw_dots();
+
+    write_debug_buffer();
     scrap_gui_render();
-
-#ifdef DEBUG
-        DrawTextEx(
-            font_cond, 
-            TextFormat(
-                "BlockChain: %p, Layer: %d\n"
-                "Block: %p, Parent: %p\n"
-                "Argument: %p, Pos: (%.3f, %.3f)\n"
-                "Prev argument: %p\n"
-                "Select block: %p\n"
-                "Select arg: %p, Pos: (%.3f, %.3f)\n"
-                "Sidebar: %d\n"
-                "Mouse: %p, Time: %.3f, Pos: (%d, %d), Click: (%d, %d)\n"
-                "Camera: (%.3f, %.3f), Click: (%.3f, %.3f)\n"
-                "Dropdown ind: %d, Scroll: %d\n"
-                "Drag cancelled: %d\n"
-                "Min: (%.3f, %.3f), Max: (%.3f, %.3f)\n"
-                "Sidebar scroll: %d, Max: %d\n"
-                "Editor: %d, Editing: %p, Blockdef: %p, input: %zu\n"
-                "Elements: %zu/%zu, Draw: %zu/%zu\n"
-                "Slider: %p, min: %d, max: %d\n"
-                "Input: %p, Select: %p\n"
-                "UI time: %.3f",
-                hover_info.blockchain,
-                hover_info.blockchain_layer,
-                hover_info.block,
-                hover_info.block ? hover_info.block->parent : NULL,
-                hover_info.argument, hover_info.argument_pos.x, hover_info.argument_pos.y, 
-                hover_info.prev_argument,
-                hover_info.select_block,
-                hover_info.select_argument, hover_info.select_argument_pos.x, hover_info.select_argument_pos.y, 
-                hover_info.sidebar,
-                mouse_blockchain.blocks,
-                hover_info.time_at_last_pos,
-                GetMouseX(), GetMouseY(),
-                (int)hover_info.mouse_click_pos.x, (int)hover_info.mouse_click_pos.y,
-                camera_pos.x, camera_pos.y, camera_click_pos.x, camera_click_pos.y,
-                hover_info.dropdown_hover_ind, dropdown.scroll_amount,
-                hover_info.drag_cancelled,
-                block_code.min_pos.x, block_code.min_pos.y, block_code.max_pos.x, block_code.max_pos.y,
-                sidebar.scroll_amount, sidebar.max_y,
-                hover_info.editor.part, hover_info.editor.edit_blockdef, hover_info.editor.blockdef, hover_info.editor.blockdef_input,
-                gui->element_stack_len, ELEMENT_STACK_SIZE, gui->command_stack_len, COMMAND_STACK_SIZE,
-                hover_info.hover_slider.value, hover_info.hover_slider.min, hover_info.hover_slider.max,
-                hover_info.input, hover_info.select_input,
-                ui_time
-            ), 
-            (Vector2){ 
-                conf.side_bar_size + 5, 
-                conf.font_size * 2.2 + 5
-            }, 
-            conf.font_size * 0.5,
-            0.0, 
-            GRAY
-        );
-#else
-        Vector2 debug_pos = (Vector2) {
-            conf.side_bar_size + 5 * conf.font_size / 32.0, 
-            conf.font_size * 2.2 + 5 * conf.font_size / 32.0,
-        };
-        DrawTextEx(font_cond, "Scrap v" SCRAP_VERSION, debug_pos, conf.font_size * 0.5, 0.0, (Color) { 0xff, 0xff, 0xff, 0x40 });
-        debug_pos.y += conf.font_size * 0.5;
-        DrawTextEx(
-            font_cond, 
-            TextFormat(
-                "FPS: %d, Frame time: %.3f\nCommand count: %zu/%zu\nElement count: %zu/%zu", 
-                GetFPS(), 
-                GetFrameTime(), 
-                gui->command_stack_len, ELEMENT_STACK_SIZE,
-                gui->element_stack_len, ELEMENT_STACK_SIZE
-            ), 
-            debug_pos, 
-            conf.font_size * 0.5, 
-            0.0, 
-            (Color) { 0xff, 0xff, 0xff, 0x40 }
-        );
-#endif
-
 }

@@ -37,3 +37,6 @@
 #define LICENSE_URL "https://www.gnu.org/licenses/gpl-3.0.html"
 
 #define CODEPOINT_REGION_COUNT 2
+
+#define DEBUG_BUFFER_LINES 32
+#define DEBUG_BUFFER_LINE_SIZE 256
