@@ -22,6 +22,7 @@
 
 #define ELEMENT_STACK_SIZE 32768
 #define COMMAND_STACK_SIZE 8192
+#define AUX_STACK_SIZE 4096
 #define STATE_STACK_SIZE 32768
 typedef struct Gui Gui;
 typedef struct FlexElement FlexElement;
@@ -71,9 +72,9 @@ typedef struct {
 typedef enum {
     DRAWTYPE_UNKNOWN = 0,
     DRAWTYPE_RECT,
-    DRAWTYPE_TEXT,
     DRAWTYPE_BORDER,
     DRAWTYPE_IMAGE,
+    DRAWTYPE_TEXT,
     DRAWTYPE_SCISSOR_BEGIN,
     DRAWTYPE_SCISSOR_END,
     DRAWTYPE_SHADER_BEGIN,
@@ -163,6 +164,18 @@ struct Gui {
     size_t command_stack_len;
     size_t command_stack_iter;
 
+    DrawCommand rect_stack[AUX_STACK_SIZE];
+    size_t rect_stack_len;
+
+    DrawCommand border_stack[AUX_STACK_SIZE];
+    size_t border_stack_len;
+
+    DrawCommand image_stack[AUX_STACK_SIZE];
+    size_t image_stack_len;
+
+    DrawCommand text_stack[AUX_STACK_SIZE];
+    size_t text_stack_len;
+
     FlexElement element_stack[ELEMENT_STACK_SIZE];
     size_t element_stack_len;
 
@@ -181,6 +194,11 @@ struct Gui {
     unsigned short win_w, win_h;
     unsigned short mouse_x, mouse_y;
     int mouse_scroll;
+
+    size_t rect_count;
+    size_t border_count;
+    size_t image_count;
+    size_t text_count;
 };
 
 #define GUI_GET_COMMANDS(gui, command) while (gui->command_stack_iter < gui->command_stack_len && (command = &gui->command_stack[gui->command_stack_iter++]))

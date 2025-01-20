@@ -40,6 +40,7 @@
 #define SET_DIRECTION(el, dir) (el->flags = (el->flags & 0xfe) | dir)
 
 static void gui_render(Gui* gui, FlexElement* el, float pos_x, float pos_y);
+static void flush_aux_buffers(Gui* gui);
 
 static bool inside_window(Gui* gui, DrawCommand* command) {
     return (command->pos_x + command->width  > 0) && (command->pos_x < gui->win_w) && 
@@ -67,6 +68,14 @@ void gui_init(Gui* gui) {
 void gui_begin(Gui* gui) {
     gui->command_stack_len = 0;
     gui->command_stack_iter = 0;
+    gui->rect_stack_len = 0;
+    gui->border_stack_len = 0;
+    gui->image_stack_len = 0;
+    gui->text_stack_len = 0;
+    gui->rect_count = 0;
+    gui->border_count = 0;
+    gui->image_count = 0;
+    gui->text_count = 0;
     gui->element_stack_len = 0;
     gui->element_ptr_stack_len = 0;
     gui->scissor_stack_len = 0;
@@ -78,6 +87,7 @@ void gui_begin(Gui* gui) {
 void gui_end(Gui* gui) {
     gui_element_end(gui);
     gui_render(gui, &gui->element_stack[0], 0, 0);
+    flush_aux_buffers(gui);
 }
 
 void gui_set_measure_text_func(Gui* gui, MeasureTextFunc measure_text) {
@@ -100,6 +110,63 @@ void gui_update_mouse_scroll(Gui* gui, int mouse_scroll) {
 void gui_update_window_size(Gui* gui, unsigned short win_w, unsigned short win_h) {
     gui->win_w = win_w;
     gui->win_h = win_h;
+}
+
+static int partition_image(DrawCommand* array, int begin, int end) {
+    DrawCommand pivot = array[(begin + end) / 2];
+    int left = begin - 1;
+    int right = end + 1;
+
+    for (;;) {
+        do left++; while (array[left].data.image < pivot.data.image);
+        do right--; while (array[right].data.image > pivot.data.image);
+        if (left >= right) return right;
+        DrawCommand temp = array[left];
+        array[left] = array[right];
+        array[right] = temp;
+    }
+}
+
+static int partition_font(DrawCommand* array, int begin, int end) {
+    DrawCommand pivot = array[(begin + end) / 2];
+    int left = begin - 1;
+    int right = end + 1;
+
+    for (;;) {
+        do left++; while (array[left].data.text.font < pivot.data.text.font);
+        do right--; while (array[right].data.text.font > pivot.data.text.font);
+        if (left >= right) return right;
+        DrawCommand temp = array[left];
+        array[left] = array[right];
+        array[right] = temp;
+    }
+}
+
+static void sort_commands(DrawCommand* array, int begin, int end, bool is_font) {
+    if (begin >= end || begin < 0 || end < 0) return;
+    int pos = is_font ? partition_font(array, begin, end) : partition_image(array, begin, end);
+    sort_commands(array, begin, pos, is_font);
+    sort_commands(array, pos + 1, end, is_font);
+}
+
+static void flush_aux_buffers(Gui* gui) {
+    sort_commands(gui->text_stack, 0, gui->text_stack_len - 1, true);
+    sort_commands(gui->image_stack, 0, gui->image_stack_len - 1, false);
+
+    for (size_t i = 0; i < gui->rect_stack_len; i++)   gui->command_stack[gui->command_stack_len++] = gui->rect_stack[i];
+    for (size_t i = 0; i < gui->border_stack_len; i++) gui->command_stack[gui->command_stack_len++] = gui->border_stack[i];
+    for (size_t i = 0; i < gui->image_stack_len; i++)  gui->command_stack[gui->command_stack_len++] = gui->image_stack[i];
+    for (size_t i = 0; i < gui->text_stack_len; i++)   gui->command_stack[gui->command_stack_len++] = gui->text_stack[i];
+
+    gui->rect_count += gui->rect_stack_len;
+    gui->border_count += gui->border_stack_len;
+    gui->image_count += gui->image_stack_len;
+    gui->text_count += gui->text_stack_len;
+
+    gui->rect_stack_len = 0;
+    gui->border_stack_len = 0;
+    gui->image_stack_len = 0;
+    gui->text_stack_len = 0;
 }
 
 static DrawCommand* new_draw_command(Gui* gui, GuiDrawBounds bounds, DrawType draw_type, DrawData data, GuiColor color) {
@@ -159,6 +226,8 @@ static void gui_render(Gui* gui, FlexElement* el, float pos_x, float pos_y) {
         (float)el->h * el->scaling,
     };
 
+    if (SCISSOR(el) || FLOATING(el) || el->shader) flush_aux_buffers(gui);
+
     if (SCISSOR(el)) {
         new_draw_command(gui, el_bounds, DRAWTYPE_SCISSOR_BEGIN, (DrawData) {0}, (GuiColor) {0});
         gui->scissor_stack[gui->scissor_stack_len++] = (GuiBounds) { el_bounds.x, el_bounds.y, el_bounds.w, el_bounds.h };
@@ -166,11 +235,40 @@ static void gui_render(Gui* gui, FlexElement* el, float pos_x, float pos_y) {
     if (el->shader) new_draw_command(gui, el_bounds, DRAWTYPE_SHADER_BEGIN, (DrawData) { .shader = el->shader }, (GuiColor) {0});
 
     if (el->draw_type != DRAWTYPE_UNKNOWN) {
-        DrawCommand* command = new_draw_command(gui, el_bounds, el->draw_type, el->data, el->color);
-        if (!inside_window(gui, command)) gui->command_stack_len--;
+        DrawCommand command;
+        command.pos_x = el_bounds.x;
+        command.pos_y = el_bounds.y;
+        command.width = el_bounds.w;
+        command.height = el_bounds.h;
+        command.type = el->draw_type;
+        command.color = el->color;
+        command.data = el->data;
+
+        if (inside_window(gui, &command)) {
+            switch (el->draw_type) {
+            case DRAWTYPE_RECT:
+                gui->rect_stack[gui->rect_stack_len++] = command;
+                break;
+            case DRAWTYPE_BORDER:
+                gui->border_stack[gui->border_stack_len++] = command;
+                break;
+            case DRAWTYPE_IMAGE:
+                gui->image_stack[gui->image_stack_len++] = command;
+                break;
+            case DRAWTYPE_TEXT:
+                gui->text_stack[gui->text_stack_len++] = command;
+                break;
+            default:
+                assert(false && "Unhandled render draw type");
+                break;
+            }
+        }
     }
 
-    if (el->shader) new_draw_command(gui, el_bounds, DRAWTYPE_SHADER_END, (DrawData) { .shader = el->shader }, (GuiColor) {0});
+    if (el->shader) {
+        flush_aux_buffers(gui);
+        new_draw_command(gui, el_bounds, DRAWTYPE_SHADER_END, (DrawData) { .shader = el->shader }, (GuiColor) {0});
+    }
 
     el->abs_x = el_bounds.x;
     el->abs_y = el_bounds.y;
@@ -209,6 +307,8 @@ static void gui_render(Gui* gui, FlexElement* el, float pos_x, float pos_y) {
             }
         }
     }
+
+    if (FLOATING(el) || SCISSOR(el)) flush_aux_buffers(gui);
 
     if (SCISSOR(el)) {
         new_draw_command(gui, el_bounds, DRAWTYPE_SCISSOR_END, (DrawData) {0}, (GuiColor) {0});
