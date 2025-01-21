@@ -27,6 +27,7 @@
 
 #define SIZING_X(el) (ElementSizing)(el->sizing & 0x0f)
 #define SIZING_Y(el) (ElementSizing)((el->sizing >> 4) & 0x0f)
+#define NEED_RESIZE(el) ((el->flags >> 5) & 1)
 #define SCISSOR(el) ((el->flags >> 4) & 1)
 #define FLOATING(el) ((el->flags >> 3) & 1)
 #define ALIGN(el) (AlignmentType)((el->flags >> 1) & 3)
@@ -34,6 +35,7 @@
 
 #define SET_SIZING_X(el, size) (el->sizing = (el->sizing & 0xf0) | size)
 #define SET_SIZING_Y(el, size) (el->sizing = (el->sizing & 0x0f) | (size << 4))
+#define SET_NEED_RESIZE(el, resize) (el->flags = (el->flags & ~(1 << 5)) | ((resize & 1) << 5))
 #define SET_SCISSOR(el, scissor) (el->flags = (el->flags & ~(1 << 4)) | ((scissor & 1) << 4))
 #define SET_FLOATING(el, floating) (el->flags = (el->flags & ~(1 << 3)) | ((floating & 1) << 3))
 #define SET_ALIGN(el, ali) (el->flags = (el->flags & 0xf9) | (ali << 1))
@@ -72,10 +74,6 @@ void gui_begin(Gui* gui) {
     gui->border_stack_len = 0;
     gui->image_stack_len = 0;
     gui->text_stack_len = 0;
-    gui->rect_count = 0;
-    gui->border_count = 0;
-    gui->image_count = 0;
-    gui->text_count = 0;
     gui->element_stack_len = 0;
     gui->element_ptr_stack_len = 0;
     gui->scissor_stack_len = 0;
@@ -157,11 +155,6 @@ static void flush_aux_buffers(Gui* gui) {
     for (size_t i = 0; i < gui->border_stack_len; i++) gui->command_stack[gui->command_stack_len++] = gui->border_stack[i];
     for (size_t i = 0; i < gui->image_stack_len; i++)  gui->command_stack[gui->command_stack_len++] = gui->image_stack[i];
     for (size_t i = 0; i < gui->text_stack_len; i++)   gui->command_stack[gui->command_stack_len++] = gui->text_stack[i];
-
-    gui->rect_count += gui->rect_stack_len;
-    gui->border_count += gui->border_stack_len;
-    gui->image_count += gui->image_stack_len;
-    gui->text_count += gui->text_stack_len;
 
     gui->rect_stack_len = 0;
     gui->border_stack_len = 0;
@@ -339,7 +332,7 @@ FlexElement* gui_element_begin(Gui* gui) {
     el->gap = 0;
     el->w = 0;
     el->h = 0;
-    el->flags = 0; // direction = DIRECTION_VERTICAL, align = ALIGN_TOP | ALIGN_LEFT, is_floating = false
+    el->flags = 0; // direction = DIRECTION_VERTICAL, align = ALIGN_TOP | ALIGN_LEFT, is_floating = false, needs_resize = false
     el->next = NULL;
     el->parent_anchor = NULL;
     el->handle_hover = NULL;
@@ -455,8 +448,7 @@ static void gui_element_resize(Gui* gui, FlexElement* el, unsigned short new_w, 
     }
 }
 
-static void gui_element_advance(Gui* gui, GuiMeasurement ms) {
-    FlexElement* el = gui->element_ptr_stack_len > 0 ? gui->element_ptr_stack[gui->element_ptr_stack_len - 1] : NULL;
+static void gui_element_advance(FlexElement* el, GuiMeasurement ms) {
     if (!el) return;
 
     if (DIRECTION(el) == DIRECTION_HORIZONTAL) {
@@ -483,15 +475,15 @@ void gui_element_end(Gui* gui) {
         prev->element_count++;
     }
 
-    gui_element_advance(gui, (GuiMeasurement) { el->w, el->h });
+    gui_element_advance(prev, (GuiMeasurement) { el->w, el->h });
     ElementSizing sizing_x = SIZING_X(el);
     ElementSizing sizing_y = SIZING_Y(el);
     bool has_defined_size = sizing_x != SIZING_GROW && sizing_x != SIZING_PERCENT && 
                             sizing_y != SIZING_GROW && sizing_y != SIZING_PERCENT;
 
-    if ((sizing_x == SIZING_FIXED || sizing_y == SIZING_FIXED) && has_defined_size) {
-        gui_element_resize(gui, el, el->w, el->h);
-    } else if ((sizing_x == SIZING_FIT || sizing_y == SIZING_FIT) && has_defined_size) {
+    if (!has_defined_size) SET_NEED_RESIZE(prev, 1);
+
+    if (has_defined_size && NEED_RESIZE(el) && (sizing_x == SIZING_FIXED || sizing_y == SIZING_FIXED || sizing_x == SIZING_FIT || sizing_y == SIZING_FIT)) {
         gui_element_resize(gui, el, el->w, el->h);
     } else {
         gui_element_realign(el);
@@ -586,8 +578,6 @@ void gui_set_fixed(Gui* gui, unsigned short w, unsigned short h) {
 void gui_set_fit(Gui* gui) {
     FlexElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
     el->sizing = SIZING_FIT | (SIZING_FIT << 4); // This sets both dimensions to SIZING_FIT
-    el->w = 0;
-    el->h = 0;
 }
 
 void gui_set_padding(Gui* gui, unsigned short pad_w, unsigned short pad_h) {

@@ -282,8 +282,8 @@ void argument_on_hover(FlexElement* el) {
 void scrap_gui_draw_block(ScrBlock* block, bool highlight) {
     bool collision = hover_info.prev_block == block || highlight;
     Color color = CONVERT_COLOR(block->blockdef->color, Color);
-    Color block_color = ColorBrightness(color, collision ? 0.3 : 0.0);
-    Color dropdown_color = ColorBrightness(color, collision ? 0.0 : -0.3);
+    Color block_color = collision ? ColorBrightness(color, 0.3) : color;
+    Color dropdown_color = collision ? color : ColorBrightness(color, -0.3);
     Color outline_color = highlight ? YELLOW : ColorBrightness(color, collision ? 0.5 : -0.2);
 
     gui_element_begin(gui);
@@ -309,8 +309,10 @@ void scrap_gui_draw_block(ScrBlock* block, bool highlight) {
         }
     
     size_t arg_id = 0;
-    for (size_t i = 0; i < vector_size(block->blockdef->inputs); i++) {
-        ScrInput* input = &block->blockdef->inputs[i];
+    ScrInput* inputs = block->blockdef->inputs;
+    size_t inputs_size = vector_size(inputs);
+    for (size_t i = 0; i < inputs_size; i++) {
+        ScrInput* input = &inputs[i];
         ScrArgument* arg = &block->arguments[arg_id];
 
         switch (input->type) {
@@ -962,6 +964,9 @@ void scrap_gui_render_rect_notched(DrawCommand* cmd) {
 }
 
 void scrap_gui_render(void) {
+#ifdef DEBUG
+    bool show_bounds = IsKeyDown(KEY_F4);
+#endif
     DrawCommand* command;
     GUI_GET_COMMANDS(gui, command) {
         Texture2D* image = command->data.image;
@@ -1059,7 +1064,7 @@ void scrap_gui_render(void) {
             break;
         }
 #ifdef DEBUG
-        DrawRectangleLinesEx((Rectangle) { command->pos_x, command->pos_y, command->width, command->height }, 1.0, (Color) { 0xff, 0x00, 0xff, 0x40 });
+        if (show_bounds) DrawRectangleLinesEx((Rectangle) { command->pos_x, command->pos_y, command->width, command->height }, 1.0, (Color) { 0xff, 0x00, 0xff, 0x40 });
 #endif
     }
 }
@@ -1079,7 +1084,7 @@ void write_debug_buffer(void) {
     print_debug(&i, "BlockChain: %p", hover_info.blockchain);
     print_debug(&i, "Prev argument: %p", hover_info.prev_argument);
     print_debug(&i, "Select block: %p", hover_info.select_block);
-    print_debug(&i, "Select arg: %p, Pos: (%.3f, %.3f)");
+    print_debug(&i, "Select arg: %p", hover_info.select_argument);
     print_debug(&i, "Sidebar: %d", hover_info.sidebar);
     print_debug(&i, "Mouse: %p, Time: %.3f, Pos: (%d, %d), Click: (%d, %d)", mouse_blockchain.blocks, hover_info.time_at_last_pos, GetMouseX(), GetMouseY(), (int)hover_info.mouse_click_pos.x, (int)hover_info.mouse_click_pos.y);
     print_debug(&i, "Camera: (%.3f, %.3f), Click: (%.3f, %.3f)", camera_pos.x, camera_pos.y, camera_click_pos.x, camera_click_pos.y);
@@ -1093,6 +1098,7 @@ void write_debug_buffer(void) {
     print_debug(&i, "Input: %p, Select: %p", hover_info.input, hover_info.select_input);
     print_debug(&i, "Exec chain: %p, ind: %zu", hover_info.exec_chain, hover_info.exec_ind);
     print_debug(&i, "UI time: %.3f", ui_time);
+    print_debug(&i, "FPS: %d, Frame time: %.3f", GetFPS(), GetFrameTime());
 #else
     print_debug(&i, "Scrap v" SCRAP_VERSION);
     print_debug(&i, "FPS: %d, Frame time: %.3f", GetFPS(), GetFrameTime());

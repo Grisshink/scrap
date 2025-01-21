@@ -21,7 +21,7 @@
 #include <stddef.h>
 
 #define ELEMENT_STACK_SIZE 32768
-#define COMMAND_STACK_SIZE 8192
+#define COMMAND_STACK_SIZE 4096
 #define AUX_STACK_SIZE 4096
 #define STATE_STACK_SIZE 32768
 typedef struct Gui Gui;
@@ -139,12 +139,14 @@ struct FlexElement {
     //   Y - ElementSizing for element height
     unsigned char sizing;
     // Flags layout:
-    // 000SFAAD
+    // 00GSFAAD
     // Where: 
     //   D - FlexDirection
     //   A - AlignmentType
     //   F - Is floating element
     //   S - Is scissoring on
+    //   G - Does this element need to be resized? (internal flag)
+    //   0 - Unused
     unsigned char flags;
     HoverHandler handle_hover;
     int* scroll_value;
@@ -163,8 +165,7 @@ typedef GuiMeasurement (*MeasureImageFunc)(void* image, unsigned short size);
 
 struct Gui {
     DrawCommand command_stack[COMMAND_STACK_SIZE];
-    size_t command_stack_len;
-    size_t command_stack_iter;
+    size_t command_stack_len; size_t command_stack_iter;
 
     DrawCommand rect_stack[AUX_STACK_SIZE];
     size_t rect_stack_len;
@@ -196,11 +197,6 @@ struct Gui {
     unsigned short win_w, win_h;
     unsigned short mouse_x, mouse_y;
     int mouse_scroll;
-
-    size_t rect_count;
-    size_t border_count;
-    size_t image_count;
-    size_t text_count;
 };
 
 #define GUI_GET_COMMANDS(gui, command) while (gui->command_stack_iter < gui->command_stack_len && (command = &gui->command_stack[gui->command_stack_iter++]))
