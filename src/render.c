@@ -30,6 +30,8 @@
 #define UNLERP(min, max, v) (((float)(v) - (float)(min)) / ((float)(max) - (float)(min)))
 #define CONVERT_COLOR(color, type) (type) { color.r, color.g, color.b, color.a }
 
+void scrap_gui_draw_code(void);
+
 void sidebar_init(void) {
     sidebar.blocks = vector_create();
     for (vec_size_t i = 0; i < vector_size(vm.blockdefs); i++) {
@@ -482,8 +484,8 @@ void scrap_gui_draw_tab_bar(void) {
         gui_set_min_size(gui, 0, tab_bar_size);
         gui_set_align(gui, ALIGN_CENTER);
 
-        scrap_gui_draw_button("Code", tab_bar_size, current_tab == TAB_CODE, handle_code_tab_click);
-        scrap_gui_draw_button("Output", tab_bar_size, current_tab == TAB_OUTPUT, handle_output_tab_click);
+        //scrap_gui_draw_button("Code", tab_bar_size, current_tab == TAB_CODE, handle_code_tab_click);
+        //scrap_gui_draw_button("Output", tab_bar_size, current_tab == TAB_OUTPUT, handle_output_tab_click);
 
         gui_grow(gui, DIRECTION_HORIZONTAL);
         gui_text(gui, &font_cond, project_name, BLOCK_TEXT_SIZE, (GuiColor) { 0x80, 0x80, 0x80, 0xff });
@@ -631,26 +633,34 @@ void scrap_gui_draw_sidebar(void) {
     gui_element_begin(gui);
         gui_set_grow(gui, DIRECTION_VERTICAL);
         gui_set_grow(gui, DIRECTION_HORIZONTAL);
-        gui_set_direction(gui, DIRECTION_HORIZONTAL);
+        gui_set_rect(gui, (GuiColor) { 0x00, 0x00, 0x00, 0x80 });
+        gui_set_padding(gui, SIDE_BAR_PADDING, SIDE_BAR_PADDING);
+        gui_set_gap(gui, SIDE_BAR_PADDING);
+        gui_on_hover(gui, sidebar_on_hover);
+        gui_set_scroll(gui, &sidebar.scroll_amount);
+        gui_set_scroll_scaling(gui, conf.font_size * 4);
+        gui_set_scissor(gui);
 
-        gui_element_begin(gui);
-            gui_set_fixed(gui, conf.side_bar_size, 0);
-            gui_set_grow(gui, DIRECTION_VERTICAL);
-            gui_set_rect(gui, (GuiColor) { 0x00, 0x00, 0x00, 0x80 });
-            gui_set_padding(gui, SIDE_BAR_PADDING, SIDE_BAR_PADDING);
-            gui_set_gap(gui, SIDE_BAR_PADDING);
-            gui_on_hover(gui, sidebar_on_hover);
-            gui_set_scroll(gui, &sidebar.scroll_amount);
-            gui_set_scroll_scaling(gui, conf.font_size * 4);
-            gui_set_scissor(gui);
+        for (size_t i = dropdown.scroll_amount; i < vector_size(sidebar.blocks); i++) {
+            scrap_gui_draw_block(&sidebar.blocks[i], false);
+        }
+    gui_element_end(gui);
+}
 
-            for (size_t i = dropdown.scroll_amount; i < vector_size(sidebar.blocks); i++) {
-                scrap_gui_draw_block(&sidebar.blocks[i], false);
-            }
-        gui_element_end(gui);
+void scrap_gui_draw_code_area(void) {
+    gui_element_begin(gui);
+        gui_set_grow(gui, DIRECTION_HORIZONTAL);
+        gui_set_grow(gui, DIRECTION_VERTICAL);
+        gui_set_direction(gui, DIRECTION_VERTICAL);
+        gui_set_padding(gui, 0, conf.font_size * 2);
+        gui_set_align(gui, ALIGN_CENTER);
+        gui_set_scissor(gui);
+
+        scrap_gui_draw_code();
 
         gui_element_begin(gui);
             gui_set_floating(gui);
+            gui_set_position(gui, 0, 0);
             gui_set_padding(gui, conf.font_size * 0.2, conf.font_size * 0.2);
 
             for (int i = 0; i < DEBUG_BUFFER_LINES; i++) {
@@ -659,19 +669,96 @@ void scrap_gui_draw_sidebar(void) {
         gui_element_end(gui);
 
         if (actionbar.show_time > 0) {
-            gui_element_begin(gui);
-                gui_set_grow(gui, DIRECTION_HORIZONTAL);
-                gui_set_grow(gui, DIRECTION_VERTICAL);
-                gui_set_direction(gui, DIRECTION_VERTICAL);
-                gui_set_padding(gui, 0, conf.font_size * 2);
-                gui_set_align(gui, ALIGN_CENTER);
-
-                Color color = YELLOW;
-                color.a = actionbar.show_time / 3.0 * 255.0;
-                gui_text(gui, &font_eb, actionbar.text, conf.font_size * 0.8, CONVERT_COLOR(color, GuiColor));
-            gui_element_end(gui);
+            Color color = YELLOW;
+            color.a = actionbar.show_time / 3.0 * 255.0;
+            gui_text(gui, &font_eb, actionbar.text, conf.font_size * 0.8, CONVERT_COLOR(color, GuiColor));
         }
     gui_element_end(gui);
+}
+
+void scrap_gui_draw_split_preview(void) {
+    if (split_preview.side == SPLIT_SIDE_NONE) return;
+
+    gui_element_begin(gui);
+        gui_set_floating(gui);
+        gui_set_position(gui, 0, 0);
+        gui_set_grow(gui, DIRECTION_HORIZONTAL);
+        gui_set_grow(gui, DIRECTION_VERTICAL);
+
+        if (split_preview.side == SPLIT_SIDE_LEFT || split_preview.side == SPLIT_SIDE_RIGHT) gui_set_direction(gui, DIRECTION_HORIZONTAL);
+
+        if (split_preview.side == SPLIT_SIDE_BOTTOM) gui_grow(gui, DIRECTION_VERTICAL);
+        if (split_preview.side == SPLIT_SIDE_RIGHT) gui_grow(gui, DIRECTION_HORIZONTAL);
+
+        gui_element_begin(gui);
+            gui_set_grow(gui, DIRECTION_VERTICAL);
+            gui_set_grow(gui, DIRECTION_HORIZONTAL);
+            gui_set_rect(gui, (GuiColor) { 0x00, 0x80, 0xff, 0x80});
+        gui_element_end(gui);
+
+        if (split_preview.side == SPLIT_SIDE_TOP) gui_grow(gui, DIRECTION_VERTICAL);
+        if (split_preview.side == SPLIT_SIDE_LEFT) gui_grow(gui, DIRECTION_HORIZONTAL);
+    gui_element_end(gui);
+}
+
+void scrap_gui_draw_term_panel(void) {
+    gui_element_begin(gui);
+        gui_set_grow(gui, DIRECTION_HORIZONTAL);
+        gui_set_grow(gui, DIRECTION_VERTICAL);
+        gui_set_padding(gui, conf.font_size * 0.5, conf.font_size * 0.5);
+        gui_set_rect(gui, (GuiColor) { 0x20, 0x20, 0x20, 0xff });
+
+        gui_element_begin(gui);
+            gui_set_grow(gui, DIRECTION_HORIZONTAL);
+            gui_set_grow(gui, DIRECTION_VERTICAL);
+            gui_set_rect(gui, (GuiColor) { 0x00, 0x00, 0x00, 0xff });
+            gui_set_rect_type(gui, RECT_TERMINAL);
+        gui_element_end(gui);
+    gui_element_end(gui);
+}
+
+void scrap_gui_draw_panel(PanelTree* panel) {
+    switch (panel->type) {
+    case PANEL_NONE:
+        assert(false && "Attempt to render panel with type PANEL_NONE");
+        break;
+    case PANEL_SIDEBAR:
+        scrap_gui_draw_sidebar();
+        break;
+    case PANEL_CODE:
+        scrap_gui_draw_code_area();
+        break;
+    case PANEL_TERM:
+        scrap_gui_draw_term_panel();
+        break;
+    case PANEL_SPLIT:
+        gui_element_begin(gui);
+            gui_set_grow(gui, DIRECTION_VERTICAL);
+            gui_set_grow(gui, DIRECTION_HORIZONTAL);
+            gui_set_direction(gui, panel->direction);
+
+            gui_element_begin(gui);
+                if (panel->direction == DIRECTION_VERTICAL) {
+                    gui_set_percent_size(gui, panel->split_percent, DIRECTION_VERTICAL);
+                    gui_set_grow(gui, DIRECTION_HORIZONTAL);
+                } else {
+                    gui_set_grow(gui, DIRECTION_VERTICAL);
+                    gui_set_percent_size(gui, panel->split_percent, DIRECTION_HORIZONTAL);
+                }
+
+                scrap_gui_draw_panel(panel->left);
+            gui_element_end(gui);
+            
+            gui_element_begin(gui);
+                gui_set_grow(gui, DIRECTION_VERTICAL);
+                gui_set_grow(gui, DIRECTION_HORIZONTAL);
+
+                scrap_gui_draw_panel(panel->right);
+            gui_element_end(gui);
+        gui_element_end(gui);
+        break;
+    }
+    if (panel->type != PANEL_SPLIT) scrap_gui_draw_split_preview();
 }
 
 void scrap_gui_draw_code(void) {
@@ -680,6 +767,7 @@ void scrap_gui_draw_code(void) {
             editor_code[i].x - camera_pos.x, 
             editor_code[i].y - camera_pos.y,
         };
+        // FIXME: code renderer does not properly check culling bounds
         if (chain_pos.x > gui->win_w || chain_pos.y > gui->win_h) continue;
         if (editor_code[i].width > 0 && editor_code[i].height > 0 && 
             (chain_pos.x + editor_code[i].width < 0 || chain_pos.y + editor_code[i].height < 0)) continue;
@@ -746,25 +834,11 @@ void scrap_gui_draw_dropdown(void) {
 void scrap_gui_process(void) {
     // Gui
     gui_begin(gui);
-        if (current_tab == TAB_CODE) scrap_gui_draw_code();
         scrap_gui_draw_top_bar();
         scrap_gui_draw_tab_bar();
         if (current_tab == TAB_CODE) {
-            scrap_gui_draw_sidebar();
+            scrap_gui_draw_panel(root_panel);
         } else if (current_tab == TAB_OUTPUT) {
-            gui_element_begin(gui);
-                gui_set_grow(gui, DIRECTION_HORIZONTAL);
-                gui_set_grow(gui, DIRECTION_VERTICAL);
-                gui_set_padding(gui, conf.font_size * 0.5, conf.font_size * 0.5);
-                gui_set_rect(gui, (GuiColor) { 0x20, 0x20, 0x20, 0xff });
-
-                gui_element_begin(gui);
-                    gui_set_grow(gui, DIRECTION_HORIZONTAL);
-                    gui_set_grow(gui, DIRECTION_VERTICAL);
-                    gui_set_rect(gui, (GuiColor) { 0x00, 0x00, 0x00, 0xff });
-                    gui_set_rect_type(gui, RECT_TERMINAL);
-                gui_element_end(gui);
-            gui_element_end(gui);
         }
         handle_window();
         if (current_tab == TAB_CODE) {
@@ -1001,18 +1075,18 @@ void write_debug_buffer(void) {
     int i = 0;
 #ifdef DEBUG
     print_debug(&i, "Block: %p, Parent: %p", hover_info.block, hover_info.block ? hover_info.block->parent : NULL);
-    print_debug(&i, "Argument: %p, Pos: (%.3f, %.3f)", hover_info.argument, hover_info.argument_pos.x, hover_info.argument_pos.y);
-    print_debug(&i, "BlockChain: %p, Layer: %d", hover_info.blockchain, hover_info.blockchain_layer);
+    print_debug(&i, "Argument: %p", hover_info.argument);
+    print_debug(&i, "BlockChain: %p", hover_info.blockchain);
     print_debug(&i, "Prev argument: %p", hover_info.prev_argument);
     print_debug(&i, "Select block: %p", hover_info.select_block);
     print_debug(&i, "Select arg: %p, Pos: (%.3f, %.3f)");
     print_debug(&i, "Sidebar: %d", hover_info.sidebar);
     print_debug(&i, "Mouse: %p, Time: %.3f, Pos: (%d, %d), Click: (%d, %d)", mouse_blockchain.blocks, hover_info.time_at_last_pos, GetMouseX(), GetMouseY(), (int)hover_info.mouse_click_pos.x, (int)hover_info.mouse_click_pos.y);
     print_debug(&i, "Camera: (%.3f, %.3f), Click: (%.3f, %.3f)", camera_pos.x, camera_pos.y, camera_click_pos.x, camera_click_pos.y);
-    print_debug(&i, "Dropdown ind: %d, Scroll: %d", hover_info.dropdown_hover_ind, dropdown.scroll_amount);
+    print_debug(&i, "Dropdown scroll: %d", dropdown.scroll_amount);
     print_debug(&i, "Drag cancelled: %d", hover_info.drag_cancelled);
     print_debug(&i, "Min: (%.3f, %.3f), Max: (%.3f, %.3f)", block_code.min_pos.x, block_code.min_pos.y, block_code.max_pos.x, block_code.max_pos.y);
-    print_debug(&i, "Sidebar scroll: %d, Max: %d", sidebar.scroll_amount, sidebar.max_y);
+    print_debug(&i, "Sidebar scroll: %d", sidebar.scroll_amount);
     print_debug(&i, "Editor: %d, Editing: %p, Blockdef: %p, input: %zu", hover_info.editor.part, hover_info.editor.edit_blockdef, hover_info.editor.blockdef, hover_info.editor.blockdef_input);
     print_debug(&i, "Elements: %zu/%zu, Draw: %zu/%zu", gui->element_stack_len, ELEMENT_STACK_SIZE, gui->command_stack_len, COMMAND_STACK_SIZE);
     print_debug(&i, "Slider: %p, min: %d, max: %d", hover_info.hover_slider.value, hover_info.hover_slider.min, hover_info.hover_slider.max);

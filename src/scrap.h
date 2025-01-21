@@ -23,6 +23,8 @@
 #include "config.h"
 #include "scrap_gui.h"
 
+typedef struct PanelTree PanelTree;
+
 typedef struct {
     int font_size;
     int side_bar_size;
@@ -34,6 +36,35 @@ typedef struct {
 } Config;
 
 typedef bool (*ButtonClickHandler)(void);
+
+typedef enum {
+    SPLIT_SIDE_NONE = 0,
+    SPLIT_SIDE_TOP,
+    SPLIT_SIDE_BOTTOM,
+    SPLIT_SIDE_LEFT,
+    SPLIT_SIDE_RIGHT,
+} SplitPreviewSide;
+
+typedef struct {
+    SplitPreviewSide side;
+} SplitPreview;
+
+typedef enum {
+    PANEL_NONE = 0,
+    PANEL_SPLIT,
+    PANEL_SIDEBAR,
+    PANEL_CODE,
+    PANEL_TERM,
+} PanelType;
+
+struct PanelTree {
+    PanelType type;
+    FlexDirection direction;
+    struct PanelTree* parent;
+    float split_percent;
+    struct PanelTree* left; // Becomes top when direction is DIRECTION_VERTICAL
+    struct PanelTree* right; // Becomes bottom when direction is DIRECTION_VERTICAL
+};
 
 typedef struct {
     ButtonClickHandler handler;
@@ -187,6 +218,10 @@ extern ScrBlockChain* editor_code;
 extern ScrBlockChain mouse_blockchain;
 extern ScrExec exec;
 extern Gui* gui;
+
+extern SplitPreview split_preview;
+extern PanelTree* root_panel;
+
 #ifdef DEBUG
 extern double ui_time;
 #endif

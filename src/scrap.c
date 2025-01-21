@@ -69,6 +69,9 @@ ScrBlockChain* editor_code = {0};
 ScrBlockChain mouse_blockchain = {0};
 Gui* gui = NULL;
 
+SplitPreview split_preview = {0};
+PanelTree* root_panel = NULL;
+
 char project_name[1024] = "project.scrp";
 char debug_buffer[DEBUG_BUFFER_LINES][DEBUG_BUFFER_LINE_SIZE] = {0};
 
@@ -201,6 +204,82 @@ GuiMeasurement scrap_gui_measure_text(void* font, const char* text, unsigned sho
     return custom_measure(*(Font*)font, text, size);
 }
 
+void panel_split(PanelTree* panel, SplitPreviewSide side, PanelType new_panel_type, float split_percent) {
+    if (panel->type == PANEL_SPLIT) return;
+
+    PanelTree* old_panel = malloc(sizeof(PanelTree));
+    old_panel->type = panel->type;
+    old_panel->left = NULL;
+    old_panel->right = NULL;
+    old_panel->parent = panel;
+
+    PanelTree* new_panel = malloc(sizeof(PanelTree));
+    new_panel->type = new_panel_type;
+    new_panel->left = NULL;
+    new_panel->right = NULL;
+    new_panel->parent = panel;
+
+    panel->type = PANEL_SPLIT;
+
+    switch (side) {
+    case SPLIT_SIDE_TOP:
+        panel->direction = DIRECTION_VERTICAL;
+        panel->left = new_panel;
+        panel->right = old_panel;
+        panel->split_percent = split_percent;
+        break;
+    case SPLIT_SIDE_BOTTOM:
+        panel->direction = DIRECTION_VERTICAL;
+        panel->left = old_panel;
+        panel->right = new_panel;
+        panel->split_percent = 1.0 - split_percent;
+        break;
+    case SPLIT_SIDE_LEFT:
+        panel->direction = DIRECTION_HORIZONTAL;
+        panel->left = new_panel;
+        panel->right = old_panel;
+        panel->split_percent = split_percent;
+        break;
+    case SPLIT_SIDE_RIGHT:
+        panel->direction = DIRECTION_HORIZONTAL;
+        panel->left = old_panel;
+        panel->right = new_panel;
+        panel->split_percent = 1.0 - split_percent;
+        break;
+    case SPLIT_SIDE_NONE:
+        assert(false && "Got SPLIT_SIDE_NONE");
+        break;
+    default: 
+        assert(false && "Got unknown split side");
+        break;
+    }
+}
+
+void panel_delete(PanelTree* panel) {
+    assert(panel != NULL);
+
+    if (panel->type == PANEL_SPLIT) {
+        panel_delete(panel->left);
+        panel_delete(panel->right);
+        panel->left = NULL;
+        panel->right = NULL;
+    }
+
+    panel->type = PANEL_NONE;
+    free(panel);
+}
+
+void init_panels(void) {
+    root_panel = malloc(sizeof(PanelTree));
+    root_panel->type = PANEL_CODE;
+    root_panel->left = NULL;
+    root_panel->right = NULL;
+    root_panel->parent = NULL;
+
+    panel_split(root_panel, SPLIT_SIDE_LEFT, PANEL_SIDEBAR, 0.25);
+    panel_split(root_panel->right, SPLIT_SIDE_TOP, PANEL_TERM, 0.4);
+}
+
 void setup(void) {
     run_tex = LoadTexture(into_data_path(DATA_PATH "run.png"));
     SetTextureFilter(run_tex, TEXTURE_FILTER_BILINEAR);
@@ -258,7 +337,7 @@ void setup(void) {
     editor_code = vector_create();
 
     sidebar_init();
-
+    init_panels();
     term_init();
 
     gui = malloc(sizeof(Gui));
@@ -278,7 +357,7 @@ int main(void) {
 
     SetConfigFlags(FLAG_MSAA_4X_HINT | FLAG_WINDOW_RESIZABLE);
     InitWindow(800, 600, "Scrap");
-    SetWindowState(FLAG_VSYNC_HINT);
+    //SetWindowState(FLAG_VSYNC_HINT);
     SetTargetFPS(conf.fps_limit);
 
     setup();
@@ -335,6 +414,7 @@ int main(void) {
     vector_free(sidebar.blocks);
     vm_free(&vm);
     free(gui);
+    panel_delete(root_panel);
     config_free(&conf);
     config_free(&window_conf);
     CloseWindow();

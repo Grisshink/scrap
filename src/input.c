@@ -117,7 +117,7 @@ bool start_vm(void) {
     actionbar_show("Started successfully!");
     if (current_tab != TAB_OUTPUT) {
         shader_time = 0.0;
-        current_tab = TAB_OUTPUT;
+        //current_tab = TAB_OUTPUT;
     }
     return true;
 }

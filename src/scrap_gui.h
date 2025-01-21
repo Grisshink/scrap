@@ -110,6 +110,7 @@ typedef enum {
     SIZING_FIT = 0,
     SIZING_FIXED,
     SIZING_GROW,
+    SIZING_PERCENT,
 } ElementSizing;
 
 typedef enum {
@@ -127,6 +128,7 @@ struct FlexElement {
     unsigned short pad_w, pad_h;
     unsigned short gap;
     float scaling;
+    float size_percentage;
     unsigned char draw_type; // DrawType
     DrawData data;
     GuiColor color;
@@ -221,6 +223,7 @@ void gui_element_end(Gui* gui);
 void gui_set_fixed(Gui* gui, unsigned short w, unsigned short h);
 void gui_set_fit(Gui* gui);
 void gui_set_grow(Gui* gui, FlexDirection direction);
+void gui_set_percent_size(Gui* gui, float percentage, FlexDirection direction);
 void gui_set_rect(Gui* gui, GuiColor color);
 void gui_set_rect_type(Gui* gui, GuiRectType type);
 void gui_set_direction(Gui* gui, FlexDirection direction);

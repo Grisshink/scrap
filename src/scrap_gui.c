@@ -209,6 +209,9 @@ static void gui_render(Gui* gui, FlexElement* el, float pos_x, float pos_y) {
         pos_y = el->parent_anchor->abs_y;
     }
 
+    el->abs_x = el->x * el->scaling + pos_x;
+    el->abs_y = el->y * el->scaling + pos_y;
+
     if (mouse_inside(gui, scissor_rect((GuiBounds) { 
         el->x * el->scaling + pos_x, 
         el->y * el->scaling + pos_y, 
@@ -269,9 +272,6 @@ static void gui_render(Gui* gui, FlexElement* el, float pos_x, float pos_y) {
         flush_aux_buffers(gui);
         new_draw_command(gui, el_bounds, DRAWTYPE_SHADER_END, (DrawData) { .shader = el->shader }, (GuiColor) {0});
     }
-
-    el->abs_x = el_bounds.x;
-    el->abs_y = el_bounds.y;
     
     FlexElement* iter = el + 1;
     for (int i = 0; i < el->element_count; i++) {
@@ -346,6 +346,7 @@ FlexElement* gui_element_begin(Gui* gui) {
     el->custom_data = NULL;
     el->custom_state = NULL;
     el->scroll_value = NULL;
+    el->size_percentage = 1.0;
     el->shader = NULL;
     el->scroll_scaling = 64;
     el->state_len = 0;
@@ -392,6 +393,8 @@ static void gui_element_resize(Gui* gui, FlexElement* el, unsigned short new_w, 
             if (DIRECTION(el) == DIRECTION_VERTICAL) {
                 if (SIZING_Y(iter) == SIZING_GROW) {
                     grow_elements++;
+                } else if (SIZING_Y(iter) == SIZING_PERCENT) {
+                    left_h -= el->h * iter->size_percentage;
                 } else {
                     left_h -= iter->h;
                 }
@@ -399,6 +402,8 @@ static void gui_element_resize(Gui* gui, FlexElement* el, unsigned short new_w, 
             } else {
                 if (SIZING_X(iter) == SIZING_GROW) {
                     grow_elements++;
+                } else if (SIZING_X(iter) == SIZING_PERCENT) {
+                    left_w -= el->w * iter->size_percentage;
                 } else {
                     left_w -= iter->w;
                 }
@@ -413,23 +418,29 @@ static void gui_element_resize(Gui* gui, FlexElement* el, unsigned short new_w, 
 
     iter = el + 1;
     for (int i = 0; i < el->element_count; i++) {
-        if (!FLOATING(iter)) {
+        bool is_floating = FLOATING(iter);
+        if (!is_floating) {
             iter->x = el->cursor_x;
             iter->y = el->cursor_y;
+        }
 
-            int size_w = iter->w;
-            int size_h = iter->h;
-            if (DIRECTION(el) == DIRECTION_VERTICAL) {
-                if (SIZING_X(iter) == SIZING_GROW) size_w = el->w - el->pad_w * 2;
-                if (SIZING_Y(iter) == SIZING_GROW) size_h = left_h / grow_elements;
-                if (SIZING_X(iter) == SIZING_GROW || SIZING_Y(iter) == SIZING_GROW) gui_element_resize(gui, iter, size_w, size_h);
-                el->cursor_y += iter->h + el->gap;
-            } else {
-                if (SIZING_X(iter) == SIZING_GROW) size_w = left_w / grow_elements;
-                if (SIZING_Y(iter) == SIZING_GROW) size_h = el->h - el->pad_h * 2;
-                if (SIZING_X(iter) == SIZING_GROW || SIZING_Y(iter) == SIZING_GROW) gui_element_resize(gui, iter, size_w, size_h);
-                el->cursor_x += iter->w + el->gap;
-            }
+        int size_w = iter->w;
+        int size_h = iter->h;
+        ElementSizing sizing_x = SIZING_X(iter);
+        ElementSizing sizing_y = SIZING_Y(iter);
+        if (sizing_x == SIZING_PERCENT) size_w = el->w * iter->size_percentage;
+        if (sizing_y == SIZING_PERCENT) size_h = el->h * iter->size_percentage;
+
+        if (DIRECTION(el) == DIRECTION_VERTICAL) {
+            if (sizing_x == SIZING_GROW) size_w = el->w - el->pad_w * 2;
+            if (sizing_y == SIZING_GROW) size_h = left_h / grow_elements;
+            if (sizing_x == SIZING_GROW || sizing_y == SIZING_GROW || sizing_x == SIZING_PERCENT || sizing_y == SIZING_PERCENT) gui_element_resize(gui, iter, size_w, size_h);
+            if (!is_floating) el->cursor_y += iter->h + el->gap;
+        } else {
+            if (sizing_x == SIZING_GROW) size_w = left_w / grow_elements;
+            if (sizing_y == SIZING_GROW) size_h = el->h - el->pad_h * 2;
+            if (sizing_x == SIZING_GROW || sizing_y == SIZING_GROW || sizing_x == SIZING_PERCENT || sizing_y == SIZING_PERCENT) gui_element_resize(gui, iter, size_w, size_h);
+            if (!is_floating) el->cursor_x += iter->w + el->gap;
         }
         iter = iter->next;
     }
@@ -473,9 +484,14 @@ void gui_element_end(Gui* gui) {
     }
 
     gui_element_advance(gui, (GuiMeasurement) { el->w, el->h });
-    if ((SIZING_X(el) == SIZING_FIXED && SIZING_Y(el) != SIZING_GROW) || (SIZING_Y(el) == SIZING_FIXED && SIZING_X(el) != SIZING_GROW)) {
+    ElementSizing sizing_x = SIZING_X(el);
+    ElementSizing sizing_y = SIZING_Y(el);
+    bool has_defined_size = sizing_x != SIZING_GROW && sizing_x != SIZING_PERCENT && 
+                            sizing_y != SIZING_GROW && sizing_y != SIZING_PERCENT;
+
+    if ((sizing_x == SIZING_FIXED || sizing_y == SIZING_FIXED) && has_defined_size) {
         gui_element_resize(gui, el, el->w, el->h);
-    } else if ((SIZING_X(el) == SIZING_FIT && SIZING_Y(el) != SIZING_GROW) || (SIZING_Y(el) == SIZING_FIT && SIZING_X(el) != SIZING_GROW)) {
+    } else if ((sizing_x == SIZING_FIT || sizing_y == SIZING_FIT) && has_defined_size) {
         gui_element_resize(gui, el, el->w, el->h);
     } else {
         gui_element_realign(el);
@@ -596,6 +612,18 @@ void gui_set_grow(Gui* gui, FlexDirection direction) {
         el->h = 0;
     } else {
         SET_SIZING_X(el, SIZING_GROW);
+        el->w = 0;
+    }
+}
+
+void gui_set_percent_size(Gui* gui, float percentage, FlexDirection direction) {
+    FlexElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
+    el->size_percentage = percentage;
+    if (direction == DIRECTION_VERTICAL) {
+        SET_SIZING_Y(el, SIZING_PERCENT);
+        el->h = 0;
+    } else {
+        SET_SIZING_X(el, SIZING_PERCENT);
         el->w = 0;
     }
 }
