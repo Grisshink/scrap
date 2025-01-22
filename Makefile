@@ -2,7 +2,7 @@ SCRAP_VERSION := 0.3-dev
 
 TARGET ?= LINUX
 
-CFLAGS := -Wall -Wextra -s -O3 -DSCRAP_VERSION=\"$(SCRAP_VERSION)\" -I./raylib/src
+CFLAGS := -Wall -Wextra -std=c11 -s -O3 -DDEBUG -D_GNU_SOURCE -DSCRAP_VERSION=\"$(SCRAP_VERSION)\" -I./raylib/src
 
 ifeq ($(TARGET), LINUX)
 	CC := gcc

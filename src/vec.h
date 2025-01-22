@@ -58,11 +58,11 @@ typedef size_t vec_type_t;
 
 // vec_addr is a vector* (aka type**)
 #define vector_add_dst(vec_addr)\
-	((typeof(*vec_addr))(\
+	((__typeof__(*vec_addr))(\
 	    _vector_add_dst((vector*)vec_addr, sizeof(**vec_addr))\
 	))
 #define vector_insert_dst(vec_addr, pos)\
-	((typeof(*vec_addr))(\
+	((__typeof__(*vec_addr))(\
 	    _vector_insert_dst((vector*)vec_addr, sizeof(**vec_addr), pos)))
 
 #define vector_add(vec_addr, value)\

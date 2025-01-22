@@ -159,7 +159,7 @@ bool handle_dropdown_close(void) {
     return true;
 }
 
-char* basename(char* path) {
+char* get_basename(char* path) {
     char* base_name = path;
     for (char* str = path; *str; str++) {
         if (*str == '/' || *str == '\\') {
@@ -185,7 +185,7 @@ bool handle_file_menu_click(void) {
         if (!path) break;
         save_code(path, editor_code);
 
-        base_path = basename(path);
+        base_path = get_basename(path);
         for (i = 0; base_path[i]; i++) project_name[i] = base_path[i]; 
         project_name[i] = 0;
         break;
@@ -207,7 +207,7 @@ bool handle_file_menu_click(void) {
         camera_pos.x = editor_code[blockchain_select_counter].x - ((GetScreenWidth() - conf.side_bar_size) / 2 + conf.side_bar_size);
         camera_pos.y = editor_code[blockchain_select_counter].y - ((GetScreenHeight() - conf.font_size * 2.2) / 2 + conf.font_size * 2.2);
 
-        base_path = basename(path);
+        base_path = get_basename(path);
         for (i = 0; base_path[i]; i++) project_name[i] = base_path[i]; 
         project_name[i] = 0;
 
