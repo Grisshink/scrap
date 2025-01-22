@@ -70,31 +70,33 @@ void draw_dots(void) {
 void draw_term(int x, int y) {
     pthread_mutex_lock(&term.lock);
 
+    if (term.char_w == 0 || term.char_h == 0) goto unlock_term;
+    if (!term.buffer) goto unlock_term;
+
     Rectangle final_pos = { term.size.x + x, term.size.y + y, term.size.width, term.size.height };
     DrawRectangleRec(final_pos, BLACK);
     BeginShaderMode(line_shader);
     DrawRectangleLinesEx(final_pos, 2.0, (Color) { 0x60, 0x60, 0x60, 0xff });
     EndShaderMode();
 
-    if (term.buffer) {
-        Vector2 pos = (Vector2) { final_pos.x, final_pos.y };
-        for (int y = 0; y < term.char_h; y++) {
-            pos.x = final_pos.x;
-            for (int x = 0; x < term.char_w; x++) {
-                DrawTextEx(font_mono, term.buffer[x + y*term.char_w], pos, TERM_CHAR_SIZE, 0.0, WHITE);
-                pos.x += term.char_size.x;
-            }
-            pos.y += TERM_CHAR_SIZE;
+    Vector2 pos = (Vector2) { final_pos.x, final_pos.y };
+    for (int y = 0; y < term.char_h; y++) {
+        pos.x = final_pos.x;
+        for (int x = 0; x < term.char_w; x++) {
+            DrawTextEx(font_mono, term.buffer[x + y*term.char_w], pos, TERM_CHAR_SIZE, 0.0, WHITE);
+            pos.x += term.char_size.x;
         }
-        if (fmod(GetTime(), 1.0) <= 0.5) {
-            Vector2 cursor_pos = (Vector2) {
-                final_pos.x + (term.cursor_pos % term.char_w) * term.char_size.x,
-                final_pos.y + (term.cursor_pos / term.char_w) * TERM_CHAR_SIZE,
-            };
-            DrawRectangle(cursor_pos.x, cursor_pos.y, BLOCK_OUTLINE_SIZE, TERM_CHAR_SIZE, WHITE);
-        }
+        pos.y += TERM_CHAR_SIZE;
+    }
+    if (fmod(GetTime(), 1.0) <= 0.5) {
+        Vector2 cursor_pos = (Vector2) {
+            final_pos.x + (term.cursor_pos % term.char_w) * term.char_size.x,
+            final_pos.y + (term.cursor_pos / term.char_w) * TERM_CHAR_SIZE,
+        };
+        DrawRectangle(cursor_pos.x, cursor_pos.y, BLOCK_OUTLINE_SIZE, TERM_CHAR_SIZE, WHITE);
     }
 
+unlock_term:
     pthread_mutex_unlock(&term.lock);
 }
 
