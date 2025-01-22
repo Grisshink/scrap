@@ -705,9 +705,17 @@ void handle_mouse_drag(void) {
 
     if (hover_info.is_panel_edit_mode && hover_info.drag_panel && hover_info.drag_panel->type == PANEL_SPLIT) {
         if (hover_info.drag_panel->direction == DIRECTION_HORIZONTAL) {
-            hover_info.drag_panel->split_percent = (mouse_pos.x - hover_info.drag_panel_size.x) / hover_info.drag_panel_size.width;
+            hover_info.drag_panel->split_percent = CLAMP(
+                (mouse_pos.x - hover_info.drag_panel_size.x - 5) / hover_info.drag_panel_size.width,
+                0.0,
+                1.0 - (10.0 / hover_info.drag_panel_size.width)
+            );
         } else {
-            hover_info.drag_panel->split_percent = (mouse_pos.y - hover_info.drag_panel_size.y) / hover_info.drag_panel_size.height;
+            hover_info.drag_panel->split_percent = CLAMP(
+                (mouse_pos.y - hover_info.drag_panel_size.y - 5) / hover_info.drag_panel_size.height,
+                0.0,
+                1.0 - (10.0 / hover_info.drag_panel_size.height)
+            );
         }
         return;
     }
