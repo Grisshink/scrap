@@ -114,7 +114,6 @@ typedef struct {
 
 typedef struct {
     bool is_panel_edit_mode;
-    bool sidebar;
     bool drag_cancelled;
 
     ScrBlockChain* prev_blockchain;

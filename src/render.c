@@ -659,11 +659,6 @@ void scrap_gui_draw_blockchain(ScrBlockChain* chain) {
     gui_element_end(gui);
 }
 
-void sidebar_on_hover(FlexElement* el) {
-    (void) el;
-    hover_info.sidebar = 1;
-}
-
 void scrap_gui_draw_sidebar(void) {
     gui_element_begin(gui);
         gui_set_grow(gui, DIRECTION_VERTICAL);
@@ -671,7 +666,6 @@ void scrap_gui_draw_sidebar(void) {
         gui_set_rect(gui, (GuiColor) { 0x00, 0x00, 0x00, 0x80 });
         gui_set_padding(gui, SIDE_BAR_PADDING, SIDE_BAR_PADDING);
         gui_set_gap(gui, SIDE_BAR_PADDING);
-        gui_on_hover(gui, sidebar_on_hover);
         gui_set_scroll(gui, &sidebar.scroll_amount);
         gui_set_scroll_scaling(gui, conf.font_size * 4);
         gui_set_scissor(gui);
@@ -944,6 +938,7 @@ void scrap_gui_draw_dropdown(void) {
 }
 
 void panel_editor_on_hover(FlexElement* el) {
+    (void) el;
     if (!hover_info.is_panel_edit_mode) return;
     hover_info.panel = NULL;
 }
@@ -1234,7 +1229,6 @@ void write_debug_buffer(void) {
     print_debug(&i, "Prev argument: %p", hover_info.prev_argument);
     print_debug(&i, "Select block: %p", hover_info.select_block);
     print_debug(&i, "Select arg: %p", hover_info.select_argument);
-    print_debug(&i, "Sidebar: %d", hover_info.sidebar);
     print_debug(&i, "Mouse: %p, Time: %.3f, Pos: (%d, %d), Click: (%d, %d)", mouse_blockchain.blocks, hover_info.time_at_last_pos, GetMouseX(), GetMouseY(), (int)hover_info.mouse_click_pos.x, (int)hover_info.mouse_click_pos.y);
     print_debug(&i, "Camera: (%.3f, %.3f), Click: (%.3f, %.3f)", camera_pos.x, camera_pos.y, camera_click_pos.x, camera_click_pos.y);
     print_debug(&i, "Dropdown scroll: %d", dropdown.scroll_amount);

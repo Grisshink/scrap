@@ -599,13 +599,14 @@ bool handle_mouse_click(void) {
         if (hover_info.input != hover_info.select_input) hover_info.select_input = hover_info.input;
         return true;
     }
+    if (!hover_info.panel) return true;
     if (hover_info.is_panel_edit_mode) return handle_editor_panel_click();
-    if (current_tab != TAB_CODE) return true;
+    if (hover_info.panel->type == PANEL_TERM) return true;
     if (vm.is_running) return false;
 
     bool mouse_empty = vector_size(mouse_blockchain.blocks) == 0;
 
-    if (hover_info.sidebar) return handle_sidebar_click(mouse_empty);
+    if (hover_info.panel->type == PANEL_SIDEBAR) return handle_sidebar_click(mouse_empty);
 
     if (mouse_empty && hover_info.argument && hover_info.argument->type == ARGUMENT_BLOCKDEF) {
         if (handle_blockdef_editor_click()) return true;
@@ -688,8 +689,8 @@ void handle_key_press(void) {
 }
 
 void handle_mouse_wheel(void) {
-    if (current_tab != TAB_CODE) return;
-    if (hover_info.sidebar) return;
+    if (!hover_info.panel) return;
+    if (hover_info.panel->type != PANEL_CODE) return;
     if (hover_info.select_argument) return;
     if (hover_info.is_panel_edit_mode) return;
 
@@ -734,7 +735,6 @@ void handle_mouse_drag(void) {
 }
 
 void scrap_gui_process_input(void) {
-    hover_info.sidebar = 0;
     hover_info.block = NULL;
     hover_info.argument = NULL;
     hover_info.input = NULL;
