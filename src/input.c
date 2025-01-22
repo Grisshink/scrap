@@ -262,6 +262,12 @@ bool handle_window_gui_close_button_click(void) {
     return true;
 }
 
+bool handle_settings_panel_editor_button_click(void) {
+    gui_window_hide();
+    hover_info.is_panel_edit_mode = true;
+    return true;
+}
+
 bool handle_settings_reset_button_click(void) {
     set_default_config(&window_conf);
     return true;
@@ -275,6 +281,11 @@ bool handle_settings_apply_button_click(void) {
 
 bool handle_about_license_button_click(void) {
     OpenURL(LICENSE_URL);
+    return true;
+}
+
+bool handle_panel_editor_done_button(void) {
+    hover_info.is_panel_edit_mode = false;
     return true;
 }
 
@@ -537,6 +548,41 @@ bool handle_code_editor_click(bool mouse_empty) {
     return false;
 }
 
+bool handle_editor_panel_click(void) {
+    if (!hover_info.panel) return true;
+
+    if (hover_info.panel->type == PANEL_SPLIT) {
+        hover_info.drag_panel = hover_info.panel;
+        hover_info.drag_panel_size = hover_info.panel_size;
+        return false;
+    }
+
+    if (hover_info.mouse_panel == PANEL_NONE) {
+        PanelTree* parent = hover_info.panel->parent;
+        if (!parent) return true;
+
+        hover_info.mouse_panel = hover_info.panel->type;
+        free(hover_info.panel);
+        PanelTree* other_panel = parent->left == hover_info.panel ? parent->right : parent->left;
+
+        parent->type = other_panel->type;
+        parent->split_percent = other_panel->split_percent;
+        parent->direction = other_panel->direction;
+        parent->left = other_panel->left;
+        parent->right = other_panel->right;
+        if (other_panel->type == PANEL_SPLIT) {
+            parent->left->parent = parent;
+            parent->right->parent = parent;
+        }
+        free(other_panel);
+    } else {
+        panel_split(hover_info.panel, hover_info.panel_side, hover_info.mouse_panel, 0.5);
+        hover_info.mouse_panel = PANEL_NONE;
+    }
+
+    return true;
+}
+
 // Return value indicates if we should cancel dragging
 bool handle_mouse_click(void) {
     hover_info.mouse_click_pos = GetMousePosition();
@@ -553,6 +599,7 @@ bool handle_mouse_click(void) {
         if (hover_info.input != hover_info.select_input) hover_info.select_input = hover_info.input;
         return true;
     }
+    if (hover_info.is_panel_edit_mode) return handle_editor_panel_click();
     if (current_tab != TAB_CODE) return true;
     if (vm.is_running) return false;
 
@@ -644,6 +691,7 @@ void handle_mouse_wheel(void) {
     if (current_tab != TAB_CODE) return;
     if (hover_info.sidebar) return;
     if (hover_info.select_argument) return;
+    if (hover_info.is_panel_edit_mode) return;
 
     Vector2 wheel = GetMouseWheelMoveV();
     camera_pos.x -= wheel.x * conf.font_size * 2;
@@ -654,6 +702,15 @@ void handle_mouse_drag(void) {
     if (hover_info.drag_cancelled) return;
 
     Vector2 mouse_pos = GetMousePosition();
+
+    if (hover_info.is_panel_edit_mode && hover_info.drag_panel && hover_info.drag_panel->type == PANEL_SPLIT) {
+        if (hover_info.drag_panel->direction == DIRECTION_HORIZONTAL) {
+            hover_info.drag_panel->split_percent = (mouse_pos.x - hover_info.drag_panel_size.x) / hover_info.drag_panel_size.width;
+        } else {
+            hover_info.drag_panel->split_percent = (mouse_pos.y - hover_info.drag_panel_size.y) / hover_info.drag_panel_size.height;
+        }
+        return;
+    }
 
     if (hover_info.dragged_slider.value) {
         *hover_info.dragged_slider.value = CLAMP(
@@ -681,6 +738,8 @@ void scrap_gui_process_input(void) {
     hover_info.editor.blockdef_input = -1;
     hover_info.top_bars.handler = NULL;
     hover_info.hover_slider.value = NULL;
+    hover_info.panel = NULL;
+    hover_info.panel_size = (Rectangle) {0};
 
     gui_update_mouse_scroll(gui, GetMouseWheelMove());
 
@@ -716,6 +775,7 @@ void scrap_gui_process_input(void) {
     } else {
         hover_info.drag_cancelled = false;
         hover_info.dragged_slider.value = NULL;
+        hover_info.drag_panel = NULL;
         handle_key_press();
     }
 
@@ -729,5 +789,6 @@ void scrap_gui_process_input(void) {
     mouse_blockchain.y = GetMouseY();
 
     hover_info.prev_block = hover_info.block;
+    hover_info.prev_panel = hover_info.panel;
     hover_info.editor.prev_blockdef = hover_info.editor.blockdef;
 }

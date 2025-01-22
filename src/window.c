@@ -339,6 +339,16 @@ void handle_window(void) {
                 scrap_gui_text_input(&window_conf.font_mono_path);
             scrap_gui_end_setting();
 
+            scrap_gui_begin_setting("Panel editor", false);
+                gui_element_begin(gui);
+                    gui_set_grow(gui, DIRECTION_HORIZONTAL);
+                    gui_set_grow(gui, DIRECTION_VERTICAL);
+                    gui_set_direction(gui, DIRECTION_HORIZONTAL);
+
+                    scrap_gui_button("Open", handle_settings_panel_editor_button_click);
+                gui_element_end(gui);
+            scrap_gui_end_setting();
+
             gui_grow(gui, DIRECTION_VERTICAL);
 
             gui_element_begin(gui);

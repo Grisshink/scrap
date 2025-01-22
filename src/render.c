@@ -123,12 +123,14 @@ void prerender_font_shadow(Font* font) {
 }
 
 void blockdef_on_hover(FlexElement* el) {
+    if (hover_info.is_panel_edit_mode) return;
     if (gui_window_is_shown()) return;
     hover_info.editor.part = EDITOR_BLOCKDEF;
     hover_info.editor.blockdef = el->custom_data;
 }
 
 void input_on_hover(FlexElement* el) {
+    if (hover_info.is_panel_edit_mode) return;
     if (gui_window_is_shown()) return;
     hover_info.input = el->custom_data;
     hover_info.blockchain = hover_info.prev_blockchain;
@@ -140,6 +142,7 @@ void input_on_hover(FlexElement* el) {
 }
 
 void editor_del_button_on_hover(FlexElement* el) {
+    if (hover_info.is_panel_edit_mode) return;
     if (gui_window_is_shown()) return;
     if (hover_info.top_bars.handler) return;
     el->draw_type = DRAWTYPE_RECT;
@@ -150,6 +153,7 @@ void editor_del_button_on_hover(FlexElement* el) {
 }
 
 void editor_button_on_hover(FlexElement* el) {
+    if (hover_info.is_panel_edit_mode) return;
     if (gui_window_is_shown()) return;
     if (hover_info.top_bars.handler) return;
     el->draw_type = DRAWTYPE_RECT;
@@ -257,12 +261,14 @@ void scrap_gui_draw_blockdef(ScrBlockdef* blockdef, bool editing) {
 }
 
 void block_on_hover(FlexElement* el) {
+    if (hover_info.is_panel_edit_mode) return;
     if (gui_window_is_shown()) return;
     hover_info.block = el->custom_data;
     hover_info.blockchain = hover_info.prev_blockchain;
 }
 
 void block_argument_on_hover(FlexElement* el) {
+    if (hover_info.is_panel_edit_mode) return;
     hover_info.prev_argument = el->custom_data;
     hover_info.blockchain = hover_info.prev_blockchain;
 }
@@ -429,6 +435,7 @@ void scrap_gui_draw_block(ScrBlock* block, bool highlight) {
 }
 
 void button_on_hover(FlexElement* el) {
+    if (hover_info.is_panel_edit_mode) return;
     if (gui_window_is_shown()) return;
     if (hover_info.top_bars.handler) return;
     if (el->draw_type == DRAWTYPE_RECT) return;
@@ -436,6 +443,29 @@ void button_on_hover(FlexElement* el) {
     el->data.rect_type = RECT_NORMAL;
     el->color = (GuiColor) { 0x40, 0x40, 0x40, 0xff };
     hover_info.top_bars.handler = el->custom_data;
+}
+
+void panel_editor_button_on_hover(FlexElement* el) {
+    if (!hover_info.is_panel_edit_mode) return;
+    if (hover_info.top_bars.handler) return;
+
+    Color color = ColorBrightness(CONVERT_COLOR(el->color, Color), -0.13);
+    el->color = CONVERT_COLOR(color, GuiColor);
+    hover_info.top_bars.handler = el->custom_data;
+}
+
+void scrap_gui_draw_panel_editor_button(const char* text, int size, GuiColor color, ButtonClickHandler handler) {
+    gui_element_begin(gui);
+        gui_set_direction(gui, DIRECTION_HORIZONTAL);
+        gui_set_align(gui, ALIGN_CENTER);
+        gui_set_min_size(gui, 0, size);
+        gui_set_padding(gui, conf.font_size * 0.3, 0);
+        gui_set_rect(gui, color);
+        gui_on_hover(gui, panel_editor_button_on_hover);
+        gui_set_custom_data(gui, handler);
+
+        gui_text(gui, &font_cond, text, BLOCK_TEXT_SIZE, (GuiColor) { 0x00, 0x00, 0x00, 0xff });
+    gui_element_end(gui);
 }
 
 FlexElement* scrap_gui_draw_button(const char* text, int size, bool selected, ButtonClickHandler handler) {
@@ -514,6 +544,7 @@ void scrap_gui_draw_tab_bar(void) {
 }
 
 void blockchain_on_hover(FlexElement* el) {
+    if (hover_info.is_panel_edit_mode) return;
     hover_info.prev_blockchain = el->custom_data;
 }
 
@@ -678,8 +709,28 @@ void scrap_gui_draw_code_area(void) {
     gui_element_end(gui);
 }
 
-void scrap_gui_draw_split_preview(void) {
-    if (split_preview.side == SPLIT_SIDE_NONE) return;
+void scrap_gui_draw_split_preview(PanelTree* panel) {
+    if (!hover_info.is_panel_edit_mode) return;
+    if (hover_info.prev_panel != panel) return;
+
+    if (hover_info.mouse_panel == PANEL_NONE) {
+        gui_element_begin(gui);
+            gui_set_floating(gui);
+            gui_set_position(gui, 0, 0);
+            gui_set_grow(gui, DIRECTION_HORIZONTAL);
+            gui_set_grow(gui, DIRECTION_VERTICAL);
+            gui_set_rect(gui, (GuiColor) { 0x00, 0xff, 0xff, 0x20 });
+
+            gui_element_begin(gui);
+                gui_set_grow(gui, DIRECTION_HORIZONTAL);
+                gui_set_grow(gui, DIRECTION_VERTICAL);
+                gui_set_border(gui, (GuiColor) { 0x00, 0xff, 0xff, 0x80 }, BLOCK_OUTLINE_SIZE);
+            gui_element_end(gui);
+        gui_element_end(gui);
+        return;
+    }
+
+    if (hover_info.panel_side == SPLIT_SIDE_NONE) return;
 
     gui_element_begin(gui);
         gui_set_floating(gui);
@@ -687,19 +738,25 @@ void scrap_gui_draw_split_preview(void) {
         gui_set_grow(gui, DIRECTION_HORIZONTAL);
         gui_set_grow(gui, DIRECTION_VERTICAL);
 
-        if (split_preview.side == SPLIT_SIDE_LEFT || split_preview.side == SPLIT_SIDE_RIGHT) gui_set_direction(gui, DIRECTION_HORIZONTAL);
+        if (hover_info.panel_side == SPLIT_SIDE_LEFT || hover_info.panel_side == SPLIT_SIDE_RIGHT) gui_set_direction(gui, DIRECTION_HORIZONTAL);
 
-        if (split_preview.side == SPLIT_SIDE_BOTTOM) gui_grow(gui, DIRECTION_VERTICAL);
-        if (split_preview.side == SPLIT_SIDE_RIGHT) gui_grow(gui, DIRECTION_HORIZONTAL);
+        if (hover_info.panel_side == SPLIT_SIDE_BOTTOM) gui_grow(gui, DIRECTION_VERTICAL);
+        if (hover_info.panel_side == SPLIT_SIDE_RIGHT) gui_grow(gui, DIRECTION_HORIZONTAL);
 
         gui_element_begin(gui);
             gui_set_grow(gui, DIRECTION_VERTICAL);
             gui_set_grow(gui, DIRECTION_HORIZONTAL);
-            gui_set_rect(gui, (GuiColor) { 0x00, 0x80, 0xff, 0x80});
+            gui_set_rect(gui, (GuiColor) { 0x00, 0xff, 0xff, 0x20 });
+
+            gui_element_begin(gui);
+                gui_set_grow(gui, DIRECTION_VERTICAL);
+                gui_set_grow(gui, DIRECTION_HORIZONTAL);
+                gui_set_border(gui, (GuiColor) { 0x00, 0xff, 0xff, 0x80 }, BLOCK_OUTLINE_SIZE);
+            gui_element_end(gui);
         gui_element_end(gui);
 
-        if (split_preview.side == SPLIT_SIDE_TOP) gui_grow(gui, DIRECTION_VERTICAL);
-        if (split_preview.side == SPLIT_SIDE_LEFT) gui_grow(gui, DIRECTION_HORIZONTAL);
+        if (hover_info.panel_side == SPLIT_SIDE_TOP) gui_grow(gui, DIRECTION_VERTICAL);
+        if (hover_info.panel_side == SPLIT_SIDE_LEFT) gui_grow(gui, DIRECTION_HORIZONTAL);
     gui_element_end(gui);
 }
 
@@ -717,6 +774,33 @@ void scrap_gui_draw_term_panel(void) {
             gui_set_rect_type(gui, RECT_TERMINAL);
         gui_element_end(gui);
     gui_element_end(gui);
+}
+
+void panel_on_hover(FlexElement* el) {
+    hover_info.panel = el->custom_data;
+    hover_info.panel_size = (Rectangle) { el->abs_x, el->abs_y, el->w, el->h };
+
+    if (hover_info.panel->type == PANEL_SPLIT) return;
+
+    int mouse_x = gui->mouse_x - el->abs_x;
+    int mouse_y = gui->mouse_y - el->abs_y;
+
+    bool is_top_right = mouse_y < ((float)el->h / (float)el->w) * mouse_x;
+    bool is_top_left = mouse_y < -((float)el->h / (float)el->w * mouse_x) + el->h;
+
+    if (is_top_right) {
+        if (is_top_left) {
+            hover_info.panel_side = SPLIT_SIDE_TOP;
+        } else {
+            hover_info.panel_side = SPLIT_SIDE_RIGHT;
+        }
+    } else {
+        if (is_top_left) {
+            hover_info.panel_side = SPLIT_SIDE_LEFT;
+        } else {
+            hover_info.panel_side = SPLIT_SIDE_BOTTOM;
+        }
+    }
 }
 
 void scrap_gui_draw_panel(PanelTree* panel) {
@@ -738,6 +822,8 @@ void scrap_gui_draw_panel(PanelTree* panel) {
             gui_set_grow(gui, DIRECTION_VERTICAL);
             gui_set_grow(gui, DIRECTION_HORIZONTAL);
             gui_set_direction(gui, panel->direction);
+            gui_on_hover(gui, panel_on_hover);
+            gui_set_custom_data(gui, panel);
 
             gui_element_begin(gui);
                 if (panel->direction == DIRECTION_VERTICAL) {
@@ -748,19 +834,41 @@ void scrap_gui_draw_panel(PanelTree* panel) {
                     gui_set_percent_size(gui, panel->split_percent, DIRECTION_HORIZONTAL);
                 }
 
+                if (panel->left->type != PANEL_SPLIT) {
+                    gui_on_hover(gui, panel_on_hover);
+                    gui_set_custom_data(gui, panel->left);
+                }
+
                 scrap_gui_draw_panel(panel->left);
             gui_element_end(gui);
+
+            if (hover_info.is_panel_edit_mode) {
+                gui_element_begin(gui);
+                    if (panel->direction == DIRECTION_HORIZONTAL) {
+                        gui_set_grow(gui, DIRECTION_VERTICAL);
+                    } else {
+                        gui_set_grow(gui, DIRECTION_HORIZONTAL);
+                    }
+                    gui_set_min_size(gui, 10, 10);
+                    gui_set_rect(gui, (GuiColor) { 0xff, 0xff, 0xff, hover_info.drag_panel == panel ? 0x20 : hover_info.prev_panel == panel ? 0x80 : 0x40 });
+                gui_element_end(gui);
+            }
             
             gui_element_begin(gui);
                 gui_set_grow(gui, DIRECTION_VERTICAL);
                 gui_set_grow(gui, DIRECTION_HORIZONTAL);
+
+                if (panel->right->type != PANEL_SPLIT) {
+                    gui_on_hover(gui, panel_on_hover);
+                    gui_set_custom_data(gui, panel->right);
+                }
 
                 scrap_gui_draw_panel(panel->right);
             gui_element_end(gui);
         gui_element_end(gui);
         break;
     }
-    if (panel->type != PANEL_SPLIT) scrap_gui_draw_split_preview();
+    if (panel->type != PANEL_SPLIT) scrap_gui_draw_split_preview(panel);
 }
 
 void scrap_gui_draw_code(void) {
@@ -833,15 +941,25 @@ void scrap_gui_draw_dropdown(void) {
     gui_element_end(gui);
 }
 
+void panel_editor_on_hover(FlexElement* el) {
+    if (!hover_info.is_panel_edit_mode) return;
+    hover_info.panel = NULL;
+}
+
 void scrap_gui_process(void) {
     // Gui
     gui_begin(gui);
         scrap_gui_draw_top_bar();
         scrap_gui_draw_tab_bar();
-        if (current_tab == TAB_CODE) {
-            scrap_gui_draw_panel(root_panel);
-        } else if (current_tab == TAB_OUTPUT) {
+        FlexElement* tab_bar_anchor = NULL;
+
+        if (hover_info.is_panel_edit_mode) {
+            gui_element_begin(gui);
+                tab_bar_anchor = gui_get_element(gui);
+            gui_element_end(gui);
         }
+
+        scrap_gui_draw_panel(root_panel);
         handle_window();
         if (current_tab == TAB_CODE) {
             gui_element_begin(gui);
@@ -849,6 +967,35 @@ void scrap_gui_process(void) {
                 gui_set_position(gui, gui->mouse_x, gui->mouse_y);
 
                 scrap_gui_draw_blockchain(&mouse_blockchain);
+            gui_element_end(gui);
+        }
+
+        if (hover_info.is_panel_edit_mode) {
+            gui_element_begin(gui);
+                gui_set_floating(gui);
+                gui_set_grow(gui, DIRECTION_HORIZONTAL);
+                gui_set_position(gui, 0, 0);
+                gui_set_anchor(gui, tab_bar_anchor);
+                gui_set_align(gui, ALIGN_CENTER);
+                gui_set_padding(gui, 0, conf.font_size);
+
+                gui_element_begin(gui);
+                    gui_set_padding(gui, conf.font_size * 0.3, conf.font_size * 0.3);
+                    gui_set_rect(gui, (GuiColor) { 0x00, 0x00, 0x00, 0x80 });
+                    gui_set_align(gui, ALIGN_CENTER);
+                    gui_on_hover(gui, panel_editor_on_hover);
+
+                    gui_text(gui, &font_eb, "Panel edit mode", conf.font_size * 0.8, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+
+                    gui_spacer(gui, 0, conf.font_size * 0.25);
+
+                    gui_text(gui, &font_cond_shadow, "Click on panels to reposition them", BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+                    gui_text(gui, &font_cond_shadow, "Drag panel edges to resize them", BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+
+                    gui_spacer(gui, 0, conf.font_size * 0.25);
+
+                    scrap_gui_draw_panel_editor_button("Done", conf.font_size, (GuiColor) { 0x40, 0xff, 0x40, 0xff }, handle_panel_editor_done_button);
+                gui_element_end(gui);
             gui_element_end(gui);
         }
 
@@ -1099,6 +1246,7 @@ void write_debug_buffer(void) {
     print_debug(&i, "Exec chain: %p, ind: %zu", hover_info.exec_chain, hover_info.exec_ind);
     print_debug(&i, "UI time: %.3f", ui_time);
     print_debug(&i, "FPS: %d, Frame time: %.3f", GetFPS(), GetFrameTime());
+    print_debug(&i, "Panel: %p, side: %d", hover_info.panel, hover_info.panel_side);
 #else
     print_debug(&i, "Scrap v" SCRAP_VERSION);
     print_debug(&i, "FPS: %d, Frame time: %.3f", GetFPS(), GetFrameTime());

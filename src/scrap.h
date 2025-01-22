@@ -43,10 +43,10 @@ typedef enum {
     SPLIT_SIDE_BOTTOM,
     SPLIT_SIDE_LEFT,
     SPLIT_SIDE_RIGHT,
-} SplitPreviewSide;
+} SplitSide;
 
 typedef struct {
-    SplitPreviewSide side;
+    SplitSide side;
 } SplitPreview;
 
 typedef enum {
@@ -113,6 +113,7 @@ typedef struct {
 } SliderHoverInfo;
 
 typedef struct {
+    bool is_panel_edit_mode;
     bool sidebar;
     bool drag_cancelled;
 
@@ -143,6 +144,14 @@ typedef struct {
     SliderHoverInfo hover_slider;
     SliderHoverInfo dragged_slider;
     int slider_last_val;
+
+    PanelTree* panel;
+    Rectangle panel_size;
+    PanelTree* drag_panel;
+    Rectangle drag_panel_size;
+    PanelType mouse_panel;
+    PanelTree* prev_panel;
+    SplitSide panel_side;
 } HoverInfo;
 
 typedef enum {
@@ -245,6 +254,7 @@ extern int codepoint_start_ranges[CODEPOINT_REGION_COUNT];
 // scrap.c
 void sanitize_links(void);
 GuiMeasurement custom_measure(Font font, const char *text, float font_size);
+void panel_split(PanelTree* panel, SplitSide side, PanelType new_panel_type, float split_percent);
 
 // render.c
 void sidebar_init(void);
@@ -275,6 +285,8 @@ bool handle_editor_edit_button(void);
 bool handle_editor_add_arg_button(void);
 bool handle_editor_add_text_button(void);
 bool handle_editor_del_arg_button(void);
+bool handle_settings_panel_editor_button_click(void);
+bool handle_panel_editor_done_button(void);
 
 // util.c
 int leading_ones(unsigned char byte);

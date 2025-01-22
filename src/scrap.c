@@ -204,7 +204,7 @@ GuiMeasurement scrap_gui_measure_text(void* font, const char* text, unsigned sho
     return custom_measure(*(Font*)font, text, size);
 }
 
-void panel_split(PanelTree* panel, SplitPreviewSide side, PanelType new_panel_type, float split_percent) {
+void panel_split(PanelTree* panel, SplitSide side, PanelType new_panel_type, float split_percent) {
     if (panel->type == PANEL_SPLIT) return;
 
     PanelTree* old_panel = malloc(sizeof(PanelTree));
@@ -276,8 +276,8 @@ void init_panels(void) {
     root_panel->right = NULL;
     root_panel->parent = NULL;
 
-    panel_split(root_panel, SPLIT_SIDE_LEFT, PANEL_SIDEBAR, 0.25);
-    panel_split(root_panel->right, SPLIT_SIDE_TOP, PANEL_TERM, 0.4);
+    panel_split(root_panel, SPLIT_SIDE_LEFT, PANEL_SIDEBAR, 0.3);
+    panel_split(root_panel->left, SPLIT_SIDE_TOP, PANEL_TERM, 0.3);
 }
 
 void setup(void) {
