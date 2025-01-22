@@ -29,11 +29,13 @@
 #define CLAMP(x, min, max) (MIN(MAX(min, x), max))
 
 typedef enum {
-    FILE_MENU_SAVE_PROJECT = 0,
+    FILE_MENU_NEW_PROJECT = 0,
+    FILE_MENU_SAVE_PROJECT,
     FILE_MENU_LOAD_PROJECT,
 } FileMenuInds;
 
 char* file_menu_list[] = {
+    "New project",
     "Save project",
     "Load project",
 };
@@ -174,6 +176,10 @@ bool handle_file_menu_click(void) {
     int i;
 
     switch (hover_info.dropdown.select_ind) {
+    case FILE_MENU_NEW_PROJECT:
+        for (size_t i = 0; i < vector_size(editor_code); i++) blockchain_free(&editor_code[i]);
+        vector_clear(editor_code);
+        break;
     case FILE_MENU_SAVE_PROJECT:
         path = tinyfd_saveFileDialog(NULL, project_name, ARRLEN(filters), filters, "Scrap project files (.scrp)"); 
         if (!path) break;
