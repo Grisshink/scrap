@@ -480,8 +480,8 @@ bool handle_code_editor_click(bool mouse_empty) {
         } else {
             // Put block
             TraceLog(LOG_INFO, "Put block");
-            mouse_blockchain.x += camera_pos.x;
-            mouse_blockchain.y += camera_pos.y;
+            mouse_blockchain.x += camera_pos.x - hover_info.panel_size.x;
+            mouse_blockchain.y += camera_pos.y - hover_info.panel_size.y;
             vector_add(&editor_code, mouse_blockchain);
             mouse_blockchain = blockchain_new();
         }
