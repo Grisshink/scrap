@@ -240,7 +240,12 @@ ScrData block_sleep(ScrExec* exec, int argc, ScrData* argv) {
     if (argc < 1) RETURN_INT(0);
     int usecs = data_to_int(argv[0]);
     if (usecs < 0) RETURN_INT(0);
-    if (usleep(usecs)) RETURN_INT(0);
+
+    struct timespec sleep_time = {0};
+    sleep_time.tv_sec = usecs / 1000000;
+    sleep_time.tv_nsec = (usecs % 1000000) * 1000;
+
+    if (nanosleep(&sleep_time, &sleep_time) == -1) RETURN_INT(0);
     RETURN_INT(usecs);
 }
 
