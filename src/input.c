@@ -653,7 +653,7 @@ void handle_key_press(void) {
         return;
     }
 
-    if (current_tab == TAB_OUTPUT) {
+    if (hover_info.panel && hover_info.panel->type == PANEL_TERM) {
         if (!vm.is_running) return;
         if (IsKeyPressed(KEY_ENTER)) {
             term_input_put_char('\n');
