@@ -133,19 +133,7 @@ void term_clear(void) {
 
 void term_resize(float screen_w, float screen_h) {
     pthread_mutex_lock(&term.lock);
-    term.size = (Rectangle) { 0, 0, 16, 9 };
-    if (screen_w == 0.0 || screen_h == 0.0) {
-        term.size.width = 0;
-        term.size.height = 0;
-    } else if (term.size.width / term.size.height > screen_w / screen_h) {
-        term.size.height *= screen_w / term.size.width;
-        term.size.width  *= screen_w / term.size.width;
-        term.size.y = screen_h / 2 - term.size.height / 2;
-    } else {
-        term.size.width  *= screen_h / term.size.height;
-        term.size.height *= screen_h / term.size.height;
-        term.size.x = screen_w / 2 - term.size.width / 2;
-    }
+    term.size = (Rectangle) { 0, 0, screen_w, screen_h };
 
     GuiMeasurement char_size = custom_measure(font_mono, "A", TERM_CHAR_SIZE);
     term.char_size = (Vector2) { char_size.w, char_size.h };
