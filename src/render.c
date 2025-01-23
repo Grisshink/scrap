@@ -436,6 +436,28 @@ void scrap_gui_draw_block(ScrBlock* block, bool highlight) {
     gui_element_end(gui);
 }
 
+void tab_button_add_on_hover(FlexElement* el) {
+    if (gui_window_is_shown()) return;
+    if (hover_info.top_bars.handler) return;
+    if (el->draw_type == DRAWTYPE_RECT) return;
+    el->draw_type = DRAWTYPE_RECT;
+    el->data.rect_type = RECT_NORMAL;
+    el->color = (GuiColor) { 0x40, 0x40, 0x40, 0xff };
+    hover_info.top_bars.handler = handle_add_tab_button;
+    hover_info.tab = (int)(size_t)el->custom_data;
+}
+
+void tab_button_on_hover(FlexElement* el) {
+    if (gui_window_is_shown()) return;
+    if (hover_info.top_bars.handler) return;
+    if (el->draw_type == DRAWTYPE_RECT) return;
+    el->draw_type = DRAWTYPE_RECT;
+    el->data.rect_type = RECT_NORMAL;
+    el->color = (GuiColor) { 0x40, 0x40, 0x40, 0xff };
+    hover_info.top_bars.handler = handle_tab_button;
+    hover_info.tab = (int)(size_t)el->custom_data;
+}
+
 void button_on_hover(FlexElement* el) {
     if (hover_info.is_panel_edit_mode) return;
     if (gui_window_is_shown()) return;
@@ -470,7 +492,7 @@ void scrap_gui_draw_panel_editor_button(const char* text, int size, GuiColor col
     gui_element_end(gui);
 }
 
-FlexElement* scrap_gui_draw_button(const char* text, int size, bool selected, ButtonClickHandler handler) {
+FlexElement* scrap_gui_draw_button(const char* text, int size, bool selected, HoverHandler on_hover, void* custom_data) {
     FlexElement* el;
     gui_element_begin(gui);
         gui_set_direction(gui, DIRECTION_HORIZONTAL);
@@ -478,8 +500,8 @@ FlexElement* scrap_gui_draw_button(const char* text, int size, bool selected, Bu
         gui_set_min_size(gui, 0, size);
         gui_set_padding(gui, conf.font_size * 0.3, 0);
         if (selected) gui_set_rect(gui, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
-        gui_on_hover(gui, button_on_hover);
-        gui_set_custom_data(gui, handler);
+        gui_on_hover(gui, on_hover);
+        gui_set_custom_data(gui, custom_data);
         el = gui_get_element(gui);
 
         gui_text(gui, &font_cond, text, BLOCK_TEXT_SIZE, selected ? (GuiColor) { 0x00, 0x00, 0x00, 0xff } : (GuiColor) { 0xff, 0xff, 0xff, 0xff });
@@ -502,10 +524,10 @@ void scrap_gui_draw_top_bar(void) {
         gui_text(gui, &font_eb, "Scrap", conf.font_size * 0.8, CONVERT_COLOR(WHITE, GuiColor));
         gui_spacer(gui, 10, 0);
 
-        FlexElement* el = scrap_gui_draw_button("File", top_bar_size, false, handle_file_button_click);
+        FlexElement* el = scrap_gui_draw_button("File", top_bar_size, false, button_on_hover, handle_file_button_click);
         if (hover_info.dropdown.location == LOCATION_FILE_MENU) hover_info.dropdown.element = el;
-        scrap_gui_draw_button("Settings", top_bar_size, false, handle_settings_button_click);
-        scrap_gui_draw_button("About", top_bar_size, false, handle_about_button_click);
+        scrap_gui_draw_button("Settings", top_bar_size, false, button_on_hover, handle_settings_button_click);
+        scrap_gui_draw_button("About", top_bar_size, false, button_on_hover, handle_about_button_click);
     gui_element_end(gui);
 }
 
@@ -518,8 +540,15 @@ void scrap_gui_draw_tab_bar(void) {
         gui_set_min_size(gui, 0, tab_bar_size);
         gui_set_align(gui, ALIGN_CENTER);
 
-        //scrap_gui_draw_button("Code", tab_bar_size, current_tab == TAB_CODE, handle_code_tab_click);
-        //scrap_gui_draw_button("Output", tab_bar_size, current_tab == TAB_OUTPUT, handle_output_tab_click);
+        if (hover_info.is_panel_edit_mode && hover_info.mouse_panel != PANEL_NONE) {
+            scrap_gui_draw_button("+", tab_bar_size, false, tab_button_add_on_hover, (void*)0);
+        }
+        for (size_t i = 0; i < vector_size(code_tabs); i++) {
+            scrap_gui_draw_button(code_tabs[i].name, tab_bar_size, current_tab == (int)i, tab_button_on_hover, (void*)i);
+            if (hover_info.is_panel_edit_mode && hover_info.mouse_panel != PANEL_NONE) {
+                scrap_gui_draw_button("+", tab_bar_size, false, tab_button_add_on_hover, (void*)(i + 1));
+            }
+        }
 
         gui_grow(gui, DIRECTION_HORIZONTAL);
         gui_text(gui, &font_cond, project_name, BLOCK_TEXT_SIZE, (GuiColor) { 0x80, 0x80, 0x80, 0xff });
@@ -800,6 +829,14 @@ void panel_on_hover(FlexElement* el) {
 }
 
 void scrap_gui_draw_panel(PanelTree* panel) {
+    if (panel->type != PANEL_SPLIT && !panel->parent) {
+        gui_element_begin(gui);
+            gui_set_grow(gui, DIRECTION_VERTICAL);
+            gui_set_grow(gui, DIRECTION_HORIZONTAL);
+            gui_on_hover(gui, panel_on_hover);
+            gui_set_custom_data(gui, panel);
+    }
+
     switch (panel->type) {
     case PANEL_NONE:
         assert(false && "Attempt to render panel with type PANEL_NONE");
@@ -865,6 +902,7 @@ void scrap_gui_draw_panel(PanelTree* panel) {
         break;
     }
     if (panel->type != PANEL_SPLIT) scrap_gui_draw_split_preview(panel);
+    if (panel->type != PANEL_SPLIT && !panel->parent) gui_element_end(gui);
 }
 
 void scrap_gui_draw_code(void) {
@@ -956,16 +994,15 @@ void scrap_gui_process(void) {
             gui_element_end(gui);
         }
 
-        scrap_gui_draw_panel(root_panel);
+        scrap_gui_draw_panel(code_tabs[current_tab].root_panel);
         handle_window();
-        if (current_tab == TAB_CODE) {
-            gui_element_begin(gui);
-                gui_set_floating(gui);
-                gui_set_position(gui, gui->mouse_x, gui->mouse_y);
 
-                scrap_gui_draw_blockchain(&mouse_blockchain);
-            gui_element_end(gui);
-        }
+        gui_element_begin(gui);
+            gui_set_floating(gui);
+            gui_set_position(gui, gui->mouse_x, gui->mouse_y);
+
+            scrap_gui_draw_blockchain(&mouse_blockchain);
+        gui_element_end(gui);
 
         if (hover_info.is_panel_edit_mode) {
             if (hover_info.mouse_panel != PANEL_NONE) {

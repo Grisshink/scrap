@@ -139,6 +139,8 @@ typedef struct {
     TopBars top_bars;
     EditorHoverInfo editor;
 
+    int tab;
+
     DropdownHoverInfo dropdown;
     SliderHoverInfo hover_slider;
     SliderHoverInfo dragged_slider;
@@ -153,14 +155,14 @@ typedef struct {
     SplitSide panel_side;
 } HoverInfo;
 
-typedef enum {
-    TAB_CODE,
-    TAB_OUTPUT,
-} TabType;
-
 typedef struct {
     int scroll_amount;
 } Dropdown;
+
+typedef struct {
+    char* name;
+    PanelTree* root_panel;
+} Tab;
 
 typedef struct {
     float show_time;
@@ -215,7 +217,6 @@ extern Texture2D list_tex;
 extern Texture2D arrow_left_tex;
 extern Texture2D arrow_right_tex;
 
-extern TabType current_tab;
 extern ScrVm vm;
 extern Vector2 camera_pos;
 extern ActionBar actionbar;
@@ -228,7 +229,8 @@ extern ScrExec exec;
 extern Gui* gui;
 
 extern SplitPreview split_preview;
-extern PanelTree* root_panel;
+extern Tab* code_tabs;
+extern int current_tab;
 
 #ifdef DEBUG
 extern double ui_time;
@@ -286,6 +288,8 @@ bool handle_editor_add_text_button(void);
 bool handle_editor_del_arg_button(void);
 bool handle_settings_panel_editor_button_click(void);
 bool handle_panel_editor_done_button(void);
+bool handle_tab_button(void);
+bool handle_add_tab_button(void);
 
 // util.c
 int leading_ones(unsigned char byte);

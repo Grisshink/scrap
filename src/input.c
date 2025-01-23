@@ -105,6 +105,19 @@ void edit_text(char** text) {
     }
 }
 
+PanelTree* find_panel(PanelTree* root, PanelType panel) {
+    if (root->type == panel) return root;
+    if (root->type == PANEL_SPLIT) {
+        PanelTree* out = NULL;
+        out = find_panel(root->left, panel);
+        if (out) return out;
+        out = find_panel(root->right, panel);
+        if (out) return out;
+    }
+
+    return NULL;
+}
+
 bool start_vm(void) {
     if (vm.is_running) return false;
 
@@ -117,10 +130,13 @@ bool start_vm(void) {
     }
 
     actionbar_show("Started successfully!");
-    if (current_tab != TAB_OUTPUT) {
-        shader_time = 0.0;
-        //current_tab = TAB_OUTPUT;
+    for (size_t i = 0; i < vector_size(code_tabs); i++) {
+        if (find_panel(code_tabs[i].root_panel, PANEL_TERM)) {
+            current_tab = i;
+            break;
+        }
     }
+    shader_time = 0.0;
     return true;
 }
 
@@ -251,15 +267,43 @@ bool handle_stop_button_click(void) {
     return true;
 }
 
-bool handle_code_tab_click(void) {
-    if (current_tab != TAB_CODE) shader_time = 0.0;
-    current_tab = TAB_CODE;
+bool handle_tab_button(void) {
+    current_tab = hover_info.tab;
+    shader_time = 0.0;
     return true;
 }
 
-bool handle_output_tab_click(void) {
-    if (current_tab != TAB_OUTPUT) shader_time = 0.0;
-    current_tab = TAB_OUTPUT;
+bool handle_add_tab_button(void) {
+    PanelTree* panel = malloc(sizeof(PanelTree));
+    panel->type = hover_info.mouse_panel;
+    panel->left = NULL;
+    panel->right = NULL;
+    panel->parent = NULL;
+
+    Tab* tab = vector_insert_dst(&code_tabs, hover_info.tab);
+    switch (hover_info.mouse_panel) {
+    case PANEL_NONE:
+        tab->name = "Unknown";
+        break;
+    case PANEL_CODE:
+        tab->name = "Code";
+        break;
+    case PANEL_SIDEBAR:
+        tab->name = "Blocks";
+        break;
+    case PANEL_TERM:
+        tab->name = "Output";
+        break;
+    case PANEL_SPLIT:
+        tab->name = "Multiple...";
+        break;
+    }
+    tab->root_panel = panel;
+
+    hover_info.mouse_panel = PANEL_NONE;
+    current_tab = hover_info.tab;
+    shader_time = 0.0;
+
     return true;
 }
 
@@ -565,7 +609,15 @@ bool handle_editor_panel_click(void) {
 
     if (hover_info.mouse_panel == PANEL_NONE) {
         PanelTree* parent = hover_info.panel->parent;
-        if (!parent) return true;
+        if (!parent) {
+            if (vector_size(code_tabs) > 1) {
+                hover_info.mouse_panel = hover_info.panel->type;
+                free(hover_info.panel);
+                vector_remove(code_tabs, current_tab);
+                if (current_tab >= (int)vector_size(code_tabs)) current_tab = vector_size(code_tabs) - 1;
+            }
+            return true;
+        }
 
         hover_info.mouse_panel = hover_info.panel->type;
         free(hover_info.panel);
@@ -754,6 +806,7 @@ void scrap_gui_process_input(void) {
     hover_info.hover_slider.value = NULL;
     hover_info.panel = NULL;
     hover_info.panel_size = (Rectangle) {0};
+    hover_info.tab = -1;
 
     gui_update_mouse_scroll(gui, GetMouseWheelMove());
 

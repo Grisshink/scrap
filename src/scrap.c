@@ -58,7 +58,6 @@ Texture2D list_tex;
 Texture2D arrow_left_tex;
 Texture2D arrow_right_tex;
 
-TabType current_tab = TAB_CODE;
 ScrVm vm;
 Vector2 camera_pos;
 ActionBar actionbar;
@@ -70,7 +69,8 @@ ScrBlockChain mouse_blockchain = {0};
 Gui* gui = NULL;
 
 SplitPreview split_preview = {0};
-PanelTree* root_panel = NULL;
+Tab* code_tabs = NULL;
+int current_tab = 0;
 
 char project_name[1024] = "project.scrp";
 char debug_buffer[DEBUG_BUFFER_LINES][DEBUG_BUFFER_LINE_SIZE] = {0};
@@ -270,14 +270,27 @@ void panel_delete(PanelTree* panel) {
 }
 
 void init_panels(void) {
-    root_panel = malloc(sizeof(PanelTree));
-    root_panel->type = PANEL_CODE;
-    root_panel->left = NULL;
-    root_panel->right = NULL;
-    root_panel->parent = NULL;
+    code_tabs = vector_create();
+    PanelTree* code_panel = malloc(sizeof(PanelTree));
+    code_panel->type = PANEL_CODE;
+    code_panel->left = NULL;
+    code_panel->right = NULL;
+    code_panel->parent = NULL;
 
-    panel_split(root_panel, SPLIT_SIDE_LEFT, PANEL_SIDEBAR, 0.3);
-    panel_split(root_panel->left, SPLIT_SIDE_TOP, PANEL_TERM, 0.3);
+    panel_split(code_panel, SPLIT_SIDE_LEFT, PANEL_SIDEBAR, 0.3);
+    Tab* tab = vector_add_dst(&code_tabs);
+    tab->name = "Code";
+    tab->root_panel = code_panel;
+
+    PanelTree* term_panel = malloc(sizeof(PanelTree));
+    term_panel->type = PANEL_TERM;
+    term_panel->left = NULL;
+    term_panel->right = NULL;
+    term_panel->parent = NULL;
+
+    tab = vector_add_dst(&code_tabs);
+    tab->name = "Output";
+    tab->root_panel = term_panel;
 }
 
 void setup(void) {
@@ -404,17 +417,14 @@ int main(void) {
     }
     term_free();
     blockchain_free(&mouse_blockchain);
-    for (vec_size_t i = 0; i < vector_size(editor_code); i++) {
-        blockchain_free(&editor_code[i]);
-    }
+    for (vec_size_t i = 0; i < vector_size(editor_code); i++) blockchain_free(&editor_code[i]);
     vector_free(editor_code);
-    for (vec_size_t i = 0; i < vector_size(sidebar.blocks); i++) {
-        block_free(&sidebar.blocks[i]);
-    }
+    for (vec_size_t i = 0; i < vector_size(sidebar.blocks); i++) block_free(&sidebar.blocks[i]);
     vector_free(sidebar.blocks);
     vm_free(&vm);
     free(gui);
-    panel_delete(root_panel);
+    for (size_t i = 0; i < vector_size(code_tabs); i++) panel_delete(code_tabs[i].root_panel);
+    vector_free(code_tabs);
     config_free(&conf);
     config_free(&window_conf);
     CloseWindow();
