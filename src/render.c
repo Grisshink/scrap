@@ -968,6 +968,22 @@ void scrap_gui_process(void) {
         }
 
         if (hover_info.is_panel_edit_mode) {
+            if (hover_info.mouse_panel != PANEL_NONE) {
+                gui_element_begin(gui);
+                    gui_set_floating(gui);
+                    gui_set_fixed(gui, gui->win_w * 0.3, gui->win_h * 0.3);
+                    gui_set_position(gui, gui->mouse_x, gui->mouse_y);
+
+                    PanelTree panel = (PanelTree) {
+                        .type = hover_info.mouse_panel,
+                        .parent = NULL,
+                        .left = NULL,
+                        .right = NULL,
+                    };
+                    scrap_gui_draw_panel(&panel);
+                gui_element_end(gui);
+            }
+
             gui_element_begin(gui);
                 gui_set_floating(gui);
                 gui_set_grow(gui, DIRECTION_HORIZONTAL);
