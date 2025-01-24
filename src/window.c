@@ -301,13 +301,26 @@ void handle_window(void) {
         window.is_hiding = false;
     }
     if (window.is_fading) {
-        window.animation_time = MAX(window.animation_time - GetFrameTime() * 2.0, 0.0);
-        if (window.animation_time == 0.0) window.shown = false;
+        window.animation_time -= GetFrameTime() * 2.0;
+        if (window.animation_time < 0.0) {
+            window.animation_time = 0.0;
+            if (window.shown) render_surface_needs_redraw = true;
+            window.shown = false;
+        } else {
+            render_surface_needs_redraw = true;
+        }
     } else {
         window.shown = true;
-        window.animation_time = MIN(window.animation_time + GetFrameTime() * 2.0, 1.0);
+        window.animation_time += GetFrameTime() * 2.0;
+        if (window.animation_time > 1.0) {
+            window.animation_time = 1.0;
+        } else {
+            render_surface_needs_redraw = true;  
+        }
     }
+}
 
+void draw_window(void) {
     if (!window.shown) return;
 
     float animation_ease = ease_out_expo(window.animation_time);

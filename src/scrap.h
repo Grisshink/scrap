@@ -135,6 +135,8 @@ typedef struct {
 
     ScrBlockChain* exec_chain;
     size_t exec_ind;
+    ScrBlockChain* prev_exec_chain;
+    size_t prev_exec_ind;
 
     TopBars top_bars;
     EditorHoverInfo editor;
@@ -194,6 +196,8 @@ extern Config conf;
 extern Config window_conf;
 extern HoverInfo hover_info;
 extern Shader line_shader;
+extern RenderTexture2D render_surface;
+extern bool render_surface_needs_redraw;
 
 extern Font font_cond;
 extern Font font_cond_shadow;
@@ -298,6 +302,7 @@ bool handle_panel_editor_save_button(void);
 bool handle_panel_editor_cancel_button(void);
 bool handle_tab_button(void);
 bool handle_add_tab_button(void);
+PanelTree* find_panel(PanelTree* root, PanelType panel);
 
 // util.c
 int leading_ones(unsigned char byte);
@@ -325,6 +330,7 @@ void gui_window_hide_immediate(void);
 WindowGuiType gui_window_get_type(void);
 bool gui_window_is_shown(void);
 void handle_window(void);
+void draw_window(void);
 
 // blocks.c
 void load_blocks(ScrVm* vm);

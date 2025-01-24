@@ -994,7 +994,7 @@ void scrap_gui_process(void) {
         }
 
         draw_panel(code_tabs[current_tab].root_panel);
-        handle_window();
+        draw_window();
 
         gui_element_begin(gui);
             gui_set_floating(gui);

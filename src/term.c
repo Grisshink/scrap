@@ -33,6 +33,7 @@ void term_init(void) {
     pthread_mutex_init(&term.lock, &attr);
     pthread_mutexattr_destroy(&attr);
     term_resize(0, 0);
+    term.is_buffer_dirty = true;
 }
 
 void term_restart(void) {
@@ -77,6 +78,7 @@ int term_print_str(const char* str) {
     if (!term.buffer) return len;
 
     pthread_mutex_lock(&term.lock);
+    if (*str) term.is_buffer_dirty = true;
     while (*str) {
         if (term.cursor_pos >= term.char_w * term.char_h) {
             term.cursor_pos = term.char_w * term.char_h - term.char_w;

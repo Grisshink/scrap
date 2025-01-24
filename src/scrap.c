@@ -25,6 +25,8 @@
 Image logo_img;
 
 Shader line_shader;
+RenderTexture2D render_surface;
+bool render_surface_needs_redraw = true;
 int shader_time_loc;
 
 ScrExec exec = {0};
@@ -326,6 +328,9 @@ void init_panels(void) {
 }
 
 void setup(void) {
+    render_surface = LoadRenderTexture(GetScreenWidth(), GetScreenHeight());
+    SetTextureWrap(render_surface.texture, TEXTURE_WRAP_MIRROR_REPEAT);
+
     run_tex = LoadTexture(into_data_path(DATA_PATH "run.png"));
     SetTextureFilter(run_tex, TEXTURE_FILTER_BILINEAR);
     drop_tex = LoadTexture(into_data_path(DATA_PATH "drop.png"));
@@ -422,22 +427,57 @@ int main(void) {
                 actionbar_show("Vm shitted and died :(");
             }
             exec_free(&exec);
+            render_surface_needs_redraw = true;
         } else if (vm.is_running) {
             hover_info.exec_chain = exec.running_chain;
             hover_info.exec_ind = exec.chain_stack[exec.chain_stack_len - 1].running_ind;
+            if (hover_info.prev_exec_chain != hover_info.exec_chain) render_surface_needs_redraw = true;
+            if (hover_info.prev_exec_ind != hover_info.exec_ind) render_surface_needs_redraw = true;
+
+            hover_info.prev_exec_chain = hover_info.exec_chain;
+            hover_info.prev_exec_ind = hover_info.exec_ind;
+
+            pthread_mutex_lock(&term.lock);
+            if (find_panel(code_tabs[current_tab].root_panel, PANEL_TERM) && term.is_buffer_dirty) {
+                render_surface_needs_redraw = true;
+                term.is_buffer_dirty = false;
+            }
+            pthread_mutex_unlock(&term.lock);
+        }
+
+        actionbar.show_time -= GetFrameTime();
+        if (actionbar.show_time < 0) {
+            actionbar.show_time = 0;
+        } else {
+            render_surface_needs_redraw = true;
+        }
+
+        if (shader_time_loc != -1) SetShaderValue(line_shader, shader_time_loc, &shader_time, SHADER_UNIFORM_FLOAT);
+        shader_time += GetFrameTime() / 2.0;
+        if (shader_time >= 1.0) {
+            shader_time = 1.0;
+        } else {
+            render_surface_needs_redraw = true;
         }
 
         scrap_gui_process_input();
 
-        actionbar.show_time -= GetFrameTime();
-        if (actionbar.show_time < 0) actionbar.show_time = 0;
-
-        if (shader_time_loc != -1) SetShaderValue(line_shader, shader_time_loc, &shader_time, SHADER_UNIFORM_FLOAT);
-        shader_time += GetFrameTime() / 2.0;
-        if (shader_time >= 1.0) shader_time = 1.0;
+        if (render_surface_needs_redraw) {
+            BeginTextureMode(render_surface);
+                scrap_gui_process_render();
+            EndTextureMode();
+            render_surface_needs_redraw = false;
+        }
 
         BeginDrawing();
-        scrap_gui_process_render();
+            DrawTexturePro(
+                render_surface.texture, 
+                (Rectangle) { 0, render_surface.texture.height, render_surface.texture.width, render_surface.texture.height }, 
+                (Rectangle) { 0, 0, render_surface.texture.width, render_surface.texture.height }, 
+                (Vector2) {0}, 
+                0.0, 
+                WHITE
+            );
         EndDrawing();
     }
 

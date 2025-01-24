@@ -92,6 +92,7 @@ static void edit_text(char** text) {
         }
 
         vector_erase(*text, remove_pos, remove_size);
+        render_surface_needs_redraw = true;
         return;
     }
 
@@ -102,10 +103,11 @@ static void edit_text(char** text) {
         for (int i = 0; i < utf_size; i++) {
             vector_insert(text, vector_size(*text) - 1, utf_char[i]);
         }
+        render_surface_needs_redraw = true;
     }
 }
 
-static PanelTree* find_panel(PanelTree* root, PanelType panel) {
+PanelTree* find_panel(PanelTree* root, PanelType panel) {
     if (root->type == panel) return root;
     if (root->type == PANEL_SPLIT) {
         PanelTree* out = NULL;
@@ -137,6 +139,7 @@ static bool start_vm(void) {
         }
     }
     shader_time = 0.0;
+    render_surface_needs_redraw = true;
     return true;
 }
 
@@ -144,6 +147,7 @@ static bool stop_vm(void) {
     if (!vm.is_running) return false;
     TraceLog(LOG_INFO, "STOP");
     exec_stop(&vm, &exec);
+    render_surface_needs_redraw = true;
     return true;
 }
 
@@ -708,6 +712,7 @@ static void handle_key_press(void) {
         if (IsKeyPressed(KEY_ENTER)) {
             term_input_put_char('\n');
             term_print_str("\r\n");
+            render_surface_needs_redraw = true;
             return;
         }
 
@@ -723,6 +728,7 @@ static void handle_key_press(void) {
             memcpy(utf_str, utf_char, utf_size);
             utf_str[utf_size] = 0;
             term_print_str(utf_str);
+            render_surface_needs_redraw = true;
         }
         return;
     }
@@ -735,6 +741,7 @@ static void handle_key_press(void) {
             camera_pos.x = editor_code[blockchain_select_counter].x - ((GetScreenWidth() - conf.side_bar_size) / 2 + conf.side_bar_size);
             camera_pos.y = editor_code[blockchain_select_counter].y - ((GetScreenHeight() - conf.font_size * 2.2) / 2 + conf.font_size * 2.2);
             actionbar_show(TextFormat("Jump to chain (%d/%d)", blockchain_select_counter + 1, vector_size(editor_code)));
+            render_surface_needs_redraw = true;
             return;
         }
         return;
@@ -791,42 +798,28 @@ static void handle_mouse_drag(void) {
 }
 
 void scrap_gui_process_input(void) {
-    hover_info.block = NULL;
-    hover_info.argument = NULL;
-    hover_info.input = NULL;
-    hover_info.prev_argument = NULL;
-    hover_info.prev_blockchain = NULL;
-    hover_info.blockchain = NULL;
-    hover_info.editor.part = EDITOR_NONE;
-    hover_info.editor.blockdef = NULL;
-    hover_info.editor.blockdef_input = -1;
-    hover_info.top_bars.handler = NULL;
-    hover_info.hover_slider.value = NULL;
-    hover_info.panel = NULL;
-    hover_info.panel_size = (Rectangle) {0};
-    hover_info.tab = -1;
-
     gui_update_mouse_scroll(gui, GetMouseWheelMove());
 
-#ifdef DEBUG
-    Timer t = start_timer("gui process");
-#endif
-    scrap_gui_process();
-#ifdef DEBUG
-    ui_time = end_timer(t);
-#endif
+    if (IsWindowResized()) {
+        shader_time = 0.0;
+        gui_update_window_size(gui, GetScreenWidth(), GetScreenHeight());
+        UnloadRenderTexture(render_surface);
+        render_surface = LoadRenderTexture(GetScreenWidth(), GetScreenHeight());
+        SetTextureWrap(render_surface.texture, TEXTURE_WRAP_MIRROR_REPEAT);
+        render_surface_needs_redraw = true;
+    }
+
+    Vector2 delta = GetMouseDelta();
+    if (delta.x != 0 || delta.y != 0) render_surface_needs_redraw = true;
 
     if (GetMouseWheelMove() != 0.0) {
         handle_mouse_wheel();
-    }
-
-    if (hover_info.block && hover_info.argument) {
-        int ind = hover_info.argument - hover_info.block->arguments;
-        if (ind < 0 || ind > (int)vector_size(hover_info.block->arguments)) hover_info.argument = NULL;
+        render_surface_needs_redraw = true;
     }
 
     if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
         hover_info.drag_cancelled = handle_mouse_click();
+        render_surface_needs_redraw = true;
 #ifdef DEBUG
         // This will traverse through all blocks in codebase, which is expensive in large codebase.
         // Ideally all functions should not be broken in the first place. This helps with debugging invalid states
@@ -835,6 +828,7 @@ void scrap_gui_process_input(void) {
     } else if (IsMouseButtonPressed(MOUSE_BUTTON_MIDDLE)) {
         hover_info.mouse_click_pos = GetMousePosition();
         camera_click_pos = camera_pos;
+        render_surface_needs_redraw = true;
     } else if (IsMouseButtonDown(MOUSE_BUTTON_MIDDLE) || IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
         handle_mouse_drag();
     } else {
@@ -844,14 +838,42 @@ void scrap_gui_process_input(void) {
         handle_key_press();
     }
 
-    if (IsWindowResized()) {
-        shader_time = 0.0;
-        gui_update_window_size(gui, GetScreenWidth(), GetScreenHeight());
-    }
+    if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT) || IsMouseButtonReleased(MOUSE_BUTTON_MIDDLE)) render_surface_needs_redraw = true;
 
     gui_update_mouse_pos(gui, GetMouseX(), GetMouseY());
-    mouse_blockchain.x = GetMouseX();
-    mouse_blockchain.y = GetMouseY();
+
+    handle_window();
+
+    if (render_surface_needs_redraw) {
+        hover_info.block = NULL;
+        hover_info.argument = NULL;
+        hover_info.input = NULL;
+        hover_info.prev_argument = NULL;
+        hover_info.prev_blockchain = NULL;
+        hover_info.blockchain = NULL;
+        hover_info.editor.part = EDITOR_NONE;
+        hover_info.editor.blockdef = NULL;
+        hover_info.editor.blockdef_input = -1;
+        hover_info.top_bars.handler = NULL;
+        hover_info.hover_slider.value = NULL;
+        hover_info.panel = NULL;
+        hover_info.panel_size = (Rectangle) {0};
+        hover_info.tab = -1;
+
+#ifdef DEBUG
+        Timer t = start_timer("gui process");
+#endif
+        scrap_gui_process();
+#ifdef DEBUG
+        ui_time = end_timer(t);
+#endif
+
+        // This fixes selecting wrong argument of a block when two blocks overlap
+        if (hover_info.block && hover_info.argument) {
+            int ind = hover_info.argument - hover_info.block->arguments;
+            if (ind < 0 || ind > (int)vector_size(hover_info.block->arguments)) hover_info.argument = NULL;
+        }
+    }
 
     hover_info.prev_block = hover_info.block;
     hover_info.prev_panel = hover_info.panel;

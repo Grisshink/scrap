@@ -32,6 +32,7 @@ typedef struct {
     int cursor_pos;
     Vector2 char_size;
     char (*buffer)[5];
+    bool is_buffer_dirty;
 
     sem_t input_sem;
     char input_buf[TERM_INPUT_BUF_SIZE];
