@@ -1043,7 +1043,13 @@ void scrap_gui_process(void) {
 
                     gui_spacer(gui, 0, conf.font_size * 0.25);
 
-                    draw_panel_editor_button("Done", conf.font_size, (GuiColor) { 0x40, 0xff, 0x40, 0xff }, handle_panel_editor_done_button);
+                    gui_element_begin(gui);
+                        gui_set_direction(gui, DIRECTION_HORIZONTAL);
+                        gui_set_gap(gui, conf.font_size * 0.25);
+
+                        draw_panel_editor_button("Save", conf.font_size, (GuiColor) { 0x40, 0xff, 0x40, 0xff }, handle_panel_editor_save_button);
+                        draw_panel_editor_button("Done", conf.font_size, (GuiColor) { 0x80, 0x80, 0x80, 0xff }, handle_panel_editor_cancel_button);
+                    gui_element_end(gui);
                 gui_element_end(gui);
             gui_element_end(gui);
         }

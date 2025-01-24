@@ -274,36 +274,30 @@ bool handle_tab_button(void) {
 }
 
 bool handle_add_tab_button(void) {
-    PanelTree* panel = malloc(sizeof(PanelTree));
-    panel->type = hover_info.mouse_panel;
-    panel->left = NULL;
-    panel->right = NULL;
-    panel->parent = NULL;
-
-    Tab* tab = vector_insert_dst(&code_tabs, hover_info.tab);
+    char* name;
     switch (hover_info.mouse_panel) {
     case PANEL_NONE:
-        tab->name = "Unknown";
+        name = "Unknown";
         break;
     case PANEL_CODE:
-        tab->name = "Code";
+        name = "Code";
         break;
     case PANEL_SIDEBAR:
-        tab->name = "Blocks";
+        name = "Blocks";
         break;
     case PANEL_TERM:
-        tab->name = "Output";
+        name = "Output";
         break;
     case PANEL_SPLIT:
-        tab->name = "Multiple...";
+        name = "Multiple...";
         break;
     }
-    tab->root_panel = panel;
+
+    tab_insert(name, panel_new(hover_info.mouse_panel), hover_info.tab);
 
     hover_info.mouse_panel = PANEL_NONE;
     current_tab = hover_info.tab;
     shader_time = 0.0;
-
     return true;
 }
 
@@ -334,7 +328,13 @@ bool handle_about_license_button_click(void) {
     return true;
 }
 
-bool handle_panel_editor_done_button(void) {
+bool handle_panel_editor_save_button(void) {
+    hover_info.is_panel_edit_mode = false;
+    save_config(&conf);
+    return true;
+}
+
+bool handle_panel_editor_cancel_button(void) {
     hover_info.is_panel_edit_mode = false;
     return true;
 }
@@ -612,9 +612,7 @@ static bool handle_editor_panel_click(void) {
         if (!parent) {
             if (vector_size(code_tabs) > 1) {
                 hover_info.mouse_panel = hover_info.panel->type;
-                free(hover_info.panel);
-                vector_remove(code_tabs, current_tab);
-                if (current_tab >= (int)vector_size(code_tabs)) current_tab = vector_size(code_tabs) - 1;
+                tab_delete(current_tab);
             }
             return true;
         }

@@ -24,6 +24,9 @@
 #include <assert.h>
 
 #define ARRLEN(x) (sizeof(x)/sizeof(x[0]))
+#define MAX(x, y) ((x) > (y) ? (x) : (y))
+#define MIN(x, y) ((x) < (y) ? (x) : (y))
+#define CLAMP(x, min, max) (MIN(MAX(min, x), max))
 
 typedef struct {
     void* ptr;
@@ -95,18 +98,108 @@ void apply_config(Config* dst, Config* src) {
     dst->side_bar_size = src->side_bar_size;
 }
 
+void save_panel_config(char* file_str, int* cursor, PanelTree* panel) {
+    switch (panel->type) {
+    case PANEL_NONE:
+        *cursor += sprintf(file_str + *cursor, "PANEL_NONE ");
+        break;
+    case PANEL_CODE:
+        *cursor += sprintf(file_str + *cursor, "PANEL_CODE ");
+        break;
+    case PANEL_TERM:
+        *cursor += sprintf(file_str + *cursor, "PANEL_TERM ");
+        break;
+    case PANEL_SIDEBAR:
+        *cursor += sprintf(file_str + *cursor, "PANEL_SIDEBAR ");
+        break;
+    case PANEL_SPLIT:
+        *cursor += sprintf(
+            file_str + *cursor, 
+            "PANEL_SPLIT %s %f ", 
+            panel->direction == DIRECTION_HORIZONTAL ? "DIRECTION_HORIZONTAL" : "DIRECTION_VERTICAL", 
+            panel->split_percent
+        );
+        save_panel_config(file_str, cursor, panel->left);
+        save_panel_config(file_str, cursor, panel->right);
+        break;
+    }
+}
+
+static char* read_panel_token(char** str, bool* is_eof) {
+    if (*is_eof) return NULL;
+    while (**str == ' ' || **str == '\0') {
+        (*str)++;
+        if (**str == '\0') return NULL; 
+    }
+
+    char* out = *str;
+    while (**str != ' ' && **str != '\0') (*str)++;
+    if (**str == '\0') *is_eof = true;
+    **str = '\0';
+
+    return out;
+}
+
+PanelTree* load_panel_config(char** config) {
+    bool is_eof = false;
+
+    char* name = read_panel_token(config, &is_eof);
+    if (!name) return NULL;
+
+    if (!strcmp(name, "PANEL_SPLIT")) {
+        char* direction = read_panel_token(config, &is_eof);
+        if (!direction) return NULL;
+        char* split_percent = read_panel_token(config, &is_eof);
+        if (!split_percent) return NULL;
+
+        GuiElementDirection dir;
+        if (!strcmp(direction, "DIRECTION_HORIZONTAL")) {
+            dir = DIRECTION_HORIZONTAL;
+        } else if (!strcmp(direction, "DIRECTION_VERTICAL")) {
+            dir = DIRECTION_VERTICAL;
+        } else {
+            return NULL;
+        }
+
+        float percent = CLAMP(atof(split_percent), 0.0, 1.0);
+
+        PanelTree* left = load_panel_config(config);
+        if (!left) return NULL;
+        PanelTree* right = load_panel_config(config);
+        if (!right) {
+            panel_delete(left);
+            return NULL;
+        }
+        
+        PanelTree* panel = malloc(sizeof(PanelTree));
+        panel->type = PANEL_SPLIT;
+        panel->direction = dir;
+        panel->parent = NULL;
+        panel->split_percent = percent;
+        panel->left = left;
+        panel->right = right;
+
+        left->parent = panel;
+        right->parent = panel;
+
+        return panel;
+    } else if (!strcmp(name, "PANEL_NONE")) {
+        return panel_new(PANEL_NONE);
+    } else if (!strcmp(name, "PANEL_CODE")) {
+        return panel_new(PANEL_CODE);
+    } else if (!strcmp(name, "PANEL_TERM")) {
+        return panel_new(PANEL_TERM);
+    } else if (!strcmp(name, "PANEL_SIDEBAR")) {
+        return panel_new(PANEL_SIDEBAR);
+    }
+
+    TraceLog(LOG_ERROR, "Unknown panel type: %s", name);
+    return NULL;
+}
+
 void save_config(Config* config) {
-    int file_size = 1;
-    // ARRLEN also includes \0 into size, but we are using this size to put = sign instead
-    file_size += ARRLEN("UI_SIZE") + 10 + 1;
-    file_size += ARRLEN("SIDE_BAR_SIZE") + 10 + 1;
-    file_size += ARRLEN("FPS_LIMIT") + 10 + 1;
-    file_size += ARRLEN("BLOCK_SIZE_THRESHOLD") + 10 + 1;
-    file_size += ARRLEN("FONT_PATH") + vector_size(config->font_path);
-    file_size += ARRLEN("FONT_BOLD_PATH") + vector_size(config->font_bold_path);
-    file_size += ARRLEN("FONT_MONO_PATH") + vector_size(config->font_mono_path);
-    
-    char* file_str = malloc(sizeof(char) * file_size);
+    char* file_str = malloc(sizeof(char) * 32768);
+    file_str[0] = 0;
     int cursor = 0;
 
     cursor += sprintf(file_str + cursor, "UI_SIZE=%u\n", config->font_size);
@@ -116,15 +209,25 @@ void save_config(Config* config) {
     cursor += sprintf(file_str + cursor, "FONT_PATH=%s\n", config->font_path);
     cursor += sprintf(file_str + cursor, "FONT_BOLD_PATH=%s\n", config->font_bold_path);
     cursor += sprintf(file_str + cursor, "FONT_MONO_PATH=%s\n", config->font_mono_path);
+    for (size_t i = 0; i < vector_size(code_tabs); i++) {
+        cursor += sprintf(file_str + cursor, "CONFIG_TAB_%s=", code_tabs[i].name);
+        save_panel_config(file_str, &cursor, code_tabs[i].root_panel);
+        cursor += sprintf(file_str + cursor, "\n");
+    }
 
     SaveFileText(CONFIG_PATH, file_str);
-
     free(file_str);
 }
 
 void load_config(Config* config) {
+    delete_all_tabs();
+
     char* file = LoadFileText(CONFIG_PATH);
-    if (!file) return;
+    if (!file) {
+        init_panels(); 
+        current_tab = 0;
+        return;
+    }
     int cursor = 0;
 
     bool has_lines = true;
@@ -167,10 +270,16 @@ void load_config(Config* config) {
             vector_set_string(&config->font_bold_path, value);
         } else if (!strcmp(field, "FONT_MONO_PATH")) {
             vector_set_string(&config->font_mono_path, value);
+        } else if (!strncmp(field, "CONFIG_TAB_", sizeof("CONFIG_TAB_") - 1)) {
+            char* panel_value = value;
+            tab_new(field + sizeof("CONFIG_TAB_") - 1, load_panel_config(&panel_value));
         } else {
             TraceLog(LOG_WARNING, "Unknown key: %s", field);
         }
     }
+
+    if (vector_size(code_tabs) == 0) init_panels(); 
+    if (current_tab >= (int)vector_size(code_tabs)) current_tab = vector_size(code_tabs) - 1;
 
     UnloadFileText(file);
 }

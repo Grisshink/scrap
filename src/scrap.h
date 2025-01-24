@@ -256,6 +256,13 @@ extern int codepoint_start_ranges[CODEPOINT_REGION_COUNT];
 void sanitize_links(void);
 GuiMeasurement custom_measure(Font font, const char *text, float font_size);
 void panel_split(PanelTree* panel, SplitSide side, PanelType new_panel_type, float split_percent);
+void delete_all_tabs(void);
+size_t tab_new(char* name, PanelTree* root_panel);
+void tab_delete(size_t tab);
+void init_panels(void);
+PanelTree* panel_new(PanelType type);
+void panel_delete(PanelTree* panel);
+void tab_insert(char* name, PanelTree* root_panel, size_t position);
 
 // render.c
 void sidebar_init(void);
@@ -287,7 +294,8 @@ bool handle_editor_add_arg_button(void);
 bool handle_editor_add_text_button(void);
 bool handle_editor_del_arg_button(void);
 bool handle_settings_panel_editor_button_click(void);
-bool handle_panel_editor_done_button(void);
+bool handle_panel_editor_save_button(void);
+bool handle_panel_editor_cancel_button(void);
 bool handle_tab_button(void);
 bool handle_add_tab_button(void);
 

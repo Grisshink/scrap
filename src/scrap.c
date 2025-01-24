@@ -255,6 +255,15 @@ void panel_split(PanelTree* panel, SplitSide side, PanelType new_panel_type, flo
     }
 }
 
+PanelTree* panel_new(PanelType type) {
+    PanelTree* panel = malloc(sizeof(PanelTree));
+    panel->type = type;
+    panel->left = NULL;
+    panel->right = NULL;
+    panel->parent = NULL;
+    return panel;
+}
+
 void panel_delete(PanelTree* panel) {
     assert(panel != NULL);
 
@@ -269,28 +278,51 @@ void panel_delete(PanelTree* panel) {
     free(panel);
 }
 
-void init_panels(void) {
-    code_tabs = vector_create();
-    PanelTree* code_panel = malloc(sizeof(PanelTree));
-    code_panel->type = PANEL_CODE;
-    code_panel->left = NULL;
-    code_panel->right = NULL;
-    code_panel->parent = NULL;
+void delete_all_tabs(void) {
+    for (ssize_t i = vector_size(code_tabs) - 1; i >= 0; i--) tab_delete(i);
+}
 
-    panel_split(code_panel, SPLIT_SIDE_LEFT, PANEL_SIDEBAR, 0.3);
+size_t tab_new(char* name, PanelTree* root_panel) {
+    if (!root_panel) {
+        TraceLog(LOG_WARNING, "Got root_panel == NULL, not adding");
+        return -1;
+    }
+
     Tab* tab = vector_add_dst(&code_tabs);
-    tab->name = "Code";
-    tab->root_panel = code_panel;
+    tab->name = vector_create();
+    for (char* str = name; *str; str++) vector_add(&tab->name, *str);
+    vector_add(&tab->name, 0);
+    tab->root_panel = root_panel;
 
-    PanelTree* term_panel = malloc(sizeof(PanelTree));
-    term_panel->type = PANEL_TERM;
-    term_panel->left = NULL;
-    term_panel->right = NULL;
-    term_panel->parent = NULL;
+    return vector_size(code_tabs) - 1;
+}
 
-    tab = vector_add_dst(&code_tabs);
-    tab->name = "Output";
-    tab->root_panel = term_panel;
+void tab_insert(char* name, PanelTree* root_panel, size_t position) {
+    if (!root_panel) {
+        TraceLog(LOG_WARNING, "Got root_panel == NULL, not adding");
+        return;
+    }
+
+    Tab* tab = vector_insert_dst(&code_tabs, position);
+    tab->name = vector_create();
+    for (char* str = name; *str; str++) vector_add(&tab->name, *str);
+    vector_add(&tab->name, 0);
+    tab->root_panel = root_panel;
+}
+
+void tab_delete(size_t tab) {
+    assert(tab < vector_size(code_tabs));
+    panel_delete(code_tabs[tab].root_panel);
+    vector_free(code_tabs[tab].name);
+    vector_remove(code_tabs, tab);
+    if (current_tab >= (int)vector_size(code_tabs)) current_tab = vector_size(code_tabs) - 1;
+}
+
+void init_panels(void) {
+    PanelTree* code_panel = panel_new(PANEL_CODE);
+    panel_split(code_panel, SPLIT_SIDE_LEFT, PANEL_SIDEBAR, 0.3);
+    tab_new("Code", code_panel);
+    tab_new("Output", panel_new(PANEL_TERM));
 }
 
 void setup(void) {
@@ -350,7 +382,6 @@ void setup(void) {
     editor_code = vector_create();
 
     sidebar_init();
-    init_panels();
     term_init();
 
     gui = malloc(sizeof(Gui));
@@ -365,6 +396,7 @@ void setup(void) {
 int main(void) {
     config_new(&conf);
     config_new(&window_conf);
+    code_tabs = vector_create();
     set_default_config(&conf);
     load_config(&conf);
 
@@ -423,7 +455,7 @@ int main(void) {
     vector_free(sidebar.blocks);
     vm_free(&vm);
     free(gui);
-    for (size_t i = 0; i < vector_size(code_tabs); i++) panel_delete(code_tabs[i].root_panel);
+    delete_all_tabs();
     vector_free(code_tabs);
     config_free(&conf);
     config_free(&window_conf);
