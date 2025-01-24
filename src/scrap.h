@@ -59,7 +59,7 @@ typedef enum {
 
 struct PanelTree {
     PanelType type;
-    FlexDirection direction;
+    GuiElementDirection direction;
     struct PanelTree* parent;
     float split_percent;
     struct PanelTree* left; // Becomes top when direction is DIRECTION_VERTICAL
@@ -97,7 +97,7 @@ typedef struct {
 
 typedef struct {
     DropdownLocations location;
-    FlexElement* element;
+    GuiElement* element;
     ButtonClickHandler handler;
     char** list;
     int list_len;

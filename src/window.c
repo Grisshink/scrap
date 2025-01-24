@@ -75,12 +75,12 @@ void gui_window_hide_immediate(void) {
     window.is_hiding = true;
 }
 
-static void settings_button_on_hover(FlexElement* el) {
+static void settings_button_on_hover(GuiElement* el) {
     el->color = (GuiColor) { 0x40, 0x40, 0x40, 0xff };
     hover_info.top_bars.handler = el->custom_data;
 }
 
-static void close_button_on_hover(FlexElement* el) {
+static void close_button_on_hover(GuiElement* el) {
     if (el->draw_type == DRAWTYPE_RECT) return;
     el->draw_type = DRAWTYPE_RECT;
     el->data.rect_type = RECT_NORMAL;
@@ -88,12 +88,12 @@ static void close_button_on_hover(FlexElement* el) {
     hover_info.top_bars.handler = handle_window_gui_close_button_click;
 }
 
-static void window_on_hover(FlexElement* el) {
+static void window_on_hover(GuiElement* el) {
     (void) el;
     hover_info.top_bars.handler = NULL;
 }
 
-static void scrap_gui_begin_window(const char* title, int w, int h, float scaling) {
+static void begin_window(const char* title, int w, int h, float scaling) {
     hover_info.top_bars.handler = handle_window_gui_close_button_click;
     gui_element_begin(gui);
         gui_set_floating(gui);
@@ -155,17 +155,17 @@ static void scrap_gui_begin_window(const char* title, int w, int h, float scalin
             gui_set_gap(gui, WINDOW_ELEMENT_PADDING);
 }
 
-static void scrap_gui_end_window(void) {
+static void end_window(void) {
     gui_element_end(gui);
     gui_element_end(gui);
 }
 
-static void warning_on_hover(FlexElement* el) {
+static void warning_on_hover(GuiElement* el) {
     (void) el;
     settings_tooltip = true;
 }
 
-static void scrap_gui_begin_setting(const char* name, bool warning) {
+static void begin_setting(const char* name, bool warning) {
     gui_element_begin(gui);
         gui_set_grow(gui, DIRECTION_HORIZONTAL);
         gui_set_direction(gui, DIRECTION_HORIZONTAL);
@@ -193,13 +193,13 @@ static void scrap_gui_begin_setting(const char* name, bool warning) {
 
 }
 
-static void slider_on_hover(FlexElement* el) {
+static void slider_on_hover(GuiElement* el) {
     unsigned short len;
     hover_info.hover_slider = *(SliderHoverInfo*)gui_get_state(el, &len);
     el->color = hover_info.hover_slider.value == hover_info.dragged_slider.value ? (GuiColor) { 0x2b, 0x2b, 0x2b, 0xff } : (GuiColor) { 0x40, 0x40, 0x40, 0xff };
 }
 
-static void scrap_gui_slider(int min, int max, int* value) {
+static void draw_slider(int min, int max, int* value) {
     gui_element_begin(gui);
         gui_set_grow(gui, DIRECTION_HORIZONTAL);
         gui_set_grow(gui, DIRECTION_VERTICAL);
@@ -233,17 +233,17 @@ static void scrap_gui_slider(int min, int max, int* value) {
     gui_element_end(gui);
 }
 
-static void scrap_gui_end_setting(void) {
+static void end_setting(void) {
     gui_element_end(gui);
 }
 
-void text_input_on_hover(FlexElement* el) {
+static void text_input_on_hover(GuiElement* el) {
     hover_info.input = el->custom_data;
     if (hover_info.input == hover_info.select_input) return;
     el->color = (GuiColor) { 0x40, 0x40, 0x40, 0xff };
 }
 
-void scrap_gui_text_input(char** input) {
+static void draw_text_input(char** input) {
     gui_element_begin(gui);
         gui_set_grow(gui, DIRECTION_HORIZONTAL);
         gui_set_grow(gui, DIRECTION_VERTICAL);
@@ -274,7 +274,7 @@ void scrap_gui_text_input(char** input) {
     gui_element_end(gui);
 }
 
-void scrap_gui_button(const char* label, ButtonClickHandler handler) {
+static void draw_button(const char* label, ButtonClickHandler handler) {
     gui_element_begin(gui);
         gui_set_min_size(gui, 0, conf.font_size);
         gui_set_rect(gui, (GuiColor) { 0x30, 0x30, 0x30, 0xff });
@@ -314,40 +314,40 @@ void handle_window(void) {
 
     switch (window.type) {
     case GUI_TYPE_SETTINGS:
-        scrap_gui_begin_window("Settings", 0.6 * gui->win_w, 0.8 * gui->win_h, animation_ease);
-            scrap_gui_begin_setting("UI size", true);
-                scrap_gui_slider(8, 64, &window_conf.font_size);
-            scrap_gui_end_setting();
+        begin_window("Settings", 0.6 * gui->win_w, 0.8 * gui->win_h, animation_ease);
+            begin_setting("UI size", true);
+                draw_slider(8, 64, &window_conf.font_size);
+            end_setting();
 
-            scrap_gui_begin_setting("Side bar size", false);
-                scrap_gui_slider(10, 500, &window_conf.side_bar_size);
-            scrap_gui_end_setting();
+            begin_setting("Side bar size", false);
+                draw_slider(10, 500, &window_conf.side_bar_size);
+            end_setting();
 
-            scrap_gui_begin_setting("FPS Limit", false);
-                scrap_gui_slider(0, 240, &window_conf.fps_limit);
-            scrap_gui_end_setting();
+            begin_setting("FPS Limit", false);
+                draw_slider(0, 240, &window_conf.fps_limit);
+            end_setting();
 
-            scrap_gui_begin_setting("Font path", true);
-                scrap_gui_text_input(&window_conf.font_path);
-            scrap_gui_end_setting();
+            begin_setting("Font path", true);
+                draw_text_input(&window_conf.font_path);
+            end_setting();
 
-            scrap_gui_begin_setting("Bold font path", true);
-                scrap_gui_text_input(&window_conf.font_bold_path);
-            scrap_gui_end_setting();
+            begin_setting("Bold font path", true);
+                draw_text_input(&window_conf.font_bold_path);
+            end_setting();
 
-            scrap_gui_begin_setting("Monospaced font path", true);
-                scrap_gui_text_input(&window_conf.font_mono_path);
-            scrap_gui_end_setting();
+            begin_setting("Monospaced font path", true);
+                draw_text_input(&window_conf.font_mono_path);
+            end_setting();
 
-            scrap_gui_begin_setting("Panel editor", false);
+            begin_setting("Panel editor", false);
                 gui_element_begin(gui);
                     gui_set_grow(gui, DIRECTION_HORIZONTAL);
                     gui_set_grow(gui, DIRECTION_VERTICAL);
                     gui_set_direction(gui, DIRECTION_HORIZONTAL);
 
-                    scrap_gui_button("Open", handle_settings_panel_editor_button_click);
+                    draw_button("Open", handle_settings_panel_editor_button_click);
                 gui_element_end(gui);
-            scrap_gui_end_setting();
+            end_setting();
 
             gui_grow(gui, DIRECTION_VERTICAL);
 
@@ -357,13 +357,13 @@ void handle_window(void) {
                 gui_set_gap(gui, WINDOW_ELEMENT_PADDING);
 
                 gui_grow(gui, DIRECTION_HORIZONTAL);
-                scrap_gui_button("Reset", handle_settings_reset_button_click);
-                scrap_gui_button("Apply", handle_settings_apply_button_click);
+                draw_button("Reset", handle_settings_reset_button_click);
+                draw_button("Apply", handle_settings_apply_button_click);
             gui_element_end(gui);
-        scrap_gui_end_window();
+        end_window();
         break;
     case GUI_TYPE_ABOUT:
-        scrap_gui_begin_window("About", 500 * conf.font_size / 32.0, 220 * conf.font_size / 32.0, animation_ease);
+        begin_window("About", 500 * conf.font_size / 32.0, 220 * conf.font_size / 32.0, animation_ease);
             gui_element_begin(gui);
                 gui_set_direction(gui, DIRECTION_HORIZONTAL);
                 gui_set_align(gui, ALIGN_CENTER);
@@ -386,9 +386,9 @@ void handle_window(void) {
                 gui_set_gap(gui, WINDOW_ELEMENT_PADDING);
 
                 gui_grow(gui, DIRECTION_HORIZONTAL);
-                scrap_gui_button("License", handle_about_license_button_click);
+                draw_button("License", handle_about_license_button_click);
             gui_element_end(gui);
-        scrap_gui_end_window();
+        end_window();
         break;
     default:
         assert(false && "Unhandled window draw");

@@ -25,13 +25,13 @@
 #define MIN(x, y) ((x) < (y) ? (x) : (y))
 #define CLAMP(x, min, max) (MIN(MAX(min, x), max))
 
-#define SIZING_X(el) (ElementSizing)(el->sizing & 0x0f)
-#define SIZING_Y(el) (ElementSizing)((el->sizing >> 4) & 0x0f)
+#define SIZING_X(el) (GuiElementSizing)(el->sizing & 0x0f)
+#define SIZING_Y(el) (GuiElementSizing)((el->sizing >> 4) & 0x0f)
 #define NEED_RESIZE(el) ((el->flags >> 5) & 1)
 #define SCISSOR(el) ((el->flags >> 4) & 1)
 #define FLOATING(el) ((el->flags >> 3) & 1)
-#define ALIGN(el) (AlignmentType)((el->flags >> 1) & 3)
-#define DIRECTION(el) (FlexDirection)(el->flags & 1)
+#define ALIGN(el) (GuiAlignmentType)((el->flags >> 1) & 3)
+#define DIRECTION(el) (GuiElementDirection)(el->flags & 1)
 
 #define SET_SIZING_X(el, size) (el->sizing = (el->sizing & 0xf0) | size)
 #define SET_SIZING_Y(el, size) (el->sizing = (el->sizing & 0x0f) | (size << 4))
@@ -41,10 +41,10 @@
 #define SET_ALIGN(el, ali) (el->flags = (el->flags & 0xf9) | (ali << 1))
 #define SET_DIRECTION(el, dir) (el->flags = (el->flags & 0xfe) | dir)
 
-static void gui_render(Gui* gui, FlexElement* el, float pos_x, float pos_y);
+static void gui_render(Gui* gui, GuiElement* el, float pos_x, float pos_y);
 static void flush_aux_buffers(Gui* gui);
 
-static bool inside_window(Gui* gui, DrawCommand* command) {
+static bool inside_window(Gui* gui, GuiDrawCommand* command) {
     return (command->pos_x + command->width  > 0) && (command->pos_x < gui->win_w) && 
            (command->pos_y + command->height > 0) && (command->pos_y < gui->win_h);
 }
@@ -88,11 +88,11 @@ void gui_end(Gui* gui) {
     flush_aux_buffers(gui);
 }
 
-void gui_set_measure_text_func(Gui* gui, MeasureTextFunc measure_text) {
+void gui_set_measure_text_func(Gui* gui, GuiMeasureTextFunc measure_text) {
     gui->measure_text = measure_text;
 }
 
-void gui_set_measure_image_func(Gui* gui, MeasureImageFunc measure_image) {
+void gui_set_measure_image_func(Gui* gui, GuiMeasureImageFunc measure_image) {
     gui->measure_image = measure_image;
 }
 
@@ -110,8 +110,8 @@ void gui_update_window_size(Gui* gui, unsigned short win_w, unsigned short win_h
     gui->win_h = win_h;
 }
 
-static int partition_image(DrawCommand* array, int begin, int end) {
-    DrawCommand pivot = array[(begin + end) / 2];
+static int partition_image(GuiDrawCommand* array, int begin, int end) {
+    GuiDrawCommand pivot = array[(begin + end) / 2];
     int left = begin - 1;
     int right = end + 1;
 
@@ -119,14 +119,14 @@ static int partition_image(DrawCommand* array, int begin, int end) {
         do left++; while (array[left].data.image < pivot.data.image);
         do right--; while (array[right].data.image > pivot.data.image);
         if (left >= right) return right;
-        DrawCommand temp = array[left];
+        GuiDrawCommand temp = array[left];
         array[left] = array[right];
         array[right] = temp;
     }
 }
 
-static int partition_font(DrawCommand* array, int begin, int end) {
-    DrawCommand pivot = array[(begin + end) / 2];
+static int partition_font(GuiDrawCommand* array, int begin, int end) {
+    GuiDrawCommand pivot = array[(begin + end) / 2];
     int left = begin - 1;
     int right = end + 1;
 
@@ -134,13 +134,13 @@ static int partition_font(DrawCommand* array, int begin, int end) {
         do left++; while (array[left].data.text.font < pivot.data.text.font);
         do right--; while (array[right].data.text.font > pivot.data.text.font);
         if (left >= right) return right;
-        DrawCommand temp = array[left];
+        GuiDrawCommand temp = array[left];
         array[left] = array[right];
         array[right] = temp;
     }
 }
 
-static void sort_commands(DrawCommand* array, int begin, int end, bool is_font) {
+static void sort_commands(GuiDrawCommand* array, int begin, int end, bool is_font) {
     if (begin >= end || begin < 0 || end < 0) return;
     int pos = is_font ? partition_font(array, begin, end) : partition_image(array, begin, end);
     sort_commands(array, begin, pos, is_font);
@@ -162,8 +162,8 @@ static void flush_aux_buffers(Gui* gui) {
     gui->text_stack_len = 0;
 }
 
-static DrawCommand* new_draw_command(Gui* gui, GuiDrawBounds bounds, DrawType draw_type, DrawData data, GuiColor color) {
-    DrawCommand* command = &gui->command_stack[gui->command_stack_len++];
+static GuiDrawCommand* new_draw_command(Gui* gui, GuiDrawBounds bounds, GuiDrawType draw_type, GuiDrawData data, GuiColor color) {
+    GuiDrawCommand* command = &gui->command_stack[gui->command_stack_len++];
     command->pos_x = bounds.x;
     command->pos_y = bounds.y;
     command->width = bounds.w;
@@ -193,7 +193,7 @@ static GuiBounds scissor_rect(GuiBounds rect, GuiBounds scissor) {
     return rect;
 }
 
-static void gui_render(Gui* gui, FlexElement* el, float pos_x, float pos_y) {
+static void gui_render(Gui* gui, GuiElement* el, float pos_x, float pos_y) {
     GuiBounds scissor = gui->scissor_stack_len > 0 ? gui->scissor_stack[gui->scissor_stack_len - 1] : (GuiBounds) { 0, 0, gui->win_w, gui->win_h };
     bool hover = false;
 
@@ -225,13 +225,13 @@ static void gui_render(Gui* gui, FlexElement* el, float pos_x, float pos_y) {
     if (SCISSOR(el) || FLOATING(el) || el->shader) flush_aux_buffers(gui);
 
     if (SCISSOR(el)) {
-        new_draw_command(gui, el_bounds, DRAWTYPE_SCISSOR_BEGIN, (DrawData) {0}, (GuiColor) {0});
+        new_draw_command(gui, el_bounds, DRAWTYPE_SCISSOR_BEGIN, (GuiDrawData) {0}, (GuiColor) {0});
         gui->scissor_stack[gui->scissor_stack_len++] = (GuiBounds) { el_bounds.x, el_bounds.y, el_bounds.w, el_bounds.h };
     }
-    if (el->shader) new_draw_command(gui, el_bounds, DRAWTYPE_SHADER_BEGIN, (DrawData) { .shader = el->shader }, (GuiColor) {0});
+    if (el->shader) new_draw_command(gui, el_bounds, DRAWTYPE_SHADER_BEGIN, (GuiDrawData) { .shader = el->shader }, (GuiColor) {0});
 
     if (el->draw_type != DRAWTYPE_UNKNOWN) {
-        DrawCommand command;
+        GuiDrawCommand command;
         command.pos_x = el_bounds.x;
         command.pos_y = el_bounds.y;
         command.width = el_bounds.w;
@@ -263,10 +263,10 @@ static void gui_render(Gui* gui, FlexElement* el, float pos_x, float pos_y) {
 
     if (el->shader) {
         flush_aux_buffers(gui);
-        new_draw_command(gui, el_bounds, DRAWTYPE_SHADER_END, (DrawData) { .shader = el->shader }, (GuiColor) {0});
+        new_draw_command(gui, el_bounds, DRAWTYPE_SHADER_END, (GuiDrawData) { .shader = el->shader }, (GuiColor) {0});
     }
     
-    FlexElement* iter = el + 1;
+    GuiElement* iter = el + 1;
     for (int i = 0; i < el->element_count; i++) {
         gui_render(gui, iter, pos_x + (float)el->x * el->scaling, pos_y + (float)el->y * el->scaling);
         iter = iter->next;
@@ -280,7 +280,7 @@ static void gui_render(Gui* gui, FlexElement* el, float pos_x, float pos_y) {
         if (hover) *el->scroll_value = CLAMP(*el->scroll_value + gui->mouse_scroll * el->scroll_scaling, -max, 0);
 
         if (max > 0) {
-            DrawCommand* command = &gui->command_stack[gui->command_stack_len++];
+            GuiDrawCommand* command = &gui->command_stack[gui->command_stack_len++];
             command->type = DRAWTYPE_RECT;
             command->data.rect_type = RECT_NORMAL;
             command->color = (GuiColor) { 0xff, 0xff, 0xff, 0x80 };
@@ -304,20 +304,20 @@ static void gui_render(Gui* gui, FlexElement* el, float pos_x, float pos_y) {
     if (FLOATING(el) || SCISSOR(el)) flush_aux_buffers(gui);
 
     if (SCISSOR(el)) {
-        new_draw_command(gui, el_bounds, DRAWTYPE_SCISSOR_END, (DrawData) {0}, (GuiColor) {0});
+        new_draw_command(gui, el_bounds, DRAWTYPE_SCISSOR_END, (GuiDrawData) {0}, (GuiColor) {0});
         gui->scissor_stack_len--;
     }
 }
 
-FlexElement* gui_element_begin(Gui* gui) {
+GuiElement* gui_element_begin(Gui* gui) {
     assert(gui->element_stack_len < ELEMENT_STACK_SIZE);
     assert(gui->element_ptr_stack_len < ELEMENT_STACK_SIZE);
 
-    FlexElement* prev = gui->element_ptr_stack_len > 0 ? gui->element_ptr_stack[gui->element_ptr_stack_len - 1] : NULL;
-    FlexElement* el = &gui->element_stack[gui->element_stack_len++];
+    GuiElement* prev = gui->element_ptr_stack_len > 0 ? gui->element_ptr_stack[gui->element_ptr_stack_len - 1] : NULL;
+    GuiElement* el = &gui->element_stack[gui->element_stack_len++];
     gui->element_ptr_stack[gui->element_ptr_stack_len++] = el;
     el->draw_type = DRAWTYPE_UNKNOWN;
-    el->data = (DrawData) {0};
+    el->data = (GuiDrawData) {0};
     el->x = prev ? prev->cursor_x : 0;
     el->y = prev ? prev->cursor_y : 0;
     el->abs_x = 0;
@@ -346,8 +346,8 @@ FlexElement* gui_element_begin(Gui* gui) {
     return el;
 }
 
-static void gui_element_offset(FlexElement* el, int offset_x, int offset_y) {
-    FlexElement *iter = el + 1;
+static void gui_element_offset(GuiElement* el, int offset_x, int offset_y) {
+    GuiElement *iter = el + 1;
     for (int i = 0; i < el->element_count; i++) {
         iter->x += offset_x;
         iter->y += offset_y;
@@ -355,11 +355,11 @@ static void gui_element_offset(FlexElement* el, int offset_x, int offset_y) {
     }
 }
 
-static void gui_element_realign(FlexElement* el) {
+static void gui_element_realign(GuiElement* el) {
     if (ALIGN(el) == ALIGN_TOP) return;
 
     int align_div = ALIGN(el) == ALIGN_CENTER ? 2 : 1;
-    FlexElement *iter = el + 1;
+    GuiElement *iter = el + 1;
     for (int i = 0; i < el->element_count; i++) {
         if (!FLOATING(iter)) {
             if (DIRECTION(el) == DIRECTION_VERTICAL) {
@@ -372,7 +372,7 @@ static void gui_element_realign(FlexElement* el) {
     }
 }
 
-static void gui_element_resize(Gui* gui, FlexElement* el, unsigned short new_w, unsigned short new_h) {
+static void gui_element_resize(Gui* gui, GuiElement* el, unsigned short new_w, unsigned short new_h) {
     el->w = new_w;
     el->h = new_h;
 
@@ -380,7 +380,7 @@ static void gui_element_resize(Gui* gui, FlexElement* el, unsigned short new_w, 
     int left_h = el->h - el->pad_h * 2 + el->gap;
     int grow_elements = 0;
 
-    FlexElement* iter = el + 1;
+    GuiElement* iter = el + 1;
     for (int i = 0; i < el->element_count; i++) {
         if (!FLOATING(iter)) {
             if (DIRECTION(el) == DIRECTION_VERTICAL) {
@@ -419,8 +419,8 @@ static void gui_element_resize(Gui* gui, FlexElement* el, unsigned short new_w, 
 
         int size_w = iter->w;
         int size_h = iter->h;
-        ElementSizing sizing_x = SIZING_X(iter);
-        ElementSizing sizing_y = SIZING_Y(iter);
+        GuiElementSizing sizing_x = SIZING_X(iter);
+        GuiElementSizing sizing_y = SIZING_Y(iter);
         if (sizing_x == SIZING_PERCENT) size_w = el->w * iter->size_percentage;
         if (sizing_y == SIZING_PERCENT) size_h = el->h * iter->size_percentage;
 
@@ -448,7 +448,7 @@ static void gui_element_resize(Gui* gui, FlexElement* el, unsigned short new_w, 
     }
 }
 
-static void gui_element_advance(FlexElement* el, GuiMeasurement ms) {
+static void gui_element_advance(GuiElement* el, GuiMeasurement ms) {
     if (!el) return;
 
     if (DIRECTION(el) == DIRECTION_HORIZONTAL) {
@@ -463,8 +463,8 @@ static void gui_element_advance(FlexElement* el, GuiMeasurement ms) {
 }
 
 void gui_element_end(Gui* gui) {
-    FlexElement* el = gui->element_ptr_stack[--gui->element_ptr_stack_len];
-    FlexElement* prev = gui->element_ptr_stack_len > 0 ? gui->element_ptr_stack[gui->element_ptr_stack_len - 1] : NULL;
+    GuiElement* el = gui->element_ptr_stack[--gui->element_ptr_stack_len];
+    GuiElement* prev = gui->element_ptr_stack_len > 0 ? gui->element_ptr_stack[gui->element_ptr_stack_len - 1] : NULL;
     if (DIRECTION(el) == DIRECTION_VERTICAL) {
         el->h -= el->gap;
     } else {
@@ -476,8 +476,8 @@ void gui_element_end(Gui* gui) {
     }
 
     gui_element_advance(prev, (GuiMeasurement) { el->w, el->h });
-    ElementSizing sizing_x = SIZING_X(el);
-    ElementSizing sizing_y = SIZING_Y(el);
+    GuiElementSizing sizing_x = SIZING_X(el);
+    GuiElementSizing sizing_y = SIZING_Y(el);
     bool has_defined_size = sizing_x != SIZING_GROW && sizing_x != SIZING_PERCENT && 
                             sizing_y != SIZING_GROW && sizing_y != SIZING_PERCENT;
 
@@ -497,47 +497,47 @@ void gui_element_end(Gui* gui) {
     }
 }
 
-FlexElement* gui_get_element(Gui* gui) {
+GuiElement* gui_get_element(Gui* gui) {
     return gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
 }
 
-void gui_on_hover(Gui* gui, HoverHandler handler) {
-    FlexElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
+void gui_on_hover(Gui* gui, GuiHoverHandler handler) {
+    GuiElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
     el->handle_hover = handler;
 }
 
-void gui_set_anchor(Gui* gui, FlexElement* anchor) {
-    FlexElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
+void gui_set_anchor(Gui* gui, GuiElement* anchor) {
+    GuiElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
     el->parent_anchor = anchor;
 }
 
 void gui_set_shader(Gui* gui, void* shader) {
-    FlexElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
+    GuiElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
     el->shader = shader;
 }
 
 void gui_set_scroll_scaling(Gui* gui, int scroll_scaling) {
-    FlexElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
+    GuiElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
     el->scroll_scaling = scroll_scaling;
 }
 
 void gui_set_scroll(Gui* gui, int* scroll_value) {
-    FlexElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
+    GuiElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
     el->scroll_value = scroll_value;
 }
 
 void gui_set_scissor(Gui* gui) {
-    FlexElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
+    GuiElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
     SET_SCISSOR(el, 1);
 }
 
 void gui_scale_element(Gui* gui, float scaling) {
-    FlexElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
+    GuiElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
     el->scaling *= scaling;
 }
 
 void* gui_set_state(Gui* gui, void* state, unsigned short state_len) {
-    FlexElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
+    GuiElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
     if (el->custom_state) return el->custom_state;
     assert(gui->state_stack_len + state_len <= STATE_STACK_SIZE);
 
@@ -547,41 +547,41 @@ void* gui_set_state(Gui* gui, void* state, unsigned short state_len) {
     return el->custom_state;
 }
 
-void* gui_get_state(FlexElement* el, unsigned short* state_len) {
+void* gui_get_state(GuiElement* el, unsigned short* state_len) {
     *state_len = el->state_len;
     return el->custom_state;
 }
 
 void gui_set_floating(Gui* gui) {
-    FlexElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
+    GuiElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
     SET_FLOATING(el, 1);
 }
 
 void gui_set_position(Gui* gui, int x, int y) {
-    FlexElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
+    GuiElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
     el->x = x;
     el->y = y;
 }
 
 void gui_set_custom_data(Gui* gui, void* custom_data) {
-    FlexElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
+    GuiElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
     el->custom_data = custom_data;
 }
 
 void gui_set_fixed(Gui* gui, unsigned short w, unsigned short h) {
-    FlexElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
+    GuiElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
     el->sizing = SIZING_FIXED | (SIZING_FIXED << 4); // This sets both dimensions to SIZING_FIXED
     el->w = w;
     el->h = h;
 }
 
 void gui_set_fit(Gui* gui) {
-    FlexElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
+    GuiElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
     el->sizing = SIZING_FIT | (SIZING_FIT << 4); // This sets both dimensions to SIZING_FIT
 }
 
 void gui_set_padding(Gui* gui, unsigned short pad_w, unsigned short pad_h) {
-    FlexElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
+    GuiElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
     el->pad_w = pad_w;
     el->pad_h = pad_h;
     el->w = MAX(el->w, el->pad_w * 2);
@@ -591,12 +591,12 @@ void gui_set_padding(Gui* gui, unsigned short pad_w, unsigned short pad_h) {
 }
 
 void gui_set_gap(Gui* gui, unsigned short gap) {
-    FlexElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
+    GuiElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
     el->gap = gap;
 }
 
-void gui_set_grow(Gui* gui, FlexDirection direction) {
-    FlexElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
+void gui_set_grow(Gui* gui, GuiElementDirection direction) {
+    GuiElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
     if (direction == DIRECTION_VERTICAL) {
         SET_SIZING_Y(el, SIZING_GROW);
         el->h = 0;
@@ -606,8 +606,8 @@ void gui_set_grow(Gui* gui, FlexDirection direction) {
     }
 }
 
-void gui_set_percent_size(Gui* gui, float percentage, FlexDirection direction) {
-    FlexElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
+void gui_set_percent_size(Gui* gui, float percentage, GuiElementDirection direction) {
+    GuiElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
     el->size_percentage = percentage;
     if (direction == DIRECTION_VERTICAL) {
         SET_SIZING_Y(el, SIZING_PERCENT);
@@ -618,26 +618,26 @@ void gui_set_percent_size(Gui* gui, float percentage, FlexDirection direction) {
     }
 }
 
-void gui_set_direction(Gui* gui, FlexDirection direction) {
-    FlexElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
+void gui_set_direction(Gui* gui, GuiElementDirection direction) {
+    GuiElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
     SET_DIRECTION(el, direction);
 }
 
 void gui_set_rect(Gui* gui, GuiColor color) {
-    FlexElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
+    GuiElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
     el->draw_type = DRAWTYPE_RECT;
     el->color = color;
     el->data.rect_type = RECT_NORMAL;
 }
 
 void gui_set_rect_type(Gui* gui, GuiRectType type) {
-    FlexElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
+    GuiElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
     if (el->draw_type != DRAWTYPE_RECT) return;
     el->data.rect_type = type;
 }
 
 void gui_set_border(Gui* gui, GuiColor color, unsigned int border_width) {
-    FlexElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
+    GuiElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
     el->draw_type = DRAWTYPE_BORDER;
     el->color = color;
     el->data.border.width = border_width;
@@ -645,13 +645,13 @@ void gui_set_border(Gui* gui, GuiColor color, unsigned int border_width) {
 }
 
 void gui_set_border_type(Gui* gui, GuiBorderType type) {
-    FlexElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
+    GuiElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
     if (el->draw_type != DRAWTYPE_BORDER) return;
     el->data.border.type = type;
 }
 
 void gui_set_text(Gui* gui, void* font, const char* text, unsigned short size, GuiColor color) {
-    FlexElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
+    GuiElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
     GuiMeasurement text_size = gui->measure_text(font, text, size);
     el->draw_type = DRAWTYPE_TEXT;
     el->color = color;
@@ -662,7 +662,7 @@ void gui_set_text(Gui* gui, void* font, const char* text, unsigned short size, G
 }
 
 void gui_set_image(Gui* gui, void* image, unsigned short size, GuiColor color) {
-    FlexElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
+    GuiElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
     GuiMeasurement image_size = gui->measure_image(image, size);
     el->draw_type = DRAWTYPE_IMAGE;
     el->color = color;
@@ -671,13 +671,13 @@ void gui_set_image(Gui* gui, void* image, unsigned short size, GuiColor color) {
     el->h = image_size.h;
 }
 
-void gui_set_align(Gui* gui, AlignmentType align) {
-    FlexElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
+void gui_set_align(Gui* gui, GuiAlignmentType align) {
+    GuiElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
     SET_ALIGN(el, align);
 }
 
 void gui_set_min_size(Gui* gui, unsigned short min_w, unsigned short min_h) {
-    FlexElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
+    GuiElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
     el->w = MAX(el->w, min_w);
     el->h = MAX(el->h, min_h);
 }
@@ -694,7 +694,7 @@ inline void gui_image(Gui* gui, void* image, unsigned short size, GuiColor color
     gui_element_end(gui);
 }
 
-inline void gui_grow(Gui* gui, FlexDirection direction) {
+inline void gui_grow(Gui* gui, GuiElementDirection direction) {
     gui_element_begin(gui);
     gui_set_grow(gui, direction);
     gui_element_end(gui);

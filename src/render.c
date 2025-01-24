@@ -30,7 +30,7 @@
 #define UNLERP(min, max, v) (((float)(v) - (float)(min)) / ((float)(max) - (float)(min)))
 #define CONVERT_COLOR(color, type) (type) { color.r, color.g, color.b, color.a }
 
-void scrap_gui_draw_code(void);
+static void draw_code(void);
 
 void sidebar_init(void) {
     sidebar.blocks = vector_create();
@@ -46,7 +46,7 @@ void actionbar_show(const char* text) {
     actionbar.show_time = 3.0;
 }
 
-void draw_dots(void) {
+static void draw_dots(void) {
     int win_width = GetScreenWidth();
     int win_height = GetScreenHeight();
 
@@ -67,7 +67,7 @@ void draw_dots(void) {
     EndShaderMode();
 }
 
-void draw_term(int x, int y) {
+static void draw_term(int x, int y) {
     pthread_mutex_lock(&term.lock);
 
     if (term.char_w == 0 || term.char_h == 0) goto unlock_term;
@@ -124,14 +124,14 @@ void prerender_font_shadow(Font* font) {
     SetTextureFilter(font->texture, TEXTURE_FILTER_BILINEAR);
 }
 
-void blockdef_on_hover(FlexElement* el) {
+static void blockdef_on_hover(GuiElement* el) {
     if (hover_info.is_panel_edit_mode) return;
     if (gui_window_is_shown()) return;
     hover_info.editor.part = EDITOR_BLOCKDEF;
     hover_info.editor.blockdef = el->custom_data;
 }
 
-void input_on_hover(FlexElement* el) {
+static void input_on_hover(GuiElement* el) {
     if (hover_info.is_panel_edit_mode) return;
     if (gui_window_is_shown()) return;
     hover_info.input = el->custom_data;
@@ -143,7 +143,7 @@ void input_on_hover(FlexElement* el) {
     el->data.border.type = BORDER_NORMAL;
 }
 
-void editor_del_button_on_hover(FlexElement* el) {
+static void editor_del_button_on_hover(GuiElement* el) {
     if (hover_info.is_panel_edit_mode) return;
     if (gui_window_is_shown()) return;
     if (hover_info.top_bars.handler) return;
@@ -154,7 +154,7 @@ void editor_del_button_on_hover(FlexElement* el) {
     hover_info.top_bars.handler = handle_editor_del_arg_button;
 }
 
-void editor_button_on_hover(FlexElement* el) {
+static void editor_button_on_hover(GuiElement* el) {
     if (hover_info.is_panel_edit_mode) return;
     if (gui_window_is_shown()) return;
     if (hover_info.top_bars.handler) return;
@@ -164,7 +164,7 @@ void editor_button_on_hover(FlexElement* el) {
     hover_info.top_bars.handler = el->custom_data;
 }
 
-void scrap_gui_draw_editor_button(Texture2D* texture, ButtonClickHandler handler) {
+static void draw_editor_button(Texture2D* texture, ButtonClickHandler handler) {
     gui_element_begin(gui);
         gui_set_rect(gui, (GuiColor) { 0xff, 0xff, 0xff, 0x40 });
         gui_on_hover(gui, editor_button_on_hover);
@@ -174,7 +174,7 @@ void scrap_gui_draw_editor_button(Texture2D* texture, ButtonClickHandler handler
     gui_element_end(gui);
 }
 
-void scrap_gui_draw_blockdef(ScrBlockdef* blockdef, bool editing) {
+static void draw_blockdef(ScrBlockdef* blockdef, bool editing) {
     bool collision = hover_info.editor.prev_blockdef == blockdef;
     Color color = CONVERT_COLOR(blockdef->color, Color);
     Color block_color = ColorBrightness(color, collision ? 0.3 : 0.0);
@@ -239,7 +239,7 @@ void scrap_gui_draw_blockdef(ScrBlockdef* blockdef, bool editing) {
             gui_image(gui, input->data.image.image_ptr, BLOCK_IMAGE_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
             break;
         case INPUT_ARGUMENT:
-            scrap_gui_draw_blockdef(input->data.arg.blockdef, editing);
+            draw_blockdef(input->data.arg.blockdef, editing);
             break;
         default:
             gui_text(gui, &font_cond_shadow, "NODEF", BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
@@ -262,20 +262,20 @@ void scrap_gui_draw_blockdef(ScrBlockdef* blockdef, bool editing) {
     gui_element_end(gui);
 }
 
-void block_on_hover(FlexElement* el) {
+static void block_on_hover(GuiElement* el) {
     if (hover_info.is_panel_edit_mode) return;
     if (gui_window_is_shown()) return;
     hover_info.block = el->custom_data;
     hover_info.blockchain = hover_info.prev_blockchain;
 }
 
-void block_argument_on_hover(FlexElement* el) {
+static void block_argument_on_hover(GuiElement* el) {
     if (hover_info.is_panel_edit_mode) return;
     hover_info.prev_argument = el->custom_data;
     hover_info.blockchain = hover_info.prev_blockchain;
 }
 
-void argument_on_hover(FlexElement* el) {
+static void argument_on_hover(GuiElement* el) {
     if (gui_window_is_shown()) return;
     hover_info.argument = el->custom_data;
     hover_info.input = &hover_info.argument->data.text;
@@ -287,7 +287,7 @@ void argument_on_hover(FlexElement* el) {
     el->data.border.type = BORDER_NORMAL;
 }
 
-void scrap_gui_draw_block(ScrBlock* block, bool highlight) {
+static void draw_block(ScrBlock* block, bool highlight) {
     bool collision = hover_info.prev_block == block || highlight;
     Color color = CONVERT_COLOR(block->blockdef->color, Color);
     Color block_color = collision ? ColorBrightness(color, 0.3) : color;
@@ -369,7 +369,7 @@ void scrap_gui_draw_block(ScrBlock* block, bool highlight) {
                     gui_on_hover(gui, block_argument_on_hover);
                     gui_set_custom_data(gui, arg);
 
-                    scrap_gui_draw_block(&arg->data.block, highlight);
+                    draw_block(&arg->data.block, highlight);
                 gui_element_end(gui);
                 break;
             default:
@@ -412,14 +412,14 @@ void scrap_gui_draw_block(ScrBlock* block, bool highlight) {
                 gui_set_custom_data(gui, arg);
                 gui_on_hover(gui, argument_on_hover);
 
-                scrap_gui_draw_blockdef(arg->data.blockdef, hover_info.editor.edit_blockdef == arg->data.blockdef);
+                draw_blockdef(arg->data.blockdef, hover_info.editor.edit_blockdef == arg->data.blockdef);
 
                 if (hover_info.editor.edit_blockdef == arg->data.blockdef) {
-                    scrap_gui_draw_editor_button(&add_arg_tex, handle_editor_add_arg_button);
-                    scrap_gui_draw_editor_button(&add_text_tex, handle_editor_add_text_button);
-                    scrap_gui_draw_editor_button(&close_tex, handle_editor_close_button);
+                    draw_editor_button(&add_arg_tex, handle_editor_add_arg_button);
+                    draw_editor_button(&add_text_tex, handle_editor_add_text_button);
+                    draw_editor_button(&close_tex, handle_editor_close_button);
                 } else {
-                    scrap_gui_draw_editor_button(&edit_tex, handle_editor_edit_button);
+                    draw_editor_button(&edit_tex, handle_editor_edit_button);
                 }
 
                 gui_spacer(gui, 0, 0);
@@ -436,7 +436,7 @@ void scrap_gui_draw_block(ScrBlock* block, bool highlight) {
     gui_element_end(gui);
 }
 
-void tab_button_add_on_hover(FlexElement* el) {
+static void tab_button_add_on_hover(GuiElement* el) {
     if (gui_window_is_shown()) return;
     if (hover_info.top_bars.handler) return;
     if (el->draw_type == DRAWTYPE_RECT) return;
@@ -447,7 +447,7 @@ void tab_button_add_on_hover(FlexElement* el) {
     hover_info.tab = (int)(size_t)el->custom_data;
 }
 
-void tab_button_on_hover(FlexElement* el) {
+static void tab_button_on_hover(GuiElement* el) {
     if (gui_window_is_shown()) return;
     if (hover_info.top_bars.handler) return;
     if (el->draw_type == DRAWTYPE_RECT) return;
@@ -458,7 +458,7 @@ void tab_button_on_hover(FlexElement* el) {
     hover_info.tab = (int)(size_t)el->custom_data;
 }
 
-void button_on_hover(FlexElement* el) {
+static void button_on_hover(GuiElement* el) {
     if (hover_info.is_panel_edit_mode) return;
     if (gui_window_is_shown()) return;
     if (hover_info.top_bars.handler) return;
@@ -469,7 +469,7 @@ void button_on_hover(FlexElement* el) {
     hover_info.top_bars.handler = el->custom_data;
 }
 
-void panel_editor_button_on_hover(FlexElement* el) {
+static void panel_editor_button_on_hover(GuiElement* el) {
     if (!hover_info.is_panel_edit_mode) return;
     if (hover_info.top_bars.handler) return;
 
@@ -478,7 +478,7 @@ void panel_editor_button_on_hover(FlexElement* el) {
     hover_info.top_bars.handler = el->custom_data;
 }
 
-void scrap_gui_draw_panel_editor_button(const char* text, int size, GuiColor color, ButtonClickHandler handler) {
+static void draw_panel_editor_button(const char* text, int size, GuiColor color, ButtonClickHandler handler) {
     gui_element_begin(gui);
         gui_set_direction(gui, DIRECTION_HORIZONTAL);
         gui_set_align(gui, ALIGN_CENTER);
@@ -492,8 +492,8 @@ void scrap_gui_draw_panel_editor_button(const char* text, int size, GuiColor col
     gui_element_end(gui);
 }
 
-FlexElement* scrap_gui_draw_button(const char* text, int size, bool selected, HoverHandler on_hover, void* custom_data) {
-    FlexElement* el;
+static GuiElement* draw_button(const char* text, int size, bool selected, GuiHoverHandler on_hover, void* custom_data) {
+    GuiElement* el;
     gui_element_begin(gui);
         gui_set_direction(gui, DIRECTION_HORIZONTAL);
         gui_set_align(gui, ALIGN_CENTER);
@@ -509,7 +509,7 @@ FlexElement* scrap_gui_draw_button(const char* text, int size, bool selected, Ho
     return el;
 }
 
-void scrap_gui_draw_top_bar(void) {
+static void draw_top_bar(void) {
     const int top_bar_size = conf.font_size * 1.2;
     gui_element_begin(gui);
         gui_set_grow(gui, DIRECTION_HORIZONTAL);
@@ -524,14 +524,14 @@ void scrap_gui_draw_top_bar(void) {
         gui_text(gui, &font_eb, "Scrap", conf.font_size * 0.8, CONVERT_COLOR(WHITE, GuiColor));
         gui_spacer(gui, 10, 0);
 
-        FlexElement* el = scrap_gui_draw_button("File", top_bar_size, false, button_on_hover, handle_file_button_click);
+        GuiElement* el = draw_button("File", top_bar_size, false, button_on_hover, handle_file_button_click);
         if (hover_info.dropdown.location == LOCATION_FILE_MENU) hover_info.dropdown.element = el;
-        scrap_gui_draw_button("Settings", top_bar_size, false, button_on_hover, handle_settings_button_click);
-        scrap_gui_draw_button("About", top_bar_size, false, button_on_hover, handle_about_button_click);
+        draw_button("Settings", top_bar_size, false, button_on_hover, handle_settings_button_click);
+        draw_button("About", top_bar_size, false, button_on_hover, handle_about_button_click);
     gui_element_end(gui);
 }
 
-void scrap_gui_draw_tab_bar(void) {
+static void draw_tab_bar(void) {
     const int tab_bar_size = conf.font_size;
     gui_element_begin(gui);
         gui_set_grow(gui, DIRECTION_HORIZONTAL);
@@ -541,12 +541,12 @@ void scrap_gui_draw_tab_bar(void) {
         gui_set_align(gui, ALIGN_CENTER);
 
         if (hover_info.is_panel_edit_mode && hover_info.mouse_panel != PANEL_NONE) {
-            scrap_gui_draw_button("+", tab_bar_size, false, tab_button_add_on_hover, (void*)0);
+            draw_button("+", tab_bar_size, false, tab_button_add_on_hover, (void*)0);
         }
         for (size_t i = 0; i < vector_size(code_tabs); i++) {
-            scrap_gui_draw_button(code_tabs[i].name, tab_bar_size, current_tab == (int)i, tab_button_on_hover, (void*)i);
+            draw_button(code_tabs[i].name, tab_bar_size, current_tab == (int)i, tab_button_on_hover, (void*)i);
             if (hover_info.is_panel_edit_mode && hover_info.mouse_panel != PANEL_NONE) {
-                scrap_gui_draw_button("+", tab_bar_size, false, tab_button_add_on_hover, (void*)(i + 1));
+                draw_button("+", tab_bar_size, false, tab_button_add_on_hover, (void*)(i + 1));
             }
         }
 
@@ -574,12 +574,12 @@ void scrap_gui_draw_tab_bar(void) {
     gui_element_end(gui);
 }
 
-void blockchain_on_hover(FlexElement* el) {
+static void blockchain_on_hover(GuiElement* el) {
     if (hover_info.is_panel_edit_mode) return;
     hover_info.prev_blockchain = el->custom_data;
 }
 
-void scrap_gui_draw_blockchain(ScrBlockChain* chain) {
+static void draw_blockchain(ScrBlockChain* chain) {
     int layer = 0;
     bool highlight = hover_info.exec_chain == chain;
 
@@ -598,7 +598,7 @@ void scrap_gui_draw_blockchain(ScrBlockChain* chain) {
             gui_element_end(gui);
             gui_element_end(gui);
 
-            FlexElement* el = gui_get_element(gui);
+            GuiElement* el = gui_get_element(gui);
 
             ScrBlock* block = el->custom_data;
 
@@ -634,20 +634,20 @@ void scrap_gui_draw_blockchain(ScrBlockChain* chain) {
                 gui_set_direction(gui, DIRECTION_VERTICAL);
                 gui_set_custom_data(gui, &chain->blocks[i]);
 
-                scrap_gui_draw_block(&chain->blocks[i], highlight && block_highlight);
+                draw_block(&chain->blocks[i], highlight && block_highlight);
         } else {
             if (blockdef->type == BLOCKTYPE_CONTROL) {
                 gui_element_begin(gui);
                     gui_set_direction(gui, DIRECTION_VERTICAL);
                     gui_set_custom_data(gui, &chain->blocks[i]);
             }
-            scrap_gui_draw_block(&chain->blocks[i], highlight && block_highlight);
+            draw_block(&chain->blocks[i], highlight && block_highlight);
         }
 
         if (blockdef->type == BLOCKTYPE_CONTROL || blockdef->type == BLOCKTYPE_CONTROLEND) {
             layer++;
 
-            FlexElement* el = gui_get_element(gui);
+            GuiElement* el = gui_get_element(gui);
             chain->blocks[i].width = el->w;
 
             bool collision = hover_info.prev_block == &chain->blocks[i] || (highlight && block_highlight);
@@ -688,7 +688,7 @@ void scrap_gui_draw_blockchain(ScrBlockChain* chain) {
     gui_element_end(gui);
 }
 
-void scrap_gui_draw_sidebar(void) {
+static void draw_sidebar(void) {
     gui_element_begin(gui);
         gui_set_grow(gui, DIRECTION_VERTICAL);
         gui_set_grow(gui, DIRECTION_HORIZONTAL);
@@ -700,12 +700,12 @@ void scrap_gui_draw_sidebar(void) {
         gui_set_scissor(gui);
 
         for (size_t i = dropdown.scroll_amount; i < vector_size(sidebar.blocks); i++) {
-            scrap_gui_draw_block(&sidebar.blocks[i], false);
+            draw_block(&sidebar.blocks[i], false);
         }
     gui_element_end(gui);
 }
 
-void scrap_gui_draw_code_area(void) {
+static void draw_code_area(void) {
     gui_element_begin(gui);
         gui_set_grow(gui, DIRECTION_HORIZONTAL);
         gui_set_grow(gui, DIRECTION_VERTICAL);
@@ -714,7 +714,7 @@ void scrap_gui_draw_code_area(void) {
         gui_set_align(gui, ALIGN_CENTER);
         gui_set_scissor(gui);
 
-        scrap_gui_draw_code();
+        draw_code();
 
         gui_element_begin(gui);
             gui_set_floating(gui);
@@ -734,7 +734,7 @@ void scrap_gui_draw_code_area(void) {
     gui_element_end(gui);
 }
 
-void scrap_gui_draw_split_preview(PanelTree* panel) {
+static void draw_split_preview(PanelTree* panel) {
     if (!hover_info.is_panel_edit_mode) return;
     if (hover_info.prev_panel != panel) return;
 
@@ -785,7 +785,7 @@ void scrap_gui_draw_split_preview(PanelTree* panel) {
     gui_element_end(gui);
 }
 
-void scrap_gui_draw_term_panel(void) {
+static void draw_term_panel(void) {
     gui_element_begin(gui);
         gui_set_grow(gui, DIRECTION_HORIZONTAL);
         gui_set_grow(gui, DIRECTION_VERTICAL);
@@ -801,7 +801,7 @@ void scrap_gui_draw_term_panel(void) {
     gui_element_end(gui);
 }
 
-void panel_on_hover(FlexElement* el) {
+static void panel_on_hover(GuiElement* el) {
     hover_info.panel = el->custom_data;
     hover_info.panel_size = (Rectangle) { el->abs_x, el->abs_y, el->w, el->h };
 
@@ -828,7 +828,7 @@ void panel_on_hover(FlexElement* el) {
     }
 }
 
-void scrap_gui_draw_panel(PanelTree* panel) {
+static void draw_panel(PanelTree* panel) {
     if (panel->type != PANEL_SPLIT && !panel->parent) {
         gui_element_begin(gui);
             gui_set_grow(gui, DIRECTION_VERTICAL);
@@ -842,13 +842,13 @@ void scrap_gui_draw_panel(PanelTree* panel) {
         assert(false && "Attempt to render panel with type PANEL_NONE");
         break;
     case PANEL_SIDEBAR:
-        scrap_gui_draw_sidebar();
+        draw_sidebar();
         break;
     case PANEL_CODE:
-        scrap_gui_draw_code_area();
+        draw_code_area();
         break;
     case PANEL_TERM:
-        scrap_gui_draw_term_panel();
+        draw_term_panel();
         break;
     case PANEL_SPLIT:
         gui_element_begin(gui);
@@ -872,7 +872,7 @@ void scrap_gui_draw_panel(PanelTree* panel) {
                     gui_set_custom_data(gui, panel->left);
                 }
 
-                scrap_gui_draw_panel(panel->left);
+                draw_panel(panel->left);
             gui_element_end(gui);
 
             if (hover_info.is_panel_edit_mode) {
@@ -896,16 +896,16 @@ void scrap_gui_draw_panel(PanelTree* panel) {
                     gui_set_custom_data(gui, panel->right);
                 }
 
-                scrap_gui_draw_panel(panel->right);
+                draw_panel(panel->right);
             gui_element_end(gui);
         gui_element_end(gui);
         break;
     }
-    if (panel->type != PANEL_SPLIT) scrap_gui_draw_split_preview(panel);
+    if (panel->type != PANEL_SPLIT) draw_split_preview(panel);
     if (panel->type != PANEL_SPLIT && !panel->parent) gui_element_end(gui);
 }
 
-void scrap_gui_draw_code(void) {
+static void draw_code(void) {
     for (size_t i = 0; i < vector_size(editor_code); i++) {
         Vector2 chain_pos = (Vector2) {
             editor_code[i].x - camera_pos.x, 
@@ -919,15 +919,15 @@ void scrap_gui_draw_code(void) {
             gui_set_floating(gui);
             gui_set_position(gui, chain_pos.x, chain_pos.y);
 
-            scrap_gui_draw_blockchain(&editor_code[i]);
+            draw_blockchain(&editor_code[i]);
         gui_element_end(gui);
-        FlexElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len];
+        GuiElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len];
         editor_code[i].width = el->w;
         editor_code[i].height = el->h;
     }
 }
 
-void dropdown_on_hover(FlexElement* el) {
+static void dropdown_on_hover(GuiElement* el) {
     el->draw_type = DRAWTYPE_RECT;
     el->data.rect_type = RECT_NORMAL;
     el->color = (GuiColor) { 0x40, 0x40, 0x40, 0xff };
@@ -937,7 +937,7 @@ void dropdown_on_hover(FlexElement* el) {
     hover_info.top_bars.handler = hover_info.dropdown.handler;
 }
 
-void scrap_gui_draw_dropdown(void) {
+static void draw_dropdown(void) {
     const int max_list_size = 10;
 
     if (!hover_info.dropdown.location) return;
@@ -975,18 +975,17 @@ void scrap_gui_draw_dropdown(void) {
     gui_element_end(gui);
 }
 
-void panel_editor_on_hover(FlexElement* el) {
+static void panel_editor_on_hover(GuiElement* el) {
     (void) el;
     if (!hover_info.is_panel_edit_mode) return;
     hover_info.panel = NULL;
 }
 
 void scrap_gui_process(void) {
-    // Gui
     gui_begin(gui);
-        scrap_gui_draw_top_bar();
-        scrap_gui_draw_tab_bar();
-        FlexElement* tab_bar_anchor = NULL;
+        draw_top_bar();
+        draw_tab_bar();
+        GuiElement* tab_bar_anchor = NULL;
 
         if (hover_info.is_panel_edit_mode) {
             gui_element_begin(gui);
@@ -994,14 +993,14 @@ void scrap_gui_process(void) {
             gui_element_end(gui);
         }
 
-        scrap_gui_draw_panel(code_tabs[current_tab].root_panel);
+        draw_panel(code_tabs[current_tab].root_panel);
         handle_window();
 
         gui_element_begin(gui);
             gui_set_floating(gui);
             gui_set_position(gui, gui->mouse_x, gui->mouse_y);
 
-            scrap_gui_draw_blockchain(&mouse_blockchain);
+            draw_blockchain(&mouse_blockchain);
         gui_element_end(gui);
 
         if (hover_info.is_panel_edit_mode) {
@@ -1017,7 +1016,7 @@ void scrap_gui_process(void) {
                         .left = NULL,
                         .right = NULL,
                     };
-                    scrap_gui_draw_panel(&panel);
+                    draw_panel(&panel);
                 gui_element_end(gui);
             }
 
@@ -1044,17 +1043,17 @@ void scrap_gui_process(void) {
 
                     gui_spacer(gui, 0, conf.font_size * 0.25);
 
-                    scrap_gui_draw_panel_editor_button("Done", conf.font_size, (GuiColor) { 0x40, 0xff, 0x40, 0xff }, handle_panel_editor_done_button);
+                    draw_panel_editor_button("Done", conf.font_size, (GuiColor) { 0x40, 0xff, 0x40, 0xff }, handle_panel_editor_done_button);
                 gui_element_end(gui);
             gui_element_end(gui);
         }
 
-        scrap_gui_draw_dropdown();
+        draw_dropdown();
     gui_end(gui);
 }
 
 
-// Draw order for scrap_gui_render_border_control()
+// Draw order for render_border_control()
 //
 //           1
 //   +---------------+ 
@@ -1062,7 +1061,7 @@ void scrap_gui_process(void) {
 //   +     +---------+
 //             3
 //
-void scrap_gui_render_border_control(DrawCommand* cmd) {
+static void render_border_control(GuiDrawCommand* cmd) {
     unsigned short border_w = cmd->data.border.width;
     Color color = CONVERT_COLOR(cmd->color, Color);
 
@@ -1072,13 +1071,13 @@ void scrap_gui_render_border_control(DrawCommand* cmd) {
     /* 4 */ DrawRectangle(cmd->pos_x, cmd->pos_y, border_w, cmd->height, color);
 }
 
-// Draw order for scrap_gui_render_border_control_body()
+// Draw order for render_border_control_body()
 //
 //   +     +
 // 1 |     | 2
 //   +     +
 //
-void scrap_gui_render_border_control_body(DrawCommand* cmd) {
+static void render_border_control_body(GuiDrawCommand* cmd) {
     unsigned short border_w = cmd->data.border.width;
     Color color = CONVERT_COLOR(cmd->color, Color);
 
@@ -1086,7 +1085,7 @@ void scrap_gui_render_border_control_body(DrawCommand* cmd) {
     /* 2 */ DrawRectangle(cmd->pos_x + cmd->width - border_w, cmd->pos_y, border_w, cmd->height, color);
 }
 
-// Draw order for scrap_gui_render_border_control_end()
+// Draw order for render_border_control_end()
 //
 //              1
 //   +     +---------+
@@ -1094,7 +1093,7 @@ void scrap_gui_render_border_control_body(DrawCommand* cmd) {
 //   +     +---------+
 //              3
 //
-void scrap_gui_render_border_control_end(DrawCommand* cmd) {
+static void render_border_control_end(GuiDrawCommand* cmd) {
     unsigned short border_w = cmd->data.border.width;
     Color color = CONVERT_COLOR(cmd->color, Color);
 
@@ -1104,14 +1103,14 @@ void scrap_gui_render_border_control_end(DrawCommand* cmd) {
     /* 4 */ DrawRectangle(cmd->pos_x, cmd->pos_y, border_w, cmd->height, color);
 }
 
-// Draw order for scrap_gui_render_border_end()
+// Draw order for render_border_end()
 //
 //              1
 //   +     +---------+
 // 4 |               | 2
 //   +---------------+ 
 //           3
-void scrap_gui_render_border_end(DrawCommand* cmd) {
+static void render_border_end(GuiDrawCommand* cmd) {
     unsigned short border_w = cmd->data.border.width;
     Color color = CONVERT_COLOR(cmd->color, Color);
 
@@ -1121,7 +1120,7 @@ void scrap_gui_render_border_end(DrawCommand* cmd) {
     /* 4 */ DrawRectangle(cmd->pos_x, cmd->pos_y, border_w, cmd->height, color);
 }
 
-// Draw order for scrap_gui_render_border_notched() and scrap_gui_render_rect_notched()
+// Draw order for render_border_notched() and render_rect_notched()
 //
 //           1
 //   +--------------+ 2
@@ -1129,7 +1128,7 @@ void scrap_gui_render_border_end(DrawCommand* cmd) {
 // 5 |               | 3
 //   +---------------+ 
 //           4
-void scrap_gui_render_border_notched(DrawCommand* cmd) {
+static void render_border_notched(GuiDrawCommand* cmd) {
     unsigned short border_w = cmd->data.border.width;
     Color color = CONVERT_COLOR(cmd->color, Color);
     int notch_size = conf.font_size / 4;
@@ -1146,7 +1145,7 @@ void scrap_gui_render_border_notched(DrawCommand* cmd) {
     /* 5 */ DrawRectangle(cmd->pos_x, cmd->pos_y, border_w, cmd->height, color);
 }
 
-void scrap_gui_render_rect_notched(DrawCommand* cmd) {
+static void render_rect_notched(GuiDrawCommand* cmd) {
     Color color = CONVERT_COLOR(cmd->color, Color);
     int notch_size = conf.font_size / 4;
 
@@ -1160,11 +1159,11 @@ void scrap_gui_render_rect_notched(DrawCommand* cmd) {
     );
 }
 
-void scrap_gui_render(void) {
+static void scrap_gui_render(void) {
 #ifdef DEBUG
     bool show_bounds = IsKeyDown(KEY_F4);
 #endif
-    DrawCommand* command;
+    GuiDrawCommand* command;
     GUI_GET_COMMANDS(gui, command) {
         Texture2D* image = command->data.image;
 
@@ -1182,19 +1181,19 @@ void scrap_gui_render(void) {
                 );
                 break;
             case BORDER_CONTROL:
-                scrap_gui_render_border_control(command);
+                render_border_control(command);
                 break;
             case BORDER_CONTROL_BODY:
-                scrap_gui_render_border_control_body(command);
+                render_border_control_body(command);
                 break;
             case BORDER_END:
-                scrap_gui_render_border_end(command);
+                render_border_end(command);
                 break;
             case BORDER_CONTROL_END:
-                scrap_gui_render_border_control_end(command);
+                render_border_control_end(command);
                 break;
             case BORDER_NOTCHED:
-                scrap_gui_render_border_notched(command);
+                render_border_notched(command);
                 break;
             default:
                 assert(false && "Unhandled draw border type");
@@ -1207,7 +1206,7 @@ void scrap_gui_render(void) {
                 DrawRectangle(command->pos_x, command->pos_y, command->width, command->height, CONVERT_COLOR(command->color, Color));
                 break;
             case RECT_NOTCHED:
-                scrap_gui_render_rect_notched(command);
+                render_rect_notched(command);
                 break;
             case RECT_TERMINAL:
                 term_resize(command->width, command->height);
@@ -1266,14 +1265,14 @@ void scrap_gui_render(void) {
     }
 }
 
-void print_debug(int* num, char* fmt, ...) {
+static void print_debug(int* num, char* fmt, ...) {
     va_list va;
     va_start(va, fmt);
     vsnprintf(debug_buffer[(*num)++], DEBUG_BUFFER_LINE_SIZE, fmt, va);
     va_end(va);
 }
 
-void write_debug_buffer(void) {
+static void write_debug_buffer(void) {
     int i = 0;
 #ifdef DEBUG
     print_debug(&i, "Block: %p, Parent: %p", hover_info.block, hover_info.block ? hover_info.block->parent : NULL);

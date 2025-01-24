@@ -40,7 +40,7 @@ char* file_menu_list[] = {
     "Load project",
 };
 
-void block_delete_blockdef(ScrBlock* block, ScrBlockdef* blockdef) {
+static void block_delete_blockdef(ScrBlock* block, ScrBlockdef* blockdef) {
     for (size_t i = 0; i < vector_size(block->arguments); i++) {
         if (blockdef->ref_count <= 1) break;
         if (block->arguments[i].type != ARGUMENT_BLOCK) continue;
@@ -53,7 +53,7 @@ void block_delete_blockdef(ScrBlock* block, ScrBlockdef* blockdef) {
     }
 }
 
-void blockchain_delete_blockdef(ScrBlockChain* chain, ScrBlockdef* blockdef) {
+static void blockchain_delete_blockdef(ScrBlockChain* chain, ScrBlockdef* blockdef) {
     for (size_t i = 0; i < vector_size(chain->blocks); i++) {
         if (blockdef->ref_count <= 1) break;
         if (chain->blocks[i].blockdef == blockdef) {
@@ -67,7 +67,7 @@ void blockchain_delete_blockdef(ScrBlockChain* chain, ScrBlockdef* blockdef) {
     blockchain_update_parent_links(chain);
 }
 
-void editor_code_remove_blockdef(ScrBlockdef* blockdef) {
+static void editor_code_remove_blockdef(ScrBlockdef* blockdef) {
     for (size_t i = 0; i < vector_size(editor_code); i++) {
         if (blockdef->ref_count <= 1) break;
         blockchain_delete_blockdef(&editor_code[i], blockdef);
@@ -79,7 +79,7 @@ void editor_code_remove_blockdef(ScrBlockdef* blockdef) {
     }
 }
 
-void edit_text(char** text) {
+static void edit_text(char** text) {
     if (IsKeyPressed(KEY_BACKSPACE) || IsKeyPressedRepeat(KEY_BACKSPACE)) {
         if (vector_size(*text) <= 1) return;
 
@@ -105,7 +105,7 @@ void edit_text(char** text) {
     }
 }
 
-PanelTree* find_panel(PanelTree* root, PanelType panel) {
+static PanelTree* find_panel(PanelTree* root, PanelType panel) {
     if (root->type == panel) return root;
     if (root->type == PANEL_SPLIT) {
         PanelTree* out = NULL;
@@ -118,7 +118,7 @@ PanelTree* find_panel(PanelTree* root, PanelType panel) {
     return NULL;
 }
 
-bool start_vm(void) {
+static bool start_vm(void) {
     if (vm.is_running) return false;
 
     term_restart();
@@ -140,20 +140,20 @@ bool start_vm(void) {
     return true;
 }
 
-bool stop_vm(void) {
+static bool stop_vm(void) {
     if (!vm.is_running) return false;
     TraceLog(LOG_INFO, "STOP");
     exec_stop(&vm, &exec);
     return true;
 }
 
-void deselect_all(void) {
+static void deselect_all(void) {
     hover_info.select_argument = NULL;
     hover_info.select_input = NULL;
     dropdown.scroll_amount = 0;
 }
 
-void show_dropdown(DropdownLocations location, char** list, int list_len, ButtonClickHandler handler) {
+static void show_dropdown(DropdownLocations location, char** list, int list_len, ButtonClickHandler handler) {
     hover_info.dropdown.location = location;
     hover_info.dropdown.list = list;
     hover_info.dropdown.list_len = list_len;
@@ -175,7 +175,7 @@ bool handle_dropdown_close(void) {
     return true;
 }
 
-char* get_basename(char* path) {
+static char* get_basename(char* path) {
     char* base_name = path;
     for (char* str = path; *str; str++) {
         if (*str == '/' || *str == '\\') {
@@ -442,7 +442,7 @@ bool handle_editor_close_button(void) {
     return true;
 }
 
-bool handle_sidebar_click(bool mouse_empty) {
+static bool handle_sidebar_click(bool mouse_empty) {
     if (hover_info.select_argument) {
         deselect_all();
         return true;
@@ -479,7 +479,7 @@ bool handle_sidebar_click(bool mouse_empty) {
     return true;
 }
 
-bool handle_blockdef_editor_click(void) {
+static bool handle_blockdef_editor_click(void) {
     if (!hover_info.editor.blockdef) return true;
     if (hover_info.editor.edit_blockdef == hover_info.argument->data.blockdef) return false;
     blockchain_add_block(&mouse_blockchain, block_new_ms(hover_info.editor.blockdef));
@@ -487,7 +487,7 @@ bool handle_blockdef_editor_click(void) {
     return true;
 }
 
-bool handle_code_editor_click(bool mouse_empty) {
+static bool handle_code_editor_click(bool mouse_empty) {
     if (!mouse_empty) {
         mouse_blockchain.x = GetMouseX();
         mouse_blockchain.y = GetMouseY();
@@ -598,7 +598,7 @@ bool handle_code_editor_click(bool mouse_empty) {
     return false;
 }
 
-bool handle_editor_panel_click(void) {
+static bool handle_editor_panel_click(void) {
     if (!hover_info.panel) return true;
 
     if (hover_info.panel->type == PANEL_SPLIT) {
@@ -642,7 +642,7 @@ bool handle_editor_panel_click(void) {
 }
 
 // Return value indicates if we should cancel dragging
-bool handle_mouse_click(void) {
+static bool handle_mouse_click(void) {
     hover_info.mouse_click_pos = GetMousePosition();
     camera_click_pos = camera_pos;
     hover_info.dragged_slider.value = NULL;
@@ -695,7 +695,7 @@ bool handle_mouse_click(void) {
     return false;
 }
 
-void handle_key_press(void) {
+static void handle_key_press(void) {
     if (IsKeyPressed(KEY_F5)) {
         start_vm();
         return;
@@ -746,7 +746,7 @@ void handle_key_press(void) {
     edit_text(hover_info.select_input);
 }
 
-void handle_mouse_wheel(void) {
+static void handle_mouse_wheel(void) {
     if (!hover_info.panel) return;
     if (hover_info.panel->type != PANEL_CODE) return;
     if (hover_info.select_argument) return;
@@ -757,7 +757,7 @@ void handle_mouse_wheel(void) {
     camera_pos.y -= wheel.y * conf.font_size * 2;
 }
 
-void handle_mouse_drag(void) {
+static void handle_mouse_drag(void) {
     if (hover_info.drag_cancelled) return;
 
     Vector2 mouse_pos = GetMousePosition();
