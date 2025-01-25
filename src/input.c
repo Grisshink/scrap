@@ -334,6 +334,16 @@ bool handle_settings_apply_button_click(void) {
     return true;
 }
 
+bool handle_left_slider_button_click(void) {
+    *hover_info.hover_slider.value = MAX(*hover_info.hover_slider.value - 1, hover_info.hover_slider.min);
+    return true;
+}
+
+bool handle_right_slider_button_click(void) {
+    *hover_info.hover_slider.value = MIN(*hover_info.hover_slider.value + 1, hover_info.hover_slider.max);
+    return true;
+}
+
 bool handle_about_license_button_click(void) {
     OpenURL(LICENSE_URL);
     return true;
@@ -656,12 +666,12 @@ static bool handle_mouse_click(void) {
     camera_click_pos = camera_pos;
     hover_info.dragged_slider.value = NULL;
 
+    if (hover_info.top_bars.handler) return hover_info.top_bars.handler();
     if (hover_info.hover_slider.value) {
         hover_info.dragged_slider = hover_info.hover_slider;
         hover_info.slider_last_val = *hover_info.dragged_slider.value;
         return false;
     }
-    if (hover_info.top_bars.handler) return hover_info.top_bars.handler();
     if (gui_window_is_shown()) {
         if (hover_info.input != hover_info.select_input) hover_info.select_input = hover_info.input;
         return true;

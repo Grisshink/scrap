@@ -199,6 +199,13 @@ static void slider_on_hover(GuiElement* el) {
     el->color = hover_info.hover_slider.value == hover_info.dragged_slider.value ? (GuiColor) { 0x2b, 0x2b, 0x2b, 0xff } : (GuiColor) { 0x40, 0x40, 0x40, 0xff };
 }
 
+static void slider_button_on_hover(GuiElement* el) {
+    el->draw_type = DRAWTYPE_RECT;
+    el->color = (GuiColor) { 0x60, 0x60, 0x60, 0xff };
+    el->data.rect_type = RECT_NORMAL;
+    hover_info.top_bars.handler = el->custom_data;
+}
+
 static void draw_slider(int min, int max, int* value) {
     gui_element_begin(gui);
         gui_set_grow(gui, DIRECTION_HORIZONTAL);
@@ -224,11 +231,31 @@ static void draw_slider(int min, int max, int* value) {
 
             snprintf(state->value_str, 16, "%d", *state->value);
 
-            gui_image(gui, &arrow_left_tex, BLOCK_IMAGE_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+            gui_element_begin(gui);
+                gui_on_hover(gui, slider_button_on_hover);
+                gui_set_custom_data(gui, handle_left_slider_button_click);
+                gui_set_grow(gui, DIRECTION_VERTICAL);
+                gui_set_direction(gui, DIRECTION_HORIZONTAL);
+                gui_set_align(gui, ALIGN_CENTER);
+
+                gui_image(gui, &arrow_left_tex, BLOCK_IMAGE_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+            gui_element_end(gui);
+
             gui_grow(gui, DIRECTION_HORIZONTAL);
+
             gui_text(gui, &font_cond, state->value_str, conf.font_size * 0.6, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+
             gui_grow(gui, DIRECTION_HORIZONTAL);
-            gui_image(gui, &arrow_right_tex, BLOCK_IMAGE_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+
+            gui_element_begin(gui);
+                gui_on_hover(gui, slider_button_on_hover);
+                gui_set_custom_data(gui, handle_right_slider_button_click);
+                gui_set_grow(gui, DIRECTION_VERTICAL);
+                gui_set_direction(gui, DIRECTION_HORIZONTAL);
+                gui_set_align(gui, ALIGN_CENTER);
+
+                gui_image(gui, &arrow_right_tex, BLOCK_IMAGE_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+            gui_element_end(gui);
         gui_element_end(gui);
     gui_element_end(gui);
 }
