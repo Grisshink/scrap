@@ -76,7 +76,6 @@ void config_free(Config* config) {
 
 void config_copy(Config* dst, Config* src) {
     dst->font_size = src->font_size;
-    dst->side_bar_size = src->side_bar_size;
     dst->fps_limit = src->fps_limit;
     dst->block_size_threshold = src->block_size_threshold;
     dst->font_path = vector_copy(src->font_path);
@@ -86,7 +85,6 @@ void config_copy(Config* dst, Config* src) {
 
 void set_default_config(Config* config) {
     config->font_size = 32;
-    config->side_bar_size = 300;
     config->fps_limit = 60;
     config->block_size_threshold = 1000;
     vector_set_string(&config->font_path, DATA_PATH "nk57-cond.otf");
@@ -97,7 +95,6 @@ void set_default_config(Config* config) {
 void apply_config(Config* dst, Config* src) {
     dst->fps_limit = src->fps_limit; SetTargetFPS(dst->fps_limit);
     dst->block_size_threshold = src->block_size_threshold;
-    dst->side_bar_size = src->side_bar_size;
 }
 
 void save_panel_config(char* file_str, int* cursor, PanelTree* panel) {
@@ -205,7 +202,6 @@ void save_config(Config* config) {
     int cursor = 0;
 
     cursor += sprintf(file_str + cursor, "UI_SIZE=%u\n", config->font_size);
-    cursor += sprintf(file_str + cursor, "SIDE_BAR_SIZE=%u\n", config->side_bar_size);
     cursor += sprintf(file_str + cursor, "FPS_LIMIT=%u\n", config->fps_limit);
     cursor += sprintf(file_str + cursor, "BLOCK_SIZE_THRESHOLD=%u\n", config->block_size_threshold);
     cursor += sprintf(file_str + cursor, "FONT_PATH=%s\n", config->font_path);
@@ -265,9 +261,6 @@ void load_config(Config* config) {
         if (!strcmp(field, "UI_SIZE")) {
             int val = atoi(value);
             config->font_size = val ? val : config->font_size;
-        } else if (!strcmp(field, "SIDE_BAR_SIZE")) {
-            int val = atoi(value);
-            config->side_bar_size = val ? val : config->side_bar_size;
         } else if (!strcmp(field, "FPS_LIMIT")) {
             int val = atoi(value);
             config->fps_limit = val ? val : config->fps_limit;

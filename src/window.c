@@ -359,10 +359,6 @@ void draw_window(void) {
                 draw_slider(8, 64, &window_conf.font_size);
             end_setting();
 
-            begin_setting("Side bar size", false);
-                draw_slider(10, 500, &window_conf.side_bar_size);
-            end_setting();
-
             begin_setting("FPS Limit", false);
                 draw_slider(0, 240, &window_conf.fps_limit);
             end_setting();

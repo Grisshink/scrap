@@ -27,7 +27,6 @@ typedef struct PanelTree PanelTree;
 
 typedef struct {
     int font_size;
-    int side_bar_size;
     int fps_limit;
     int block_size_threshold;
     char* font_path;
