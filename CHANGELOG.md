@@ -4,6 +4,8 @@
 - The code area has been split up into flexible, customizable panels. This gives a lot more choice for UI customization
 - Now scrap only redraws the screen if its internal state is changed or an input is recieved
 - Updated `actual_3d.scrp` example
+- Now scrap config is saved in OS specific folder, instead of saving relative to the working directory
+- Added terminal colors support
 
 # v0.2-beta
 - Added various string manipulation blocks
