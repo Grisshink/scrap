@@ -1,8 +1,9 @@
 SCRAP_VERSION := 0.3-dev
 
 TARGET ?= LINUX
+BUILD_MODE ?= RELEASE
 
-CFLAGS := -Wall -Wextra -std=c11 -s -O3 -DDEBUG -D_GNU_SOURCE -DSCRAP_VERSION=\"$(SCRAP_VERSION)\" -I./raylib/src
+CFLAGS := -Wall -Wextra -std=c11 -D_GNU_SOURCE -DSCRAP_VERSION=\"$(SCRAP_VERSION)\" -I./raylib/src
 
 ifeq ($(TARGET), LINUX)
 	CC := gcc
@@ -24,6 +25,12 @@ ifeq ($(CC), clang)
 	CFLAGS += -ferror-limit=5
 else
 	CFLAGS += -fmax-errors=5
+endif
+
+ifeq ($(BUILD_MODE), RELEASE)
+	CFLAGS += -s -O3
+else
+	CFLAGS += -g -O0 -DDEBUG
 endif
 
 OBJFILES := $(addprefix src/,filedialogs.o render.o save.o term.o blocks.o scrap.o vec.o util.o input.o scrap_gui.o window.o cfgpath.o)
@@ -67,7 +74,7 @@ appimage: $(EXE_NAME)
 	mkdir -p scrap.AppDir
 	cp $(EXE_NAME) scrap.AppDir/AppRun
 	cp -r data scrap.desktop extras/scrap.png scrap.AppDir
-	./appimagetool-x86_64.AppImage scrap.AppDir
+	./appimagetool-x86_64.AppImage --appimage-extract-and-run scrap.AppDir
 	rm -r scrap.AppDir
 
 $(EXE_NAME).exe: $(OBJFILES)
