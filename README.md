@@ -69,6 +69,8 @@ This will build `scrap.exe` binary which can be run normally.
 
 #### MacOS build
 
+⚠️ WARNING ⚠️ MacOS build is not being tested right now, so it may not work properly or not at all, you have beed warned!
+
 To build and run Scrap on macOS, you need to install `gcc` and `make`.
 First, install Homebrew:
 
