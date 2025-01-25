@@ -28,6 +28,8 @@
 #define MIN(x, y) ((x) < (y) ? (x) : (y))
 #define CLAMP(x, min, max) (MIN(MAX(min, x), max))
 
+#include "../external/cfgpath.h"
+
 typedef struct {
     void* ptr;
     void* next;
@@ -215,14 +217,22 @@ void save_config(Config* config) {
         cursor += sprintf(file_str + cursor, "\n");
     }
 
-    SaveFileText(CONFIG_PATH, file_str);
+    char config_path[MAX_PATH + 10];
+    get_user_config_folder(config_path, ARRLEN(config_path), CONFIG_FOLDER_NAME);
+    strcat(config_path, CONFIG_PATH);
+
+    SaveFileText(config_path, file_str);
     free(file_str);
 }
 
 void load_config(Config* config) {
     delete_all_tabs();
 
-    char* file = LoadFileText(CONFIG_PATH);
+    char config_path[MAX_PATH + 10];
+    get_user_config_folder(config_path, ARRLEN(config_path), CONFIG_FOLDER_NAME);
+    strcat(config_path, CONFIG_PATH);
+
+    char* file = LoadFileText(config_path);
     if (!file) {
         init_panels(); 
         current_tab = 0;

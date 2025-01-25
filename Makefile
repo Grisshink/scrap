@@ -22,7 +22,7 @@ else
 	CFLAGS += -fmax-errors=5
 endif
 
-OBJFILES := $(addprefix src/,filedialogs.o render.o save.o term.o blocks.o scrap.o vec.o util.o input.o scrap_gui.o window.o)
+OBJFILES := $(addprefix src/,filedialogs.o render.o save.o term.o blocks.o scrap.o vec.o util.o input.o scrap_gui.o window.o cfgpath.o)
 SCRAP_HEADERS := src/scrap.h src/vm.h src/config.h src/scrap_gui.h
 EXE_NAME := scrap
 
@@ -82,7 +82,7 @@ src/scrap_gui.o: src/scrap_gui.c src/scrap_gui.h
 	$(CC) $(CFLAGS) -c -o $@ $<
 src/render.o: src/render.c $(SCRAP_HEADERS)
 	$(CC) $(CFLAGS) -c -o $@ $<
-src/save.o: src/save.c $(SCRAP_HEADERS)
+src/save.o: src/save.c $(SCRAP_HEADERS) external/cfgpath.h
 	$(CC) $(CFLAGS) -c -o $@ $<
 src/term.o: src/term.c src/term.h $(SCRAP_HEADERS)
 	$(CC) $(CFLAGS) -c -o $@ $<
@@ -94,5 +94,8 @@ src/util.o: src/util.c $(SCRAP_HEADERS)
 	$(CC) $(CFLAGS) -c -o $@ $<
 src/input.o: src/input.c $(SCRAP_HEADERS)
 	$(CC) $(CFLAGS) -c -o $@ $<
+
 src/filedialogs.o: external/tinyfiledialogs.c
+	$(CC) $(CFLAGS) -c -o $@ $<
+src/cfgpath.o: external/cfgpath.c
 	$(CC) $(CFLAGS) -c -o $@ $<

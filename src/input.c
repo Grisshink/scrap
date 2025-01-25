@@ -278,7 +278,7 @@ bool handle_tab_button(void) {
 }
 
 bool handle_add_tab_button(void) {
-    char* name;
+    char* name = "";
     switch (hover_info.mouse_panel) {
     case PANEL_NONE:
         name = "Unknown";

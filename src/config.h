@@ -33,6 +33,7 @@
 
 #define DATA_PATH "data/"
 #define CONFIG_PATH "config.txt"
+#define CONFIG_FOLDER_NAME "scrap"
 
 #define LICENSE_URL "https://www.gnu.org/licenses/gpl-3.0.html"
 
