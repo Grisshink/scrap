@@ -29,6 +29,7 @@
 #define CLAMP(x, min, max) (MIN(MAX(min, x), max))
 
 #define MATH_LIST_LEN 10
+#define TERM_COLOR_LIST_LEN 8
 
 typedef struct {
     char* str;
@@ -42,10 +43,20 @@ char* block_math_list[MATH_LIST_LEN] = {
     "asin", "acos", "atan",
 };
 
+char* term_color_list[TERM_COLOR_LIST_LEN] = {
+    "black", "red", "yellow", "green", "blue", "purple", "cyan", "white",
+};
+
 char** math_list_access(ScrBlock* block, size_t* list_len) {
     (void) block;
     *list_len = MATH_LIST_LEN;
     return block_math_list;
+}
+
+char** term_color_list_access(ScrBlock* block, size_t* list_len) {
+    (void) block;
+    *list_len = TERM_COLOR_LIST_LEN;
+    return term_color_list;
 }
 
 String string_new(size_t cap) {
@@ -451,6 +462,58 @@ ScrData block_set_cursor(ScrExec* exec, int argc, ScrData* argv) {
     int y = CLAMP(data_to_int(argv[1]), 0, term.char_h - 1);
     term.cursor_pos = x + y * term.char_w;
     pthread_mutex_unlock(&term.lock);
+    RETURN_NOTHING;
+}
+
+ScrData block_set_fg_color(ScrExec* exec, int argc, ScrData* argv) {
+    (void) exec;
+    if (argc < 1) RETURN_NOTHING;
+    if (argv[0].type != DATA_STR) RETURN_NOTHING;
+
+    if (!strcmp(argv[0].data.str_arg, "black")) {
+        term_set_fg_color(BLACK);
+    } else if (!strcmp(argv[0].data.str_arg, "red")) {
+        term_set_fg_color(RED);
+    } else if (!strcmp(argv[0].data.str_arg, "yellow")) {
+        term_set_fg_color(YELLOW);
+    } else if (!strcmp(argv[0].data.str_arg, "green")) {
+        term_set_fg_color(GREEN);
+    } else if (!strcmp(argv[0].data.str_arg, "blue")) {
+        term_set_fg_color(BLUE);
+    } else if (!strcmp(argv[0].data.str_arg, "purple")) {
+        term_set_fg_color(PURPLE);
+    } else if (!strcmp(argv[0].data.str_arg, "cyan")) {
+        term_set_fg_color((Color) { 0x00, 0xff, 0xff, 0xff});
+    } else if (!strcmp(argv[0].data.str_arg, "white")) {
+        term_set_fg_color(WHITE);
+    }
+
+    RETURN_NOTHING;
+}
+
+ScrData block_set_bg_color(ScrExec* exec, int argc, ScrData* argv) {
+    (void) exec;
+    if (argc < 1) RETURN_NOTHING;
+    if (argv[0].type != DATA_STR) RETURN_NOTHING;
+
+    if (!strcmp(argv[0].data.str_arg, "black")) {
+        term_set_bg_color(BLACK);
+    } else if (!strcmp(argv[0].data.str_arg, "red")) {
+        term_set_bg_color(RED);
+    } else if (!strcmp(argv[0].data.str_arg, "yellow")) {
+        term_set_bg_color(YELLOW);
+    } else if (!strcmp(argv[0].data.str_arg, "green")) {
+        term_set_bg_color(GREEN);
+    } else if (!strcmp(argv[0].data.str_arg, "blue")) {
+        term_set_bg_color(BLUE);
+    } else if (!strcmp(argv[0].data.str_arg, "purple")) {
+        term_set_bg_color(PURPLE);
+    } else if (!strcmp(argv[0].data.str_arg, "cyan")) {
+        term_set_bg_color((Color) { 0x00, 0xff, 0xff, 0xff});
+    } else if (!strcmp(argv[0].data.str_arg, "white")) {
+        term_set_bg_color(WHITE);
+    }
+
     RETURN_NOTHING;
 }
 
@@ -973,6 +1036,18 @@ void load_blocks(ScrVm* vm) {
     blockdef_add_text(sc_set_cursor, "Y:");
     blockdef_add_argument(sc_set_cursor, "0", BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_set_cursor);
+
+    ScrBlockdef* sc_set_fg_color = blockdef_new("set_fg_color", BLOCKTYPE_NORMAL, (ScrColor) { 0x00, 0xaa, 0x44, 0xFF }, block_set_fg_color);
+    blockdef_add_image(sc_set_fg_color, (ScrImage) { .image_ptr = &term_tex });
+    blockdef_add_text(sc_set_fg_color, "Set text color");
+    blockdef_add_dropdown(sc_set_fg_color, DROPDOWN_SOURCE_LISTREF, term_color_list_access);
+    blockdef_register(vm, sc_set_fg_color);
+
+    ScrBlockdef* sc_set_bg_color = blockdef_new("set_bg_color", BLOCKTYPE_NORMAL, (ScrColor) { 0x00, 0xaa, 0x44, 0xFF }, block_set_bg_color);
+    blockdef_add_image(sc_set_bg_color, (ScrImage) { .image_ptr = &term_tex });
+    blockdef_add_text(sc_set_bg_color, "Set background color");
+    blockdef_add_dropdown(sc_set_bg_color, DROPDOWN_SOURCE_LISTREF, term_color_list_access);
+    blockdef_register(vm, sc_set_bg_color);
 
     ScrBlockdef* sc_term_clear = blockdef_new("term_clear", BLOCKTYPE_NORMAL, (ScrColor) { 0x00, 0xaa, 0x44, 0xFF }, block_term_clear);
     blockdef_add_image(sc_term_clear, (ScrImage) { .image_ptr = &term_tex });

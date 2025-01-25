@@ -34,6 +34,8 @@ void term_init(void) {
     pthread_mutexattr_destroy(&attr);
     term_resize(0, 0);
     term.is_buffer_dirty = true;
+    term.cursor_fg_color = WHITE;
+    term.cursor_bg_color = BLACK;
 }
 
 void term_restart(void) {
@@ -41,6 +43,8 @@ void term_restart(void) {
     sem_init(&term.input_sem, 0, 0);
     term.buf_start = 0;
     term.buf_end = 0;
+    term.cursor_fg_color = WHITE;
+    term.cursor_bg_color = BLACK;
     term_clear();
 }
 
@@ -69,7 +73,23 @@ char term_input_get_char(void) {
 void term_scroll_down(void) {
     pthread_mutex_lock(&term.lock);
     memmove(term.buffer, term.buffer + term.char_w, term.char_w * (term.char_h - 1) * sizeof(*term.buffer));
-    for (int i = term.char_w * (term.char_h - 1); i < term.char_w * term.char_h; i++) strncpy(term.buffer[i], " ", ARRLEN(*term.buffer));
+    for (int i = term.char_w * (term.char_h - 1); i < term.char_w * term.char_h; i++) {
+        strncpy(term.buffer[i].ch, " ", ARRLEN(term.buffer[i].ch));
+        term.buffer[i].fg_color = WHITE;
+        term.buffer[i].bg_color = BLACK;
+    }
+    pthread_mutex_unlock(&term.lock);
+}
+
+void term_set_fg_color(Color color) {
+    pthread_mutex_lock(&term.lock);
+    term.cursor_fg_color = color;
+    pthread_mutex_unlock(&term.lock);
+}
+
+void term_set_bg_color(Color color) {
+    pthread_mutex_lock(&term.lock);
+    term.cursor_bg_color = color;
     pthread_mutex_unlock(&term.lock);
 }
 
@@ -102,8 +122,10 @@ int term_print_str(const char* str) {
         int mb_size = leading_ones(*str);
         if (mb_size == 0) mb_size = 1;
         int i = 0;
-        for (; i < mb_size; i++) term.buffer[term.cursor_pos][i] = str[i];
-        term.buffer[term.cursor_pos][i] = 0;
+        for (; i < mb_size; i++) term.buffer[term.cursor_pos].ch[i] = str[i];
+        term.buffer[term.cursor_pos].ch[i] = 0;
+        term.buffer[term.cursor_pos].fg_color = term.cursor_fg_color;
+        term.buffer[term.cursor_pos].bg_color = term.cursor_bg_color;
 
         str += mb_size;
         term.cursor_pos++;
@@ -128,7 +150,11 @@ int term_print_double(double value) {
 
 void term_clear(void) {
     pthread_mutex_lock(&term.lock);
-    for (int i = 0; i < term.char_w * term.char_h; i++) strncpy(term.buffer[i], " ", ARRLEN(*term.buffer));
+    for (int i = 0; i < term.char_w * term.char_h; i++) {
+        strncpy(term.buffer[i].ch, " ", ARRLEN(term.buffer[i].ch));
+        term.buffer[i].fg_color = WHITE;
+        term.buffer[i].bg_color = BLACK;
+    }
     term.cursor_pos = 0;
     pthread_mutex_unlock(&term.lock);
 }

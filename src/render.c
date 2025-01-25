@@ -32,6 +32,10 @@
 
 static void draw_code(void);
 
+bool rl_vec_equal(Color lhs, Color rhs) {
+    return lhs.r == rhs.r && lhs.g == rhs.g && lhs.b == rhs.b && lhs.a == rhs.a;
+}
+
 void sidebar_init(void) {
     sidebar.blocks = vector_create();
     for (vec_size_t i = 0; i < vector_size(vm.blockdefs); i++) {
@@ -83,7 +87,23 @@ static void draw_term(int x, int y) {
     for (int y = 0; y < term.char_h; y++) {
         pos.x = final_pos.x;
         for (int x = 0; x < term.char_w; x++) {
-            DrawTextEx(font_mono, term.buffer[x + y*term.char_w], pos, TERM_CHAR_SIZE, 0.0, WHITE);
+            TerminalChar buffer_char = term.buffer[x + y*term.char_w];
+            if (!rl_vec_equal(buffer_char.bg_color, BLACK)) {
+                DrawRectangle(pos.x, pos.y, term.char_size.x, TERM_CHAR_SIZE, buffer_char.bg_color);
+            }
+            pos.x += term.char_size.x;
+        }
+        pos.y += TERM_CHAR_SIZE;
+    }
+
+    pos = (Vector2) { final_pos.x, final_pos.y };
+    for (int y = 0; y < term.char_h; y++) {
+        pos.x = final_pos.x;
+        for (int x = 0; x < term.char_w; x++) {
+            TerminalChar buffer_char = term.buffer[x + y*term.char_w];
+            if (!rl_vec_equal(buffer_char.fg_color, buffer_char.bg_color)) {
+                DrawTextEx(font_mono, buffer_char.ch, pos, TERM_CHAR_SIZE, 0.0, buffer_char.fg_color);
+            }
             pos.x += term.char_size.x;
         }
         pos.y += TERM_CHAR_SIZE;

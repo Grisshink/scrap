@@ -23,15 +23,22 @@
 #include <pthread.h>
 
 #define TERM_INPUT_BUF_SIZE 256
-#define TERM_CHAR_SIZE (conf.font_size * 0.6)
+#define TERM_CHAR_SIZE (int)(conf.font_size * 0.6)
+
+typedef struct {
+    char ch[5];
+    Color fg_color;
+    Color bg_color;
+} TerminalChar;
 
 typedef struct {
     pthread_mutex_t lock;
     Rectangle size;
     int char_w, char_h;
     int cursor_pos;
+    Color cursor_fg_color, cursor_bg_color;
     Vector2 char_size;
-    char (*buffer)[5];
+    TerminalChar *buffer;
     bool is_buffer_dirty;
 
     sem_t input_sem;
@@ -46,6 +53,8 @@ void term_init(void);
 void term_input_put_char(char ch);
 char term_input_get_char(void);
 void term_scroll_down(void);
+void term_set_fg_color(Color color);
+void term_set_bg_color(Color color);
 int term_print_str(const char* str);
 int term_print_int(int value);
 int term_print_double(double value);
