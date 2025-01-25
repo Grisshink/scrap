@@ -27,6 +27,7 @@ else
 endif
 
 OBJFILES := $(addprefix src/,filedialogs.o render.o save.o term.o blocks.o scrap.o vec.o util.o input.o scrap_gui.o window.o cfgpath.o)
+BUNDLE_FILES := data examples extras LICENSE README.md CHANGELOG.md
 SCRAP_HEADERS := src/scrap.h src/vm.h src/config.h src/scrap_gui.h
 EXE_NAME := scrap
 
@@ -46,19 +47,19 @@ clean:
 
 windows-build: $(EXE_NAME).exe
 	mkdir -p $(WINDOWS_DIR)
-	cp -r data examples extras LICENSE README.md $(EXE_NAME).exe $(WINDOWS_DIR)
+	cp -r $(BUNDLE_FILES) $(EXE_NAME).exe $(WINDOWS_DIR)
 	zip -r $(WINDOWS_DIR).zip $(WINDOWS_DIR)
 	rm -r $(WINDOWS_DIR)
 
 linux-build: $(EXE_NAME)
 	mkdir -p $(LINUX_DIR)
-	cp -r data examples extras LICENSE README.md $(EXE_NAME) $(LINUX_DIR)
+	cp -r $(BUNDLE_FILES) $(EXE_NAME) $(LINUX_DIR)
 	tar czvf $(LINUX_DIR).tar.gz $(LINUX_DIR)
 	rm -r $(LINUX_DIR)
 
 macos-build: $(EXE_NAME)
 	mkdir -p $(MACOS_DIR)
-	cp -r data examples extras LICENSE README.md $(EXE_NAME) $(MACOS_DIR)
+	cp -r $(BUNDLE_FILES) $(EXE_NAME) $(MACOS_DIR)
 	zip -r $(MACOS_DIR).zip $(MACOS_DIR)
 	rm -r $(MACOS_DIR)
 
