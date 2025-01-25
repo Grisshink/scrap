@@ -224,8 +224,8 @@ bool handle_file_menu_click(void) {
         editor_code = chain;
 
         blockchain_select_counter = 0;
-        camera_pos.x = editor_code[blockchain_select_counter].x - ((GetScreenWidth() - conf.side_bar_size) / 2 + conf.side_bar_size);
-        camera_pos.y = editor_code[blockchain_select_counter].y - ((GetScreenHeight() - conf.font_size * 2.2) / 2 + conf.font_size * 2.2);
+        camera_pos.x = editor_code[blockchain_select_counter].x - 50;
+        camera_pos.y = editor_code[blockchain_select_counter].y - 50;
 
         base_path = get_basename(path);
         for (i = 0; base_path[i]; i++) project_name[i] = base_path[i]; 
@@ -745,8 +745,8 @@ static void handle_key_press(void) {
             blockchain_select_counter++;
             if ((vec_size_t)blockchain_select_counter >= vector_size(editor_code)) blockchain_select_counter = 0;
 
-            camera_pos.x = editor_code[blockchain_select_counter].x - ((GetScreenWidth() - conf.side_bar_size) / 2 + conf.side_bar_size);
-            camera_pos.y = editor_code[blockchain_select_counter].y - ((GetScreenHeight() - conf.font_size * 2.2) / 2 + conf.font_size * 2.2);
+            camera_pos.x = editor_code[blockchain_select_counter].x - 50;
+            camera_pos.y = editor_code[blockchain_select_counter].y - 50;
             actionbar_show(TextFormat("Jump to chain (%d/%d)", blockchain_select_counter + 1, vector_size(editor_code)));
             render_surface_needs_redraw = true;
             return;
