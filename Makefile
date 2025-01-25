@@ -16,6 +16,10 @@ else
 	LDFLAGS := -static -lole32 -lcomdlg32 -lwinmm -lgdi32 -Wl,--subsystem,windows
 endif
 
+ifeq ($(ARABIC_MODE), TRUE)
+	CFLAGS += -DARABIC_MODE
+endif
+
 ifeq ($(CC), clang)
 	CFLAGS += -ferror-limit=5
 else

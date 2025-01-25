@@ -500,8 +500,8 @@ static bool handle_blockdef_editor_click(void) {
 
 static bool handle_code_editor_click(bool mouse_empty) {
     if (!mouse_empty) {
-        mouse_blockchain.x = GetMouseX();
-        mouse_blockchain.y = GetMouseY();
+        mouse_blockchain.x = gui->mouse_x;
+        mouse_blockchain.y = gui->mouse_y;
         if (hover_info.argument || hover_info.prev_argument) {
             if (vector_size(mouse_blockchain.blocks) > 1) return true;
             if (mouse_blockchain.blocks[0].blockdef->type == BLOCKTYPE_CONTROLEND) return true;
@@ -652,7 +652,7 @@ static bool handle_editor_panel_click(void) {
 
 // Return value indicates if we should cancel dragging
 static bool handle_mouse_click(void) {
-    hover_info.mouse_click_pos = GetMousePosition();
+    hover_info.mouse_click_pos = (Vector2) { gui->mouse_x, gui->mouse_y };
     camera_click_pos = camera_pos;
     hover_info.dragged_slider.value = NULL;
 
@@ -772,18 +772,16 @@ static void handle_mouse_wheel(void) {
 static void handle_mouse_drag(void) {
     if (hover_info.drag_cancelled) return;
 
-    Vector2 mouse_pos = GetMousePosition();
-
     if (hover_info.is_panel_edit_mode && hover_info.drag_panel && hover_info.drag_panel->type == PANEL_SPLIT) {
         if (hover_info.drag_panel->direction == DIRECTION_HORIZONTAL) {
             hover_info.drag_panel->split_percent = CLAMP(
-                (mouse_pos.x - hover_info.drag_panel_size.x - 5) / hover_info.drag_panel_size.width,
+                (gui->mouse_x - hover_info.drag_panel_size.x - 5) / hover_info.drag_panel_size.width,
                 0.0,
                 1.0 - (10.0 / hover_info.drag_panel_size.width)
             );
         } else {
             hover_info.drag_panel->split_percent = CLAMP(
-                (mouse_pos.y - hover_info.drag_panel_size.y - 5) / hover_info.drag_panel_size.height,
+                (gui->mouse_y - hover_info.drag_panel_size.y - 5) / hover_info.drag_panel_size.height,
                 0.0,
                 1.0 - (10.0 / hover_info.drag_panel_size.height)
             );
@@ -793,15 +791,15 @@ static void handle_mouse_drag(void) {
 
     if (hover_info.dragged_slider.value) {
         *hover_info.dragged_slider.value = CLAMP(
-            hover_info.slider_last_val + (mouse_pos.x - hover_info.mouse_click_pos.x) / 2, 
+            hover_info.slider_last_val + (gui->mouse_x - hover_info.mouse_click_pos.x) / 2, 
             hover_info.dragged_slider.min, 
             hover_info.dragged_slider.max
         );
         return;
     }
 
-    camera_pos.x = camera_click_pos.x - (mouse_pos.x - hover_info.mouse_click_pos.x);
-    camera_pos.y = camera_click_pos.y - (mouse_pos.y - hover_info.mouse_click_pos.y);
+    camera_pos.x = camera_click_pos.x - (gui->mouse_x - hover_info.mouse_click_pos.x);
+    camera_pos.y = camera_click_pos.y - (gui->mouse_y - hover_info.mouse_click_pos.y);
 }
 
 void scrap_gui_process_input(void) {
@@ -826,6 +824,12 @@ void scrap_gui_process_input(void) {
         render_surface_needs_redraw = true;
     }
 
+#ifdef ARABIC_MODE
+    gui_update_mouse_pos(gui, gui->win_w - GetMouseX(), GetMouseY());
+#else
+    gui_update_mouse_pos(gui, GetMouseX(), GetMouseY());
+#endif
+
     if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
         hover_info.drag_cancelled = handle_mouse_click();
         render_surface_needs_redraw = true;
@@ -835,7 +839,7 @@ void scrap_gui_process_input(void) {
         sanitize_links();
 #endif
     } else if (IsMouseButtonPressed(MOUSE_BUTTON_MIDDLE)) {
-        hover_info.mouse_click_pos = GetMousePosition();
+        hover_info.mouse_click_pos = (Vector2) { gui->mouse_x, gui->mouse_y };
         camera_click_pos = camera_pos;
         render_surface_needs_redraw = true;
     } else if (IsMouseButtonDown(MOUSE_BUTTON_MIDDLE) || IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
@@ -848,8 +852,6 @@ void scrap_gui_process_input(void) {
     }
 
     if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT) || IsMouseButtonReleased(MOUSE_BUTTON_MIDDLE)) render_surface_needs_redraw = true;
-
-    gui_update_mouse_pos(gui, GetMouseX(), GetMouseY());
 
     handle_window();
 

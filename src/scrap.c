@@ -472,7 +472,11 @@ int main(void) {
         BeginDrawing();
             DrawTexturePro(
                 render_surface.texture, 
+#ifdef ARABIC_MODE
+                (Rectangle) { render_surface.texture.width, render_surface.texture.height, render_surface.texture.width, render_surface.texture.height }, 
+#else
                 (Rectangle) { 0, render_surface.texture.height, render_surface.texture.width, render_surface.texture.height }, 
+#endif
                 (Rectangle) { 0, 0, render_surface.texture.width, render_surface.texture.height }, 
                 (Vector2) {0}, 
                 0.0, 
