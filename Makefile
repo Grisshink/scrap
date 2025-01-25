@@ -6,7 +6,7 @@ CFLAGS := -Wall -Wextra -std=c11 -s -O3 -DDEBUG -D_GNU_SOURCE -DSCRAP_VERSION=\"
 
 ifeq ($(TARGET), LINUX)
 	CC := gcc
-	LDFLAGS := -lGL -lm -lpthread -lX11 -ldl
+	LDFLAGS := -lm -lpthread -lX11 -ldl
 else ifeq ($(TARGET), MACOS)
 	# Thanks for @arducat for MacOS support
 	CC := gcc-14
@@ -67,7 +67,7 @@ appimage: $(EXE_NAME)
 	mkdir -p scrap.AppDir
 	cp $(EXE_NAME) scrap.AppDir/AppRun
 	cp -r data scrap.desktop extras/scrap.png scrap.AppDir
-	appimagetool-x86_64.AppImage scrap.AppDir
+	./appimagetool-x86_64.AppImage scrap.AppDir
 	rm -r scrap.AppDir
 
 $(EXE_NAME).exe: $(OBJFILES)
