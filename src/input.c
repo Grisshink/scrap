@@ -321,6 +321,13 @@ bool handle_settings_reset_button_click(void) {
     return true;
 }
 
+bool handle_settings_reset_panels_button_click(void) {
+    delete_all_tabs();
+    init_panels();
+    current_tab = 0;
+    return true;
+}
+
 bool handle_settings_apply_button_click(void) {
     apply_config(&conf, &window_conf);
     save_config(&window_conf);

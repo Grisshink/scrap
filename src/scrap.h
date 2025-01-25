@@ -302,6 +302,7 @@ bool handle_panel_editor_save_button(void);
 bool handle_panel_editor_cancel_button(void);
 bool handle_tab_button(void);
 bool handle_add_tab_button(void);
+bool handle_settings_reset_panels_button_click(void);
 PanelTree* find_panel(PanelTree* root, PanelType panel);
 
 // util.c

@@ -370,6 +370,7 @@ void draw_window(void) {
                 gui_set_gap(gui, WINDOW_ELEMENT_PADDING);
 
                 gui_grow(gui, DIRECTION_HORIZONTAL);
+                draw_button("Reset panels", handle_settings_reset_panels_button_click);
                 draw_button("Reset", handle_settings_reset_button_click);
                 draw_button("Apply", handle_settings_apply_button_click);
             gui_element_end(gui);
