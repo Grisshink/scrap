@@ -805,7 +805,9 @@ static void handle_mouse_drag(void) {
 }
 
 void scrap_gui_process_input(void) {
+    int prev_mouse_scroll = gui->mouse_scroll;
     gui_update_mouse_scroll(gui, GetMouseWheelMove());
+    if (prev_mouse_scroll != gui->mouse_scroll) render_surface_needs_redraw = true;
 
     if (IsWindowResized()) {
         shader_time = 0.0;

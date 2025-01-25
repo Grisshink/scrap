@@ -277,8 +277,6 @@ static void gui_render(Gui* gui, GuiElement* el, float pos_x, float pos_y) {
         int content_size = DIRECTION(el) == DIRECTION_HORIZONTAL ? el->cursor_x : el->cursor_y;
         int max = content_size - el_size;
 
-        if (hover) *el->scroll_value = CLAMP(*el->scroll_value + gui->mouse_scroll * el->scroll_scaling, -max, 0);
-
         if (max > 0) {
             GuiDrawCommand* command = &gui->command_stack[gui->command_stack_len++];
             command->type = DRAWTYPE_RECT;
@@ -299,6 +297,8 @@ static void gui_render(Gui* gui, GuiElement* el, float pos_x, float pos_y) {
                 command->pos_y = el_bounds.y + scroll_pos * el->scaling;
             }
         }
+
+        if (hover) *el->scroll_value = CLAMP(*el->scroll_value + gui->mouse_scroll * el->scroll_scaling, -max, 0);
     }
 
     if (FLOATING(el) || SCISSOR(el)) flush_aux_buffers(gui);
