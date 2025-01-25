@@ -45,6 +45,7 @@ void term_restart(void) {
     term.buf_end = 0;
     term.cursor_fg_color = WHITE;
     term.cursor_bg_color = BLACK;
+    term.clear_color = BLACK;
     term_clear();
 }
 
@@ -76,7 +77,7 @@ void term_scroll_down(void) {
     for (int i = term.char_w * (term.char_h - 1); i < term.char_w * term.char_h; i++) {
         strncpy(term.buffer[i].ch, " ", ARRLEN(term.buffer[i].ch));
         term.buffer[i].fg_color = WHITE;
-        term.buffer[i].bg_color = BLACK;
+        term.buffer[i].bg_color = term.clear_color;
     }
     pthread_mutex_unlock(&term.lock);
 }
@@ -90,6 +91,12 @@ void term_set_fg_color(Color color) {
 void term_set_bg_color(Color color) {
     pthread_mutex_lock(&term.lock);
     term.cursor_bg_color = color;
+    pthread_mutex_unlock(&term.lock);
+}
+
+void term_set_clear_color(Color color) {
+    pthread_mutex_lock(&term.lock);
+    term.clear_color = color;
     pthread_mutex_unlock(&term.lock);
 }
 
@@ -153,7 +160,7 @@ void term_clear(void) {
     for (int i = 0; i < term.char_w * term.char_h; i++) {
         strncpy(term.buffer[i].ch, " ", ARRLEN(term.buffer[i].ch));
         term.buffer[i].fg_color = WHITE;
-        term.buffer[i].bg_color = BLACK;
+        term.buffer[i].bg_color = term.clear_color;
     }
     term.cursor_pos = 0;
     pthread_mutex_unlock(&term.lock);

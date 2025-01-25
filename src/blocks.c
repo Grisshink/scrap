@@ -525,6 +525,32 @@ ScrData block_term_clear(ScrExec* exec, int argc, ScrData* argv) {
     RETURN_NOTHING;
 }
 
+ScrData block_term_set_clear(ScrExec* exec, int argc, ScrData* argv) {
+    (void) exec;
+    if (argc < 1) RETURN_NOTHING;
+    if (argv[0].type != DATA_STR) RETURN_NOTHING;
+
+    if (!strcmp(argv[0].data.str_arg, "black")) {
+        term_set_clear_color(BLACK);
+    } else if (!strcmp(argv[0].data.str_arg, "red")) {
+        term_set_clear_color(RED);
+    } else if (!strcmp(argv[0].data.str_arg, "yellow")) {
+        term_set_clear_color(YELLOW);
+    } else if (!strcmp(argv[0].data.str_arg, "green")) {
+        term_set_clear_color(GREEN);
+    } else if (!strcmp(argv[0].data.str_arg, "blue")) {
+        term_set_clear_color(BLUE);
+    } else if (!strcmp(argv[0].data.str_arg, "purple")) {
+        term_set_clear_color(PURPLE);
+    } else if (!strcmp(argv[0].data.str_arg, "cyan")) {
+        term_set_clear_color((Color) { 0x00, 0xff, 0xff, 0xff});
+    } else if (!strcmp(argv[0].data.str_arg, "white")) {
+        term_set_clear_color(WHITE);
+    }
+
+    RETURN_NOTHING;
+}
+
 ScrData block_input(ScrExec* exec, int argc, ScrData* argv) {
     (void) exec;
     (void) argv;
@@ -1053,6 +1079,12 @@ void load_blocks(ScrVm* vm) {
     blockdef_add_image(sc_term_clear, (ScrImage) { .image_ptr = &term_tex });
     blockdef_add_text(sc_term_clear, "Clear terminal");
     blockdef_register(vm, sc_term_clear);
+    
+    ScrBlockdef* sc_term_set_clear = blockdef_new("term_set_clear", BLOCKTYPE_NORMAL, (ScrColor) { 0x00, 0xaa, 0x44, 0xFF }, block_term_set_clear);
+    blockdef_add_image(sc_term_set_clear, (ScrImage) { .image_ptr = &term_tex });
+    blockdef_add_text(sc_term_set_clear, "Set clear color");
+    blockdef_add_dropdown(sc_term_set_clear, DROPDOWN_SOURCE_LISTREF, term_color_list_access);
+    blockdef_register(vm, sc_term_set_clear);
 
     ScrBlockdef* sc_loop = blockdef_new("loop", BLOCKTYPE_CONTROL, (ScrColor) { 0xff, 0x99, 0x00, 0xff }, block_loop);
     blockdef_add_text(sc_loop, "Loop");

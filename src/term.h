@@ -41,6 +41,8 @@ typedef struct {
     TerminalChar *buffer;
     bool is_buffer_dirty;
 
+    Color clear_color;
+
     sem_t input_sem;
     char input_buf[TERM_INPUT_BUF_SIZE];
     int buf_start;
@@ -55,6 +57,7 @@ char term_input_get_char(void);
 void term_scroll_down(void);
 void term_set_fg_color(Color color);
 void term_set_bg_color(Color color);
+void term_set_clear_color(Color color);
 int term_print_str(const char* str);
 int term_print_int(int value);
 int term_print_double(double value);
