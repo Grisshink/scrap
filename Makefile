@@ -1,4 +1,4 @@
-SCRAP_VERSION := 0.3-dev
+SCRAP_VERSION := 0.3-beta
 
 MAKE ?= make
 TARGET ?= LINUX
