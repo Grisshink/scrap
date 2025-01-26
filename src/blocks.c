@@ -517,6 +517,15 @@ ScrData block_set_bg_color(ScrExec* exec, int argc, ScrData* argv) {
     RETURN_NOTHING;
 }
 
+ScrData block_reset_color(ScrExec* exec, int argc, ScrData* argv) {
+    (void) exec;
+    (void) argv;
+    (void) argc;
+    term_set_fg_color(WHITE);
+    term_set_bg_color(BLACK);
+    RETURN_NOTHING;
+}
+
 ScrData block_term_clear(ScrExec* exec, int argc, ScrData* argv) {
     (void) exec;
     (void) argv;
@@ -1074,6 +1083,11 @@ void load_blocks(ScrVm* vm) {
     blockdef_add_text(sc_set_bg_color, "Set background color");
     blockdef_add_dropdown(sc_set_bg_color, DROPDOWN_SOURCE_LISTREF, term_color_list_access);
     blockdef_register(vm, sc_set_bg_color);
+
+    ScrBlockdef* sc_reset_color = blockdef_new("reset_color", BLOCKTYPE_NORMAL, (ScrColor) { 0x00, 0xaa, 0x44, 0xFF }, block_reset_color);
+    blockdef_add_image(sc_reset_color, (ScrImage) { .image_ptr = &term_tex });
+    blockdef_add_text(sc_reset_color, "Reset color");
+    blockdef_register(vm, sc_reset_color);
 
     ScrBlockdef* sc_term_clear = blockdef_new("term_clear", BLOCKTYPE_NORMAL, (ScrColor) { 0x00, 0xaa, 0x44, 0xFF }, block_term_clear);
     blockdef_add_image(sc_term_clear, (ScrImage) { .image_ptr = &term_tex });
