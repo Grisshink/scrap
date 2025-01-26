@@ -123,23 +123,22 @@ PanelTree* find_panel(PanelTree* root, PanelType panel) {
 static bool start_vm(void) {
     if (vm.is_running) return false;
 
-    term_restart();
-    exec = exec_new();
-    exec_copy_code(&vm, &exec, editor_code);
-    if (!exec_start(&vm, &exec)) {
-        actionbar_show("Start failed!");
-        return false;
-    }
-
-    actionbar_show("Started successfully!");
     for (size_t i = 0; i < vector_size(code_tabs); i++) {
         if (find_panel(code_tabs[i].root_panel, PANEL_TERM)) {
+            if (current_tab != (int)i) {
+                shader_time = 0.0;
+                // Delay vm startup until next frame. Because this handler only runs after the layout is computed and 
+                // before the actual rendering begins, we need to add delay to vm startup to make sure the terminal buffer 
+                // is initialized and vm does not try to write to uninitialized buffer
+                start_vm_timeout = 2;
+            } else {
+                start_vm_timeout = 1;
+            }
             current_tab = i;
+            render_surface_needs_redraw = true;
             break;
         }
     }
-    shader_time = 0.0;
-    render_surface_needs_redraw = true;
     return true;
 }
 
@@ -889,6 +888,7 @@ void scrap_gui_process_input(void) {
         ui_time = end_timer(t);
 #endif
 
+        if (start_vm_timeout >= 0) start_vm_timeout--;
         // This fixes selecting wrong argument of a block when two blocks overlap
         if (hover_info.block && hover_info.argument) {
             int ind = hover_info.argument - hover_info.block->arguments;

@@ -61,6 +61,7 @@ Texture2D arrow_left_tex;
 Texture2D arrow_right_tex;
 
 ScrVm vm;
+int start_vm_timeout = -1;
 Vector2 camera_pos;
 ActionBar actionbar;
 BlockCode block_code = {0};

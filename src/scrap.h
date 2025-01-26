@@ -221,6 +221,7 @@ extern Texture2D arrow_left_tex;
 extern Texture2D arrow_right_tex;
 
 extern ScrVm vm;
+extern int start_vm_timeout;
 extern Vector2 camera_pos;
 extern ActionBar actionbar;
 extern BlockCode block_code;

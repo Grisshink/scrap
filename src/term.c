@@ -20,6 +20,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <assert.h>
 
 #define ARRLEN(x) (sizeof(x)/sizeof(x[0]))
 
@@ -102,7 +103,7 @@ void term_set_clear_color(Color color) {
 
 int term_print_str(const char* str) {
     int len = 0;
-    if (!term.buffer) return len;
+    assert(term.buffer != NULL);
 
     pthread_mutex_lock(&term.lock);
     if (*str) term.is_buffer_dirty = true;
