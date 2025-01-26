@@ -113,7 +113,7 @@ static void draw_term(int x, int y) {
             final_pos.x + (term.cursor_pos % term.char_w) * term.char_size.x,
             final_pos.y + (term.cursor_pos / term.char_w) * TERM_CHAR_SIZE,
         };
-        DrawRectangle(cursor_pos.x, cursor_pos.y, BLOCK_OUTLINE_SIZE, TERM_CHAR_SIZE, WHITE);
+        DrawRectangle(cursor_pos.x, cursor_pos.y, BLOCK_OUTLINE_SIZE, TERM_CHAR_SIZE, term.cursor_fg_color);
     }
 
 unlock_term:
