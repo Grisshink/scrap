@@ -6,6 +6,19 @@ Scrap is a new block based programming language with the aim towards advanced us
 It is written in pure C and mostly inspired by other block based languages such as [Scratch](https://scratch.mit.edu/) and
 its forks such as [Turbowarp](https://turbowarp.org).
 
+## Notable advantages from scratch
+
+- Faster runtime (Still not faster than Turbowarp because Scrap is interpreted *for now*)
+- The addition of separate else if, else blocks (C-end blocks as i call them), which eliminates a lot of nested checks with if-else blocks (i.e. more flexible variant of if-else block in Snap!)
+- Variables can have a lifetime, which avoids variable name conflicts and allows to make temporary variables
+- Custom blocks can return values and can be used as an argument for other block
+- Various string manipulation blocks and bitwise operator blocks
+- Data type conversion functions
+- More strict checks for [[] = []] and [[] != []] blocks. Now they are case sensitive and will check data type for equality
+- Lists are now a data type instead of a different type of variable, this allows nesting lists inside a list (although it's not very convenient as of right now)
+- The code runs in a separate thread. This solves some performance issues compared to Scratch
+- Modularized interface. Most of the interface can be rearranged or moved to another tab
+
 ## ⚠️ WARNING ⚠️
 
 Scrap is currently in **Beta** stage. Some features may be missing or break, so use with caution!
@@ -30,10 +43,9 @@ Scrap is currently in **Beta** stage. Some features may be missing or break, so 
 ### Dependencies
 
 Scrap requires these dependencies to run (They are all built into the repo, so you don't have to download anything):
-- [Raylib 5.0](https://github.com/raysan5/raylib) (Patched to support SVGs)
-- [Nuklear](https://github.com/Immediate-Mode-UI/Nuklear) (Patched, see [Pull request](https://github.com/Immediate-Mode-UI/Nuklear/pull/755))
-- [raylib-nuklear](https://github.com/RobLoach/raylib-nuklear) (Patched to add shaders to all borders)
+- [Raylib](https://github.com/raysan5/raylib) (Patched to support SVGs)
 - [tinyfiledialogs](https://sourceforge.net/projects/tinyfiledialogs/)
+- [cfgpath](https://github.com/Malvineous/cfgpath) (Heavily modified to workaround `windows.h` conflicts)
 
 ### Build
 
@@ -44,7 +56,7 @@ git clone --recursive https://github.com/Grisshink/scrap.git
 cd scrap
 ```
 
-Currently Scrap can be built for *Windows*, *Linux* and *MacOS*. 
+Currently Scrap can be built for *Windows*, *Linux*, *MacOS* and *FreeBSD*. 
 
 #### Linux build
 
@@ -52,6 +64,15 @@ To build and run Scrap on linux you need to install `gcc` and `make`. After inst
 
 ```bash
 make -j$(nproc)
+./scrap
+```
+
+#### FreeBSD build
+
+To build and run Scrap on FreeBSD you need to install `gcc` and `gmake`. After install, just run following commands:
+
+```bash
+gmake MAKE=gmake -j$(nproc)
 ./scrap
 ```
 
