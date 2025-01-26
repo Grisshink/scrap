@@ -35,7 +35,7 @@
 
 #define MAX_PATH 512  /* arbitrary value */
 
-#if defined(__linux__) || defined(BSD)
+#if defined(__linux__) || defined(BSD) || defined(__FreeBSD__)
     #define CFGPATH_LINUX
     #define PATH_SEPARATOR_CHAR '/'
     #define PATH_SEPARATOR_STRING "/"
