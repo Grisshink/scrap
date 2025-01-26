@@ -6,6 +6,7 @@
 - Updated `actual_3d.scrp` example
 - Now scrap config is saved in OS specific folder, instead of saving relative to the working directory
 - Added terminal colors support
+- Added `colors.scrp` example to demonstrate the use of colors
 
 # v0.2-beta
 - Added various string manipulation blocks
