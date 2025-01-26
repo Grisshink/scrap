@@ -1035,13 +1035,13 @@ void load_blocks(ScrVm* vm) {
     ScrBlockdef* sc_print = blockdef_new("print", BLOCKTYPE_NORMAL, (ScrColor) { 0x00, 0xaa, 0x44, 0xFF }, block_print);
     blockdef_add_image(sc_print, (ScrImage) { .image_ptr = &term_tex });
     blockdef_add_text(sc_print, "Print");
-    blockdef_add_argument(sc_print, "Привет, мусороид!", BLOCKCONSTR_UNLIMITED);
+    blockdef_add_argument(sc_print, "Hello, scrap!", BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_print);
 
     ScrBlockdef* sc_println = blockdef_new("println", BLOCKTYPE_NORMAL, (ScrColor) { 0x00, 0xaa, 0x44, 0xFF }, block_println);
     blockdef_add_image(sc_println, (ScrImage) { .image_ptr = &term_tex });
     blockdef_add_text(sc_println, "Print line");
-    blockdef_add_argument(sc_println, "Привет, мусороид!", BLOCKCONSTR_UNLIMITED);
+    blockdef_add_argument(sc_println, "Hello, scrap!", BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_println);
 
     ScrBlockdef* sc_cursor_x = blockdef_new("cursor_x", BLOCKTYPE_NORMAL, (ScrColor) { 0x00, 0xaa, 0x44, 0xFF }, block_cursor_x);
@@ -1283,8 +1283,8 @@ void load_blocks(ScrVm* vm) {
 
     ScrBlockdef* sc_join = blockdef_new("join", BLOCKTYPE_NORMAL, (ScrColor) { 0x00, 0xcc, 0x77, 0xFF }, block_join);
     blockdef_add_text(sc_join, "Join");
-    blockdef_add_argument(sc_join, "абоба ", BLOCKCONSTR_UNLIMITED);
-    blockdef_add_argument(sc_join, "мусор", BLOCKCONSTR_UNLIMITED);
+    blockdef_add_argument(sc_join, "left and ", BLOCKCONSTR_UNLIMITED);
+    blockdef_add_argument(sc_join, "right", BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_join);
 
     ScrBlockdef* sc_ord = blockdef_new("ord", BLOCKTYPE_NORMAL, (ScrColor) { 0x00, 0xcc, 0x77, 0xFF }, block_ord);
@@ -1315,7 +1315,7 @@ void load_blocks(ScrVm* vm) {
 
     ScrBlockdef* sc_length = blockdef_new("length", BLOCKTYPE_NORMAL, (ScrColor) { 0x00, 0xcc, 0x77, 0xFF }, block_length);
     blockdef_add_text(sc_length, "Length");
-    blockdef_add_argument(sc_length, "мусорка", BLOCKCONSTR_UNLIMITED);
+    blockdef_add_argument(sc_length, "string", BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_length);
 
     ScrBlockdef* sc_unix_time = blockdef_new("unix_time", BLOCKTYPE_NORMAL, (ScrColor) { 0x00, 0x99, 0xff, 0xff }, block_unix_time);
