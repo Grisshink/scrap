@@ -40,6 +40,7 @@ char* file_menu_list[] = {
     "Load project",
 };
 
+// Removes a block and all blocks within it if it matches the specified definition
 static void block_delete_blockdef(ScrBlock* block, ScrBlockdef* blockdef) {
     for (size_t i = 0; i < vector_size(block->arguments); i++) {
         if (blockdef->ref_count <= 1) break;
@@ -53,6 +54,7 @@ static void block_delete_blockdef(ScrBlock* block, ScrBlockdef* blockdef) {
     }
 }
 
+// Deletes blocks in the chain that have a reference to the specified definition
 static void blockchain_delete_blockdef(ScrBlockChain* chain, ScrBlockdef* blockdef) {
     for (size_t i = 0; i < vector_size(chain->blocks); i++) {
         if (blockdef->ref_count <= 1) break;
@@ -67,6 +69,7 @@ static void blockchain_delete_blockdef(ScrBlockChain* chain, ScrBlockdef* blockd
     blockchain_update_parent_links(chain);
 }
 
+// Removes blocks associated with blockdef, freeing memory
 static void editor_code_remove_blockdef(ScrBlockdef* blockdef) {
     for (size_t i = 0; i < vector_size(editor_code); i++) {
         if (blockdef->ref_count <= 1) break;
