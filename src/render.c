@@ -287,6 +287,7 @@ static void block_on_hover(GuiElement* el) {
     if (gui_window_is_shown()) return;
     hover_info.block = el->custom_data;
     hover_info.blockchain = hover_info.prev_blockchain;
+    if (!hover_info.block->parent) hover_info.prev_argument = NULL;
 }
 
 static void block_argument_on_hover(GuiElement* el) {
