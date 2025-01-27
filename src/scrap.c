@@ -86,7 +86,6 @@ double ui_time = 0.0;
 float shader_time = 0.0;
 int blockchain_select_counter = -1;
 
-// Vertex shader code for line rendering with position, color, and transformation
 const char* line_shader_vertex =
     "#version 330\n"
     "in vec3 vertexPosition;\n"
@@ -155,7 +154,6 @@ void sanitize_links(void) {
     }
 }
 
-// Loads an SVG image from a file and converts it to a texture with bilinear filtering
 Texture2D load_svg(const char* path) {
     Image svg_img = LoadImageSvg(path, conf.font_size, conf.font_size);
     Texture2D texture = LoadTextureFromImage(svg_img);
@@ -214,7 +212,6 @@ GuiMeasurement custom_measure(Font font, const char *text, float font_size) {
     return ms;
 }
 
-// Wrapper for calling custom_measure with passing font and text parameters
 GuiMeasurement scrap_gui_measure_text(void* font, const char* text, unsigned short size) {
     return custom_measure(*(Font*)font, text, size);
 }
@@ -271,7 +268,6 @@ void panel_split(PanelTree* panel, SplitSide side, PanelType new_panel_type, flo
     }
 }
 
-// Creates a new panel object with the given type and initializes its parameters
 PanelTree* panel_new(PanelType type) {
     PanelTree* panel = malloc(sizeof(PanelTree));
     panel->type = type;
@@ -305,7 +301,6 @@ void tab_delete(size_t tab) {
     if (current_tab >= (int)vector_size(code_tabs)) current_tab = vector_size(code_tabs) - 1;
 }
 
-//Deletes all tabs starting with the last one using the tab_delete function
 void delete_all_tabs(void) {
     for (ssize_t i = vector_size(code_tabs) - 1; i >= 0; i--) tab_delete(i);
 }
@@ -340,7 +335,7 @@ void tab_insert(char* name, PanelTree* root_panel, size_t position) {
     tab->root_panel = root_panel;
 }
 
-// Initializes panels, creating and splitting a code panel, then adding tabs for code and output
+// Initializes codespace, using a default panel layout
 void init_panels(void) {
     PanelTree* code_panel = panel_new(PANEL_CODE);
     panel_split(code_panel, SPLIT_SIDE_LEFT, PANEL_SIDEBAR, 0.3);
@@ -494,7 +489,6 @@ int main(void) {
         }
 
         BeginDrawing();
-            // Draws a render_surface texture with a custom rectangle, flipping it horizontally if Arabic mode is enabled
             DrawTexturePro(
                 render_surface.texture, 
 #ifdef ARABIC_MODE
