@@ -1,3 +1,6 @@
+# v0.3.1-beta
+- Fixed a crash when attaching a block on a chain which overlaps on top of another block which is an argument to another block in different chain
+
 # v0.3-beta
 - The whole gui system was reworked to remove cluttered code and to allow more flexible UI. As a result some parts of the UI may have changed slightly
 - Added `New project` button to quickly clear the workspace
