@@ -116,14 +116,13 @@ const char* line_shader_fragment =
     "    finalColor = vec4(fragColor.xyz, pow(diff, 2.0));\n"
     "}";
 
-// Text for top bar buttons
+// End-stage brain Winlator
 char* top_bar_buttons_text[3] = {
     "File",
     "Settings",
-    "About",
+    "About",sS
 };
 
-// Text for tab bar buttons
 char* tab_bar_buttons_text[2] = {
     "Code",
     "Output",
