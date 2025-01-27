@@ -412,7 +412,6 @@ void setup(void) {
     init_gui_window();
 }
 
-
 // Main function: Initializes configurations, sets up window, processes input, renders GUI, and cleans up resources on exit
 int main(void) {
     config_new(&conf);
