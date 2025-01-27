@@ -1281,22 +1281,26 @@ void load_blocks(ScrVm* vm) {
     blockdef_add_argument(sc_random, "10", BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_random);
 
+    // Creates and registers a join block with arguments and text
     ScrBlockdef* sc_join = blockdef_new("join", BLOCKTYPE_NORMAL, (ScrColor) { 0x00, 0xcc, 0x77, 0xFF }, block_join);
     blockdef_add_text(sc_join, "Join");
     blockdef_add_argument(sc_join, "left and ", BLOCKCONSTR_UNLIMITED);
     blockdef_add_argument(sc_join, "right", BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_join);
 
+    // Creates and registers a ord block with an argument and text
     ScrBlockdef* sc_ord = blockdef_new("ord", BLOCKTYPE_NORMAL, (ScrColor) { 0x00, 0xcc, 0x77, 0xFF }, block_ord);
     blockdef_add_text(sc_ord, "Ord");
     blockdef_add_argument(sc_ord, "A", BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_ord);
 
+    // Creates and registers a chr block with an argument and text
     ScrBlockdef* sc_chr = blockdef_new("chr", BLOCKTYPE_NORMAL, (ScrColor) { 0x00, 0xcc, 0x77, 0xFF }, block_chr);
     blockdef_add_text(sc_chr, "Chr");
     blockdef_add_argument(sc_chr, "65", BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_chr);
 
+    // Creates and registers a letter_in block with arguments and text
     ScrBlockdef* sc_letter_in = blockdef_new("letter_in", BLOCKTYPE_NORMAL, (ScrColor) { 0x00, 0xcc, 0x77, 0xFF }, block_letter_in);
     blockdef_add_text(sc_letter_in, "Letter");
     blockdef_add_argument(sc_letter_in, "1", BLOCKCONSTR_UNLIMITED);
@@ -1304,6 +1308,7 @@ void load_blocks(ScrVm* vm) {
     blockdef_add_argument(sc_letter_in, "string", BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_letter_in);
 
+    // Creates and registers a substring block with arguments and text
     ScrBlockdef* sc_substring = blockdef_new("substring", BLOCKTYPE_NORMAL, (ScrColor) { 0x00, 0xcc, 0x77, 0xFF }, block_substring);
     blockdef_add_text(sc_substring, "Substring");
     blockdef_add_argument(sc_substring, "2", BLOCKCONSTR_UNLIMITED);
@@ -1313,44 +1318,53 @@ void load_blocks(ScrVm* vm) {
     blockdef_add_argument(sc_substring, "string", BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_substring);
 
+    // Creates and registers a length block with an argument and text
     ScrBlockdef* sc_length = blockdef_new("length", BLOCKTYPE_NORMAL, (ScrColor) { 0x00, 0xcc, 0x77, 0xFF }, block_length);
     blockdef_add_text(sc_length, "Length");
     blockdef_add_argument(sc_length, "string", BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_length);
 
+    // Creates and registers a unix_time block with text
     ScrBlockdef* sc_unix_time = blockdef_new("unix_time", BLOCKTYPE_NORMAL, (ScrColor) { 0x00, 0x99, 0xff, 0xff }, block_unix_time);
     blockdef_add_text(sc_unix_time, "Time since 1970");
     blockdef_register(vm, sc_unix_time);
 
+    // Creates and registers a convert_int block with an argument and text
     ScrBlockdef* sc_int = blockdef_new("convert_int", BLOCKTYPE_NORMAL, (ScrColor) { 0x00, 0x99, 0xff, 0xff }, block_convert_int);
     blockdef_add_text(sc_int, "Int");
     blockdef_add_argument(sc_int, "", BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_int);
 
+    // Creates and registers a convert_float block with an argument and text
     ScrBlockdef* sc_float = blockdef_new("convert_float", BLOCKTYPE_NORMAL, (ScrColor) { 0x00, 0x99, 0xff, 0xff }, block_convert_float);
     blockdef_add_text(sc_float, "Float");
     blockdef_add_argument(sc_float, "", BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_float);
 
+    // Creates and registers a convert_str block with an argument and text
     ScrBlockdef* sc_str = blockdef_new("convert_str", BLOCKTYPE_NORMAL, (ScrColor) { 0x00, 0x99, 0xff, 0xff }, block_convert_str);
     blockdef_add_text(sc_str, "Str");
     blockdef_add_argument(sc_str, "", BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_str);
 
+    // Creates and registers a convert_bool block with an argument and text
     ScrBlockdef* sc_bool = blockdef_new("convert_bool", BLOCKTYPE_NORMAL, (ScrColor) { 0x00, 0x99, 0xff, 0xff }, block_convert_bool);
     blockdef_add_text(sc_bool, "Bool");
     blockdef_add_argument(sc_bool, "", BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_bool);
 
+    // Creates and registers a nothing block with text
     ScrBlockdef* sc_nothing = blockdef_new("nothing", BLOCKTYPE_NORMAL, (ScrColor) { 0x77, 0x77, 0x77, 0xff }, block_noop);
     blockdef_add_text(sc_nothing, "Nothing");
     blockdef_register(vm, sc_nothing);
 
+    // Creates and registers a comment block with an argument and text
     ScrBlockdef* sc_comment = blockdef_new("comment", BLOCKTYPE_NORMAL, (ScrColor) { 0x77, 0x77, 0x77, 0xff }, block_noop);
     blockdef_add_text(sc_comment, "//");
     blockdef_add_argument(sc_comment, "", BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_comment);
 
+    // Creates and registers a decl_var block with arguments and text
     ScrBlockdef* sc_decl_var = blockdef_new("decl_var", BLOCKTYPE_NORMAL, (ScrColor) { 0xff, 0x77, 0x00, 0xff }, block_declare_var);
     blockdef_add_text(sc_decl_var, "Declare");
     blockdef_add_argument(sc_decl_var, "my variable", BLOCKCONSTR_STRING);
@@ -1358,11 +1372,13 @@ void load_blocks(ScrVm* vm) {
     blockdef_add_argument(sc_decl_var, "", BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_decl_var);
 
+    // Creates and registers a get_var block with an argument and text
     ScrBlockdef* sc_get_var = blockdef_new("get_var", BLOCKTYPE_NORMAL, (ScrColor) { 0xff, 0x77, 0x00, 0xff }, block_get_var);
     blockdef_add_text(sc_get_var, "Get");
     blockdef_add_argument(sc_get_var, "my variable", BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_get_var);
 
+    // Creates and registers a set_var block with arguments and text
     ScrBlockdef* sc_set_var = blockdef_new("set_var", BLOCKTYPE_NORMAL, (ScrColor) { 0xff, 0x77, 0x00, 0xff }, block_set_var);
     blockdef_add_text(sc_set_var, "Set");
     blockdef_add_argument(sc_set_var, "my variable", BLOCKCONSTR_UNLIMITED);
@@ -1370,11 +1386,13 @@ void load_blocks(ScrVm* vm) {
     blockdef_add_argument(sc_set_var, "", BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_set_var);
 
+    // Creates and registers a create_list block with an image and text
     ScrBlockdef* sc_create_list = blockdef_new("create_list", BLOCKTYPE_NORMAL, (ScrColor) { 0xff, 0x44, 0x00, 0xff }, block_create_list);
     blockdef_add_image(sc_create_list, (ScrImage) { .image_ptr = &list_tex });
     blockdef_add_text(sc_create_list, "Empty list");
     blockdef_register(vm, sc_create_list);
 
+    // Creates and registers a list_add block with an image and arguments
     ScrBlockdef* sc_list_add = blockdef_new("list_add", BLOCKTYPE_NORMAL, (ScrColor) { 0xff, 0x44, 0x00, 0xff }, block_list_add);
     blockdef_add_image(sc_list_add, (ScrImage) { .image_ptr = &list_tex });
     blockdef_add_text(sc_list_add, "Add");
@@ -1383,6 +1401,7 @@ void load_blocks(ScrVm* vm) {
     blockdef_add_argument(sc_list_add, "", BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_list_add);
 
+    // Creates and registers a list_get block with an image and arguments
     ScrBlockdef* sc_list_get = blockdef_new("list_get", BLOCKTYPE_NORMAL, (ScrColor) { 0xff, 0x44, 0x00, 0xff }, block_list_get);
     blockdef_add_image(sc_list_get, (ScrImage) { .image_ptr = &list_tex });
     blockdef_add_argument(sc_list_get, "my variable", BLOCKCONSTR_UNLIMITED);
@@ -1390,6 +1409,7 @@ void load_blocks(ScrVm* vm) {
     blockdef_add_argument(sc_list_get, "0", BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_list_get);
 
+    // Creates and registers a list_set block with an image and arguments
     ScrBlockdef* sc_list_set = blockdef_new("list_set", BLOCKTYPE_NORMAL, (ScrColor) { 0xff, 0x44, 0x00, 0xff }, block_list_set);
     blockdef_add_image(sc_list_set, (ScrImage) { .image_ptr = &list_tex });
     blockdef_add_argument(sc_list_set, "my variable", BLOCKCONSTR_UNLIMITED);
@@ -1399,12 +1419,14 @@ void load_blocks(ScrVm* vm) {
     blockdef_add_argument(sc_list_set, "", BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_list_set);
 
+    // Creates and registers a define_block block with an image and an argument
     ScrBlockdef* sc_define_block = blockdef_new("define_block", BLOCKTYPE_HAT, (ScrColor) { 0x99, 0x00, 0xff, 0xff }, block_noop);
     blockdef_add_image(sc_define_block, (ScrImage) { .image_ptr = &special_tex });
     blockdef_add_text(sc_define_block, "Define");
     blockdef_add_blockdef_editor(sc_define_block);
     blockdef_register(vm, sc_define_block);
 
+    // Creates and registers a return block with an image and an argument
     ScrBlockdef* sc_return = blockdef_new("return", BLOCKTYPE_NORMAL, (ScrColor) { 0x99, 0x00, 0xff, 0xff }, block_return);
     blockdef_add_image(sc_return, (ScrImage) { .image_ptr = &special_tex });
     blockdef_add_text(sc_return, "Return");
