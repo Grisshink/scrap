@@ -10,7 +10,7 @@ ifeq ($(TARGET), LINUX)
 	CC := gcc
 	LDFLAGS := -lm -lpthread -lX11 -ldl
 else ifeq ($(TARGET), MACOS)
-	# Thanks for @arducat for MacOS support
+	# Thanks to @arducat for MacOS support
 	CC := gcc-14
 	LDFLAGS := -framework CoreVideo -framework IOKit -framework Cocoa -framework GLUT -framework OpenGL -lm -lpthread
 else
