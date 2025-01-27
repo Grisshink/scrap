@@ -22,6 +22,7 @@
 
 #include <math.h>
 
+// Global Variables
 Image logo_img;
 
 Shader line_shader;
@@ -99,6 +100,7 @@ const char* line_shader_vertex =
     "    gl_Position = pos;\n"
     "}";
 
+// Fragment shader code for line rendering with time-based effects and color modulation
 const char* line_shader_fragment =
     "#version 330\n"
     "in vec2 fragCoord;\n"
@@ -113,6 +115,7 @@ const char* line_shader_fragment =
     "    finalColor = vec4(fragColor.xyz, pow(diff, 2.0));\n"
     "}";
 
+// End-stage brain Winlator
 char* top_bar_buttons_text[3] = {
     "File",
     "Settings",
@@ -124,6 +127,7 @@ char* tab_bar_buttons_text[2] = {
     "Output",
 };
 
+// Recursively checks nested blocks for correct structure and connection with the parent block
 void sanitize_block(ScrBlock* block) {
     for (vec_size_t i = 0; i < vector_size(block->arguments); i++) {
         if (block->arguments[i].type != ARGUMENT_BLOCK) continue;
@@ -136,6 +140,7 @@ void sanitize_block(ScrBlock* block) {
     }
 }
 
+// Checks the integrity and correctness of connections of all blocks of editor code and the mouse blockchain
 void sanitize_links(void) {
     for (vec_size_t i = 0; i < vector_size(editor_code); i++) {
         ScrBlock* blocks = editor_code[i].blocks;
@@ -157,6 +162,7 @@ Texture2D load_svg(const char* path) {
     return texture;
 }
 
+// Returns the absolute path to the font, converting the relative path to a path inside the data directory
 const char* get_font_path(char* font_path) {
     return font_path[0] != '/' && font_path[1] != ':' ? into_data_path(font_path) : font_path;
 }
@@ -207,6 +213,7 @@ GuiMeasurement scrap_gui_measure_text(void* font, const char* text, unsigned sho
     return custom_measure(*(Font*)font, text, size);
 }
 
+// Divides the panel into two parts along the specified side with the specified split percentage
 void panel_split(PanelTree* panel, SplitSide side, PanelType new_panel_type, float split_percent) {
     if (panel->type == PANEL_SPLIT) return;
 
@@ -267,6 +274,7 @@ PanelTree* panel_new(PanelType type) {
     return panel;
 }
 
+// Removes a panel and its child panels recursively, freeing memory
 void panel_delete(PanelTree* panel) {
     assert(panel != NULL);
 
@@ -281,10 +289,20 @@ void panel_delete(PanelTree* panel) {
     free(panel);
 }
 
+// Removes a tab by index and frees its resources
+void tab_delete(size_t tab) {
+    assert(tab < vector_size(code_tabs));
+    panel_delete(code_tabs[tab].root_panel);
+    vector_free(code_tabs[tab].name);
+    vector_remove(code_tabs, tab);
+    if (current_tab >= (int)vector_size(code_tabs)) current_tab = vector_size(code_tabs) - 1;
+}
+
 void delete_all_tabs(void) {
     for (ssize_t i = vector_size(code_tabs) - 1; i >= 0; i--) tab_delete(i);
 }
 
+// Creates a new tab with the given name and panel, adding it to the list of tabs
 size_t tab_new(char* name, PanelTree* root_panel) {
     if (!root_panel) {
         TraceLog(LOG_WARNING, "Got root_panel == NULL, not adding");
@@ -300,6 +318,7 @@ size_t tab_new(char* name, PanelTree* root_panel) {
     return vector_size(code_tabs) - 1;
 }
 
+// Inserts a new tab with the given name and panel at the specified position in the list of tabs
 void tab_insert(char* name, PanelTree* root_panel, size_t position) {
     if (!root_panel) {
         TraceLog(LOG_WARNING, "Got root_panel == NULL, not adding");
@@ -313,14 +332,7 @@ void tab_insert(char* name, PanelTree* root_panel, size_t position) {
     tab->root_panel = root_panel;
 }
 
-void tab_delete(size_t tab) {
-    assert(tab < vector_size(code_tabs));
-    panel_delete(code_tabs[tab].root_panel);
-    vector_free(code_tabs[tab].name);
-    vector_remove(code_tabs, tab);
-    if (current_tab >= (int)vector_size(code_tabs)) current_tab = vector_size(code_tabs) - 1;
-}
-
+// Initializes codespace, using a default panel layout
 void init_panels(void) {
     PanelTree* code_panel = panel_new(PANEL_CODE);
     panel_split(code_panel, SPLIT_SIDE_LEFT, PANEL_SIDEBAR, 0.3);
@@ -328,6 +340,7 @@ void init_panels(void) {
     tab_new("Output", panel_new(PANEL_TERM));
 }
 
+// Initializes resources and settings by loading textures, fonts, and configurations, and sets up GUI and panel interface
 void setup(void) {
     render_surface = LoadRenderTexture(GetScreenWidth(), GetScreenHeight());
     SetTextureWrap(render_surface.texture, TEXTURE_WRAP_MIRROR_REPEAT);
@@ -399,6 +412,7 @@ void setup(void) {
     init_gui_window();
 }
 
+// Main function: Initializes configurations, sets up window, processes input, renders GUI, and cleans up resources on exit
 int main(void) {
     config_new(&conf);
     config_new(&window_conf);

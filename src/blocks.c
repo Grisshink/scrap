@@ -1001,6 +1001,7 @@ ScrData block_exec_custom(ScrExec* exec, int argc, ScrData* argv) {
     return return_val;
 }
 
+// Checks the arguments and returns the value from custom_argv at index if all conditions are met
 ScrData block_custom_arg(ScrExec* exec, int argc, ScrData* argv) {
     if (argc < 1) RETURN_NOTHING;
     if (argv[0].type != DATA_INT) RETURN_NOTHING;
@@ -1008,6 +1009,7 @@ ScrData block_custom_arg(ScrExec* exec, int argc, ScrData* argv) {
     return data_copy(exec->chain_stack[exec->chain_stack_len - 1].custom_argv[argv[0].data.int_arg]);
 }
 
+// Modifies the internal state of the current code chain so that it returns early with the data written to .return_arg
 ScrData block_return(ScrExec* exec, int argc, ScrData* argv) {
     if (argc < 1) RETURN_NOTHING;
     exec->chain_stack[exec->chain_stack_len - 1].return_arg = data_copy(argv[0]);
@@ -1015,7 +1017,9 @@ ScrData block_return(ScrExec* exec, int argc, ScrData* argv) {
     RETURN_NOTHING;
 }
 
-void load_blocks(ScrVm* vm) {
+
+// Creates and registers blocks (commands) for the ScrVm/ScrExec virtual machine
+void register_blocks(ScrVm* vm) {
     ScrBlockdef* on_start = blockdef_new("on_start", BLOCKTYPE_HAT, (ScrColor) { 0xff, 0x77, 0x00, 0xFF }, block_noop);
     blockdef_add_text(on_start, "When");
     blockdef_add_image(on_start, (ScrImage) { .image_ptr = &run_tex });
@@ -1321,7 +1325,7 @@ void load_blocks(ScrVm* vm) {
     ScrBlockdef* sc_unix_time = blockdef_new("unix_time", BLOCKTYPE_NORMAL, (ScrColor) { 0x00, 0x99, 0xff, 0xff }, block_unix_time);
     blockdef_add_text(sc_unix_time, "Time since 1970");
     blockdef_register(vm, sc_unix_time);
-
+    
     ScrBlockdef* sc_int = blockdef_new("convert_int", BLOCKTYPE_NORMAL, (ScrColor) { 0x00, 0x99, 0xff, 0xff }, block_convert_int);
     blockdef_add_text(sc_int, "Int");
     blockdef_add_argument(sc_int, "", BLOCKCONSTR_UNLIMITED);
