@@ -89,6 +89,7 @@ void string_add_array(String* string, const char* arr, int arr_len) {
     string->len = new_len;
 }
 
+// The function creates a managed string from the given String object, setting the appropriate storage type and length.
 ScrData string_make_managed(String* string) {
     ScrData out;
     out.type = DATA_STR;
@@ -967,6 +968,7 @@ ScrData block_false(ScrExec* exec, int argc, ScrData* argv) {
     RETURN_BOOL(0);
 }
 
+
 ScrData block_eq(ScrExec* exec, int argc, ScrData* argv) {
     (void) exec;
     if (argc < 2) RETURN_BOOL(0);
@@ -1001,6 +1003,7 @@ ScrData block_exec_custom(ScrExec* exec, int argc, ScrData* argv) {
     return return_val;
 }
 
+// Checks the arguments and returns the value from custom_argv at index if all conditions are met
 ScrData block_custom_arg(ScrExec* exec, int argc, ScrData* argv) {
     if (argc < 1) RETURN_NOTHING;
     if (argv[0].type != DATA_INT) RETURN_NOTHING;
