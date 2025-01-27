@@ -967,7 +967,6 @@ ScrData block_false(ScrExec* exec, int argc, ScrData* argv) {
     RETURN_BOOL(0);
 }
 
-
 ScrData block_eq(ScrExec* exec, int argc, ScrData* argv) {
     (void) exec;
     if (argc < 2) RETURN_BOOL(0);
