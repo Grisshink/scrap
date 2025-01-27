@@ -89,7 +89,6 @@ void string_add_array(String* string, const char* arr, int arr_len) {
     string->len = new_len;
 }
 
-// The function creates a managed string from the given String object, setting the appropriate storage type and length.
 ScrData string_make_managed(String* string) {
     ScrData out;
     out.type = DATA_STR;
