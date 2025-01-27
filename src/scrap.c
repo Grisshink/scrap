@@ -167,13 +167,11 @@ const char* get_font_path(char* font_path) {
     return font_path[0] != '/' && font_path[1] != ':' ? into_data_path(font_path) : font_path;
 }
 
-// Calculates the dimensions of a GUI element based on the image texture and the given height size
 GuiMeasurement scrap_gui_measure_image(void* image, unsigned short size) {
     Texture2D* img = image;
     return (GuiMeasurement) { img->width * ((float)size / (float)img->height), size };
 }
 
-// Looks up the glyph index for the given character (code point) or returns the fallback glyph index ('?') if there are no matches
 int search_glyph(int codepoint) {
     // We assume that ASCII region is the first region, so this index should correspond to char '?' in the glyph table
     const int fallback = 31;
@@ -184,7 +182,6 @@ int search_glyph(int codepoint) {
     return fallback;
 }
 
-// Calculates text sizes for a given font and font size
 GuiMeasurement custom_measure(Font font, const char *text, float font_size) {
     GuiMeasurement ms = {0};
 
