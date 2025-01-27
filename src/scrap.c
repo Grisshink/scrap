@@ -120,7 +120,7 @@ const char* line_shader_fragment =
 char* top_bar_buttons_text[3] = {
     "File",
     "Settings",
-    "About",sS
+    "About",
 };
 
 char* tab_bar_buttons_text[2] = {
