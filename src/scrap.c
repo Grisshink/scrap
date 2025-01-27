@@ -86,7 +86,7 @@ double ui_time = 0.0;
 float shader_time = 0.0;
 int blockchain_select_counter = -1;
 
-// Vertex shader for drawing lines
+// Vertex shader code for line rendering with position, color, and transformation
 const char* line_shader_vertex =
     "#version 330\n"
     "in vec3 vertexPosition;\n"
@@ -101,7 +101,7 @@ const char* line_shader_vertex =
     "    gl_Position = pos;\n"
     "}";
 
-// Fragment shader for drawing lines
+// Fragment shader code for line rendering with time-based effects and color modulation
 const char* line_shader_fragment =
     "#version 330\n"
     "in vec2 fragCoord;\n"
