@@ -54,6 +54,7 @@ typedef enum {
     PANEL_BLOCK_PALETTE,
     PANEL_CODE,
     PANEL_TERM,
+    PANEL_BLOCK_CATEGORIES,
 } PanelType;
 
 struct PanelTree {
@@ -112,8 +113,16 @@ typedef struct {
 } SliderHoverInfo;
 
 typedef struct {
+    const char* name;
+    Color color;
+    ScrBlock* blocks;
+} BlockCategory;
+
+typedef struct {
     bool is_panel_edit_mode;
     bool drag_cancelled;
+
+    BlockCategory* category;
 
     ScrBlockChain* prev_blockchain;
     ScrBlockChain* blockchain;
@@ -177,7 +186,8 @@ typedef struct {
 
 typedef struct {
     int scroll_amount;
-    ScrBlock* blocks;
+    int current_category;
+    BlockCategory* categories;
 } BlockPalette;
 
 typedef enum {
@@ -267,9 +277,9 @@ void init_panels(void);
 PanelTree* panel_new(PanelType type);
 void panel_delete(PanelTree* panel);
 void tab_insert(char* name, PanelTree* root_panel, size_t position);
+BlockCategory block_category_new(const char* name, Color color);
 
 // render.c
-void block_palette_init(void);
 void actionbar_show(const char* text);
 void process_render(void);
 void prerender_font_shadow(Font* font);
@@ -305,6 +315,7 @@ bool handle_add_tab_button(void);
 bool handle_settings_reset_panels_button_click(void);
 bool handle_left_slider_button_click(void);
 bool handle_right_slider_button_click(void);
+bool handle_category_click(void);
 PanelTree* find_panel(PanelTree* root, PanelType panel);
 
 // util.c
@@ -337,5 +348,6 @@ void draw_window(void);
 
 // blocks.c
 void register_blocks(ScrVm* vm);
+void register_categories(void);
 
 #endif // SCRAP_H

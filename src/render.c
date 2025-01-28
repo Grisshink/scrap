@@ -36,14 +36,6 @@ bool rl_vec_equal(Color lhs, Color rhs) {
     return lhs.r == rhs.r && lhs.g == rhs.g && lhs.b == rhs.b && lhs.a == rhs.a;
 }
 
-void block_palette_init(void) {
-    palette.blocks = vector_create();
-    for (vec_size_t i = 0; i < vector_size(vm.blockdefs); i++) {
-        if (vm.blockdefs[i]->hidden) continue;
-        vector_add(&palette.blocks, block_new_ms(vm.blockdefs[i]));
-    }
-}
-
 void actionbar_show(const char* text) {
     TraceLog(LOG_INFO, "[ACTION] %s", text);
     strncpy(actionbar.text, text, sizeof(actionbar.text) - 1);
@@ -283,6 +275,7 @@ static void draw_blockdef(ScrBlockdef* blockdef, bool editing) {
 }
 
 static void block_on_hover(GuiElement* el) {
+    if (hover_info.top_bars.handler) return;
     if (hover_info.is_panel_edit_mode) return;
     if (gui_window_is_shown()) return;
     hover_info.block = el->custom_data;
@@ -291,12 +284,15 @@ static void block_on_hover(GuiElement* el) {
 }
 
 static void block_argument_on_hover(GuiElement* el) {
+    if (hover_info.top_bars.handler) return;
     if (hover_info.is_panel_edit_mode) return;
     hover_info.prev_argument = el->custom_data;
     hover_info.blockchain = hover_info.prev_blockchain;
 }
 
 static void argument_on_hover(GuiElement* el) {
+    if (hover_info.top_bars.handler) return;
+    if (hover_info.is_panel_edit_mode) return;
     if (gui_window_is_shown()) return;
     hover_info.argument = el->custom_data;
     hover_info.input = &hover_info.argument->data.text;
@@ -709,6 +705,72 @@ static void draw_blockchain(ScrBlockChain* chain) {
     gui_element_end(gui);
 }
 
+static void category_on_hover(GuiElement* el) {
+    if (hover_info.is_panel_edit_mode) return;
+    if (gui_window_is_shown()) return;
+    if (hover_info.top_bars.handler) return;
+
+    el->color.a = 0x80;
+    hover_info.top_bars.handler = handle_category_click;
+    hover_info.category = el->custom_data;
+}
+
+static void draw_category(BlockCategory* category, bool selected) {
+    GuiColor color = CONVERT_COLOR(category->color, GuiColor);
+    color.a = 0x40;
+
+    gui_element_begin(gui);
+        gui_set_grow(gui, DIRECTION_HORIZONTAL);
+        gui_set_rect(gui, color);
+        gui_on_hover(gui, category_on_hover);
+        gui_set_custom_data(gui, category);
+
+        color.a = 0xff;
+        gui_element_begin(gui);
+            gui_set_grow(gui, DIRECTION_HORIZONTAL);
+            if (selected) gui_set_border(gui, color, BLOCK_OUTLINE_SIZE);
+            gui_set_direction(gui, DIRECTION_HORIZONTAL);
+            gui_set_padding(gui, BLOCK_PADDING, BLOCK_PADDING);
+            gui_set_min_size(gui, 0, conf.font_size);
+            gui_set_align(gui, ALIGN_CENTER);
+            gui_set_gap(gui, BLOCK_PADDING);
+
+            gui_element_begin(gui);
+                gui_set_min_size(gui, conf.font_size * 0.5, conf.font_size * 0.5);
+                gui_set_rect(gui, color);
+            gui_element_end(gui);
+
+            gui_text(gui, &font_cond_shadow, category->name, BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+        gui_element_end(gui);
+    gui_element_end(gui);
+}
+
+static void draw_block_categories(void) {
+    gui_element_begin(gui);
+        gui_set_grow(gui, DIRECTION_VERTICAL);
+        gui_set_grow(gui, DIRECTION_HORIZONTAL);
+        gui_set_rect(gui, (GuiColor) { 0x00, 0x00, 0x00, 0x80 });
+        gui_set_padding(gui, SIDE_BAR_PADDING, SIDE_BAR_PADDING);
+        gui_set_gap(gui, SIDE_BAR_PADDING);
+        gui_set_scissor(gui);
+
+        for (size_t i = 0; i < vector_size(palette.categories); i += 2) {
+            gui_element_begin(gui);
+                gui_set_direction(gui, DIRECTION_HORIZONTAL);
+                gui_set_grow(gui, DIRECTION_HORIZONTAL);
+                gui_set_gap(gui, SIDE_BAR_PADDING);
+
+                draw_category(&palette.categories[i], (int)i == palette.current_category);
+                if (i + 1 < vector_size(palette.categories)) {
+                    draw_category(&palette.categories[i + 1], (int)i + 1 == palette.current_category);
+                } else {
+                    gui_grow(gui, DIRECTION_HORIZONTAL);
+                }
+            gui_element_end(gui);
+        }
+    gui_element_end(gui);
+}
+
 static void draw_block_palette(void) {
     gui_element_begin(gui);
         gui_set_grow(gui, DIRECTION_VERTICAL);
@@ -720,8 +782,8 @@ static void draw_block_palette(void) {
         gui_set_scroll_scaling(gui, conf.font_size * 4);
         gui_set_scissor(gui);
 
-        for (size_t i = dropdown.scroll_amount; i < vector_size(palette.blocks); i++) {
-            draw_block(&palette.blocks[i], false);
+        for (size_t i = 0; i < vector_size(palette.categories[palette.current_category].blocks); i++) {
+            draw_block(&palette.categories[palette.current_category].blocks[i], false);
         }
     gui_element_end(gui);
 }
@@ -870,6 +932,9 @@ static void draw_panel(PanelTree* panel) {
         break;
     case PANEL_TERM:
         draw_term_panel();
+        break;
+    case PANEL_BLOCK_CATEGORIES:
+        draw_block_categories();
         break;
     case PANEL_SPLIT:
         gui_element_begin(gui);
@@ -1308,6 +1373,7 @@ static void write_debug_buffer(void) {
     print_debug(&i, "Prev argument: %p", hover_info.prev_argument);
     print_debug(&i, "Select block: %p", hover_info.select_block);
     print_debug(&i, "Select arg: %p", hover_info.select_argument);
+    print_debug(&i, "Category: %p", hover_info.category);
     print_debug(&i, "Mouse: %p, Time: %.3f, Pos: (%d, %d), Click: (%d, %d)", mouse_blockchain.blocks, hover_info.time_at_last_pos, GetMouseX(), GetMouseY(), (int)hover_info.mouse_click_pos.x, (int)hover_info.mouse_click_pos.y);
     print_debug(&i, "Camera: (%.3f, %.3f), Click: (%.3f, %.3f)", camera_pos.x, camera_pos.y, camera_click_pos.x, camera_click_pos.y);
     print_debug(&i, "Dropdown scroll: %d", dropdown.scroll_amount);

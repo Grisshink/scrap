@@ -121,6 +121,9 @@ void save_panel_config(char* file_str, int* cursor, PanelTree* panel) {
         save_panel_config(file_str, cursor, panel->left);
         save_panel_config(file_str, cursor, panel->right);
         break;
+    case PANEL_BLOCK_CATEGORIES:
+        *cursor += sprintf(file_str + *cursor, "PANEL_BLOCK_CATEGORIES ");
+        break;
     }
 }
 
@@ -192,6 +195,8 @@ PanelTree* load_panel_config(char** config) {
         return panel_new(PANEL_BLOCK_PALETTE);
     } else if (!strcmp(name, "PANEL_BLOCK_PALETTE")) {
         return panel_new(PANEL_BLOCK_PALETTE);
+    } else if (!strcmp(name, "PANEL_BLOCK_CATEGORIES")) {
+        return panel_new(PANEL_BLOCK_CATEGORIES);
     }
 
     TraceLog(LOG_ERROR, "Unknown panel type: %s", name);

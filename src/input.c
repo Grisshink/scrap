@@ -273,6 +273,12 @@ bool handle_stop_button_click(void) {
     return true;
 }
 
+bool handle_category_click(void) {
+    palette.current_category = hover_info.category - palette.categories;
+    assert(palette.current_category >= 0 && palette.current_category < (int)vector_size(palette.categories));
+    return true;
+}
+
 bool handle_tab_button(void) {
     current_tab = hover_info.tab;
     shader_time = 0.0;
@@ -293,6 +299,9 @@ bool handle_add_tab_button(void) {
         break;
     case PANEL_TERM:
         name = "Output";
+        break;
+    case PANEL_BLOCK_CATEGORIES:
+        name = "Block categories";
         break;
     case PANEL_SPLIT:
         name = "Multiple...";
@@ -473,8 +482,8 @@ static bool handle_block_palette_click(bool mouse_empty) {
     if (mouse_empty && hover_info.block) {
         // Pickup block
         TraceLog(LOG_INFO, "Pickup block");
-        int ind = hover_info.block - palette.blocks;
-        if (ind < 0 || ind > (int)vector_size(palette.blocks)) return true;
+        int ind = hover_info.block - palette.categories[palette.current_category].blocks;
+        if (ind < 0 || ind > (int)vector_size(palette.categories[palette.current_category].blocks)) return true;
 
         blockchain_add_block(&mouse_blockchain, block_new_ms(hover_info.block->blockdef));
         if (hover_info.block->blockdef->type == BLOCKTYPE_CONTROL && vm.end_blockdef) {
@@ -713,7 +722,7 @@ static bool handle_mouse_click(void) {
     }
 
     if (handle_code_editor_click(mouse_empty)) return true;
-    return false;
+    return hover_info.panel->type != PANEL_CODE;
 }
 
 static void handle_key_press(void) {
@@ -871,6 +880,7 @@ void scrap_gui_process_input(void) {
         hover_info.block = NULL;
         hover_info.argument = NULL;
         hover_info.input = NULL;
+        hover_info.category = NULL;
         hover_info.prev_argument = NULL;
         hover_info.prev_blockchain = NULL;
         hover_info.blockchain = NULL;

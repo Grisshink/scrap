@@ -298,8 +298,9 @@ static void gui_render(Gui* gui, GuiElement* el, float pos_x, float pos_y) {
             }
         }
 
-        if (hover) *el->scroll_value = MIN(*el->scroll_value + gui->mouse_scroll * el->scroll_scaling, 0);
+        if (hover) *el->scroll_value += gui->mouse_scroll * el->scroll_scaling;
         if (*el->scroll_value < -max) *el->scroll_value = -max;
+        if (*el->scroll_value > 0) *el->scroll_value = 0;
     }
 
     if (FLOATING(el) || SCISSOR(el)) flush_aux_buffers(gui);

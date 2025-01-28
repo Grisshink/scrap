@@ -213,6 +213,18 @@ GuiMeasurement scrap_gui_measure_text(void* font, const char* text, unsigned sho
     return custom_measure(*(Font*)font, text, size);
 }
 
+BlockCategory block_category_new(const char* name, Color color) {
+    return (BlockCategory) {
+        .name = name,
+        .color = color,
+        .blocks = vector_create(),
+    };
+}
+
+void block_category_free(BlockCategory* category) {
+    vector_free(category->blocks);
+}
+
 // Divides the panel into two parts along the specified side with the specified split percentage
 void panel_split(PanelTree* panel, SplitSide side, PanelType new_panel_type, float split_percent) {
     if (panel->type == PANEL_SPLIT) return;
@@ -336,6 +348,7 @@ void tab_insert(char* name, PanelTree* root_panel, size_t position) {
 void init_panels(void) {
     PanelTree* code_panel = panel_new(PANEL_CODE);
     panel_split(code_panel, SPLIT_SIDE_LEFT, PANEL_BLOCK_PALETTE, 0.3);
+    panel_split(code_panel->left, SPLIT_SIDE_TOP, PANEL_BLOCK_CATEGORIES, 0.35);
     tab_new("Code", code_panel);
     tab_new("Output", panel_new(PANEL_TERM));
 }
@@ -395,12 +408,12 @@ void setup(void) {
     shader_time_loc = GetShaderLocation(line_shader, "time");
 
     vm = vm_new();
+    register_categories();
     register_blocks(&vm);
 
     mouse_blockchain = blockchain_new();
     editor_code = vector_create();
 
-    block_palette_init();
     term_init();
 
     gui = malloc(sizeof(Gui));
@@ -510,8 +523,6 @@ int main(void) {
     blockchain_free(&mouse_blockchain);
     for (vec_size_t i = 0; i < vector_size(editor_code); i++) blockchain_free(&editor_code[i]);
     vector_free(editor_code);
-    for (vec_size_t i = 0; i < vector_size(palette.blocks); i++) block_free(&palette.blocks[i]);
-    vector_free(palette.blocks);
     vm_free(&vm);
     free(gui);
     delete_all_tabs();
