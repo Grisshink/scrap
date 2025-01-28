@@ -13,5 +13,8 @@ jobs:
         steps:
             - uses: actions/checkout@v4
 
+            - name: Install dependencies
+              run: sudo apt-get update -y && sudo apt-get install -y --no-install-recommends libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev
+
             - name: Build project
               run: git submodule init && git submodule update && make
