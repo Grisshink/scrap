@@ -51,7 +51,7 @@ typedef struct {
 typedef enum {
     PANEL_NONE = 0,
     PANEL_SPLIT,
-    PANEL_SIDEBAR,
+    PANEL_BLOCK_PALETTE,
     PANEL_CODE,
     PANEL_TERM,
 } PanelType;
@@ -178,7 +178,7 @@ typedef struct {
 typedef struct {
     int scroll_amount;
     ScrBlock* blocks;
-} Sidebar;
+} BlockPalette;
 
 typedef enum {
     GUI_TYPE_SETTINGS,
@@ -226,7 +226,7 @@ extern Vector2 camera_pos;
 extern ActionBar actionbar;
 extern BlockCode block_code;
 extern Dropdown dropdown;
-extern Sidebar sidebar;
+extern BlockPalette palette;
 extern ScrBlockChain* editor_code;
 extern ScrBlockChain mouse_blockchain;
 extern ScrExec exec;
@@ -269,7 +269,7 @@ void panel_delete(PanelTree* panel);
 void tab_insert(char* name, PanelTree* root_panel, size_t position);
 
 // render.c
-void sidebar_init(void);
+void block_palette_init(void);
 void actionbar_show(const char* text);
 void process_render(void);
 void prerender_font_shadow(Font* font);

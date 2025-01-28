@@ -288,8 +288,8 @@ bool handle_add_tab_button(void) {
     case PANEL_CODE:
         name = "Code";
         break;
-    case PANEL_SIDEBAR:
-        name = "Blocks";
+    case PANEL_BLOCK_PALETTE:
+        name = "Block palette";
         break;
     case PANEL_TERM:
         name = "Output";
@@ -465,7 +465,7 @@ bool handle_editor_close_button(void) {
     return true;
 }
 
-static bool handle_sidebar_click(bool mouse_empty) {
+static bool handle_block_palette_click(bool mouse_empty) {
     if (hover_info.select_argument) {
         deselect_all();
         return true;
@@ -473,8 +473,8 @@ static bool handle_sidebar_click(bool mouse_empty) {
     if (mouse_empty && hover_info.block) {
         // Pickup block
         TraceLog(LOG_INFO, "Pickup block");
-        int ind = hover_info.block - sidebar.blocks;
-        if (ind < 0 || ind > (int)vector_size(sidebar.blocks)) return true;
+        int ind = hover_info.block - palette.blocks;
+        if (ind < 0 || ind > (int)vector_size(palette.blocks)) return true;
 
         blockchain_add_block(&mouse_blockchain, block_new_ms(hover_info.block->blockdef));
         if (hover_info.block->blockdef->type == BLOCKTYPE_CONTROL && vm.end_blockdef) {
@@ -685,7 +685,7 @@ static bool handle_mouse_click(void) {
 
     bool mouse_empty = vector_size(mouse_blockchain.blocks) == 0;
 
-    if (hover_info.panel->type == PANEL_SIDEBAR) return handle_sidebar_click(mouse_empty);
+    if (hover_info.panel->type == PANEL_BLOCK_PALETTE) return handle_block_palette_click(mouse_empty);
 
     if (mouse_empty && hover_info.argument && hover_info.argument->type == ARGUMENT_BLOCKDEF) {
         if (handle_blockdef_editor_click()) return true;

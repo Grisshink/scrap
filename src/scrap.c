@@ -67,7 +67,7 @@ Vector2 camera_pos;
 ActionBar actionbar;
 BlockCode block_code = {0};
 Dropdown dropdown = {0};
-Sidebar sidebar = {0};
+BlockPalette palette = {0};
 ScrBlockChain* editor_code = {0};
 ScrBlockChain mouse_blockchain = {0};
 Gui* gui = NULL;
@@ -335,7 +335,7 @@ void tab_insert(char* name, PanelTree* root_panel, size_t position) {
 // Initializes codespace, using a default panel layout
 void init_panels(void) {
     PanelTree* code_panel = panel_new(PANEL_CODE);
-    panel_split(code_panel, SPLIT_SIDE_LEFT, PANEL_SIDEBAR, 0.3);
+    panel_split(code_panel, SPLIT_SIDE_LEFT, PANEL_BLOCK_PALETTE, 0.3);
     tab_new("Code", code_panel);
     tab_new("Output", panel_new(PANEL_TERM));
 }
@@ -400,7 +400,7 @@ void setup(void) {
     mouse_blockchain = blockchain_new();
     editor_code = vector_create();
 
-    sidebar_init();
+    block_palette_init();
     term_init();
 
     gui = malloc(sizeof(Gui));
@@ -510,8 +510,8 @@ int main(void) {
     blockchain_free(&mouse_blockchain);
     for (vec_size_t i = 0; i < vector_size(editor_code); i++) blockchain_free(&editor_code[i]);
     vector_free(editor_code);
-    for (vec_size_t i = 0; i < vector_size(sidebar.blocks); i++) block_free(&sidebar.blocks[i]);
-    vector_free(sidebar.blocks);
+    for (vec_size_t i = 0; i < vector_size(palette.blocks); i++) block_free(&palette.blocks[i]);
+    vector_free(palette.blocks);
     vm_free(&vm);
     free(gui);
     delete_all_tabs();

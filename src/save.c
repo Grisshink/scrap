@@ -108,8 +108,8 @@ void save_panel_config(char* file_str, int* cursor, PanelTree* panel) {
     case PANEL_TERM:
         *cursor += sprintf(file_str + *cursor, "PANEL_TERM ");
         break;
-    case PANEL_SIDEBAR:
-        *cursor += sprintf(file_str + *cursor, "PANEL_SIDEBAR ");
+    case PANEL_BLOCK_PALETTE:
+        *cursor += sprintf(file_str + *cursor, "PANEL_BLOCK_PALETTE ");
         break;
     case PANEL_SPLIT:
         *cursor += sprintf(
@@ -188,8 +188,10 @@ PanelTree* load_panel_config(char** config) {
         return panel_new(PANEL_CODE);
     } else if (!strcmp(name, "PANEL_TERM")) {
         return panel_new(PANEL_TERM);
-    } else if (!strcmp(name, "PANEL_SIDEBAR")) {
-        return panel_new(PANEL_SIDEBAR);
+    } else if (!strcmp(name, "PANEL_SIDEBAR")) { // Legacy panel name
+        return panel_new(PANEL_BLOCK_PALETTE);
+    } else if (!strcmp(name, "PANEL_BLOCK_PALETTE")) {
+        return panel_new(PANEL_BLOCK_PALETTE);
     }
 
     TraceLog(LOG_ERROR, "Unknown panel type: %s", name);

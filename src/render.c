@@ -36,11 +36,11 @@ bool rl_vec_equal(Color lhs, Color rhs) {
     return lhs.r == rhs.r && lhs.g == rhs.g && lhs.b == rhs.b && lhs.a == rhs.a;
 }
 
-void sidebar_init(void) {
-    sidebar.blocks = vector_create();
+void block_palette_init(void) {
+    palette.blocks = vector_create();
     for (vec_size_t i = 0; i < vector_size(vm.blockdefs); i++) {
         if (vm.blockdefs[i]->hidden) continue;
-        vector_add(&sidebar.blocks, block_new_ms(vm.blockdefs[i]));
+        vector_add(&palette.blocks, block_new_ms(vm.blockdefs[i]));
     }
 }
 
@@ -709,19 +709,19 @@ static void draw_blockchain(ScrBlockChain* chain) {
     gui_element_end(gui);
 }
 
-static void draw_sidebar(void) {
+static void draw_block_palette(void) {
     gui_element_begin(gui);
         gui_set_grow(gui, DIRECTION_VERTICAL);
         gui_set_grow(gui, DIRECTION_HORIZONTAL);
         gui_set_rect(gui, (GuiColor) { 0x00, 0x00, 0x00, 0x80 });
         gui_set_padding(gui, SIDE_BAR_PADDING, SIDE_BAR_PADDING);
         gui_set_gap(gui, SIDE_BAR_PADDING);
-        gui_set_scroll(gui, &sidebar.scroll_amount);
+        gui_set_scroll(gui, &palette.scroll_amount);
         gui_set_scroll_scaling(gui, conf.font_size * 4);
         gui_set_scissor(gui);
 
-        for (size_t i = dropdown.scroll_amount; i < vector_size(sidebar.blocks); i++) {
-            draw_block(&sidebar.blocks[i], false);
+        for (size_t i = dropdown.scroll_amount; i < vector_size(palette.blocks); i++) {
+            draw_block(&palette.blocks[i], false);
         }
     gui_element_end(gui);
 }
@@ -862,8 +862,8 @@ static void draw_panel(PanelTree* panel) {
     case PANEL_NONE:
         assert(false && "Attempt to render panel with type PANEL_NONE");
         break;
-    case PANEL_SIDEBAR:
-        draw_sidebar();
+    case PANEL_BLOCK_PALETTE:
+        draw_block_palette();
         break;
     case PANEL_CODE:
         draw_code_area();
@@ -1313,7 +1313,7 @@ static void write_debug_buffer(void) {
     print_debug(&i, "Dropdown scroll: %d", dropdown.scroll_amount);
     print_debug(&i, "Drag cancelled: %d", hover_info.drag_cancelled);
     print_debug(&i, "Min: (%.3f, %.3f), Max: (%.3f, %.3f)", block_code.min_pos.x, block_code.min_pos.y, block_code.max_pos.x, block_code.max_pos.y);
-    print_debug(&i, "Sidebar scroll: %d", sidebar.scroll_amount);
+    print_debug(&i, "Palette scroll: %d", palette.scroll_amount);
     print_debug(&i, "Editor: %d, Editing: %p, Blockdef: %p, input: %zu", hover_info.editor.part, hover_info.editor.edit_blockdef, hover_info.editor.blockdef, hover_info.editor.blockdef_input);
     print_debug(&i, "Elements: %zu/%zu, Draw: %zu/%zu", gui->element_stack_len, ELEMENT_STACK_SIZE, gui->command_stack_len, COMMAND_STACK_SIZE);
     print_debug(&i, "Slider: %p, min: %d, max: %d", hover_info.hover_slider.value, hover_info.hover_slider.min, hover_info.hover_slider.max);
