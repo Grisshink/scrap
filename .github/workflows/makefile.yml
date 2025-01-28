@@ -14,4 +14,4 @@ jobs:
             - uses: actions/checkout@v4
 
             - name: Build project
-              run: make
+              run: git submodule init && git submodule update && make
