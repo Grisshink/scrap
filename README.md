@@ -121,3 +121,6 @@ the wallpaper was made by [@Grisshink](https://github.com/Grisshink)
 ## License
 
 All scrap code is licensed under the terms of [GPLv3 license](/LICENSE).
+
+//yo im now contributor
+//Grisshink please im want to be a contributor
