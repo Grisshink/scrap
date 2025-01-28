@@ -336,6 +336,6 @@ void handle_window(void);
 void draw_window(void);
 
 // blocks.c
-void load_blocks(ScrVm* vm);
+void register_blocks(ScrVm* vm);
 
 #endif // SCRAP_H

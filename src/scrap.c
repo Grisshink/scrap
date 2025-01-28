@@ -395,7 +395,7 @@ void setup(void) {
     shader_time_loc = GetShaderLocation(line_shader, "time");
 
     vm = vm_new();
-    load_blocks(&vm);
+    register_blocks(&vm);
 
     mouse_blockchain = blockchain_new();
     editor_code = vector_create();
