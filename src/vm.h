@@ -323,7 +323,7 @@ struct ScrVm {
 
 #define control_stack_push_data(data, type) \
     if (exec->control_stack_len + sizeof(type) > VM_CONTROL_STACK_SIZE) { \
-        TraceLog(LOG_FATAL, "[VM] Control stack overflow"); \
+        TraceLog(LOG_ERROR, "[VM] Control stack overflow"); \
         pthread_exit((void*)0); \
     } \
     *(type *)(exec->control_stack + exec->control_stack_len) = (data); \
@@ -331,7 +331,7 @@ struct ScrVm {
 
 #define control_stack_pop_data(data, type) \
     if (sizeof(type) > exec->control_stack_len) { \
-        TraceLog(LOG_FATAL, "[VM] Control stack underflow"); \
+        TraceLog(LOG_ERROR, "[VM] Control stack underflow"); \
         pthread_exit((void*)0); \
     } \
     exec->control_stack_len -= sizeof(type); \
@@ -756,7 +756,7 @@ ScrVariable* variable_stack_get_variable(ScrExec* exec, const char* name) {
 
 void chain_stack_push(ScrExec* exec, ScrChainStackData data) {
     if (exec->chain_stack_len >= VM_CHAIN_STACK_SIZE) {
-        TraceLog(LOG_FATAL, "[VM] Chain stack overflow");
+        TraceLog(LOG_ERROR, "[VM] Chain stack overflow");
         pthread_exit((void*)0);
     }
     exec->chain_stack[exec->chain_stack_len++] = data;
@@ -764,7 +764,7 @@ void chain_stack_push(ScrExec* exec, ScrChainStackData data) {
 
 void chain_stack_pop(ScrExec* exec) {
     if (exec->chain_stack_len == 0) {
-        TraceLog(LOG_FATAL, "[VM] Chain stack underflow");
+        TraceLog(LOG_ERROR, "[VM] Chain stack underflow");
         pthread_exit((void*)0);
     }
     exec->chain_stack_len--;
@@ -772,7 +772,7 @@ void chain_stack_pop(ScrExec* exec) {
 
 void arg_stack_push_arg(ScrExec* exec, ScrData arg) {
     if (exec->arg_stack_len >= VM_ARG_STACK_SIZE) {
-        TraceLog(LOG_FATAL, "[VM] Arg stack overflow");
+        TraceLog(LOG_ERROR, "[VM] Arg stack overflow");
         pthread_exit((void*)0);
     }
     exec->arg_stack[exec->arg_stack_len++] = arg;
@@ -780,7 +780,7 @@ void arg_stack_push_arg(ScrExec* exec, ScrData arg) {
 
 void arg_stack_undo_args(ScrExec* exec, size_t count) {
     if (count > exec->arg_stack_len) {
-        TraceLog(LOG_FATAL, "[VM] Arg stack underflow");
+        TraceLog(LOG_ERROR, "[VM] Arg stack underflow");
         pthread_exit((void*)0);
     }
     for (size_t i = 0; i < count; i++) {
