@@ -873,7 +873,7 @@ static void draw_term_panel(void) {
         gui_set_grow(gui, DIRECTION_HORIZONTAL);
         gui_set_grow(gui, DIRECTION_VERTICAL);
         gui_set_padding(gui, conf.font_size * 0.5, conf.font_size * 0.5);
-        gui_set_rect(gui, (GuiColor) { 0x20, 0x20, 0x20, 0xff });
+        gui_set_rect(gui, (GuiColor) { 0x00, 0x00, 0x00, 0x80 });
 
         gui_element_begin(gui);
             gui_set_grow(gui, DIRECTION_HORIZONTAL);
