@@ -1,3 +1,8 @@
+# v0.4-beta
+- The block palette is now split up into various categories to make finding blocks easier
+
+- Fixed "crash" when vm overflows/underflows one its stacks
+
 # v0.3.1-beta
 - Fixed a crash when attaching a block on a chain which overlaps on top of another block which is an argument to another block in different chain
 - Fixed scroll containers not updating their lower bounds when resized
