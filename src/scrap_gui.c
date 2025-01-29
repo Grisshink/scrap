@@ -88,7 +88,7 @@ void gui_end(Gui* gui) {
     flush_aux_buffers(gui);
 }
 
-void gui_set_measure_text_func(Gui* gui, GuiMeasureTextFunc measure_text) {
+void gui_set_measure_text_func(Gui* gui, GuiMeasureTextSliceFunc measure_text) {
     gui->measure_text = measure_text;
 }
 
@@ -652,15 +652,21 @@ void gui_set_border_type(Gui* gui, GuiBorderType type) {
     el->data.border.type = type;
 }
 
-void gui_set_text(Gui* gui, void* font, const char* text, unsigned short size, GuiColor color) {
+void gui_set_text_slice(Gui* gui, void* font, const char* text, unsigned int text_size, unsigned short font_size, GuiColor color) {
+    if (text_size == 0) return;
     GuiElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
-    GuiMeasurement text_size = gui->measure_text(font, text, size);
+    GuiMeasurement text_bounds = gui->measure_text(font, text, text_size, font_size);
     el->draw_type = DRAWTYPE_TEXT;
     el->color = color;
     el->data.text.text = text;
     el->data.text.font = font;
-    el->w = text_size.w;
-    el->h = text_size.h;
+    el->data.text.text_size = text_size;
+    el->w = text_bounds.w;
+    el->h = text_bounds.h;
+}
+
+inline void gui_set_text(Gui* gui, void* font, const char* text, unsigned short font_size, GuiColor color) {
+    gui_set_text_slice(gui, font, text, strlen(text), font_size, color);
 }
 
 void gui_set_image(Gui* gui, void* image, unsigned short size, GuiColor color) {
@@ -682,6 +688,13 @@ void gui_set_min_size(Gui* gui, unsigned short min_w, unsigned short min_h) {
     GuiElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
     el->w = MAX(el->w, min_w);
     el->h = MAX(el->h, min_h);
+}
+
+inline void gui_text_slice(Gui* gui, void* font, const char* text, unsigned int text_size, unsigned short font_size, GuiColor color) {
+    if (text_size == 0) return;
+    gui_element_begin(gui);
+    gui_set_text_slice(gui, font, text, text_size, font_size, color);
+    gui_element_end(gui);
 }
 
 inline void gui_text(Gui* gui, void* font, const char* text, unsigned short size, GuiColor color) {

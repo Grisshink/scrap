@@ -113,6 +113,13 @@ typedef struct {
 } SliderHoverInfo;
 
 typedef struct {
+    char** input;
+    Vector2 rel_pos;
+    Font* font;
+    float font_size;
+} InputHoverInfo;
+
+typedef struct {
     const char* name;
     Color color;
     ScrBlock* blocks;
@@ -135,8 +142,9 @@ typedef struct {
     ScrBlock* select_block;
     ScrArgument* select_argument;
 
-    char** input;
+    InputHoverInfo input_info;
     char** select_input;
+    int select_input_ind;
 
     Vector2 mouse_click_pos;
     float time_at_last_pos;
@@ -268,7 +276,8 @@ extern int codepoint_start_ranges[CODEPOINT_REGION_COUNT];
 
 // scrap.c
 void sanitize_links(void);
-GuiMeasurement custom_measure(Font font, const char *text, float font_size);
+GuiMeasurement measure_slice(Font font, const char *text, unsigned int text_size, float font_size);
+int search_glyph(int codepoint);
 void panel_split(PanelTree* panel, SplitSide side, PanelType new_panel_type, float split_percent);
 void delete_all_tabs(void);
 size_t tab_new(char* name, PanelTree* root_panel);

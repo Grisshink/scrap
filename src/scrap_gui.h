@@ -47,6 +47,7 @@ typedef struct {
 typedef struct {
     void* font;
     const char* text;
+    unsigned int text_size;
 } GuiTextData;
 
 typedef enum {
@@ -160,7 +161,7 @@ struct GuiElement {
     struct GuiElement* next;
 };
 
-typedef GuiMeasurement (*GuiMeasureTextFunc)(void* font, const char* text, unsigned short size);
+typedef GuiMeasurement (*GuiMeasureTextSliceFunc)(void* font, const char* text, unsigned int text_size, unsigned short font_size);
 typedef GuiMeasurement (*GuiMeasureImageFunc)(void* image, unsigned short size);
 
 struct Gui {
@@ -191,7 +192,7 @@ struct Gui {
     GuiBounds scissor_stack[COMMAND_STACK_SIZE];
     size_t scissor_stack_len;
 
-    GuiMeasureTextFunc measure_text;
+    GuiMeasureTextSliceFunc measure_text;
     GuiMeasureImageFunc measure_image;
 
     unsigned short win_w, win_h;
@@ -210,7 +211,7 @@ void gui_end(Gui* gui);
 void gui_update_window_size(Gui* gui, unsigned short win_w, unsigned short win_h);
 void gui_update_mouse_pos(Gui* gui, unsigned short mouse_x, unsigned short mouse_y);
 void gui_update_mouse_scroll(Gui* gui, int mouse_scroll);
-void gui_set_measure_text_func(Gui* gui, GuiMeasureTextFunc measure_text);
+void gui_set_measure_text_func(Gui* gui, GuiMeasureTextSliceFunc measure_text);
 void gui_set_measure_image_func(Gui* gui, GuiMeasureImageFunc measure_image);
 
 GuiElement* gui_element_begin(Gui* gui);
@@ -225,6 +226,7 @@ void gui_set_rect_type(Gui* gui, GuiRectType type);
 void gui_set_direction(Gui* gui, GuiElementDirection direction);
 void gui_set_border(Gui* gui, GuiColor color, unsigned int border_width);
 void gui_set_border_type(Gui* gui, GuiBorderType type);
+void gui_set_text_slice(Gui* gui, void* font, const char* text, unsigned int text_size, unsigned short font_size, GuiColor color);
 void gui_set_text(Gui* gui, void* font, const char* text, unsigned short size, GuiColor color);
 void gui_set_image(Gui* gui, void* image, unsigned short size, GuiColor color);
 void gui_set_min_size(Gui* gui, unsigned short min_w, unsigned short min_h);
@@ -246,6 +248,7 @@ GuiElement* gui_get_element(Gui* gui);
 
 void gui_on_hover(Gui* gui, GuiHoverHandler handler);
 
+void gui_text_slice(Gui* gui, void* font, const char* text, unsigned int text_size, unsigned short font_size, GuiColor color);
 void gui_text(Gui* gui, void* font, const char* text, unsigned short size, GuiColor color);
 void gui_image(Gui* gui, void* image, unsigned short size, GuiColor color);
 void gui_grow(Gui* gui, GuiElementDirection direction);

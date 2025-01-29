@@ -143,10 +143,10 @@ static void blockdef_on_hover(GuiElement* el) {
     hover_info.editor.blockdef = el->custom_data;
 }
 
-static void input_on_hover(GuiElement* el) {
+static void blockdef_input_on_hover(GuiElement* el) {
     if (hover_info.is_panel_edit_mode) return;
     if (gui_window_is_shown()) return;
-    hover_info.input = el->custom_data;
+    //hover_info.input = el->custom_data;
     hover_info.blockchain = hover_info.prev_blockchain;
     if (el->draw_type != DRAWTYPE_UNKNOWN) return;
     el->draw_type = DRAWTYPE_BORDER;
@@ -232,7 +232,7 @@ static void draw_blockdef(ScrBlockdef* blockdef, bool editing) {
                         gui_set_padding(gui, BLOCK_STRING_PADDING / 2, 0);
                         if (hover_info.select_input == &input->data.text) gui_set_border(gui, (GuiColor) { 0x30, 0x30, 0x30, 0xff }, BLOCK_OUTLINE_SIZE);
                         gui_set_custom_data(gui, &input->data.text);
-                        gui_on_hover(gui, input_on_hover);
+                        gui_on_hover(gui, blockdef_input_on_hover);
 
                         gui_element_begin(gui);
                             gui_set_direction(gui, DIRECTION_VERTICAL);
@@ -295,13 +295,57 @@ static void argument_on_hover(GuiElement* el) {
     if (hover_info.is_panel_edit_mode) return;
     if (gui_window_is_shown()) return;
     hover_info.argument = el->custom_data;
-    hover_info.input = &hover_info.argument->data.text;
     hover_info.blockchain = hover_info.prev_blockchain;
     if (el->draw_type != DRAWTYPE_UNKNOWN) return;
     el->draw_type = DRAWTYPE_BORDER;
     el->color = (GuiColor) { 0xa0, 0xa0, 0xa0, 0xff };
     el->data.border.width = BLOCK_OUTLINE_SIZE;
     el->data.border.type = BORDER_NORMAL;
+}
+
+static void input_on_hover(GuiElement* el) {
+    if (hover_info.top_bars.handler) return;
+    if (hover_info.is_panel_edit_mode) return;
+
+    unsigned short len;
+    hover_info.input_info = *(InputHoverInfo*)gui_get_state(el, &len);
+    hover_info.input_info.rel_pos = (Vector2) { gui->mouse_x - el->abs_x, gui->mouse_y - el->abs_y };
+}
+
+static void draw_input(Font* font, char** input, unsigned short font_size, GuiColor font_color) {
+    gui_element_begin(gui);
+        gui_set_direction(gui, DIRECTION_VERTICAL);
+        gui_set_grow(gui, DIRECTION_VERTICAL);
+        gui_set_grow(gui, DIRECTION_HORIZONTAL);
+        gui_set_align(gui, ALIGN_CENTER);
+        gui_on_hover(gui, input_on_hover);
+        InputHoverInfo info = (InputHoverInfo) {
+            .input = input,
+            .rel_pos = (Vector2) {0},
+            .font = font,
+            .font_size = font_size,
+        };
+        gui_set_state(gui, &info, sizeof(info));
+
+        gui_element_begin(gui);
+            gui_set_direction(gui, DIRECTION_HORIZONTAL);   
+            gui_set_align(gui, ALIGN_CENTER);
+            gui_set_grow(gui, DIRECTION_VERTICAL);
+
+            if (hover_info.select_input == input) {
+                gui_text_slice(gui, font, *input, hover_info.select_input_ind, font_size, font_color);
+
+                gui_element_begin(gui);
+                    gui_set_rect(gui, font_color);
+                    gui_set_min_size(gui, BLOCK_OUTLINE_SIZE, BLOCK_TEXT_SIZE);
+                gui_element_end(gui);
+
+                gui_text(gui, font, *input + hover_info.select_input_ind, font_size, font_color);
+            } else {
+                gui_text(gui, font, *input, font_size, font_color);
+            }
+        gui_element_end(gui);
+    gui_element_end(gui);
 }
 
 static void draw_block(ScrBlock* block, bool highlight) {
@@ -361,23 +405,16 @@ static void draw_block(ScrBlock* block, bool highlight) {
                     gui_element_begin(gui);
                         gui_set_direction(gui, DIRECTION_HORIZONTAL);
                         gui_set_min_size(gui, conf.font_size - BLOCK_OUTLINE_SIZE * 4, conf.font_size - BLOCK_OUTLINE_SIZE * 4);
-                        gui_set_align(gui, ALIGN_CENTER);
                         gui_set_padding(gui, BLOCK_STRING_PADDING / 2, 0);
                         if (hover_info.select_argument == arg) gui_set_border(gui, (GuiColor) { 0x30, 0x30, 0x30, 0xff }, BLOCK_OUTLINE_SIZE);
                         gui_set_custom_data(gui, arg);
                         gui_on_hover(gui, argument_on_hover);
 
-                        gui_element_begin(gui);
-                            gui_set_direction(gui, DIRECTION_VERTICAL);
-                            gui_set_align(gui, ALIGN_CENTER);
-                            gui_set_grow(gui, DIRECTION_HORIZONTAL);
-
-                            if (arg->type == ARGUMENT_TEXT) {
-                                gui_text(gui, &font_cond, arg->data.text, BLOCK_TEXT_SIZE, (GuiColor) { 0x00, 0x00, 0x00, 0xff });
-                            } else {
-                                gui_text(gui, &font_cond_shadow, arg->data.text, BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
-                            }
-                        gui_element_end(gui);
+                        if (arg->type == ARGUMENT_TEXT) {
+                            draw_input(&font_cond, &arg->data.text, BLOCK_TEXT_SIZE, (GuiColor) { 0x00, 0x00, 0x00, 0xff });
+                        } else {
+                            draw_input(&font_cond_shadow, &arg->data.text, BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+                        }
                     gui_element_end(gui);
                 gui_element_end(gui);
                 break;
@@ -805,7 +842,7 @@ static void draw_code_area(void) {
             gui_set_padding(gui, conf.font_size * 0.2, conf.font_size * 0.2);
 
             for (int i = 0; i < DEBUG_BUFFER_LINES; i++) {
-                gui_text(gui, &font_cond, debug_buffer[i], conf.font_size * 0.5, (GuiColor) { 0xff, 0xff, 0xff, 0x60 });
+                if (*debug_buffer[i]) gui_text(gui, &font_cond, debug_buffer[i], conf.font_size * 0.5, (GuiColor) { 0xff, 0xff, 0xff, 0x60 });
             }
         gui_element_end(gui);
 
@@ -1251,6 +1288,29 @@ static void render_rect_notched(GuiDrawCommand* cmd) {
     );
 }
 
+static void draw_text_slice(Font font, const char *text, float pos_x, float pos_y, unsigned int text_size, float font_size, Color color) {
+    if (font.texture.id == 0) return;
+
+    Vector2 pos = (Vector2) { pos_x, pos_y };
+    int codepoint, index;
+    float scale_factor = font_size / font.baseSize;
+
+    for (unsigned int i = 0; i < text_size;) {
+        int next = 0;
+        codepoint = GetCodepointNext(&text[i], &next);
+        index = search_glyph(codepoint);
+        i += next;
+
+        if (codepoint != ' ') DrawTextCodepoint(font, codepoint, pos, font_size, color);
+
+        if (font.glyphs[index].advanceX != 0) {
+            pos.x += font.glyphs[index].advanceX * scale_factor;
+        } else {
+            pos.y += font.recs[index].width * scale_factor + font.glyphs[index].offsetX;
+        }
+    }
+}
+
 static void scrap_gui_render(void) {
 #ifdef DEBUG
     bool show_bounds = IsKeyDown(KEY_F4);
@@ -1310,12 +1370,13 @@ static void scrap_gui_render(void) {
             }
             break;
         case DRAWTYPE_TEXT:
-            DrawTextEx(
+            draw_text_slice(
                 *(Font*)command->data.text.font, 
                 command->data.text.text, 
-                (Vector2) { command->pos_x, command->pos_y }, 
+                command->pos_x, 
+                command->pos_y, 
+                command->data.text.text_size, 
                 command->height, 
-                0.0, 
                 CONVERT_COLOR(command->color, Color)
             );
             break;
@@ -1383,7 +1444,7 @@ static void write_debug_buffer(void) {
     print_debug(&i, "Editor: %d, Editing: %p, Blockdef: %p, input: %zu", hover_info.editor.part, hover_info.editor.edit_blockdef, hover_info.editor.blockdef, hover_info.editor.blockdef_input);
     print_debug(&i, "Elements: %zu/%zu, Draw: %zu/%zu", gui->element_stack_len, ELEMENT_STACK_SIZE, gui->command_stack_len, COMMAND_STACK_SIZE);
     print_debug(&i, "Slider: %p, min: %d, max: %d", hover_info.hover_slider.value, hover_info.hover_slider.min, hover_info.hover_slider.max);
-    print_debug(&i, "Input: %p, Select: %p", hover_info.input, hover_info.select_input);
+    print_debug(&i, "Input: %p, Select: %p, Pos: (%.3f, %.3f), ind: %d", hover_info.input_info.input, hover_info.select_input, hover_info.input_info.rel_pos.x, hover_info.input_info.rel_pos.y, hover_info.select_input_ind);
     print_debug(&i, "Exec chain: %p, ind: %zu", hover_info.exec_chain, hover_info.exec_ind);
     print_debug(&i, "UI time: %.3f", ui_time);
     print_debug(&i, "FPS: %d, Frame time: %.3f", GetFPS(), GetFrameTime());

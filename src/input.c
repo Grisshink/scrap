@@ -84,11 +84,10 @@ static void editor_code_remove_blockdef(ScrBlockdef* blockdef) {
 
 static void edit_text(char** text) {
     if (IsKeyPressed(KEY_BACKSPACE) || IsKeyPressedRepeat(KEY_BACKSPACE)) {
-        if (vector_size(*text) <= 1) return;
+        if (vector_size(*text) <= 1 || hover_info.select_input_ind == 0) return;
 
-        int remove_pos = vector_size(*text) - 2;
+        int remove_pos = hover_info.select_input_ind - 1;
         int remove_size = 1;
-
         while (((unsigned char)(*text)[remove_pos] >> 6) == 2) { // This checks if we are in the middle of UTF-8 char
             remove_pos--;
             remove_size++;
@@ -96,6 +95,7 @@ static void edit_text(char** text) {
 
         vector_erase(*text, remove_pos, remove_size);
         render_surface_needs_redraw = true;
+        hover_info.select_input_ind -= remove_size;
         return;
     }
 
@@ -104,7 +104,7 @@ static void edit_text(char** text) {
         int utf_size = 0;
         const char* utf_char = CodepointToUTF8(char_val, &utf_size);
         for (int i = 0; i < utf_size; i++) {
-            vector_insert(text, vector_size(*text) - 1, utf_char[i]);
+            vector_insert(text, hover_info.select_input_ind++, utf_char[i]);
         }
         render_surface_needs_redraw = true;
     }
@@ -671,6 +671,46 @@ static bool handle_editor_panel_click(void) {
     return true;
 }
 
+static int get_input_ind(void) {
+    assert(hover_info.input_info.font != NULL);
+    assert(hover_info.input_info.input != NULL);
+
+    float width = 0.0;
+    float prev_width = 0.0;
+
+    int codepoint = 0; // Current character
+    int index = 0; // Index position in sprite font
+    int text_size = strlen(*hover_info.input_info.input);
+    float scale_factor = hover_info.input_info.font_size / (float)hover_info.input_info.font->baseSize;
+
+    int prev_i = 0;
+    int i = 0;
+
+    while (i < text_size && (width * scale_factor) < hover_info.input_info.rel_pos.x) {
+        int next = 0;
+        codepoint = GetCodepointNext(&(*hover_info.input_info.input)[i], &next);
+        index = search_glyph(codepoint);
+
+        prev_width = width;
+        prev_i = i;
+
+        if (hover_info.input_info.font->glyphs[index].advanceX != 0) {
+            width += hover_info.input_info.font->glyphs[index].advanceX;
+        } else {
+            width += hover_info.input_info.font->recs[index].width + hover_info.input_info.font->glyphs[index].offsetX;
+        }
+        i += next;
+    }
+    prev_width *= scale_factor;
+    width *= scale_factor;
+
+    if (width - hover_info.input_info.rel_pos.x < hover_info.input_info.rel_pos.x - prev_width) { // Right side of char is closer
+        hover_info.select_input_ind = i;
+    } else {
+        hover_info.select_input_ind = prev_i;
+    }
+}
+
 // Return value indicates if we should cancel dragging
 static bool handle_mouse_click(void) {
     hover_info.mouse_click_pos = (Vector2) { gui->mouse_x, gui->mouse_y };
@@ -684,7 +724,8 @@ static bool handle_mouse_click(void) {
         return false;
     }
     if (gui_window_is_shown()) {
-        if (hover_info.input != hover_info.select_input) hover_info.select_input = hover_info.input;
+        if (hover_info.input_info.input) get_input_ind();
+        if (hover_info.input_info.input != hover_info.select_input) hover_info.select_input = hover_info.input_info.input;
         return true;
     }
     if (!hover_info.panel) return true;
@@ -711,10 +752,11 @@ static bool handle_mouse_click(void) {
             }
         }
 
+        if (hover_info.input_info.input) get_input_ind();
         if (hover_info.block != hover_info.select_block) hover_info.select_block = hover_info.block;
-        if (hover_info.input != hover_info.select_input) hover_info.select_input = hover_info.input;
+        if (hover_info.input_info.input != hover_info.select_input) hover_info.select_input = hover_info.input_info.input;
         if (hover_info.argument != hover_info.select_argument) {
-            hover_info.select_argument = hover_info.argument;
+            if (!hover_info.argument || hover_info.input_info.input || hover_info.dropdown.location != LOCATION_NONE) hover_info.select_argument = hover_info.argument;
             dropdown.scroll_amount = 0;
             return true;
         }
@@ -879,7 +921,7 @@ void scrap_gui_process_input(void) {
     if (render_surface_needs_redraw) {
         hover_info.block = NULL;
         hover_info.argument = NULL;
-        hover_info.input = NULL;
+        hover_info.input_info.input = NULL;
         hover_info.category = NULL;
         hover_info.prev_argument = NULL;
         hover_info.prev_blockchain = NULL;

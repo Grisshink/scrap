@@ -171,7 +171,7 @@ void term_resize(float screen_w, float screen_h) {
     pthread_mutex_lock(&term.lock);
     term.size = (Rectangle) { 0, 0, screen_w, screen_h };
 
-    GuiMeasurement char_size = custom_measure(font_mono, "A", TERM_CHAR_SIZE);
+    GuiMeasurement char_size = measure_slice(font_mono, "A", 1, TERM_CHAR_SIZE);
     term.char_size = (Vector2) { char_size.w, char_size.h };
     Vector2 new_buffer_size = { term.size.width / term.char_size.x, term.size.height / term.char_size.y };
 

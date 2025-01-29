@@ -182,16 +182,15 @@ int search_glyph(int codepoint) {
     return fallback;
 }
 
-GuiMeasurement custom_measure(Font font, const char *text, float font_size) {
+GuiMeasurement measure_slice(Font font, const char *text, unsigned int text_size, float font_size) {
     GuiMeasurement ms = {0};
 
     if ((font.texture.id == 0) || !text) return ms;
 
-    int size = TextLength(text);
     int codepoint = 0; // Current character
     int index = 0; // Index position in sprite font
 
-    for (int i = 0; i < size;) {
+    for (unsigned int i = 0; i < text_size;) {
         int next = 0;
         codepoint = GetCodepointNext(&text[i], &next);
         index = search_glyph(codepoint);
@@ -209,8 +208,8 @@ GuiMeasurement custom_measure(Font font, const char *text, float font_size) {
     return ms;
 }
 
-GuiMeasurement scrap_gui_measure_text(void* font, const char* text, unsigned short size) {
-    return custom_measure(*(Font*)font, text, size);
+GuiMeasurement scrap_gui_measure_text(void* font, const char* text, unsigned int text_size, unsigned short font_size) {
+    return measure_slice(*(Font*)font, text, text_size, font_size);
 }
 
 BlockCategory block_category_new(const char* name, Color color) {

@@ -265,8 +265,8 @@ static void end_setting(void) {
 }
 
 static void text_input_on_hover(GuiElement* el) {
-    hover_info.input = el->custom_data;
-    if (hover_info.input == hover_info.select_input) return;
+    //hover_info.input = el->custom_data;
+    //if (hover_info.input == hover_info.select_input) return;
     el->color = (GuiColor) { 0x40, 0x40, 0x40, 0xff };
 }
 
