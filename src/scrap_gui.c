@@ -288,8 +288,8 @@ static void gui_render(Gui* gui, GuiElement* el, float pos_x, float pos_y) {
             if (DIRECTION(el) == DIRECTION_HORIZONTAL) {
                 command->width = scroll_size * el->scaling;
                 command->height = 5 * el->scaling;
-                command->pos_x = scroll_pos * el->scaling;
-                command->pos_y = el_bounds.h - command->height;
+                command->pos_x = el_bounds.x + scroll_pos * el->scaling;
+                command->pos_y = el_bounds.y + el_bounds.h - command->height;
             } else {
                 command->width = 5 * el->scaling;
                 command->height = scroll_size * el->scaling;
