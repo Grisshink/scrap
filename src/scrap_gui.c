@@ -439,6 +439,11 @@ static void gui_element_resize(Gui* gui, GuiElement* el, unsigned short new_w, u
         }
         iter = iter->next;
     }
+    if (DIRECTION(el) == DIRECTION_HORIZONTAL) {
+        el->cursor_x += el->pad_w - el->gap;
+    } else {
+        el->cursor_y += el->pad_h - el->gap;
+    }
 
     gui_element_realign(el);
     if (el->scroll_value) {
