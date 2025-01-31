@@ -96,13 +96,23 @@ static void edit_text(char** text) {
     }
 
     if (IsKeyPressed(KEY_LEFT) || IsKeyPressedRepeat(KEY_LEFT)) {
-        if (--hover_info.select_input_ind < 0) hover_info.select_input_ind = 0;
+        hover_info.select_input_ind--;
+        if (hover_info.select_input_ind < 0) {
+            hover_info.select_input_ind = 0;
+        } else {
+            while (((unsigned char)(*text)[hover_info.select_input_ind] >> 6) == 2) hover_info.select_input_ind--;
+        }
         render_surface_needs_redraw = true;
         return;
     }
 
     if (IsKeyPressed(KEY_RIGHT) || IsKeyPressedRepeat(KEY_RIGHT)) {
-        if (++hover_info.select_input_ind >= (int)vector_size(*text)) hover_info.select_input_ind = vector_size(*text) - 1;
+        hover_info.select_input_ind++;
+        if (hover_info.select_input_ind >= (int)vector_size(*text)) {
+            hover_info.select_input_ind = vector_size(*text) - 1;
+        } else {
+            while (((unsigned char)(*text)[hover_info.select_input_ind] >> 6) == 2) hover_info.select_input_ind++;
+        }
         render_surface_needs_redraw = true;
         return;
     }
