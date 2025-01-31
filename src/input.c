@@ -671,7 +671,7 @@ static bool handle_editor_panel_click(void) {
     return true;
 }
 
-static int get_input_ind(void) {
+static void get_input_ind(void) {
     assert(hover_info.input_info.font != NULL);
     assert(hover_info.input_info.input != NULL);
 
