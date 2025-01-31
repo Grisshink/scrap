@@ -67,10 +67,12 @@ void gui_window_show(WindowGuiType type) {
 }
 
 void gui_window_hide(void) {
+    hover_info.select_input = NULL;
     window.is_fading = true;
 }
 
 void gui_window_hide_immediate(void) {
+    hover_info.select_input = NULL;
     window.is_fading = true;
     window.is_hiding = true;
 }
@@ -270,7 +272,7 @@ static void text_input_on_hover(GuiElement* el) {
     el->color = (GuiColor) { 0x40, 0x40, 0x40, 0xff };
 }
 
-static void draw_text_input(char** input) {
+static void draw_text_input(char** input, int* scroll) {
     gui_element_begin(gui);
         gui_set_grow(gui, DIRECTION_HORIZONTAL);
         gui_set_grow(gui, DIRECTION_VERTICAL);
@@ -288,15 +290,13 @@ static void draw_text_input(char** input) {
             gui_set_align(gui, ALIGN_CENTER);
             gui_set_border(gui, (GuiColor) { 0x60, 0x60, 0x60, 0xff }, 2);
             gui_set_shader(gui, &line_shader);
+            gui_set_padding(gui, WINDOW_ELEMENT_PADDING, 0);
+            gui_set_scroll(gui, scroll);
+            gui_set_scissor(gui);
 
-            gui_spacer(gui, WINDOW_ELEMENT_PADDING, 0);
-            gui_text(gui, &font_cond, *input, conf.font_size * 0.6, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
-            if (input == hover_info.select_input) {
-                gui_element_begin(gui);
-                    gui_set_min_size(gui, 2, conf.font_size * 0.6);
-                    gui_set_rect(gui, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
-                gui_element_end(gui);
-            }
+            gui_element_begin(gui);
+                draw_input(&font_cond, input, conf.font_size * 0.6, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+            gui_element_end(gui);
         gui_element_end(gui);
     gui_element_end(gui);
 }
@@ -352,6 +352,10 @@ void draw_window(void) {
 
     float animation_ease = ease_out_expo(window.animation_time);
 
+    static int font_path_scroll = 0;
+    static int font_bold_path_scroll = 0;
+    static int font_mono_path_scroll = 0;
+
     switch (window.type) {
     case GUI_TYPE_SETTINGS:
         begin_window("Settings", 0.6 * gui->win_w, 0.8 * gui->win_h, animation_ease);
@@ -364,15 +368,15 @@ void draw_window(void) {
             end_setting();
 
             begin_setting("Font path", true);
-                draw_text_input(&window_conf.font_path);
+                draw_text_input(&window_conf.font_path, &font_path_scroll);
             end_setting();
 
             begin_setting("Bold font path", true);
-                draw_text_input(&window_conf.font_bold_path);
+                draw_text_input(&window_conf.font_bold_path, &font_bold_path_scroll);
             end_setting();
 
             begin_setting("Monospaced font path", true);
-                draw_text_input(&window_conf.font_mono_path);
+                draw_text_input(&window_conf.font_mono_path, &font_mono_path_scroll);
             end_setting();
 
             begin_setting("Panel editor", false);

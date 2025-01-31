@@ -194,7 +194,7 @@ static void input_on_hover(GuiElement* el) {
     hover_info.input_info.rel_pos = (Vector2) { gui->mouse_x - el->abs_x, gui->mouse_y - el->abs_y };
 }
 
-static void draw_input(Font* font, char** input, unsigned short font_size, GuiColor font_color) {
+void draw_input(Font* font, char** input, unsigned short font_size, GuiColor font_color) {
     gui_element_begin(gui);
         gui_set_direction(gui, DIRECTION_VERTICAL);
         gui_set_grow(gui, DIRECTION_VERTICAL);
