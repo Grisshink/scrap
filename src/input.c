@@ -83,6 +83,30 @@ static void editor_code_remove_blockdef(ScrBlockdef* blockdef) {
 }
 
 static void edit_text(char** text) {
+    if (IsKeyPressed(KEY_HOME)) {
+        hover_info.select_input_ind = 0;
+        render_surface_needs_redraw = true;
+        return;
+    }
+
+    if (IsKeyPressed(KEY_END)) {
+        hover_info.select_input_ind = vector_size(*text) - 1;
+        render_surface_needs_redraw = true;
+        return;
+    }
+
+    if (IsKeyPressed(KEY_LEFT) || IsKeyPressedRepeat(KEY_LEFT)) {
+        if (--hover_info.select_input_ind < 0) hover_info.select_input_ind = 0;
+        render_surface_needs_redraw = true;
+        return;
+    }
+
+    if (IsKeyPressed(KEY_RIGHT) || IsKeyPressedRepeat(KEY_RIGHT)) {
+        if (++hover_info.select_input_ind >= (int)vector_size(*text)) hover_info.select_input_ind = vector_size(*text) - 1;
+        render_surface_needs_redraw = true;
+        return;
+    }
+
     if (IsKeyPressed(KEY_BACKSPACE) || IsKeyPressedRepeat(KEY_BACKSPACE)) {
         if (vector_size(*text) <= 1 || hover_info.select_input_ind == 0) return;
 
