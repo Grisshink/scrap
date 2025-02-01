@@ -228,6 +228,26 @@ void save_config(Config* config) {
     free(file_str);
 }
 
+PanelTree* find_panel_in_all_tabs(PanelType panel_type) {
+    for (size_t i = 0; i < vector_size(code_tabs); i++) {
+        PanelTree* panel = find_panel(code_tabs[i].root_panel, panel_type);
+        if (panel) return panel;
+    }
+    return NULL;
+}
+
+void add_missing_panels(void) {
+    PanelTree* categories = find_panel_in_all_tabs(PANEL_BLOCK_CATEGORIES);
+    if (categories) return;
+
+    PanelTree* palette = find_panel_in_all_tabs(PANEL_BLOCK_PALETTE);
+    if (!palette) {
+        TraceLog(LOG_ERROR, "Failed to insert missing panel PANEL_BLOCK_CATEGORIES: panel PANEL_BLOCK_PALETTE is missing");
+        return;
+    }
+    panel_split(palette, SPLIT_SIDE_TOP, PANEL_BLOCK_CATEGORIES, 0.35);
+}
+
 void load_config(Config* config) {
     delete_all_tabs();
 
@@ -288,6 +308,7 @@ void load_config(Config* config) {
         }
     }
 
+    add_missing_panels();
     if (vector_size(code_tabs) == 0) init_panels(); 
     if (current_tab >= (int)vector_size(code_tabs)) current_tab = vector_size(code_tabs) - 1;
 
