@@ -21,6 +21,8 @@
 #include "blocks.h"
 
 #include <math.h>
+#include <libintl.h>
+#include <locale.h>
 
 // Global Variables
 Image logo_img;
@@ -427,6 +429,10 @@ void setup(void) {
 
 // Main function: Initializes configurations, sets up window, processes input, renders GUI, and cleans up resources on exit
 int main(void) {
+    setlocale(LC_MESSAGES, "");
+    textdomain("scrap");
+    bindtextdomain("scrap", LOCALE_PATH);
+
     config_new(&conf);
     config_new(&window_conf);
     code_tabs = vector_create();

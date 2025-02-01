@@ -32,6 +32,7 @@
 #define WINDOW_ELEMENT_PADDING (10.0 * (float)conf.font_size / 32.0)
 
 #define DATA_PATH "data/"
+#define LOCALE_PATH "locale/"
 #define CONFIG_PATH "config.txt"
 #define CONFIG_FOLDER_NAME "scrap"
 

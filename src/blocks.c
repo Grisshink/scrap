@@ -24,6 +24,7 @@
 #include <string.h>
 #include <math.h>
 #include <assert.h>
+#include <libintl.h>
 
 #define MIN(x, y) ((x) < (y) ? (x) : (y))
 #define MAX(x, y) ((x) > (y) ? (x) : (y))
@@ -1080,7 +1081,7 @@ void register_blocks(ScrVm* vm) {
     ScrBlockdef* sc_print = blockdef_new("print", BLOCKTYPE_NORMAL, (ScrColor) CATEGORY_TERMINAL_COLOR, block_print);
     blockdef_add_image(sc_print, (ScrImage) { .image_ptr = &term_tex });
     blockdef_add_text(sc_print, "Print");
-    blockdef_add_argument(sc_print, "Hello, scrap!", BLOCKCONSTR_UNLIMITED);
+    blockdef_add_argument(sc_print, gettext("Hello, scrap!"), BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_print);
     add_to_category(sc_print, cat_terminal);
 
