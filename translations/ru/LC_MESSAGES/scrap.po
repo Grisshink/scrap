@@ -160,10 +160,6 @@ msgid "Pow"
 msgstr "Степень"
 
 #: blocks.c
-msgid "Pi"
-msgstr "Пи"
-
-#: blocks.c
 msgid "Not"
 msgstr "Не"
 

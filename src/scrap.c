@@ -62,6 +62,7 @@ Texture2D special_tex;
 Texture2D list_tex;
 Texture2D arrow_left_tex;
 Texture2D arrow_right_tex;
+Texture2D pi_symbol_tex;
 
 ScrVm vm;
 int start_vm_timeout = -1;
@@ -383,6 +384,7 @@ void setup(void) {
     list_tex = load_svg(into_data_path(DATA_PATH "list.svg"));
     arrow_left_tex = load_svg(into_data_path(DATA_PATH "arrow_left.svg"));
     arrow_right_tex = load_svg(into_data_path(DATA_PATH "arrow_right.svg"));
+    pi_symbol_tex = load_svg(into_data_path(DATA_PATH "pi_symbol.svg"));
 
     int* codepoints = vector_create();
     for (int i = 0; i < CODEPOINT_REGION_COUNT; i++) {

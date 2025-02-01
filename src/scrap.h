@@ -237,6 +237,7 @@ extern Texture2D special_tex;
 extern Texture2D list_tex;
 extern Texture2D arrow_left_tex;
 extern Texture2D arrow_right_tex;
+extern Texture2D pi_symbol_tex;
 
 extern ScrVm vm;
 extern int start_vm_timeout;

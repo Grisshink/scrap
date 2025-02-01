@@ -1253,7 +1253,7 @@ void register_blocks(ScrVm* vm) {
     add_to_category(sc_math, cat_math);
 
     ScrBlockdef* sc_pi = blockdef_new("pi", BLOCKTYPE_NORMAL, (ScrColor) CATEGORY_MATH_COLOR, block_pi);
-    blockdef_add_text(sc_pi, gettext("Pi"));
+    blockdef_add_image(sc_pi, (ScrImage) { .image_ptr = &pi_symbol_tex });
     blockdef_register(vm, sc_pi);
     add_to_category(sc_pi, cat_math);
 
