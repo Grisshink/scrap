@@ -278,6 +278,7 @@ static void gui_render(Gui* gui, GuiElement* el, float pos_x, float pos_y) {
         int max = content_size - el_size;
 
         if (max > 0) {
+            flush_aux_buffers(gui);
             GuiDrawCommand* command = &gui->command_stack[gui->command_stack_len++];
             command->type = DRAWTYPE_RECT;
             command->data.rect_type = RECT_NORMAL;
