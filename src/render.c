@@ -1153,12 +1153,12 @@ void scrap_gui_process(void) {
                     gui_set_align(gui, ALIGN_CENTER);
                     gui_on_hover(gui, panel_editor_on_hover);
 
-                    gui_text(gui, &font_eb, "Panel edit mode", conf.font_size * 0.8, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+                    gui_text(gui, &font_eb, gettext("Panel edit mode"), conf.font_size * 0.8, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
 
                     gui_spacer(gui, 0, conf.font_size * 0.25);
 
-                    gui_text(gui, &font_cond_shadow, "Click on panels to reposition them", BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
-                    gui_text(gui, &font_cond_shadow, "Drag panel edges to resize them", BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+                    gui_text(gui, &font_cond_shadow, gettext("Click on panels to reposition them"), BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+                    gui_text(gui, &font_cond_shadow, gettext("Drag panel edges to resize them"), BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
 
                     gui_spacer(gui, 0, conf.font_size * 0.25);
 
@@ -1166,8 +1166,8 @@ void scrap_gui_process(void) {
                         gui_set_direction(gui, DIRECTION_HORIZONTAL);
                         gui_set_gap(gui, conf.font_size * 0.25);
 
-                        draw_panel_editor_button("Save", conf.font_size, (GuiColor) { 0x40, 0xff, 0x40, 0xff }, handle_panel_editor_save_button);
-                        draw_panel_editor_button("Done", conf.font_size, (GuiColor) { 0x80, 0x80, 0x80, 0xff }, handle_panel_editor_cancel_button);
+                        draw_panel_editor_button(gettext("Save"), conf.font_size, (GuiColor) { 0x40, 0xff, 0x40, 0xff }, handle_panel_editor_save_button);
+                        draw_panel_editor_button(gettext("Done"), conf.font_size, (GuiColor) { 0x80, 0x80, 0x80, 0xff }, handle_panel_editor_cancel_button);
                     gui_element_end(gui);
                 gui_element_end(gui);
             gui_element_end(gui);

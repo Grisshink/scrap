@@ -422,3 +422,23 @@ msgstr "создавать софт, используя простой, блоч
 #: window.c
 msgid "License"
 msgstr "Лицензия"
+
+#: render.c
+msgid "Panel edit mode"
+msgstr "Режим редактирования панелей"
+
+#: render.c
+msgid "Click on panels to reposition them"
+msgstr "Нажимайте на панели чтобы их передвигать"
+
+#: render.c
+msgid "Drag panel edges to resize them"
+msgstr "Перетягивайте края панелей, чтобы изменить размер"
+
+#: render.c
+msgid "Done"
+msgstr "Готово"
+
+#: render.c
+msgid "Save"
+msgstr "Сохранить"
