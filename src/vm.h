@@ -26,6 +26,7 @@
 #include <stdatomic.h>
 #include "vec.h"
 #include <string.h>
+#include <libintl.h>
 
 #define VM_ARG_STACK_SIZE 1024
 #define VM_CONTROL_STACK_SIZE 32768
@@ -946,7 +947,7 @@ ScrBlock block_new(ScrBlockdef* blockdef) {
             arg->type = ARGUMENT_BLOCKDEF;
             arg->data.blockdef = blockdef_new("custom", BLOCKTYPE_NORMAL, blockdef->color, NULL);
             arg->data.blockdef->ref_count++;
-            blockdef_add_text(arg->data.blockdef, "My block");
+            blockdef_add_text(arg->data.blockdef, gettext("My block"));
             break;
         default:
             assert(false && "Unreachable");

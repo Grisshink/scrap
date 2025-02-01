@@ -251,7 +251,7 @@ bool handle_file_menu_click(void) {
 
         ScrBlockChain* chain = load_code(path);
         if (!chain) {
-            actionbar_show("File load failed :(");
+            actionbar_show(gettext("File load failed :("));
             break;
         }
 
@@ -267,7 +267,7 @@ bool handle_file_menu_click(void) {
         for (i = 0; base_path[i]; i++) project_name[i] = base_path[i]; 
         project_name[i] = 0;
 
-        actionbar_show("File load succeeded!");
+        actionbar_show(gettext("File load succeeded!"));
         break;
     default:
         printf("idk\n");
@@ -844,7 +844,7 @@ static void handle_key_press(void) {
 
             camera_pos.x = editor_code[blockchain_select_counter].x - 50;
             camera_pos.y = editor_code[blockchain_select_counter].y - 50;
-            actionbar_show(TextFormat("Jump to chain (%d/%d)", blockchain_select_counter + 1, vector_size(editor_code)));
+            actionbar_show(TextFormat(gettext("Jump to chain (%d/%d)"), blockchain_select_counter + 1, vector_size(editor_code)));
             render_surface_needs_redraw = true;
             return;
         }

@@ -23,6 +23,7 @@
 #include <assert.h>
 #include <math.h>
 #include <stdarg.h>
+#include <libintl.h>
 
 #define ARRLEN(x) (sizeof(x)/sizeof(x[0]))
 #define MOD(x, y) (((x) % (y) + (y)) % (y))
@@ -566,13 +567,13 @@ static void draw_top_bar(void) {
         gui_spacer(gui, 5, 0);
         gui_image(gui, &logo_tex, conf.font_size, CONVERT_COLOR(WHITE, GuiColor));
         gui_spacer(gui, 10, 0);
-        gui_text(gui, &font_eb, "Scrap", conf.font_size * 0.8, CONVERT_COLOR(WHITE, GuiColor));
+        gui_text(gui, &font_eb, gettext("Scrap"), conf.font_size * 0.8, CONVERT_COLOR(WHITE, GuiColor));
         gui_spacer(gui, 10, 0);
 
-        GuiElement* el = draw_button("File", top_bar_size, false, button_on_hover, handle_file_button_click);
+        GuiElement* el = draw_button(gettext("File"), top_bar_size, false, button_on_hover, handle_file_button_click);
         if (hover_info.dropdown.location == LOCATION_FILE_MENU) hover_info.dropdown.element = el;
-        draw_button("Settings", top_bar_size, false, button_on_hover, handle_settings_button_click);
-        draw_button("About", top_bar_size, false, button_on_hover, handle_about_button_click);
+        draw_button(gettext("Settings"), top_bar_size, false, button_on_hover, handle_settings_button_click);
+        draw_button(gettext("About"), top_bar_size, false, button_on_hover, handle_about_button_click);
     gui_element_end(gui);
 }
 
@@ -589,7 +590,7 @@ static void draw_tab_bar(void) {
             draw_button("+", tab_bar_size, false, tab_button_add_on_hover, (void*)0);
         }
         for (size_t i = 0; i < vector_size(code_tabs); i++) {
-            draw_button(code_tabs[i].name, tab_bar_size, current_tab == (int)i, tab_button_on_hover, (void*)i);
+            draw_button(gettext(code_tabs[i].name), tab_bar_size, current_tab == (int)i, tab_button_on_hover, (void*)i);
             if (hover_info.is_panel_edit_mode && hover_info.mouse_panel != PANEL_NONE) {
                 draw_button("+", tab_bar_size, false, tab_button_add_on_hover, (void*)(i + 1));
             }
@@ -1084,7 +1085,10 @@ static void draw_dropdown(void) {
                 gui_on_hover(gui, dropdown_on_hover);
                 gui_set_custom_data(gui, (void*)(size_t)i);
 
-                gui_text(gui, &font_cond, hover_info.dropdown.list[i], BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+                const char* list_value = hover_info.dropdown.location != LOCATION_BLOCK_DROPDOWN ? 
+                                         gettext(hover_info.dropdown.list[i]) : 
+                                         hover_info.dropdown.list[i];
+                gui_text(gui, &font_cond, list_value, BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
             gui_element_end(gui);
         }
     gui_element_end(gui);
@@ -1459,9 +1463,9 @@ void scrap_gui_process_render(void) {
         exec = exec_new();
         exec_copy_code(&vm, &exec, editor_code);
         if (!exec_start(&vm, &exec)) {
-            actionbar_show("Start failed!");
+            actionbar_show(gettext("Start failed!"));
         } else {
-            actionbar_show("Started successfully!");
+            actionbar_show(gettext("Started successfully!"));
         }
     }
 }

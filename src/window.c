@@ -356,34 +356,34 @@ void draw_window(void) {
 
     switch (window.type) {
     case GUI_TYPE_SETTINGS:
-        begin_window("Settings", 0.6 * gui->win_w, 0.8 * gui->win_h, animation_ease);
-            begin_setting("UI size", true);
+        begin_window(gettext("Settings"), 0.6 * gui->win_w, 0.8 * gui->win_h, animation_ease);
+            begin_setting(gettext("UI size"), true);
                 draw_slider(8, 64, &window_conf.font_size);
             end_setting();
 
-            begin_setting("FPS Limit", false);
+            begin_setting(gettext("FPS Limit"), false);
                 draw_slider(0, 240, &window_conf.fps_limit);
             end_setting();
 
-            begin_setting("Font path", true);
+            begin_setting(gettext("Font path"), true);
                 draw_text_input(&window_conf.font_path, &font_path_scroll);
             end_setting();
 
-            begin_setting("Bold font path", true);
+            begin_setting(gettext("Bold font path"), true);
                 draw_text_input(&window_conf.font_bold_path, &font_bold_path_scroll);
             end_setting();
 
-            begin_setting("Monospaced font path", true);
+            begin_setting(gettext("Monospaced font path"), true);
                 draw_text_input(&window_conf.font_mono_path, &font_mono_path_scroll);
             end_setting();
 
-            begin_setting("Panel editor", false);
+            begin_setting(gettext("Panel editor"), false);
                 gui_element_begin(gui);
                     gui_set_grow(gui, DIRECTION_HORIZONTAL);
                     gui_set_grow(gui, DIRECTION_VERTICAL);
                     gui_set_direction(gui, DIRECTION_HORIZONTAL);
 
-                    draw_button("Open", handle_settings_panel_editor_button_click);
+                    draw_button(gettext("Open"), handle_settings_panel_editor_button_click);
                 gui_element_end(gui);
             end_setting();
 
@@ -395,14 +395,14 @@ void draw_window(void) {
                 gui_set_gap(gui, WINDOW_ELEMENT_PADDING);
 
                 gui_grow(gui, DIRECTION_HORIZONTAL);
-                draw_button("Reset panels", handle_settings_reset_panels_button_click);
-                draw_button("Reset", handle_settings_reset_button_click);
-                draw_button("Apply", handle_settings_apply_button_click);
+                draw_button(gettext("Reset panels"), handle_settings_reset_panels_button_click);
+                draw_button(gettext("Reset"), handle_settings_reset_button_click);
+                draw_button(gettext("Apply"), handle_settings_apply_button_click);
             gui_element_end(gui);
         end_window();
         break;
     case GUI_TYPE_ABOUT:
-        begin_window("About", 500 * conf.font_size / 32.0, 220 * conf.font_size / 32.0, animation_ease);
+        begin_window(gettext("About"), 500 * conf.font_size / 32.0, 220 * conf.font_size / 32.0, animation_ease);
             gui_element_begin(gui);
                 gui_set_direction(gui, DIRECTION_HORIZONTAL);
                 gui_set_align(gui, ALIGN_CENTER);
@@ -413,8 +413,8 @@ void draw_window(void) {
             gui_element_end(gui);
 
             gui_element_begin(gui);
-                gui_text(gui, &font_cond, "Scrap is a project that allows anyone to build", conf.font_size * 0.6, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
-                gui_text(gui, &font_cond, "software using simple, block based interface.", conf.font_size * 0.6, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+                gui_text(gui, &font_cond, gettext("Scrap is a project that allows anyone to build"), conf.font_size * 0.6, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+                gui_text(gui, &font_cond, gettext("software using simple, block based interface."), conf.font_size * 0.6, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
             gui_element_end(gui);
 
             gui_grow(gui, DIRECTION_VERTICAL);
@@ -425,7 +425,7 @@ void draw_window(void) {
                 gui_set_gap(gui, WINDOW_ELEMENT_PADDING);
 
                 gui_grow(gui, DIRECTION_HORIZONTAL);
-                draw_button("License", handle_about_license_button_click);
+                draw_button(gettext("License"), handle_about_license_button_click);
             gui_element_end(gui);
         end_window();
         break;
@@ -441,7 +441,7 @@ void draw_window(void) {
             gui_set_position(gui, gui->mouse_x + 10, gui->mouse_y + 10);
             gui_set_padding(gui, WINDOW_ELEMENT_PADDING * 0.5, WINDOW_ELEMENT_PADDING * 0.5);
 
-            gui_text(gui, &font_cond, "Needs restart for changes to take effect", conf.font_size * 0.6, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+            gui_text(gui, &font_cond, gettext("Needs restart for changes to take effect"), conf.font_size * 0.6, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
         gui_element_end(gui);
     }
 

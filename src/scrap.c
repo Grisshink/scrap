@@ -454,11 +454,11 @@ int main(void) {
         size_t vm_return = -1;
         if (exec_try_join(&vm, &exec, &vm_return)) {
             if (vm_return == 1) {
-                actionbar_show("Vm executed successfully");
+                actionbar_show(gettext("Vm executed successfully"));
             } else if (vm_return == (size_t)PTHREAD_CANCELED) {
-                actionbar_show("Vm stopped >:(");
+                actionbar_show(gettext("Vm stopped >:("));
             } else {
-                actionbar_show("Vm shitted and died :(");
+                actionbar_show(gettext("Vm shitted and died :("));
             }
             exec_free(&exec);
             render_surface_needs_redraw = true;
