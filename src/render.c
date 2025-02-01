@@ -780,6 +780,7 @@ static void draw_block_categories(void) {
         gui_set_rect(gui, (GuiColor) { 0x00, 0x00, 0x00, 0x80 });
         gui_set_padding(gui, SIDE_BAR_PADDING, SIDE_BAR_PADDING);
         gui_set_gap(gui, SIDE_BAR_PADDING);
+        gui_set_scroll(gui, &categories_scroll);
         gui_set_scissor(gui);
 
         for (size_t i = 0; i < vector_size(palette.categories); i += 2) {

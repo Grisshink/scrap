@@ -71,6 +71,7 @@ BlockPalette palette = {0};
 ScrBlockChain* editor_code = {0};
 ScrBlockChain mouse_blockchain = {0};
 Gui* gui = NULL;
+int categories_scroll = 0;
 
 SplitPreview split_preview = {0};
 Tab* code_tabs = NULL;

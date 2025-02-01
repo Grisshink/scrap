@@ -249,6 +249,7 @@ extern ScrBlockChain* editor_code;
 extern ScrBlockChain mouse_blockchain;
 extern ScrExec exec;
 extern Gui* gui;
+extern int categories_scroll;
 
 extern SplitPreview split_preview;
 extern Tab* code_tabs;
