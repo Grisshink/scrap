@@ -1,7 +1,11 @@
 # v0.4-beta
-- The block palette is now split up into various categories to make finding blocks easier
+- The sidebar (Now named as block palette to remove ambiguity) is now split up into various categories to make finding blocks easier
+- The terminal's background color has been changed to match with the color of other panels
+- All of the text boxes were upgraded to allow inserting or deleting at any position
 
 - Fixed "crash" when vm overflows/underflows one its stacks
+- Fixed scrollbars sometimes appearing behind scroll container
+- Fixed text in the settings going out of bounds when the text is too large
 
 # v0.3.1-beta
 - Fixed a crash when attaching a block on a chain which overlaps on top of another block which is an argument to another block in different chain
