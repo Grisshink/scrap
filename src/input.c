@@ -751,6 +751,9 @@ static bool handle_mouse_click(void) {
     camera_click_pos = camera_pos;
     hover_info.dragged_slider.value = NULL;
 
+    if (hover_info.input_info.input) get_input_ind();
+    if (hover_info.input_info.input != hover_info.select_input) hover_info.select_input = hover_info.input_info.input;
+
     if (hover_info.top_bars.handler) return hover_info.top_bars.handler();
     if (hover_info.hover_slider.value) {
         hover_info.dragged_slider = hover_info.hover_slider;
@@ -785,10 +788,7 @@ static bool handle_mouse_click(void) {
                 show_dropdown(LOCATION_BLOCK_DROPDOWN, list, list_len, handle_block_dropdown_click);
             }
         }
-
-        if (hover_info.input_info.input) get_input_ind();
         if (hover_info.block != hover_info.select_block) hover_info.select_block = hover_info.block;
-        if (hover_info.input_info.input != hover_info.select_input) hover_info.select_input = hover_info.input_info.input;
         if (hover_info.argument != hover_info.select_argument) {
             if (!hover_info.argument || hover_info.input_info.input || hover_info.dropdown.location != LOCATION_NONE) hover_info.select_argument = hover_info.argument;
             dropdown.scroll_amount = 0;
