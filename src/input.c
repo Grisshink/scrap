@@ -117,6 +117,18 @@ static void edit_text(char** text) {
         return;
     }
 
+    if (IsKeyPressed(KEY_DELETE) || IsKeyPressedRepeat(KEY_DELETE)) {
+        if (vector_size(*text) <= 1 || hover_info.select_input_ind == vector_size(*text) - 1) return;
+
+        int remove_pos = hover_info.select_input_ind;
+        int remove_size;
+        GetCodepointNext(*text + remove_pos, &remove_size);
+
+        vector_erase(*text, remove_pos, remove_size);
+        render_surface_needs_redraw = true;
+        return;
+    }
+
     if (IsKeyPressed(KEY_BACKSPACE) || IsKeyPressedRepeat(KEY_BACKSPACE)) {
         if (vector_size(*text) <= 1 || hover_info.select_input_ind == 0) return;
 
