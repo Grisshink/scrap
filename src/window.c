@@ -269,7 +269,7 @@ static void text_input_on_hover(GuiElement* el) {
     el->color = (GuiColor) { 0x40, 0x40, 0x40, 0xff };
 }
 
-static void draw_text_input(char** input, int* scroll) {
+static void draw_text_input(char** input, const char* hint, int* scroll) {
     gui_element_begin(gui);
         gui_set_grow(gui, DIRECTION_HORIZONTAL);
         gui_set_grow(gui, DIRECTION_VERTICAL);
@@ -292,7 +292,7 @@ static void draw_text_input(char** input, int* scroll) {
             gui_set_scissor(gui);
 
             gui_element_begin(gui);
-                draw_input(&font_cond, input, conf.font_size * 0.6, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+                draw_input(&font_cond, input, hint, conf.font_size * 0.6, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
             gui_element_end(gui);
         gui_element_end(gui);
     gui_element_end(gui);
@@ -365,15 +365,15 @@ void draw_window(void) {
             end_setting();
 
             begin_setting(gettext("Font path"), true);
-                draw_text_input(&window_conf.font_path, &font_path_scroll);
+                draw_text_input(&window_conf.font_path, gettext("path"), &font_path_scroll);
             end_setting();
 
             begin_setting(gettext("Bold font path"), true);
-                draw_text_input(&window_conf.font_bold_path, &font_bold_path_scroll);
+                draw_text_input(&window_conf.font_bold_path, gettext("path"), &font_bold_path_scroll);
             end_setting();
 
             begin_setting(gettext("Monospaced font path"), true);
-                draw_text_input(&window_conf.font_mono_path, &font_mono_path_scroll);
+                draw_text_input(&window_conf.font_mono_path, gettext("path"), &font_mono_path_scroll);
             end_setting();
 
             begin_setting(gettext("Panel editor"), false);

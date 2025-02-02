@@ -1087,14 +1087,14 @@ void register_blocks(ScrVm* vm) {
     ScrBlockdef* sc_print = blockdef_new("print", BLOCKTYPE_NORMAL, (ScrColor) CATEGORY_TERMINAL_COLOR, block_print);
     blockdef_add_image(sc_print, (ScrImage) { .image_ptr = &term_tex });
     blockdef_add_text(sc_print, gettext("Print"));
-    blockdef_add_argument(sc_print, gettext("Hello, scrap!"), BLOCKCONSTR_UNLIMITED);
+    blockdef_add_argument(sc_print, gettext("Hello, scrap!"), gettext("Abc"), BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_print);
     add_to_category(sc_print, cat_terminal);
 
     ScrBlockdef* sc_println = blockdef_new("println", BLOCKTYPE_NORMAL, (ScrColor) CATEGORY_TERMINAL_COLOR, block_println);
     blockdef_add_image(sc_println, (ScrImage) { .image_ptr = &term_tex });
     blockdef_add_text(sc_println, gettext("Print line"));
-    blockdef_add_argument(sc_println, gettext("Hello, scrap!"), BLOCKCONSTR_UNLIMITED);
+    blockdef_add_argument(sc_println, gettext("Hello, scrap!"), gettext("Abc"), BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_println);
     add_to_category(sc_println, cat_terminal);
 
@@ -1125,9 +1125,9 @@ void register_blocks(ScrVm* vm) {
     ScrBlockdef* sc_set_cursor = blockdef_new("set_cursor", BLOCKTYPE_NORMAL, (ScrColor) CATEGORY_TERMINAL_COLOR, block_set_cursor);
     blockdef_add_image(sc_set_cursor, (ScrImage) { .image_ptr = &term_tex });
     blockdef_add_text(sc_set_cursor, gettext("Set cursor X:"));
-    blockdef_add_argument(sc_set_cursor, "0", BLOCKCONSTR_UNLIMITED);
+    blockdef_add_argument(sc_set_cursor, "0", "0", BLOCKCONSTR_UNLIMITED);
     blockdef_add_text(sc_set_cursor, gettext("Y:"));
-    blockdef_add_argument(sc_set_cursor, "0", BLOCKCONSTR_UNLIMITED);
+    blockdef_add_argument(sc_set_cursor, "0", "0", BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_set_cursor);
     add_to_category(sc_set_cursor, cat_terminal);
 
@@ -1171,27 +1171,27 @@ void register_blocks(ScrVm* vm) {
 
     ScrBlockdef* sc_repeat = blockdef_new("repeat", BLOCKTYPE_CONTROL, (ScrColor) CATEGORY_CONTROL_COLOR, block_repeat);
     blockdef_add_text(sc_repeat, gettext("Repeat"));
-    blockdef_add_argument(sc_repeat, "10", BLOCKCONSTR_UNLIMITED);
+    blockdef_add_argument(sc_repeat, "10", "0", BLOCKCONSTR_UNLIMITED);
     blockdef_add_text(sc_repeat, gettext("times"));
     blockdef_register(vm, sc_repeat);
     add_to_category(sc_repeat, cat_control);
 
     ScrBlockdef* sc_while = blockdef_new("while", BLOCKTYPE_CONTROL, (ScrColor) CATEGORY_CONTROL_COLOR, block_while);
     blockdef_add_text(sc_while, gettext("While"));
-    blockdef_add_argument(sc_while, "", BLOCKCONSTR_UNLIMITED);
+    blockdef_add_argument(sc_while, "", gettext("cond."), BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_while);
     add_to_category(sc_while, cat_control);
 
     ScrBlockdef* sc_if = blockdef_new("if", BLOCKTYPE_CONTROL, (ScrColor) CATEGORY_CONTROL_COLOR, block_if);
     blockdef_add_text(sc_if, gettext("If"));
-    blockdef_add_argument(sc_if, "", BLOCKCONSTR_UNLIMITED);
+    blockdef_add_argument(sc_if, "", gettext("cond."), BLOCKCONSTR_UNLIMITED);
     blockdef_add_text(sc_if, gettext(", then"));
     blockdef_register(vm, sc_if);
     add_to_category(sc_if, cat_control);
 
     ScrBlockdef* sc_else_if = blockdef_new("else_if", BLOCKTYPE_CONTROLEND, (ScrColor) CATEGORY_CONTROL_COLOR, block_else_if);
     blockdef_add_text(sc_else_if, gettext("Else if"));
-    blockdef_add_argument(sc_else_if, "", BLOCKCONSTR_UNLIMITED);
+    blockdef_add_argument(sc_else_if, "", gettext("cond."), BLOCKCONSTR_UNLIMITED);
     blockdef_add_text(sc_else_if, gettext(", then"));
     blockdef_register(vm, sc_else_if);
     add_to_category(sc_else_if, cat_control);
@@ -1208,7 +1208,7 @@ void register_blocks(ScrVm* vm) {
 
     ScrBlockdef* sc_sleep = blockdef_new("sleep", BLOCKTYPE_NORMAL, (ScrColor) CATEGORY_CONTROL_COLOR, block_sleep);
     blockdef_add_text(sc_sleep, gettext("Sleep"));
-    blockdef_add_argument(sc_sleep, "", BLOCKCONSTR_UNLIMITED);
+    blockdef_add_argument(sc_sleep, "", "0", BLOCKCONSTR_UNLIMITED);
     blockdef_add_text(sc_sleep, gettext("us"));
     blockdef_register(vm, sc_sleep);
     add_to_category(sc_sleep, cat_control);
@@ -1218,43 +1218,43 @@ void register_blocks(ScrVm* vm) {
     blockdef_register(vm, sc_end);
 
     ScrBlockdef* sc_plus = blockdef_new("plus", BLOCKTYPE_NORMAL, (ScrColor) CATEGORY_MATH_COLOR, block_plus);
-    blockdef_add_argument(sc_plus, "9", BLOCKCONSTR_UNLIMITED);
+    blockdef_add_argument(sc_plus, "9", "0", BLOCKCONSTR_UNLIMITED);
     blockdef_add_text(sc_plus, "+");
-    blockdef_add_argument(sc_plus, "10", BLOCKCONSTR_UNLIMITED);
+    blockdef_add_argument(sc_plus, "10", "0", BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_plus);
     add_to_category(sc_plus, cat_math);
 
     ScrBlockdef* sc_minus = blockdef_new("minus", BLOCKTYPE_NORMAL, (ScrColor) CATEGORY_MATH_COLOR, block_minus);
-    blockdef_add_argument(sc_minus, "9", BLOCKCONSTR_UNLIMITED);
+    blockdef_add_argument(sc_minus, "9", "0", BLOCKCONSTR_UNLIMITED);
     blockdef_add_text(sc_minus, "-");
-    blockdef_add_argument(sc_minus, "10", BLOCKCONSTR_UNLIMITED);
+    blockdef_add_argument(sc_minus, "10", "0", BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_minus);
     add_to_category(sc_minus, cat_math);
 
     ScrBlockdef* sc_mult = blockdef_new("mult", BLOCKTYPE_NORMAL, (ScrColor) CATEGORY_MATH_COLOR, block_mult);
-    blockdef_add_argument(sc_mult, "9", BLOCKCONSTR_UNLIMITED);
+    blockdef_add_argument(sc_mult, "9", "0", BLOCKCONSTR_UNLIMITED);
     blockdef_add_text(sc_mult, "*");
-    blockdef_add_argument(sc_mult, "10", BLOCKCONSTR_UNLIMITED);
+    blockdef_add_argument(sc_mult, "10", "0", BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_mult);
     add_to_category(sc_mult, cat_math);
 
     ScrBlockdef* sc_div = blockdef_new("div", BLOCKTYPE_NORMAL, (ScrColor) CATEGORY_MATH_COLOR, block_div);
-    blockdef_add_argument(sc_div, "39", BLOCKCONSTR_UNLIMITED);
+    blockdef_add_argument(sc_div, "39", "0", BLOCKCONSTR_UNLIMITED);
     blockdef_add_text(sc_div, "/");
-    blockdef_add_argument(sc_div, "5", BLOCKCONSTR_UNLIMITED);
+    blockdef_add_argument(sc_div, "5", "0", BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_div);
     add_to_category(sc_div, cat_math);
 
     ScrBlockdef* sc_pow = blockdef_new("pow", BLOCKTYPE_NORMAL, (ScrColor) CATEGORY_MATH_COLOR, block_pow);
     blockdef_add_text(sc_pow, gettext("Pow"));
-    blockdef_add_argument(sc_pow, "5", BLOCKCONSTR_UNLIMITED);
-    blockdef_add_argument(sc_pow, "5", BLOCKCONSTR_UNLIMITED);
+    blockdef_add_argument(sc_pow, "5", "0", BLOCKCONSTR_UNLIMITED);
+    blockdef_add_argument(sc_pow, "5", "0", BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_pow);
     add_to_category(sc_pow, cat_math);
 
     ScrBlockdef* sc_math = blockdef_new("math", BLOCKTYPE_NORMAL, (ScrColor) CATEGORY_MATH_COLOR, block_math);
     blockdef_add_dropdown(sc_math, DROPDOWN_SOURCE_LISTREF, math_list_access);
-    blockdef_add_argument(sc_math, "", BLOCKCONSTR_UNLIMITED);
+    blockdef_add_argument(sc_math, "", "0.0", BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_math);
     add_to_category(sc_math, cat_math);
 
@@ -1265,97 +1265,97 @@ void register_blocks(ScrVm* vm) {
 
     ScrBlockdef* sc_bit_not = blockdef_new("bit_not", BLOCKTYPE_NORMAL, (ScrColor) CATEGORY_LOGIC_COLOR, block_bit_not);
     blockdef_add_text(sc_bit_not, "~");
-    blockdef_add_argument(sc_bit_not, "39", BLOCKCONSTR_UNLIMITED);
+    blockdef_add_argument(sc_bit_not, "39", "0", BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_bit_not);
     add_to_category(sc_bit_not, cat_logic);
 
     ScrBlockdef* sc_bit_and = blockdef_new("bit_and", BLOCKTYPE_NORMAL, (ScrColor) CATEGORY_LOGIC_COLOR, block_bit_and);
-    blockdef_add_argument(sc_bit_and, "39", BLOCKCONSTR_UNLIMITED);
+    blockdef_add_argument(sc_bit_and, "39", "0", BLOCKCONSTR_UNLIMITED);
     blockdef_add_text(sc_bit_and, "&");
-    blockdef_add_argument(sc_bit_and, "5", BLOCKCONSTR_UNLIMITED);
+    blockdef_add_argument(sc_bit_and, "5", "0", BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_bit_and);
     add_to_category(sc_bit_and, cat_logic);
 
     ScrBlockdef* sc_bit_or = blockdef_new("bit_or", BLOCKTYPE_NORMAL, (ScrColor) CATEGORY_LOGIC_COLOR, block_bit_or);
-    blockdef_add_argument(sc_bit_or, "39", BLOCKCONSTR_UNLIMITED);
+    blockdef_add_argument(sc_bit_or, "39", "0", BLOCKCONSTR_UNLIMITED);
     blockdef_add_text(sc_bit_or, "|");
-    blockdef_add_argument(sc_bit_or, "5", BLOCKCONSTR_UNLIMITED);
+    blockdef_add_argument(sc_bit_or, "5", "0", BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_bit_or);
     add_to_category(sc_bit_or, cat_logic);
 
     ScrBlockdef* sc_bit_xor = blockdef_new("bit_xor", BLOCKTYPE_NORMAL, (ScrColor) CATEGORY_LOGIC_COLOR, block_bit_xor);
-    blockdef_add_argument(sc_bit_xor, "39", BLOCKCONSTR_UNLIMITED);
+    blockdef_add_argument(sc_bit_xor, "39", "0", BLOCKCONSTR_UNLIMITED);
     blockdef_add_text(sc_bit_xor, "^");
-    blockdef_add_argument(sc_bit_xor, "5", BLOCKCONSTR_UNLIMITED);
+    blockdef_add_argument(sc_bit_xor, "5", "0", BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_bit_xor);
     add_to_category(sc_bit_xor, cat_logic);
 
     ScrBlockdef* sc_rem = blockdef_new("rem", BLOCKTYPE_NORMAL, (ScrColor) CATEGORY_MATH_COLOR, block_rem);
-    blockdef_add_argument(sc_rem, "39", BLOCKCONSTR_UNLIMITED);
+    blockdef_add_argument(sc_rem, "39", "0", BLOCKCONSTR_UNLIMITED);
     blockdef_add_text(sc_rem, "%");
-    blockdef_add_argument(sc_rem, "5", BLOCKCONSTR_UNLIMITED);
+    blockdef_add_argument(sc_rem, "5", "0", BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_rem);
     add_to_category(sc_rem, cat_math);
 
     ScrBlockdef* sc_less = blockdef_new("less", BLOCKTYPE_NORMAL, (ScrColor) CATEGORY_LOGIC_COLOR, block_less);
-    blockdef_add_argument(sc_less, "9", BLOCKCONSTR_UNLIMITED);
+    blockdef_add_argument(sc_less, "9", "0", BLOCKCONSTR_UNLIMITED);
     blockdef_add_text(sc_less, "<");
-    blockdef_add_argument(sc_less, "11", BLOCKCONSTR_UNLIMITED);
+    blockdef_add_argument(sc_less, "11", "0", BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_less);
     add_to_category(sc_less, cat_logic);
 
     ScrBlockdef* sc_less_eq = blockdef_new("less_eq", BLOCKTYPE_NORMAL, (ScrColor) CATEGORY_LOGIC_COLOR, block_less_eq);
-    blockdef_add_argument(sc_less_eq, "9", BLOCKCONSTR_UNLIMITED);
+    blockdef_add_argument(sc_less_eq, "9", "0", BLOCKCONSTR_UNLIMITED);
     blockdef_add_text(sc_less_eq, "<=");
-    blockdef_add_argument(sc_less_eq, "11", BLOCKCONSTR_UNLIMITED);
+    blockdef_add_argument(sc_less_eq, "11", "0", BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_less_eq);
     add_to_category(sc_less_eq, cat_logic);
 
     ScrBlockdef* sc_eq = blockdef_new("eq", BLOCKTYPE_NORMAL, (ScrColor) CATEGORY_LOGIC_COLOR, block_eq);
-    blockdef_add_argument(sc_eq, "", BLOCKCONSTR_UNLIMITED);
+    blockdef_add_argument(sc_eq, "", gettext("any"), BLOCKCONSTR_UNLIMITED);
     blockdef_add_text(sc_eq, "=");
-    blockdef_add_argument(sc_eq, "", BLOCKCONSTR_UNLIMITED);
+    blockdef_add_argument(sc_eq, "", gettext("any"), BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_eq);
     add_to_category(sc_eq, cat_logic);
 
     ScrBlockdef* sc_not_eq = blockdef_new("not_eq", BLOCKTYPE_NORMAL, (ScrColor) CATEGORY_LOGIC_COLOR, block_not_eq);
-    blockdef_add_argument(sc_not_eq, "", BLOCKCONSTR_UNLIMITED);
+    blockdef_add_argument(sc_not_eq, "", gettext("any"), BLOCKCONSTR_UNLIMITED);
     blockdef_add_text(sc_not_eq, "!=");
-    blockdef_add_argument(sc_not_eq, "", BLOCKCONSTR_UNLIMITED);
+    blockdef_add_argument(sc_not_eq, "", gettext("any"), BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_not_eq);
     add_to_category(sc_not_eq, cat_logic);
 
     ScrBlockdef* sc_more_eq = blockdef_new("more_eq", BLOCKTYPE_NORMAL, (ScrColor) CATEGORY_LOGIC_COLOR, block_more_eq);
-    blockdef_add_argument(sc_more_eq, "9", BLOCKCONSTR_UNLIMITED);
+    blockdef_add_argument(sc_more_eq, "9", "0", BLOCKCONSTR_UNLIMITED);
     blockdef_add_text(sc_more_eq, ">=");
-    blockdef_add_argument(sc_more_eq, "11", BLOCKCONSTR_UNLIMITED);
+    blockdef_add_argument(sc_more_eq, "11", "0", BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_more_eq);
     add_to_category(sc_more_eq, cat_logic);
 
     ScrBlockdef* sc_more = blockdef_new("more", BLOCKTYPE_NORMAL, (ScrColor) CATEGORY_LOGIC_COLOR, block_more);
-    blockdef_add_argument(sc_more, "9", BLOCKCONSTR_UNLIMITED);
+    blockdef_add_argument(sc_more, "9", "0", BLOCKCONSTR_UNLIMITED);
     blockdef_add_text(sc_more, ">");
-    blockdef_add_argument(sc_more, "11", BLOCKCONSTR_UNLIMITED);
+    blockdef_add_argument(sc_more, "11", "0", BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_more);
     add_to_category(sc_more, cat_logic);
 
     ScrBlockdef* sc_not = blockdef_new("not", BLOCKTYPE_NORMAL, (ScrColor) CATEGORY_LOGIC_COLOR, block_not);
     blockdef_add_text(sc_not, gettext("Not"));
-    blockdef_add_argument(sc_not, "", BLOCKCONSTR_UNLIMITED);
+    blockdef_add_argument(sc_not, "", gettext("cond."), BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_not);
     add_to_category(sc_not, cat_logic);
 
     ScrBlockdef* sc_and = blockdef_new("and", BLOCKTYPE_NORMAL, (ScrColor) CATEGORY_LOGIC_COLOR, block_and);
-    blockdef_add_argument(sc_and, "", BLOCKCONSTR_UNLIMITED);
+    blockdef_add_argument(sc_and, "", gettext("cond."), BLOCKCONSTR_UNLIMITED);
     blockdef_add_text(sc_and, gettext("and"));
-    blockdef_add_argument(sc_and, "", BLOCKCONSTR_UNLIMITED);
+    blockdef_add_argument(sc_and, "", gettext("cond."), BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_and);
     add_to_category(sc_and, cat_logic);
 
     ScrBlockdef* sc_or = blockdef_new("or", BLOCKTYPE_NORMAL, (ScrColor) CATEGORY_LOGIC_COLOR, block_or);
-    blockdef_add_argument(sc_or, "", BLOCKCONSTR_UNLIMITED);
+    blockdef_add_argument(sc_or, "", gettext("cond."), BLOCKCONSTR_UNLIMITED);
     blockdef_add_text(sc_or, gettext("or"));
-    blockdef_add_argument(sc_or, "", BLOCKCONSTR_UNLIMITED);
+    blockdef_add_argument(sc_or, "", gettext("cond."), BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_or);
     add_to_category(sc_or, cat_logic);
 
@@ -1371,52 +1371,52 @@ void register_blocks(ScrVm* vm) {
 
     ScrBlockdef* sc_random = blockdef_new("random", BLOCKTYPE_NORMAL, (ScrColor) CATEGORY_LOGIC_COLOR, block_random);
     blockdef_add_text(sc_random, gettext("Random"));
-    blockdef_add_argument(sc_random, "0", BLOCKCONSTR_UNLIMITED);
+    blockdef_add_argument(sc_random, "0", "0", BLOCKCONSTR_UNLIMITED);
     blockdef_add_text(sc_random, gettext("to"));
-    blockdef_add_argument(sc_random, "10", BLOCKCONSTR_UNLIMITED);
+    blockdef_add_argument(sc_random, "10", "0", BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_random);
     add_to_category(sc_random, cat_logic);
 
     ScrBlockdef* sc_join = blockdef_new("join", BLOCKTYPE_NORMAL, (ScrColor) CATEGORY_STRING_COLOR, block_join);
     blockdef_add_text(sc_join, gettext("Join"));
-    blockdef_add_argument(sc_join, gettext("left and "), BLOCKCONSTR_UNLIMITED);
-    blockdef_add_argument(sc_join, gettext("right"), BLOCKCONSTR_UNLIMITED);
+    blockdef_add_argument(sc_join, gettext("left and "), gettext("Abc"), BLOCKCONSTR_UNLIMITED);
+    blockdef_add_argument(sc_join, gettext("right"), gettext("Abc"), BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_join);
     add_to_category(sc_join, cat_string);
 
     ScrBlockdef* sc_ord = blockdef_new("ord", BLOCKTYPE_NORMAL, (ScrColor) CATEGORY_STRING_COLOR, block_ord);
     blockdef_add_text(sc_ord, gettext("Ord"));
-    blockdef_add_argument(sc_ord, "A", BLOCKCONSTR_UNLIMITED);
+    blockdef_add_argument(sc_ord, "A", gettext("Abc"), BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_ord);
     add_to_category(sc_ord, cat_string);
 
     ScrBlockdef* sc_chr = blockdef_new("chr", BLOCKTYPE_NORMAL, (ScrColor) CATEGORY_STRING_COLOR, block_chr);
     blockdef_add_text(sc_chr, gettext("Chr"));
-    blockdef_add_argument(sc_chr, "65", BLOCKCONSTR_UNLIMITED);
+    blockdef_add_argument(sc_chr, "65", "0", BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_chr);
     add_to_category(sc_chr, cat_string);
 
     ScrBlockdef* sc_letter_in = blockdef_new("letter_in", BLOCKTYPE_NORMAL, (ScrColor) CATEGORY_STRING_COLOR, block_letter_in);
     blockdef_add_text(sc_letter_in, gettext("Letter"));
-    blockdef_add_argument(sc_letter_in, "1", BLOCKCONSTR_UNLIMITED);
+    blockdef_add_argument(sc_letter_in, "1", "0", BLOCKCONSTR_UNLIMITED);
     blockdef_add_text(sc_letter_in, gettext("in"));
-    blockdef_add_argument(sc_letter_in, gettext("string"), BLOCKCONSTR_UNLIMITED);
+    blockdef_add_argument(sc_letter_in, gettext("string"), gettext("Abc"), BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_letter_in);
     add_to_category(sc_letter_in, cat_string);
 
     ScrBlockdef* sc_substring = blockdef_new("substring", BLOCKTYPE_NORMAL, (ScrColor) CATEGORY_STRING_COLOR, block_substring);
     blockdef_add_text(sc_substring, gettext("Substring"));
-    blockdef_add_argument(sc_substring, "2", BLOCKCONSTR_UNLIMITED);
+    blockdef_add_argument(sc_substring, "2", "0", BLOCKCONSTR_UNLIMITED);
     blockdef_add_text(sc_substring, gettext("to"));
-    blockdef_add_argument(sc_substring, "4", BLOCKCONSTR_UNLIMITED);
+    blockdef_add_argument(sc_substring, "4", "0", BLOCKCONSTR_UNLIMITED);
     blockdef_add_text(sc_substring, gettext("in"));
-    blockdef_add_argument(sc_substring, gettext("string"), BLOCKCONSTR_UNLIMITED);
+    blockdef_add_argument(sc_substring, gettext("string"), gettext("Abc"), BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_substring);
     add_to_category(sc_substring, cat_string);
 
     ScrBlockdef* sc_length = blockdef_new("length", BLOCKTYPE_NORMAL, (ScrColor) CATEGORY_STRING_COLOR, block_length);
     blockdef_add_text(sc_length, gettext("Length"));
-    blockdef_add_argument(sc_length, gettext("string"), BLOCKCONSTR_UNLIMITED);
+    blockdef_add_argument(sc_length, gettext("string"), gettext("Abc"), BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_length);
     add_to_category(sc_length, cat_string);
 
@@ -1427,25 +1427,25 @@ void register_blocks(ScrVm* vm) {
     
     ScrBlockdef* sc_int = blockdef_new("convert_int", BLOCKTYPE_NORMAL, (ScrColor) CATEGORY_MISC_COLOR, block_convert_int);
     blockdef_add_text(sc_int, gettext("Int"));
-    blockdef_add_argument(sc_int, "", BLOCKCONSTR_UNLIMITED);
+    blockdef_add_argument(sc_int, "", gettext("any"), BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_int);
     add_to_category(sc_int, cat_misc);
 
     ScrBlockdef* sc_float = blockdef_new("convert_float", BLOCKTYPE_NORMAL, (ScrColor) CATEGORY_MISC_COLOR, block_convert_float);
     blockdef_add_text(sc_float, gettext("Float"));
-    blockdef_add_argument(sc_float, "", BLOCKCONSTR_UNLIMITED);
+    blockdef_add_argument(sc_float, "", gettext("any"), BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_float);
     add_to_category(sc_float, cat_misc);
 
     ScrBlockdef* sc_str = blockdef_new("convert_str", BLOCKTYPE_NORMAL, (ScrColor) CATEGORY_MISC_COLOR, block_convert_str);
     blockdef_add_text(sc_str, gettext("Str"));
-    blockdef_add_argument(sc_str, "", BLOCKCONSTR_UNLIMITED);
+    blockdef_add_argument(sc_str, "", gettext("any"), BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_str);
     add_to_category(sc_str, cat_misc);
 
     ScrBlockdef* sc_bool = blockdef_new("convert_bool", BLOCKTYPE_NORMAL, (ScrColor) CATEGORY_MISC_COLOR, block_convert_bool);
     blockdef_add_text(sc_bool, gettext("Bool"));
-    blockdef_add_argument(sc_bool, "", BLOCKCONSTR_UNLIMITED);
+    blockdef_add_argument(sc_bool, "", gettext("any"), BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_bool);
     add_to_category(sc_bool, cat_misc);
 
@@ -1456,29 +1456,29 @@ void register_blocks(ScrVm* vm) {
 
     ScrBlockdef* sc_comment = blockdef_new("comment", BLOCKTYPE_NORMAL, (ScrColor) { 0x77, 0x77, 0x77, 0xff }, block_noop);
     blockdef_add_text(sc_comment, "//");
-    blockdef_add_argument(sc_comment, "", BLOCKCONSTR_UNLIMITED);
+    blockdef_add_argument(sc_comment, "", gettext("any"), BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_comment);
     add_to_category(sc_comment, cat_misc);
 
     ScrBlockdef* sc_decl_var = blockdef_new("decl_var", BLOCKTYPE_NORMAL, (ScrColor) CATEGORY_DATA_COLOR, block_declare_var);
     blockdef_add_text(sc_decl_var, gettext("Declare"));
-    blockdef_add_argument(sc_decl_var, gettext("my variable"), BLOCKCONSTR_STRING);
+    blockdef_add_argument(sc_decl_var, gettext("my variable"), gettext("Abc"), BLOCKCONSTR_STRING);
     blockdef_add_text(sc_decl_var, "=");
-    blockdef_add_argument(sc_decl_var, "", BLOCKCONSTR_UNLIMITED);
+    blockdef_add_argument(sc_decl_var, "", gettext("any"), BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_decl_var);
     add_to_category(sc_decl_var, cat_data);
 
     ScrBlockdef* sc_get_var = blockdef_new("get_var", BLOCKTYPE_NORMAL, (ScrColor) CATEGORY_DATA_COLOR, block_get_var);
     blockdef_add_text(sc_get_var, gettext("Get"));
-    blockdef_add_argument(sc_get_var, gettext("my variable"), BLOCKCONSTR_UNLIMITED);
+    blockdef_add_argument(sc_get_var, gettext("my variable"), gettext("Abc"), BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_get_var);
     add_to_category(sc_get_var, cat_data);
 
     ScrBlockdef* sc_set_var = blockdef_new("set_var", BLOCKTYPE_NORMAL, (ScrColor) CATEGORY_DATA_COLOR, block_set_var);
     blockdef_add_text(sc_set_var, gettext("Set"));
-    blockdef_add_argument(sc_set_var, gettext("my variable"), BLOCKCONSTR_UNLIMITED);
+    blockdef_add_argument(sc_set_var, gettext("my variable"), gettext("Abc"), BLOCKCONSTR_UNLIMITED);
     blockdef_add_text(sc_set_var, "=");
-    blockdef_add_argument(sc_set_var, "", BLOCKCONSTR_UNLIMITED);
+    blockdef_add_argument(sc_set_var, "", gettext("any"), BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_set_var);
     add_to_category(sc_set_var, cat_data);
 
@@ -1491,27 +1491,27 @@ void register_blocks(ScrVm* vm) {
     ScrBlockdef* sc_list_add = blockdef_new("list_add", BLOCKTYPE_NORMAL, (ScrColor) { 0xff, 0x44, 0x00, 0xff }, block_list_add);
     blockdef_add_image(sc_list_add, (ScrImage) { .image_ptr = &list_tex });
     blockdef_add_text(sc_list_add, gettext("Add"));
-    blockdef_add_argument(sc_list_add, gettext("my variable"), BLOCKCONSTR_UNLIMITED);
+    blockdef_add_argument(sc_list_add, gettext("my variable"), gettext("Abc"), BLOCKCONSTR_UNLIMITED);
     blockdef_add_text(sc_list_add, gettext("value"));
-    blockdef_add_argument(sc_list_add, "", BLOCKCONSTR_UNLIMITED);
+    blockdef_add_argument(sc_list_add, "", gettext("any"), BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_list_add);
     add_to_category(sc_list_add, cat_data);
 
     ScrBlockdef* sc_list_get = blockdef_new("list_get", BLOCKTYPE_NORMAL, (ScrColor) { 0xff, 0x44, 0x00, 0xff }, block_list_get);
     blockdef_add_image(sc_list_get, (ScrImage) { .image_ptr = &list_tex });
-    blockdef_add_argument(sc_list_get, gettext("my variable"), BLOCKCONSTR_UNLIMITED);
+    blockdef_add_argument(sc_list_get, gettext("my variable"), gettext("Abc"), BLOCKCONSTR_UNLIMITED);
     blockdef_add_text(sc_list_get, gettext("get at"));
-    blockdef_add_argument(sc_list_get, "0", BLOCKCONSTR_UNLIMITED);
+    blockdef_add_argument(sc_list_get, "0", "0", BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_list_get);
     add_to_category(sc_list_get, cat_data);
 
     ScrBlockdef* sc_list_set = blockdef_new("list_set", BLOCKTYPE_NORMAL, (ScrColor) { 0xff, 0x44, 0x00, 0xff }, block_list_set);
     blockdef_add_image(sc_list_set, (ScrImage) { .image_ptr = &list_tex });
-    blockdef_add_argument(sc_list_set, gettext("my variable"), BLOCKCONSTR_UNLIMITED);
+    blockdef_add_argument(sc_list_set, gettext("my variable"), gettext("Abc"), BLOCKCONSTR_UNLIMITED);
     blockdef_add_text(sc_list_set, gettext("set at"));
-    blockdef_add_argument(sc_list_set, "0", BLOCKCONSTR_UNLIMITED);
+    blockdef_add_argument(sc_list_set, "0", "0", BLOCKCONSTR_UNLIMITED);
     blockdef_add_text(sc_list_set, "=");
-    blockdef_add_argument(sc_list_set, "", BLOCKCONSTR_UNLIMITED);
+    blockdef_add_argument(sc_list_set, "", gettext("any"), BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_list_set);
     add_to_category(sc_list_set, cat_data);
 
@@ -1525,7 +1525,7 @@ void register_blocks(ScrVm* vm) {
     ScrBlockdef* sc_return = blockdef_new("return", BLOCKTYPE_NORMAL, (ScrColor) { 0x99, 0x00, 0xff, 0xff }, block_return);
     blockdef_add_image(sc_return, (ScrImage) { .image_ptr = &special_tex });
     blockdef_add_text(sc_return, gettext("Return"));
-    blockdef_add_argument(sc_return, "", BLOCKCONSTR_UNLIMITED);
+    blockdef_add_argument(sc_return, "", gettext("any"), BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_return);
     add_to_category(sc_return, cat_control);
 }

@@ -118,7 +118,7 @@ static void edit_text(char** text) {
     }
 
     if (IsKeyPressed(KEY_DELETE) || IsKeyPressedRepeat(KEY_DELETE)) {
-        if (vector_size(*text) <= 1 || hover_info.select_input_ind == vector_size(*text) - 1) return;
+        if (vector_size(*text) <= 1 || hover_info.select_input_ind == (int)vector_size(*text) - 1) return;
 
         int remove_pos = hover_info.select_input_ind;
         int remove_size;
@@ -435,7 +435,7 @@ bool handle_editor_add_arg_button(void) {
         }
     }
 
-    blockdef_add_argument(blockdef, "", BLOCKCONSTR_UNLIMITED);
+    blockdef_add_argument(blockdef, "", gettext("any"), BLOCKCONSTR_UNLIMITED);
 
     sprintf(str, "arg%zu", last_input);
     ScrBlockdef* arg_blockdef = blockdef->inputs[last_input].data.arg.blockdef;

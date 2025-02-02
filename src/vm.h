@@ -86,6 +86,7 @@ struct ScrInputArgument {
     ScrBlockdef* blockdef;
     ScrInputArgumentConstraint constr;
     char* text;
+    const char* hint_text;
 };
 
 enum ScrInputDropdownSource {
@@ -368,7 +369,7 @@ void data_free(ScrData data);
 ScrBlockdef* blockdef_new(const char* id, ScrBlockdefType type, ScrColor color, ScrBlockFunc func);
 size_t blockdef_register(ScrVm* vm, ScrBlockdef* blockdef);
 void blockdef_add_text(ScrBlockdef* blockdef, char* text);
-void blockdef_add_argument(ScrBlockdef* blockdef, char* defualt_data, ScrInputArgumentConstraint constraint);
+void blockdef_add_argument(ScrBlockdef* blockdef, char* defualt_data, const char* hint_text, ScrInputArgumentConstraint constraint);
 void blockdef_add_dropdown(ScrBlockdef* blockdef, ScrInputDropdownSource dropdown_source, ScrListAccessor accessor);
 void blockdef_add_image(ScrBlockdef* blockdef, ScrImage image);
 void blockdef_add_blockdef_editor(ScrBlockdef* blockdef);
@@ -1342,7 +1343,7 @@ void blockdef_add_text(ScrBlockdef* blockdef, char* text) {
     vector_add(&input->data.text, 0);
 }
 
-void blockdef_add_argument(ScrBlockdef* blockdef, char* defualt_data, ScrInputArgumentConstraint constraint) {
+void blockdef_add_argument(ScrBlockdef* blockdef, char* defualt_data, const char* hint_text, ScrInputArgumentConstraint constraint) {
     ScrInput* input = vector_add_dst(&blockdef->inputs);
     input->type = INPUT_ARGUMENT;
     input->data = (ScrInputData) {
@@ -1350,6 +1351,7 @@ void blockdef_add_argument(ScrBlockdef* blockdef, char* defualt_data, ScrInputAr
             .blockdef = blockdef_new("custom_arg", BLOCKTYPE_NORMAL, blockdef->color, NULL),
             .text = defualt_data,
             .constr = constraint,
+            .hint_text = hint_text,
         },
     };
     input->data.arg.blockdef->ref_count++;

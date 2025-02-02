@@ -195,7 +195,7 @@ static void input_on_hover(GuiElement* el) {
     hover_info.input_info.rel_pos = (Vector2) { gui->mouse_x - el->abs_x, gui->mouse_y - el->abs_y };
 }
 
-void draw_input(Font* font, char** input, unsigned short font_size, GuiColor font_color) {
+void draw_input(Font* font, char** input, const char* hint, unsigned short font_size, GuiColor font_color) {
     gui_element_begin(gui);
         gui_set_direction(gui, DIRECTION_VERTICAL);
         gui_set_grow(gui, DIRECTION_VERTICAL);
@@ -225,7 +225,11 @@ void draw_input(Font* font, char** input, unsigned short font_size, GuiColor fon
 
                 gui_text(gui, font, *input + hover_info.select_input_ind, font_size, font_color);
             } else {
-                gui_text(gui, font, *input, font_size, font_color);
+                if (**input == 0) {
+                    gui_text(gui, font, hint, font_size, (GuiColor) { font_color.r, font_color.g, font_color.b, font_color.a * 0.3 });
+                } else {
+                    gui_text(gui, font, *input, font_size, font_color);
+                }
             }
         gui_element_end(gui);
     gui_element_end(gui);
@@ -277,7 +281,7 @@ static void draw_blockdef(ScrBlockdef* blockdef, bool editing) {
                         if (hover_info.select_input == &input->data.text) gui_set_border(gui, (GuiColor) { 0x30, 0x30, 0x30, 0xff }, BLOCK_OUTLINE_SIZE);
                         gui_on_hover(gui, blockdef_input_on_hover);
 
-                        draw_input(&font_cond, &input->data.text, BLOCK_TEXT_SIZE, (GuiColor) { 0x00, 0x00, 0x00, 0xff });
+                        draw_input(&font_cond, &input->data.text, "", BLOCK_TEXT_SIZE, (GuiColor) { 0x00, 0x00, 0x00, 0xff });
                     gui_element_end(gui);
                 gui_element_end(gui);
             } else {
@@ -403,9 +407,9 @@ static void draw_block(ScrBlock* block, bool highlight) {
                         gui_on_hover(gui, argument_on_hover);
 
                         if (arg->type == ARGUMENT_TEXT) {
-                            draw_input(&font_cond, &arg->data.text, BLOCK_TEXT_SIZE, (GuiColor) { 0x00, 0x00, 0x00, 0xff });
+                            draw_input(&font_cond, &arg->data.text, input->data.arg.hint_text, BLOCK_TEXT_SIZE, (GuiColor) { 0x00, 0x00, 0x00, 0xff });
                         } else {
-                            draw_input(&font_cond_shadow, &arg->data.text, BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+                            draw_input(&font_cond_shadow, &arg->data.text, input->data.arg.hint_text, BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
                         }
                     gui_element_end(gui);
                 gui_element_end(gui);

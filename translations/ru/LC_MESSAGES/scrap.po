@@ -442,3 +442,19 @@ msgstr "Готово"
 #: render.c
 msgid "Save"
 msgstr "Сохранить"
+
+#: blocks.c
+msgid "any"
+msgstr "любое"
+
+#: blocks.c
+msgid "cond."
+msgstr "усл."
+
+#: blocks.c
+msgid "Abc"
+msgstr "Абв"
+
+#: window.c
+msgid "path"
+msgstr "путь"
