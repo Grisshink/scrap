@@ -58,6 +58,8 @@ translations:
 	cp -r translations locale
 	msgfmt -o locale/ru/LC_MESSAGES/scrap.mo locale/ru/LC_MESSAGES/scrap.po
 	rm locale/ru/LC_MESSAGES/scrap.po
+	msgfmt -o locale/kk/LC_MESSAGES/scrap.mo locale/kk/LC_MESSAGES/scrap.po
+	rm locale/kk/LC_MESSAGES/scrap.po
 
 windows-build: $(EXE_NAME).exe
 	mkdir -p $(WINDOWS_DIR)
