@@ -431,15 +431,16 @@ void setup(void) {
 
 // Main function: Initializes configurations, sets up window, processes input, renders GUI, and cleans up resources on exit
 int main(void) {
-    setlocale(LC_MESSAGES, "");
-    textdomain("scrap");
-    bindtextdomain("scrap", LOCALE_PATH);
-
     config_new(&conf);
     config_new(&window_conf);
     code_tabs = vector_create();
     set_default_config(&conf);
     load_config(&conf);
+
+    if (conf.language != LANG_SYSTEM) setenv("LANGUAGE", language_to_code(conf.language), false);
+    setlocale(LC_MESSAGES, "");
+    textdomain("scrap");
+    bindtextdomain("scrap", LOCALE_PATH);
 
     SetConfigFlags(FLAG_MSAA_4X_HINT | FLAG_WINDOW_RESIZABLE);
     InitWindow(800, 600, "Scrap");

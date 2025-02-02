@@ -43,6 +43,13 @@ const int codepoint_regions[CODEPOINT_REGION_COUNT][2] = {
 };
 int codepoint_start_ranges[CODEPOINT_REGION_COUNT] = {0};
 
+char* language_list[4] = {
+    "System",
+    "English [en]",
+    "Russian [ru]",
+    "Kazakh [kk]",
+};
+
 char scrap_ident[] = "SCRAP";
 const char** save_block_ids = NULL;
 ScrBlockdef** save_blockdefs = NULL;
@@ -77,6 +84,7 @@ void config_free(Config* config) {
 void config_copy(Config* dst, Config* src) {
     dst->font_size = src->font_size;
     dst->fps_limit = src->fps_limit;
+    dst->language = src->language;
     dst->block_size_threshold = src->block_size_threshold;
     dst->font_path = vector_copy(src->font_path);
     dst->font_bold_path = vector_copy(src->font_bold_path);
@@ -87,6 +95,7 @@ void set_default_config(Config* config) {
     config->font_size = 32;
     config->fps_limit = 60;
     config->block_size_threshold = 1000;
+    config->language = LANG_SYSTEM;
     vector_set_string(&config->font_path, DATA_PATH "nk57-cond.otf");
     vector_set_string(&config->font_bold_path, DATA_PATH "nk57-eb.otf");
     vector_set_string(&config->font_mono_path, DATA_PATH "nk57.otf");
@@ -208,6 +217,7 @@ void save_config(Config* config) {
     file_str[0] = 0;
     int cursor = 0;
 
+    cursor += sprintf(file_str + cursor, "LANGUAGE=%s\n", language_to_code(config->language));
     cursor += sprintf(file_str + cursor, "UI_SIZE=%u\n", config->font_size);
     cursor += sprintf(file_str + cursor, "FPS_LIMIT=%u\n", config->fps_limit);
     cursor += sprintf(file_str + cursor, "BLOCK_SIZE_THRESHOLD=%u\n", config->block_size_threshold);
@@ -303,6 +313,9 @@ void load_config(Config* config) {
         } else if (!strncmp(field, "CONFIG_TAB_", sizeof("CONFIG_TAB_") - 1)) {
             char* panel_value = value;
             tab_new(field + sizeof("CONFIG_TAB_") - 1, load_panel_config(&panel_value));
+        } else if (!strcmp(field, "LANGUAGE")) {
+            Language lang = code_to_language(value);
+            config->language = lang;
         } else {
             TraceLog(LOG_WARNING, "Unknown key: %s", field);
         }

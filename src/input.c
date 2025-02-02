@@ -401,6 +401,17 @@ bool handle_right_slider_button_click(void) {
     return true;
 }
 
+bool handle_settings_dropdown_button_click(void) {
+    *hover_info.select_settings_dropdown_value = hover_info.dropdown.select_ind;
+    return handle_dropdown_close();
+}
+
+bool handle_settings_dropdown_click(void) {
+    hover_info.select_settings_dropdown_value = hover_info.settings_dropdown_data.value;
+    show_dropdown(LOCATION_SETTINGS, hover_info.settings_dropdown_data.list, hover_info.settings_dropdown_data.list_len, handle_settings_dropdown_button_click);
+    return true;
+} 
+
 bool handle_about_license_button_click(void) {
     OpenURL(LICENSE_URL);
     return true;

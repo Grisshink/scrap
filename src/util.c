@@ -19,6 +19,8 @@
 #include "raylib.h"
 #include "blocks.h"
 
+#include <assert.h>
+
 Timer start_timer(const char* name) {
     Timer timer;
     timer.name = name;
@@ -54,4 +56,26 @@ ScrBlock block_new_ms(ScrBlockdef* blockdef) {
         block.arguments[i].data.blockdef->func = block_exec_custom;
     }
     return block;
+}
+
+const char* language_to_code(Language lang) {
+    switch (lang) {
+        case LANG_SYSTEM: return "system";
+        case LANG_EN: return "en";
+        case LANG_RU: return "ru";
+        case LANG_KK: return "kk";
+    }
+    assert(false && "Unreachable");
+}
+
+Language code_to_language(const char* code) {
+    if (!strcmp(code, "en")) {
+        return LANG_EN;
+    } else if (!strcmp(code, "ru")) {
+        return LANG_RU;
+    } else if (!strcmp(code, "kk")) {
+        return LANG_KK;
+    } else {
+        return LANG_SYSTEM;
+    }
 }

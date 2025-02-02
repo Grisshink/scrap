@@ -25,10 +25,18 @@
 
 typedef struct PanelTree PanelTree;
 
+typedef enum {
+    LANG_SYSTEM = 0,
+    LANG_EN,
+    LANG_RU,
+    LANG_KK,
+} Language;
+
 typedef struct {
     int font_size;
     int fps_limit;
     int block_size_threshold;
+    Language language;
     char* font_path;
     char* font_bold_path;
     char* font_mono_path;
@@ -84,6 +92,7 @@ typedef enum {
     LOCATION_NONE = 0,
     LOCATION_FILE_MENU,
     LOCATION_BLOCK_DROPDOWN,
+    LOCATION_SETTINGS,
 } DropdownLocations;
 
 typedef struct {
@@ -104,6 +113,12 @@ typedef struct {
     int select_ind;
     int scroll_amount;
 } DropdownHoverInfo;
+
+typedef struct {
+    int* value;
+    char** list;
+    int list_len;
+} DropdownData;
 
 typedef struct {
     int min;
@@ -171,6 +186,9 @@ typedef struct {
     PanelType mouse_panel;
     PanelTree* prev_panel;
     SplitSide panel_side;
+
+    DropdownData settings_dropdown_data;
+    int* select_settings_dropdown_value;
 } HoverInfo;
 
 typedef struct {
@@ -272,6 +290,7 @@ extern char* top_bar_buttons_text[3];
 extern char* tab_bar_buttons_text[2];
 
 extern char project_name[1024];
+extern char* language_list[4];
 
 extern const int codepoint_regions[CODEPOINT_REGION_COUNT][2];
 extern int codepoint_start_ranges[CODEPOINT_REGION_COUNT];
@@ -328,6 +347,7 @@ bool handle_settings_reset_panels_button_click(void);
 bool handle_left_slider_button_click(void);
 bool handle_right_slider_button_click(void);
 bool handle_category_click(void);
+bool handle_settings_dropdown_click(void);
 PanelTree* find_panel(PanelTree* root, PanelType panel);
 
 // util.c
@@ -336,6 +356,8 @@ const char* into_data_path(const char* path);
 ScrBlock block_new_ms(ScrBlockdef* blockdef);
 Timer start_timer(const char* name);
 double end_timer(Timer timer);
+Language code_to_language(const char* code);
+const char* language_to_code(Language lang);
 
 // save.c
 void set_default_config(Config* config);

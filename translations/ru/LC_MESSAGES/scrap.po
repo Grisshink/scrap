@@ -458,3 +458,23 @@ msgstr "Абв"
 #: window.c
 msgid "path"
 msgstr "путь"
+
+#: window.c
+msgid "Language"
+msgstr "Язык"
+
+#: save.c
+msgid "System"
+msgstr "Системный"
+
+#: save.c
+msgid "English [en]"
+msgstr "Английский [en]"
+
+#: save.c
+msgid "Russian [ru]"
+msgstr "Русский [ru]"
+
+#: save.c
+msgid "Kazakh [kk]"
+msgstr "Казахский [kk]"

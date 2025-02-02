@@ -78,11 +78,13 @@ void gui_window_hide_immediate(void) {
 }
 
 static void settings_button_on_hover(GuiElement* el) {
+    if (hover_info.top_bars.handler) return;
     el->color = (GuiColor) { 0x40, 0x40, 0x40, 0xff };
     hover_info.top_bars.handler = el->custom_data;
 }
 
 static void close_button_on_hover(GuiElement* el) {
+    if (hover_info.top_bars.handler) return;
     if (el->draw_type == DRAWTYPE_RECT) return;
     el->draw_type = DRAWTYPE_RECT;
     el->data.rect_type = RECT_NORMAL;
@@ -92,7 +94,7 @@ static void close_button_on_hover(GuiElement* el) {
 
 static void window_on_hover(GuiElement* el) {
     (void) el;
-    hover_info.top_bars.handler = NULL;
+    if (!hover_info.dropdown.location) hover_info.top_bars.handler = NULL;
 }
 
 static void begin_window(const char* title, int w, int h, float scaling) {
@@ -163,6 +165,7 @@ static void end_window(void) {
 }
 
 static void warning_on_hover(GuiElement* el) {
+    if (hover_info.top_bars.handler) return;
     (void) el;
     settings_tooltip = true;
 }
@@ -196,12 +199,14 @@ static void begin_setting(const char* name, bool warning) {
 }
 
 static void slider_on_hover(GuiElement* el) {
+    if (hover_info.top_bars.handler) return;
     unsigned short len;
     hover_info.hover_slider = *(SliderHoverInfo*)gui_get_state(el, &len);
     el->color = hover_info.hover_slider.value == hover_info.dragged_slider.value ? (GuiColor) { 0x2b, 0x2b, 0x2b, 0xff } : (GuiColor) { 0x40, 0x40, 0x40, 0xff };
 }
 
 static void slider_button_on_hover(GuiElement* el) {
+    if (hover_info.top_bars.handler) return;
     el->draw_type = DRAWTYPE_RECT;
     el->color = (GuiColor) { 0x60, 0x60, 0x60, 0xff };
     el->data.rect_type = RECT_NORMAL;
@@ -267,7 +272,54 @@ static void end_setting(void) {
 }
 
 static void text_input_on_hover(GuiElement* el) {
+    if (hover_info.top_bars.handler) return;
     el->color = (GuiColor) { 0x40, 0x40, 0x40, 0xff };
+}
+
+static void dropdown_input_on_hover(GuiElement* el) {
+    if (hover_info.top_bars.handler) return;
+    unsigned short len;
+    hover_info.settings_dropdown_data = *(DropdownData*)gui_get_state(el, &len);
+    hover_info.top_bars.handler = handle_settings_dropdown_click;
+    if (el->color.r == 0x30) el->color = (GuiColor) { 0x40, 0x40, 0x40, 0xff };
+}
+
+static void draw_dropdown_input(int* value, char** list, int list_len) {
+    gui_element_begin(gui);
+        gui_set_grow(gui, DIRECTION_HORIZONTAL);
+        gui_set_grow(gui, DIRECTION_VERTICAL);
+        gui_set_direction(gui, DIRECTION_HORIZONTAL);
+        gui_set_rect(gui, (GuiColor) { 0x30, 0x30, 0x30, 0xff });
+        gui_on_hover(gui, dropdown_input_on_hover);
+
+        DropdownData data = (DropdownData) {
+            .value = value,
+            .list = list,
+            .list_len = list_len,
+        };
+        gui_set_state(gui, &data, sizeof(data));
+
+        if (hover_info.select_settings_dropdown_value == value && hover_info.dropdown.location == LOCATION_SETTINGS) {
+            hover_info.dropdown.element = gui_get_element(gui);
+            gui_set_rect(gui, (GuiColor) { 0x2b, 0x2b, 0x2b, 0xff });
+        }
+
+        gui_element_begin(gui);
+            gui_set_grow(gui, DIRECTION_HORIZONTAL);
+            gui_set_grow(gui, DIRECTION_VERTICAL);
+            gui_set_direction(gui, DIRECTION_HORIZONTAL);
+            gui_set_align(gui, ALIGN_CENTER);
+            gui_set_border(gui, (GuiColor) { 0x60, 0x60, 0x60, 0xff }, 2);
+            gui_set_shader(gui, &line_shader);
+            gui_set_padding(gui, WINDOW_ELEMENT_PADDING, 0);
+            gui_set_scissor(gui);
+
+            gui_grow(gui, DIRECTION_HORIZONTAL);
+            gui_text(gui, &font_cond, gettext(list[*value]), conf.font_size * 0.6, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+            gui_grow(gui, DIRECTION_HORIZONTAL);
+            gui_image(gui, &drop_tex, BLOCK_IMAGE_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+        gui_element_end(gui);
+    gui_element_end(gui);
 }
 
 static void draw_text_input(char** input, const char* hint, int* scroll) {
@@ -357,6 +409,10 @@ void draw_window(void) {
     switch (window.type) {
     case GUI_TYPE_SETTINGS:
         begin_window(gettext("Settings"), 0.6 * gui->win_w, 0.8 * gui->win_h, animation_ease);
+            begin_setting(gettext("Language"), true);
+                draw_dropdown_input((int*)&window_conf.language, language_list, ARRLEN(language_list));
+            end_setting();
+
             begin_setting(gettext("UI size"), true);
                 draw_slider(8, 64, &window_conf.font_size);
             end_setting();
