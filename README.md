@@ -60,6 +60,12 @@ Download command for arch-based distributions:
 sudo pacman -S libx11 libxrandr libxi libxcursor libxinerama gettext
 ```
 
+Download command for openSUSE:
+
+```bash
+sudo zypper install libX11-devel libXrandr-devel libXi-devel libXcursor-devel libXinerama-devel gettext
+```
+
 ### Build
 
 Before building the repo needs to be cloned along with its submodules. To do this, run:
