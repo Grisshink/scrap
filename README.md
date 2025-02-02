@@ -42,10 +42,23 @@ Scrap is currently in **Beta** stage. Some features may be missing or break, so 
 
 ### Dependencies
 
-Scrap requires these dependencies to run (They are all built into the repo, so you don't have to download anything):
-- [Raylib](https://github.com/raysan5/raylib) (Patched to support SVGs)
-- [tinyfiledialogs](https://sourceforge.net/projects/tinyfiledialogs/)
-- [cfgpath](https://github.com/Malvineous/cfgpath) (Heavily modified to workaround `windows.h` conflicts)
+Scrap requires these dependencies to run:
+- [Raylib](https://github.com/raysan5/raylib) *(Built in)* (Patched to support SVGs) (Needs additional dependencies to build)
+- [tinyfiledialogs](https://sourceforge.net/projects/tinyfiledialogs/) *(Built in)*
+- [cfgpath](https://github.com/Malvineous/cfgpath) *(Built in)* (Heavily modified to workaround `windows.h` conflicts)
+- [gettext](https://www.gnu.org/software/gettext/)
+
+Download command for debian-based distributions:
+
+```bash
+sudo apt install libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev gettext
+```
+
+Download command for arch-based distributions:
+
+```bash
+sudo pacman -S libx11 libxrandr libxi libxcursor libxinerama gettext
+```
 
 ### Build
 
