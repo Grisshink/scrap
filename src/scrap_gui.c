@@ -96,7 +96,7 @@ void gui_set_measure_image_func(Gui* gui, GuiMeasureImageFunc measure_image) {
     gui->measure_image = measure_image;
 }
 
-void gui_update_mouse_pos(Gui* gui, unsigned short mouse_x, unsigned short mouse_y) {
+void gui_update_mouse_pos(Gui* gui, short mouse_x, short mouse_y) {
     gui->mouse_x = mouse_x;
     gui->mouse_y = mouse_y;
 }

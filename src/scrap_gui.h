@@ -196,7 +196,7 @@ struct Gui {
     GuiMeasureImageFunc measure_image;
 
     unsigned short win_w, win_h;
-    unsigned short mouse_x, mouse_y;
+    short mouse_x, mouse_y;
     int mouse_scroll;
 };
 
@@ -209,7 +209,7 @@ void gui_init(Gui* gui);
 void gui_begin(Gui* gui);
 void gui_end(Gui* gui);
 void gui_update_window_size(Gui* gui, unsigned short win_w, unsigned short win_h);
-void gui_update_mouse_pos(Gui* gui, unsigned short mouse_x, unsigned short mouse_y);
+void gui_update_mouse_pos(Gui* gui, short mouse_x, short mouse_y);
 void gui_update_mouse_scroll(Gui* gui, int mouse_scroll);
 void gui_set_measure_text_func(Gui* gui, GuiMeasureTextSliceFunc measure_text);
 void gui_set_measure_image_func(Gui* gui, GuiMeasureImageFunc measure_image);
