@@ -7,6 +7,7 @@
 
 ## Fixes
 - Fixed "crash" when vm overflows/underflows one its stacks
+- Fixed crash when trying to divide by zero in code
 - Fixed scrollbars sometimes appearing behind scroll container
 - Fixed text in the settings going out of bounds when the text is too large
 
