@@ -121,8 +121,8 @@ First, install Homebrew:
 After that, you need to run the following commands:
 
 ```bash
-brew install gcc
-make -j$(nproc) TARGET=MACOS
+brew install gettext
+make -j$(nproc) TARGET=OSX
 ./scrap
 ```
 
