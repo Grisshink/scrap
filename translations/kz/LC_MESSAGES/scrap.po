@@ -129,7 +129,7 @@ msgstr "Терминал биіктігі"
 
 #: blocks.c
 msgid "Set cursor X:"
-msgstr "X курсорын орнату:"
+msgstr "курсорын орнату X:"
 
 #: blocks.c
 msgid "Y:"
@@ -237,7 +237,7 @@ msgstr "1970 жылдан бері уақыт"
 
 #: blocks.c
 msgid "Int"
-msgstr "бүтін сан"
+msgstr "Бүтін сан"
 
 #: blocks.c
 msgid "Float"
@@ -253,7 +253,7 @@ msgstr "Булевое"
 
 #: blocks.c
 msgid "Nothing"
-msgstr " "
+msgstr "Ештеңе"
 
 #: blocks.c
 msgid "Declare"
@@ -277,7 +277,7 @@ msgstr "Бос тізім"
 
 #: blocks.c
 msgid "Add"
-msgstr "қосу"
+msgstr "Қосу"
 
 #: blocks.c
 msgid "value"
@@ -309,7 +309,7 @@ msgstr "Шығару"
 
 #: input.c
 msgid "Block categories"
-msgstr "код сәтті орындалды"
+msgstr "Код сәтті орындалды"
 
 #: input.c
 msgid "Block palette"
@@ -325,19 +325,19 @@ msgstr "Параметрлер"
 
 #: render.c
 msgid "About"
-msgstr "туралы"
+msgstr "Туралы"
 
 #: scrap.c
 msgid "Vm executed successfully"
-msgstr "код сәтті орындалды"
+msgstr "Код сәтті орындалды"
 
 #: scrap.c
 msgid "Vm stopped >:("
-msgstr "код тоқтатылды >:("
+msgstr "Код тоқтатылды >:("
 
 #: scrap.c
 msgid "Vm shitted and died :("
-msgstr "код бұзылды және өлді :("
+msgstr "Код бұзылды және өлді :("
 
 #: input.c
 msgid "File load failed :("
@@ -353,11 +353,11 @@ msgstr "Переход на цепочку (%d/%d)"
 
 #: render.c
 msgid "Start failed!"
-msgstr "кодты бастау сәтсіз аяқталды!"
+msgstr "Кодты бастау сәтсіз аяқталды!"
 
 #: render.c
 msgid "Started successfully!"
-msgstr "код сәтті басталды!"
+msgstr "Код сәтті басталды!"
 
 #: render.c
 msgid "New project"
@@ -373,7 +373,7 @@ msgstr "Жобаны жүктеңіз"
 
 #: window.c
 msgid "UI size"
-msgstr "пайдаланушы интерфейсінің өлшемі"
+msgstr "Пайдаланушы интерфейсінің өлшемі"
 
 #: window.c
 msgid "FPS limit"
@@ -417,7 +417,7 @@ msgstr "Өзгерістер күшіне енуі үшін қайта іске 
 
 #: window.c
 msgid "Scrap is a project that allows anyone to build"
-msgstr "Скреп - бұл кез келген адамға салуға мүмкіндік беретін жоба"
+msgstr "Scrap - бұл кез келген адамға салуға мүмкіндік беретін жоба"
 
 #: window.c
 msgid "software using simple, block based interface."
