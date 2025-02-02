@@ -24,6 +24,10 @@
 #include <libintl.h>
 #include <locale.h>
 
+#ifdef _WIN32
+#define setenv(env, val, override) _putenv_s(env, val)
+#endif // _WIN32
+
 // Global Variables
 Image logo_img;
 
@@ -441,6 +445,9 @@ int main(void) {
     setlocale(LC_MESSAGES, "");
     textdomain("scrap");
     bindtextdomain("scrap", LOCALE_PATH);
+#ifdef _WIN32
+    bind_textdomain_codeset("scrap", "UTF-8");
+#endif
 
     SetConfigFlags(FLAG_MSAA_4X_HINT | FLAG_WINDOW_RESIZABLE);
     InitWindow(800, 600, "Scrap");
