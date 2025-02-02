@@ -177,10 +177,9 @@ static void begin_setting(const char* name, bool warning) {
         gui_element_begin(gui);
             gui_set_grow(gui, DIRECTION_HORIZONTAL);
             gui_set_grow(gui, DIRECTION_VERTICAL);
-            gui_set_direction(gui, DIRECTION_HORIZONTAL);
-            gui_set_align(gui, ALIGN_CENTER);
+            gui_set_direction(gui, DIRECTION_VERTICAL);
+            gui_set_align(gui, ALIGN_RIGHT);
 
-            gui_grow(gui, DIRECTION_HORIZONTAL);
             gui_text(gui, &font_cond, name, conf.font_size * 0.6, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
         gui_element_end(gui);
 
