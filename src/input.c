@@ -820,7 +820,7 @@ static bool handle_mouse_click(void) {
         if (hover_info.select_argument) return true;
     }
 
-    if (handle_code_editor_click(mouse_empty)) return true;
+    if (hover_info.panel->type == PANEL_CODE && handle_code_editor_click(mouse_empty)) return true;
     return hover_info.panel->type != PANEL_CODE;
 }
 
