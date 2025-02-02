@@ -361,7 +361,7 @@ void draw_window(void) {
                 draw_slider(8, 64, &window_conf.font_size);
             end_setting();
 
-            begin_setting(gettext("FPS Limit"), false);
+            begin_setting(gettext("FPS limit"), false);
                 draw_slider(0, 240, &window_conf.fps_limit);
             end_setting();
 
