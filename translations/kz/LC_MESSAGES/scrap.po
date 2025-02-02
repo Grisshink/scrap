@@ -1,6 +1,6 @@
 msgid ""
 msgstr ""
-"Language: ru\n"
+"Language: kz\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 
 #: blocks.c
@@ -426,3 +426,23 @@ msgstr "қарапайым, блок негізіндегі интерфейст
 #: window.c
 msgid "License"
 msgstr "Лицензия"
+
+#: render.c
+msgid "Panel edit mode"
+msgstr "Панельді өңдеу режимі"
+
+#: render.c
+msgid "Click on panels to reposition them"
+msgstr "Олардың орнын өзгерту үшін панельдерді басыңыз"
+
+#: render.c
+msgid "Drag panel edges to resize them"
+msgstr "Өлшемдерін өзгерту үшін панель жиектерін сүйреңіз"
+
+#: render.c
+msgid "Done"
+msgstr "Дайын"
+
+#: render.c
+msgid "Save"
+msgstr "Сақтау"
