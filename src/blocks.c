@@ -798,7 +798,13 @@ ScrData block_div(ScrExec* exec, int argc, ScrData* argv) {
     if (argv[0].type == DATA_DOUBLE) {
         RETURN_DOUBLE(argv[0].data.double_arg / data_to_double(argv[1]));
     } else {
-        RETURN_INT(data_to_int(argv[0]) / data_to_int(argv[1]));
+        int divisor = data_to_int(argv[1]);
+        if (divisor == 0) {
+            term_print_str("VM ERROR: Division by zero!");
+            TraceLog(LOG_ERROR, "[VM] Division by zero");
+            pthread_exit((void*)0);
+        }
+        RETURN_INT(data_to_int(argv[0]) / divisor);
     }
 }
 
