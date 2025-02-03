@@ -113,6 +113,9 @@ make -B TARGET=WINDOWS
 ./scrap.exe
 ```
 
+NOTE: When running `make clean` MSYS2 will occasionally drop you into command prompt. 
+To fix this, just type `exit` in the cmd and the cleanup process will proceed
+
 #### MacOS build
 
 ⚠️ WARNING ⚠️ MacOS build is not being tested right now, so it may not work properly or not at all, you have been warned!
