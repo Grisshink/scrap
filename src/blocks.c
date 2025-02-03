@@ -1209,7 +1209,7 @@ void register_blocks(ScrVm* vm) {
     ScrBlockdef* sc_sleep = blockdef_new("sleep", BLOCKTYPE_NORMAL, (ScrColor) CATEGORY_CONTROL_COLOR, block_sleep);
     blockdef_add_text(sc_sleep, gettext("Sleep"));
     blockdef_add_argument(sc_sleep, "", "0", BLOCKCONSTR_UNLIMITED);
-    blockdef_add_text(sc_sleep, gettext("us"));
+    blockdef_add_text(sc_sleep, gettext("μs"));
     blockdef_register(vm, sc_sleep);
     add_to_category(sc_sleep, cat_control);
 

@@ -84,7 +84,7 @@ msgid "Sleep"
 msgstr "Ұйқы"
 
 #: blocks.c
-msgid "us"
+msgid "μs"
 msgstr "мкс"
 
 #: blocks.c

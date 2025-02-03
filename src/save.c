@@ -39,6 +39,7 @@ typedef struct {
 
 const int codepoint_regions[CODEPOINT_REGION_COUNT][2] = {
     { 0x20, 0x7e }, // All printable ASCII chars
+    { 0x3bc, 0x3bc }, // Letter μ
     { 0x400, 0x4ff }, // Cyrillic letters
 };
 int codepoint_start_ranges[CODEPOINT_REGION_COUNT] = {0};
