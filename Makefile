@@ -9,10 +9,10 @@ CFLAGS := -Wall -Wextra -std=c11 -D_GNU_SOURCE -DSCRAP_VERSION=\"$(SCRAP_VERSION
 ifeq ($(TARGET), LINUX)
 	CC := gcc
 	LDFLAGS := -lm -lpthread -lX11 -ldl
-else ifeq ($(TARGET), MACOS)
+else ifeq ($(TARGET), OSX)
 	# Thanks to @arducat for MacOS support
-	CC := gcc-14
-	LDFLAGS := -framework CoreVideo -framework IOKit -framework Cocoa -framework GLUT -framework OpenGL -lm -lpthread
+	CC := clang
+	LDFLAGS := -framework CoreVideo -framework IOKit -framework Cocoa -framework GLUT -framework OpenGL -lm -lpthread -lintl
 else
 	CC := x86_64-w64-mingw32-gcc
 	LDFLAGS := -static -lole32 -lcomdlg32 -lwinmm -lgdi32 -lintl -liconv -Wl,--subsystem,windows
