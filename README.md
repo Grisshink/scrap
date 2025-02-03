@@ -97,15 +97,21 @@ gmake MAKE=gmake -j$(nproc)
 
 #### Windows build
 
-To build and run Scrap on Windows you need to have [mingw-w64](https://www.mingw-w64.org/) installed. 
-The most recommended way to use it is through [MSYS2](https://www.msys2.org/). 
-After that, just run following commands:
+NOTE: This guide will assume that you have [MSYS2](https://www.msys2.org/) installed and running on your system. 
+
+To build and run Scrap on Windows you first need to install dependencies:
+
+```bash
+pacman -S mingw-w64-ucrt-x86_64-gcc make
+ln -sf "${MSYSTEM_PREFIX}/bin/windres.exe" "${MSYSTEM_PREFIX}/bin/x86_64-w64-mingw32-windres"
+```
+
+After that, run the following commands:
 
 ```bash
 make -B TARGET=WINDOWS
+./scrap.exe
 ```
-
-This will build `scrap.exe` binary which can be run normally.
 
 #### MacOS build
 
