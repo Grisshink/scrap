@@ -860,7 +860,7 @@ static void block_next_argument() {
         return;
     }
 
-    if (arg->type == ARGUMENT_TEXT) {
+    if (arg->type == ARGUMENT_TEXT || arg->type == ARGUMENT_CONST_STRING) {
         hover_info.select_argument = arg;
     } else if (arg->type == ARGUMENT_BLOCK) {
         hover_info.select_argument = NULL;
@@ -889,14 +889,14 @@ static void block_prev_argument() {
         return;
     }
 
-    if (arg->type == ARGUMENT_TEXT) {
+    if (arg->type == ARGUMENT_TEXT || arg->type == ARGUMENT_CONST_STRING) {
         hover_info.select_argument = arg;
     } else if (arg->type == ARGUMENT_BLOCK) {
         hover_info.select_argument = NULL;
         hover_info.select_block = &arg->data.block;
         while (vector_size(hover_info.select_block->arguments) != 0) {
             arg = &hover_info.select_block->arguments[vector_size(hover_info.select_block->arguments) - 1];
-            if (arg->type == ARGUMENT_TEXT) {
+            if (arg->type == ARGUMENT_TEXT || arg->type == ARGUMENT_CONST_STRING) {
                 hover_info.select_argument = arg;
                 break;
             } else if (arg->type == ARGUMENT_BLOCK) {
