@@ -48,6 +48,13 @@ Scrap requires these dependencies to run:
 - [cfgpath](https://github.com/Malvineous/cfgpath) *(Built in)* (Heavily modified to workaround `windows.h` conflicts)
 - [gettext](https://www.gnu.org/software/gettext/)
 
+Download commands for MSYS2 UCRT64 (Windows):
+
+```bash
+pacman -S mingw-w64-ucrt-x86_64-gcc make
+ln -sf "${MSYSTEM_PREFIX}/bin/windres.exe" "${MSYSTEM_PREFIX}/bin/x86_64-w64-mingw32-windres"
+```
+
 Download command for debian-based distributions:
 
 ```bash
@@ -77,6 +84,20 @@ cd scrap
 
 Currently Scrap can be built for *Windows*, *Linux*, *MacOS* and *FreeBSD*. 
 
+#### Windows build
+
+NOTE: This guide will assume that you have [MSYS2](https://www.msys2.org/) installed and running on your system. 
+
+After that, run the following commands:
+
+```bash
+make -B TARGET=WINDOWS
+./scrap.exe
+```
+
+NOTE: When running `make clean` MSYS2 will occasionally drop you into command prompt. 
+To fix this, just type `exit` in the cmd and the cleanup process will proceed
+
 #### Linux build
 
 To build and run Scrap on linux you need to install `gcc` and `make`. After install, just run following commands:
@@ -94,27 +115,6 @@ To build and run Scrap on FreeBSD you need to install `gcc` and `gmake`. After i
 gmake MAKE=gmake -j$(nproc)
 ./scrap
 ```
-
-#### Windows build
-
-NOTE: This guide will assume that you have [MSYS2](https://www.msys2.org/) installed and running on your system. 
-
-To build and run Scrap on Windows you first need to install dependencies:
-
-```bash
-pacman -S mingw-w64-ucrt-x86_64-gcc make
-ln -sf "${MSYSTEM_PREFIX}/bin/windres.exe" "${MSYSTEM_PREFIX}/bin/x86_64-w64-mingw32-windres"
-```
-
-After that, run the following commands:
-
-```bash
-make -B TARGET=WINDOWS
-./scrap.exe
-```
-
-NOTE: When running `make clean` MSYS2 will occasionally drop you into command prompt. 
-To fix this, just type `exit` in the cmd and the cleanup process will proceed
 
 #### MacOS build
 
