@@ -362,6 +362,7 @@ void init_panels(void) {
 
 // Initializes resources and settings by loading textures, fonts, and configurations, and sets up GUI and panel interface
 void setup(void) {
+    SetExitKey(KEY_NULL);
     render_surface = LoadRenderTexture(GetScreenWidth(), GetScreenHeight());
     SetTextureWrap(render_surface.texture, TEXTURE_WRAP_MIRROR_REPEAT);
 

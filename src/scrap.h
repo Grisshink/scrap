@@ -156,6 +156,7 @@ typedef struct {
 
     ScrBlock* select_block;
     ScrArgument* select_argument;
+    ScrBlockChain* select_blockchain;
 
     InputHoverInfo input_info;
     char** select_input;

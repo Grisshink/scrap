@@ -1432,8 +1432,7 @@ static void write_debug_buffer(void) {
     print_debug(&i, "Argument: %p", hover_info.argument);
     print_debug(&i, "BlockChain: %p", hover_info.blockchain);
     print_debug(&i, "Prev argument: %p", hover_info.prev_argument);
-    print_debug(&i, "Select block: %p", hover_info.select_block);
-    print_debug(&i, "Select arg: %p", hover_info.select_argument);
+    print_debug(&i, "Select block: %p, arg: %p, chain: %p", hover_info.select_block, hover_info.select_argument, hover_info.select_blockchain);
     print_debug(&i, "Category: %p", hover_info.category);
     print_debug(&i, "Mouse: %p, Time: %.3f, Pos: (%d, %d), Click: (%d, %d)", mouse_blockchain.blocks, hover_info.time_at_last_pos, GetMouseX(), GetMouseY(), (int)hover_info.mouse_click_pos.x, (int)hover_info.mouse_click_pos.y);
     print_debug(&i, "Camera: (%.3f, %.3f), Click: (%.3f, %.3f)", camera_pos.x, camera_pos.y, camera_click_pos.x, camera_click_pos.y);

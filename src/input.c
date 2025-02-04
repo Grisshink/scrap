@@ -83,6 +83,8 @@ static void editor_code_remove_blockdef(ScrBlockdef* blockdef) {
 }
 
 static void edit_text(char** text) {
+    if (!text) return;
+
     if (IsKeyPressed(KEY_HOME)) {
         hover_info.select_input_ind = 0;
         render_surface_needs_redraw = true;
@@ -811,6 +813,10 @@ static bool handle_mouse_click(void) {
                 show_dropdown(LOCATION_BLOCK_DROPDOWN, list, list_len, handle_block_dropdown_click);
             }
         }
+        if (hover_info.blockchain != hover_info.select_blockchain) {
+            hover_info.select_blockchain = hover_info.blockchain;
+            if (hover_info.select_blockchain) blockchain_select_counter = hover_info.select_blockchain - editor_code;
+        }
         if (hover_info.block != hover_info.select_block) hover_info.select_block = hover_info.block;
         if (hover_info.argument != hover_info.select_argument) {
             if (!hover_info.argument || hover_info.input_info.input || hover_info.dropdown.location != LOCATION_NONE) hover_info.select_argument = hover_info.argument;
@@ -860,19 +866,33 @@ static void handle_key_press(void) {
         return;
     }
 
-    if (!hover_info.select_input) {
-        if (IsKeyPressed(KEY_SPACE) && vector_size(editor_code) > 0) {
+    if (IsKeyPressed(KEY_TAB) && vector_size(editor_code) > 0) {
+        if (IsKeyDown(KEY_LEFT_SHIFT)) {
+            blockchain_select_counter--;
+            if (blockchain_select_counter < 0) blockchain_select_counter = vector_size(editor_code) - 1;
+        } else {
             blockchain_select_counter++;
             if ((vec_size_t)blockchain_select_counter >= vector_size(editor_code)) blockchain_select_counter = 0;
-
-            camera_pos.x = editor_code[blockchain_select_counter].x - 50;
-            camera_pos.y = editor_code[blockchain_select_counter].y - 50;
-            actionbar_show(TextFormat(gettext("Jump to chain (%d/%d)"), blockchain_select_counter + 1, vector_size(editor_code)));
-            render_surface_needs_redraw = true;
-            return;
         }
+
+        hover_info.select_input = NULL;
+        hover_info.select_argument = NULL;
+        hover_info.select_block = &editor_code[blockchain_select_counter].blocks[0];
+        hover_info.select_blockchain = &editor_code[blockchain_select_counter];
+        camera_pos.x = editor_code[blockchain_select_counter].x - 50;
+        camera_pos.y = editor_code[blockchain_select_counter].y - 50;
+        actionbar_show(TextFormat(gettext("Jump to chain (%d/%d)"), blockchain_select_counter + 1, vector_size(editor_code)));
+        render_surface_needs_redraw = true;
         return;
-    };
+    }
+
+    if (IsKeyPressed(KEY_ESCAPE)) {
+        hover_info.select_input = NULL;
+        hover_info.select_block = NULL;
+        hover_info.select_argument = NULL;
+        render_surface_needs_redraw = true;
+        return;
+    }
     if (hover_info.select_block && hover_info.select_argument && hover_info.select_block->blockdef->inputs[hover_info.select_argument->input_id].type == INPUT_DROPDOWN) return;
 
     edit_text(hover_info.select_input);
