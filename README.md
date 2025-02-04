@@ -2,6 +2,11 @@
 
 # Scrap
 
+![CI build](https://img.shields.io/github/actions/workflow/status/Grisshink/scrap/makefile.yml)
+![Version](https://img.shields.io/github/v/release/Grisshink/scrap)
+![Downloads](https://img.shields.io/github/downloads/Grisshink/scrap/total)
+![License](https://img.shields.io/github/license/Grisshink/scrap)
+
 Scrap is a new block based programming language with the aim towards advanced users. 
 It is written in pure C and mostly inspired by other block based languages such as [Scratch](https://scratch.mit.edu/) and
 its forks such as [Turbowarp](https://turbowarp.org).
