@@ -349,7 +349,14 @@ static void draw_block(ScrBlock* block, bool highlight) {
     Color color = CONVERT_COLOR(block->blockdef->color, Color);
     Color block_color = collision ? ColorBrightness(color, 0.3) : color;
     Color dropdown_color = collision ? color : ColorBrightness(color, -0.3);
-    Color outline_color = highlight ? YELLOW : ColorBrightness(color, collision ? 0.5 : -0.2);
+    Color outline_color;
+    if (highlight) {
+        outline_color = YELLOW;
+    } else if (hover_info.select_block == block) {
+        outline_color = ColorBrightness(color, 0.7);
+    } else {
+        outline_color = ColorBrightness(color, collision ? 0.5 : -0.2);
+    }
 
     gui_element_begin(gui);
         gui_set_direction(gui, DIRECTION_HORIZONTAL);
@@ -655,7 +662,14 @@ static void draw_blockchain(ScrBlockChain* chain) {
             bool collision = hover_info.prev_block == &chain->blocks[i] || (highlight && block_highlight);
             Color color = CONVERT_COLOR(block->blockdef->color, Color);
             Color block_color = ColorBrightness(color, collision ? 0.3 : 0.0);
-            Color outline_color = highlight && block_highlight ? YELLOW : ColorBrightness(block_color, collision ? 0.5 : -0.2);
+            Color outline_color;
+            if (highlight && block_highlight) {
+                outline_color = YELLOW;
+            } else if (hover_info.select_block == &chain->blocks[i]) {
+                outline_color = ColorBrightness(color, 0.7);
+            } else {
+                outline_color = ColorBrightness(color, collision ? 0.5 : -0.2);
+            }
 
             gui_element_begin(gui);
                 gui_set_min_size(gui, block->width, conf.font_size);
@@ -703,7 +717,14 @@ static void draw_blockchain(ScrBlockChain* chain) {
             bool collision = hover_info.prev_block == &chain->blocks[i] || (highlight && block_highlight);
             Color color = CONVERT_COLOR(blockdef->color, Color);
             Color block_color = ColorBrightness(color, collision ? 0.3 : 0.0);
-            Color outline_color = highlight && block_highlight ? YELLOW : ColorBrightness(block_color, collision ? 0.5 : -0.2);
+            Color outline_color;
+            if (highlight && block_highlight) {
+                outline_color = YELLOW;
+            } else if (hover_info.select_block == &chain->blocks[i]) {
+                outline_color = ColorBrightness(color, 0.7);
+            } else {
+                outline_color = ColorBrightness(color, collision ? 0.5 : -0.2);
+            }
 
             gui_element_begin(gui);
                 gui_set_direction(gui, DIRECTION_HORIZONTAL);

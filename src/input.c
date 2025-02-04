@@ -594,6 +594,9 @@ static bool handle_code_editor_click(bool mouse_empty) {
                 mouse_blockchain.blocks[0].parent = hover_info.block;
                 argument_set_block(hover_info.argument, mouse_blockchain.blocks[0]);
                 vector_clear(mouse_blockchain.blocks);
+                hover_info.select_blockchain = hover_info.blockchain;
+                hover_info.select_block = &hover_info.argument->data.block;
+                hover_info.select_input = NULL;
             } else if (hover_info.prev_argument) {
                 // Swap argument
                 TraceLog(LOG_INFO, "Swap argument");
@@ -604,6 +607,8 @@ static bool handle_code_editor_click(bool mouse_empty) {
                 mouse_blockchain.blocks[0].parent = NULL;
                 block_update_parent_links(&mouse_blockchain.blocks[0]);
                 argument_set_block(hover_info.prev_argument, temp);
+                hover_info.select_block = &hover_info.prev_argument->data.block;
+                hover_info.select_blockchain = hover_info.blockchain;
             }
         } else if (
             hover_info.block && 
@@ -618,6 +623,8 @@ static bool handle_code_editor_click(bool mouse_empty) {
             blockchain_insert(hover_info.blockchain, &mouse_blockchain, ind);
             // Update block link to make valgrind happy
             hover_info.block = &hover_info.blockchain->blocks[ind];
+            hover_info.select_block = hover_info.block + 1;
+            hover_info.select_blockchain = hover_info.blockchain;
         } else {
             // Put block
             TraceLog(LOG_INFO, "Put block");
@@ -625,6 +632,8 @@ static bool handle_code_editor_click(bool mouse_empty) {
             mouse_blockchain.y += camera_pos.y - hover_info.panel_size.y;
             vector_add(&editor_code, mouse_blockchain);
             mouse_blockchain = blockchain_new();
+            hover_info.select_blockchain = &editor_code[vector_size(editor_code) - 1];
+            hover_info.select_block = &hover_info.select_blockchain->blocks[0];
         }
         return true;
     } else if (hover_info.block) {
@@ -642,6 +651,8 @@ static bool handle_code_editor_click(bool mouse_empty) {
                 mouse_blockchain.blocks[0].parent = NULL;
 
                 argument_set_text(hover_info.prev_argument, "");
+                hover_info.select_blockchain = NULL;
+                hover_info.select_block = NULL;
             }
         } else if (hover_info.blockchain) {
             int ind = hover_info.block - hover_info.blockchain->blocks;
@@ -682,6 +693,8 @@ static bool handle_code_editor_click(bool mouse_empty) {
                         hover_info.block = NULL;
                     }
                 }
+                hover_info.select_blockchain = NULL;
+                hover_info.select_block = NULL;
             }
         }
         return true;
@@ -830,6 +843,133 @@ static bool handle_mouse_click(void) {
     return hover_info.panel->type != PANEL_CODE;
 }
 
+static void block_next_argument() {
+    ScrArgument* args = hover_info.select_block->arguments;
+    ScrArgument* arg = hover_info.select_argument ? hover_info.select_argument + 1 : &args[0];
+    if (arg - args >= (int)vector_size(args)) {
+        if (hover_info.select_block->parent) {
+            ScrArgument* parent_args = hover_info.select_block->parent->arguments;
+            for (size_t i = 0; i < vector_size(parent_args); i++) {
+                if (parent_args[i].type == ARGUMENT_BLOCK && &parent_args[i].data.block == hover_info.select_block) hover_info.select_argument = &parent_args[i];
+            }
+            hover_info.select_block = hover_info.select_block->parent;
+            block_next_argument();
+        } else {
+            hover_info.select_argument = NULL;
+        }
+        return;
+    }
+
+    if (arg->type == ARGUMENT_TEXT) {
+        hover_info.select_argument = arg;
+    } else if (arg->type == ARGUMENT_BLOCK) {
+        hover_info.select_argument = NULL;
+        hover_info.select_block = &arg->data.block;
+    }
+}
+
+static void block_prev_argument() {
+    ScrArgument* args = hover_info.select_block->arguments;
+    ScrArgument* arg = hover_info.select_argument ? hover_info.select_argument - 1 : &args[-1];
+    if (arg - args < 0) {
+        if (hover_info.select_argument) {
+            hover_info.select_argument = NULL;
+            return;
+        }
+        if (hover_info.select_block->parent) {
+            ScrArgument* parent_args = hover_info.select_block->parent->arguments;
+            for (size_t i = 0; i < vector_size(parent_args); i++) {
+                if (parent_args[i].type == ARGUMENT_BLOCK && &parent_args[i].data.block == hover_info.select_block) hover_info.select_argument = &parent_args[i];
+            }
+            hover_info.select_block = hover_info.select_block->parent;
+            block_prev_argument();
+        } else {
+            hover_info.select_argument = NULL;
+        }
+        return;
+    }
+
+    if (arg->type == ARGUMENT_TEXT) {
+        hover_info.select_argument = arg;
+    } else if (arg->type == ARGUMENT_BLOCK) {
+        hover_info.select_argument = NULL;
+        hover_info.select_block = &arg->data.block;
+        while (vector_size(hover_info.select_block->arguments) != 0) {
+            arg = &hover_info.select_block->arguments[vector_size(hover_info.select_block->arguments) - 1];
+            if (arg->type == ARGUMENT_TEXT) {
+                hover_info.select_argument = arg;
+                break;
+            } else if (arg->type == ARGUMENT_BLOCK) {
+                hover_info.select_block = &arg->data.block;
+            }
+        }
+    }
+}
+
+static bool handle_code_panel_key_press(void) {
+    if (hover_info.select_argument && !hover_info.select_input) {
+        if (IsKeyPressed(KEY_ENTER)) {
+            hover_info.select_input = &hover_info.select_argument->data.text;
+            hover_info.select_input_ind = strlen(*hover_info.select_input);
+            render_surface_needs_redraw = true;
+            return true;
+        }
+    }
+
+    if (IsKeyPressed(KEY_TAB) && vector_size(editor_code) > 0) {
+        if (IsKeyDown(KEY_LEFT_SHIFT)) {
+            blockchain_select_counter--;
+            if (blockchain_select_counter < 0) blockchain_select_counter = vector_size(editor_code) - 1;
+        } else {
+            blockchain_select_counter++;
+            if ((vec_size_t)blockchain_select_counter >= vector_size(editor_code)) blockchain_select_counter = 0;
+        }
+
+        hover_info.select_input = NULL;
+        hover_info.select_argument = NULL;
+        hover_info.select_block = &editor_code[blockchain_select_counter].blocks[0];
+        hover_info.select_blockchain = &editor_code[blockchain_select_counter];
+        camera_pos.x = editor_code[blockchain_select_counter].x - 50;
+        camera_pos.y = editor_code[blockchain_select_counter].y - 50;
+        actionbar_show(TextFormat(gettext("Jump to chain (%d/%d)"), blockchain_select_counter + 1, vector_size(editor_code)));
+        render_surface_needs_redraw = true;
+        return true;
+    }
+
+    if (!hover_info.select_blockchain || !hover_info.select_block || hover_info.select_input) return false;
+
+    if (IsKeyPressed(KEY_RIGHT) || IsKeyPressedRepeat(KEY_RIGHT)) {
+        block_next_argument();
+        render_surface_needs_redraw = true;
+        return true;
+    }
+    if (IsKeyPressed(KEY_LEFT) || IsKeyPressedRepeat(KEY_LEFT)) {
+        block_prev_argument();
+        render_surface_needs_redraw = true;
+        return true;
+    }
+    if (IsKeyPressed(KEY_UP) || IsKeyPressedRepeat(KEY_UP)) {
+        while (hover_info.select_block->parent) hover_info.select_block = hover_info.select_block->parent;
+        hover_info.select_block--;
+        hover_info.select_argument = NULL;
+        if (hover_info.select_block < hover_info.select_blockchain->blocks) hover_info.select_block = hover_info.select_blockchain->blocks;
+        render_surface_needs_redraw = true;
+        return true;
+    }
+    if (IsKeyPressed(KEY_DOWN) || IsKeyPressedRepeat(KEY_DOWN)) {
+        while (hover_info.select_block->parent) hover_info.select_block = hover_info.select_block->parent;
+        hover_info.select_block++;
+        hover_info.select_argument = NULL;
+        if (hover_info.select_block - hover_info.select_blockchain->blocks >= (int)vector_size(hover_info.select_blockchain->blocks)) {
+            hover_info.select_block--;
+        }
+        render_surface_needs_redraw = true;
+        return true;
+    }
+
+    return false;
+}
+
 static void handle_key_press(void) {
     if (IsKeyPressed(KEY_F5)) {
         start_vm();
@@ -866,31 +1006,12 @@ static void handle_key_press(void) {
             }
             return;
         } else if (hover_info.panel->type == PANEL_CODE) {
-            if (IsKeyPressed(KEY_TAB) && vector_size(editor_code) > 0) {
-                if (IsKeyDown(KEY_LEFT_SHIFT)) {
-                    blockchain_select_counter--;
-                    if (blockchain_select_counter < 0) blockchain_select_counter = vector_size(editor_code) - 1;
-                } else {
-                    blockchain_select_counter++;
-                    if ((vec_size_t)blockchain_select_counter >= vector_size(editor_code)) blockchain_select_counter = 0;
-                }
-
-                hover_info.select_input = NULL;
-                hover_info.select_argument = NULL;
-                hover_info.select_block = &editor_code[blockchain_select_counter].blocks[0];
-                hover_info.select_blockchain = &editor_code[blockchain_select_counter];
-                camera_pos.x = editor_code[blockchain_select_counter].x - 50;
-                camera_pos.y = editor_code[blockchain_select_counter].y - 50;
-                actionbar_show(TextFormat(gettext("Jump to chain (%d/%d)"), blockchain_select_counter + 1, vector_size(editor_code)));
-                render_surface_needs_redraw = true;
-                return;
-            }
+            if (handle_code_panel_key_press()) return;
         }
     }
 
     if (IsKeyPressed(KEY_ESCAPE)) {
         hover_info.select_input = NULL;
-        hover_info.select_block = NULL;
         hover_info.select_argument = NULL;
         render_surface_needs_redraw = true;
         return;
