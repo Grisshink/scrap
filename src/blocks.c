@@ -802,7 +802,7 @@ ScrData block_div(ScrExec* exec, int argc, ScrData* argv) {
         if (divisor == 0) {
             term_print_str("VM ERROR: Division by zero!");
             TraceLog(LOG_ERROR, "[VM] Division by zero");
-            pthread_exit((void*)0);
+            PTHREAD_FAIL(exec);
         }
         RETURN_INT(data_to_int(argv[0]) / divisor);
     }

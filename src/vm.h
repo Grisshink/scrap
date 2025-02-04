@@ -323,10 +323,19 @@ struct ScrVm {
     }, \
 }
 
+#ifdef _WIN32
+// Winpthreads for some reason does not trigger cleanup functions, so we are explicitly doing cleanup here
+#define PTHREAD_FAIL(exec) \
+    exec_thread_exit(exec); \
+    pthread_exit((void*)0);
+#else
+#define PTHREAD_FAIL(exec) pthread_exit((void*)0);
+#endif
+
 #define control_stack_push_data(data, type) \
     if (exec->control_stack_len + sizeof(type) > VM_CONTROL_STACK_SIZE) { \
         TraceLog(LOG_ERROR, "[VM] Control stack overflow"); \
-        pthread_exit((void*)0); \
+        PTHREAD_FAIL(exec); \
     } \
     *(type *)(exec->control_stack + exec->control_stack_len) = (data); \
     exec->control_stack_len += sizeof(type);
@@ -334,7 +343,7 @@ struct ScrVm {
 #define control_stack_pop_data(data, type) \
     if (sizeof(type) > exec->control_stack_len) { \
         TraceLog(LOG_ERROR, "[VM] Control stack underflow"); \
-        pthread_exit((void*)0); \
+        PTHREAD_FAIL(exec); \
     } \
     exec->control_stack_len -= sizeof(type); \
     data = *(type*)(exec->control_stack + exec->control_stack_len);
@@ -355,6 +364,7 @@ bool exec_stop(ScrVm* vm, ScrExec* exec);
 bool exec_join(ScrVm* vm, ScrExec* exec, size_t* return_code);
 bool exec_try_join(ScrVm* vm, ScrExec* exec, size_t* return_code);
 void exec_set_skip_block(ScrExec* exec);
+void exec_thread_exit(void* thread_exec);
 
 bool variable_stack_push_var(ScrExec* exec, const char* name, ScrData data);
 ScrVariable* variable_stack_get_variable(ScrExec* exec, const char* name);
@@ -661,7 +671,7 @@ void* exec_thread_entry(void* thread_exec) {
         ScrData bin;
         if (!exec_run_chain(exec, &exec->code[i], &bin)) {
             exec->running_chain = NULL;
-            pthread_exit((void*)0);
+            PTHREAD_FAIL(exec);
         }
         exec->running_chain = NULL;
     }
@@ -759,7 +769,7 @@ ScrVariable* variable_stack_get_variable(ScrExec* exec, const char* name) {
 void chain_stack_push(ScrExec* exec, ScrChainStackData data) {
     if (exec->chain_stack_len >= VM_CHAIN_STACK_SIZE) {
         TraceLog(LOG_ERROR, "[VM] Chain stack overflow");
-        pthread_exit((void*)0);
+        PTHREAD_FAIL(exec);
     }
     exec->chain_stack[exec->chain_stack_len++] = data;
 }
@@ -767,7 +777,7 @@ void chain_stack_push(ScrExec* exec, ScrChainStackData data) {
 void chain_stack_pop(ScrExec* exec) {
     if (exec->chain_stack_len == 0) {
         TraceLog(LOG_ERROR, "[VM] Chain stack underflow");
-        pthread_exit((void*)0);
+        PTHREAD_FAIL(exec);
     }
     exec->chain_stack_len--;
 }
@@ -775,7 +785,7 @@ void chain_stack_pop(ScrExec* exec) {
 void arg_stack_push_arg(ScrExec* exec, ScrData arg) {
     if (exec->arg_stack_len >= VM_ARG_STACK_SIZE) {
         TraceLog(LOG_ERROR, "[VM] Arg stack overflow");
-        pthread_exit((void*)0);
+        PTHREAD_FAIL(exec);
     }
     exec->arg_stack[exec->arg_stack_len++] = arg;
 }
@@ -783,7 +793,7 @@ void arg_stack_push_arg(ScrExec* exec, ScrData arg) {
 void arg_stack_undo_args(ScrExec* exec, size_t count) {
     if (count > exec->arg_stack_len) {
         TraceLog(LOG_ERROR, "[VM] Arg stack underflow");
-        pthread_exit((void*)0);
+        PTHREAD_FAIL(exec);
     }
     for (size_t i = 0; i < count; i++) {
         ScrData arg = exec->arg_stack[exec->arg_stack_len - 1 - i];
