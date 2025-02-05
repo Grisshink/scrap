@@ -13,7 +13,7 @@
 - Fixed crash when trying to divide by zero in code
 - Fixed scrollbars sometimes appearing behind scroll container
 - Fixed text in the settings going out of bounds when the text is too large
-- Fixed codespace occasionally jumping far away when it is dragged outside of the window
+- Fixed codespace occasionally jumping far away when it is being dragged outside of the window
 - Fixed code renderer not checking with proper culling bounds. This should slightly improve performance of the renderer
 
 # v0.3.1-beta
