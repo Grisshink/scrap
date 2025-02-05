@@ -454,7 +454,7 @@ int main(void) {
     if (conf.language != LANG_SYSTEM) setenv("LANGUAGE", language_to_code(conf.language), false);
     setlocale(LC_MESSAGES, "");
     textdomain("scrap");
-    bindtextdomain("scrap", LOCALE_PATH);
+    bindtextdomain("scrap", into_data_path(LOCALE_PATH));
 #ifdef _WIN32
     bind_textdomain_codeset("scrap", "UTF-8");
 #endif
