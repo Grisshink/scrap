@@ -22,6 +22,7 @@
 
 #include <assert.h>
 #include <math.h>
+#include <wctype.h>
 
 #define ARRLEN(x) (sizeof(x)/sizeof(x[0]))
 #define MAX(x, y) ((x) > (y) ? (x) : (y))
@@ -1009,11 +1010,33 @@ static bool handle_code_panel_key_press(void) {
     return false;
 }
 
+static bool search_string(char* str, char* substr) {
+    if (*substr == 0) return true;
+
+    int next_ch, next_subch, cur_ch, cur_subch;
+    char* cur_substr = substr;
+    char* cur_str = str;
+
+    while (*cur_str != 0 && *cur_substr != 0) {
+        cur_ch = GetCodepointNext(cur_str, &next_ch);
+        cur_subch = GetCodepointNext(cur_substr, &next_subch);
+
+        if (towlower(cur_ch) == towlower(cur_subch)) {
+            cur_substr += next_subch;
+            cur_str += next_ch;
+        } else {
+            if (cur_substr == substr) cur_str += next_ch;
+            cur_substr = substr;
+        }
+    }
+    return *cur_substr == 0;
+}
+
 static bool search_blockdef(ScrBlockdef* blockdef) {
-    if (strcasestr(blockdef->id, search_list_search)) return true;
+    if (search_string(blockdef->id, search_list_search)) return true;
     for (size_t i = 0; i < vector_size(blockdef->inputs); i++) {
         if (blockdef->inputs[i].type != INPUT_TEXT_DISPLAY) continue;
-        if (strcasestr(blockdef->inputs[i].data.text, search_list_search)) return true;
+        if (search_string(blockdef->inputs[i].data.text, search_list_search)) return true;
     }
     return false;
 }
