@@ -35,7 +35,7 @@ else
 endif
 
 OBJFILES := $(addprefix src/,filedialogs.o render.o save.o term.o blocks.o scrap.o vec.o util.o input.o scrap_gui.o window.o cfgpath.o)
-BUNDLE_FILES := data examples extras LICENSE README.md CHANGELOG.md
+BUNDLE_FILES := data examples extras locale LICENSE README.md CHANGELOG.md
 SCRAP_HEADERS := src/scrap.h src/vm.h src/config.h src/scrap_gui.h
 EXE_NAME := scrap
 
@@ -61,28 +61,28 @@ translations:
 	msgfmt -o locale/kk/LC_MESSAGES/scrap.mo locale/kk/LC_MESSAGES/scrap.po
 	rm locale/kk/LC_MESSAGES/scrap.po
 
-windows-build: $(EXE_NAME).exe
+windows-build: translations target
 	mkdir -p $(WINDOWS_DIR)
 	cp -r $(BUNDLE_FILES) $(EXE_NAME).exe $(WINDOWS_DIR)
 	zip -r $(WINDOWS_DIR).zip $(WINDOWS_DIR)
 	rm -r $(WINDOWS_DIR)
 
-linux-build: $(EXE_NAME)
+linux-build: translations target
 	mkdir -p $(LINUX_DIR)
 	cp -r $(BUNDLE_FILES) $(EXE_NAME) $(LINUX_DIR)
 	tar czvf $(LINUX_DIR).tar.gz $(LINUX_DIR)
 	rm -r $(LINUX_DIR)
 
-macos-build: $(EXE_NAME)
+macos-build: translations target
 	mkdir -p $(MACOS_DIR)
 	cp -r $(BUNDLE_FILES) $(EXE_NAME) $(MACOS_DIR)
 	zip -r $(MACOS_DIR).zip $(MACOS_DIR)
 	rm -r $(MACOS_DIR)
 
-appimage: $(EXE_NAME)
+appimage: translations target
 	mkdir -p scrap.AppDir
 	cp $(EXE_NAME) scrap.AppDir/AppRun
-	cp -r data scrap.desktop extras/scrap.png scrap.AppDir
+	cp -r data locale scrap.desktop extras/scrap.png scrap.AppDir
 	./appimagetool-x86_64.AppImage --appimage-extract-and-run scrap.AppDir
 	rm -r scrap.AppDir
 
