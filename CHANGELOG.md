@@ -1,11 +1,12 @@
 # v0.4-beta
 
 ## What's new?
+- Added translations for 2 languages: Russian *(by @Grisshink)* and Kazakh *(by @unknownkeyNB)*
 - The sidebar (Now named as block palette to remove ambiguity) is now split up into various categories to make finding blocks easier
 - The terminal's background color has been changed to match with the color of other panels
 - All of the text boxes were upgraded to allow inserting or deleting at any position
 - Now if any block input is empty, it will show a small hint of what it needs
-- Added codebase movement through keyboard keys, see `README.md` for details
+- Added codebase movement through keyboard keys, see `README.md` for more details
 - Added block search menu. You can open it by pressing `S` in code area
 
 ## Fixes
