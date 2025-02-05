@@ -590,9 +590,13 @@ void gui_set_fixed(Gui* gui, unsigned short w, unsigned short h) {
     el->h = h;
 }
 
-void gui_set_fit(Gui* gui) {
+void gui_set_fit(Gui* gui, GuiElementDirection direction) {
     GuiElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
-    el->sizing = SIZING_FIT | (SIZING_FIT << 4); // This sets both dimensions to SIZING_FIT
+    if (direction == DIRECTION_VERTICAL) {
+        SET_SIZING_Y(el, SIZING_FIT);
+    } else {
+        SET_SIZING_X(el, SIZING_FIT);
+    }
 }
 
 void gui_set_padding(Gui* gui, unsigned short pad_w, unsigned short pad_h) {

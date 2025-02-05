@@ -219,7 +219,7 @@ GuiElement* gui_element_begin(Gui* gui);
 void gui_element_end(Gui* gui);
 
 void gui_set_fixed(Gui* gui, unsigned short w, unsigned short h);
-void gui_set_fit(Gui* gui);
+void gui_set_fit(Gui* gui, GuiElementDirection direction);
 void gui_set_grow(Gui* gui, GuiElementDirection diection);
 void gui_set_percent_size(Gui* gui, float percentage, GuiElementDirection direction);
 void gui_set_rect(Gui* gui, GuiColor color);

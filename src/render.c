@@ -352,7 +352,7 @@ static void argument_on_hover(GuiElement* el) {
     el->data.border.type = BORDER_NORMAL;
 }
 
-static void draw_block(ScrBlock* block, bool highlight) {
+static void draw_block(ScrBlock* block, bool highlight, bool can_hover) {
     bool collision = hover_info.prev_block == block || highlight;
     Color color = CONVERT_COLOR(block->blockdef->color, Color);
     Color block_color = collision ? ColorBrightness(color, 0.3) : color;
@@ -371,7 +371,7 @@ static void draw_block(ScrBlock* block, bool highlight) {
         gui_set_rect(gui, CONVERT_COLOR(block_color, GuiColor));
         gui_set_custom_data(gui, block);
         if (block->blockdef->type == BLOCKTYPE_HAT) gui_set_rect_type(gui, RECT_NOTCHED);
-        gui_on_hover(gui, block_on_hover);
+        if (can_hover) gui_on_hover(gui, block_on_hover);
         if (hover_info.select_block == block) gui_on_render(gui, block_on_render);
 
     gui_element_begin(gui);
@@ -423,22 +423,22 @@ static void draw_block(ScrBlock* block, bool highlight) {
                             gui_on_render(gui, argument_on_render);
                         }
                         gui_set_custom_data(gui, arg);
-                        gui_on_hover(gui, argument_on_hover);
+                        if (can_hover) gui_on_hover(gui, argument_on_hover);
 
                         if (arg->type == ARGUMENT_TEXT) {
-                            draw_input(&font_cond, &arg->data.text, input->data.arg.hint_text, BLOCK_TEXT_SIZE, (GuiColor) { 0x00, 0x00, 0x00, 0xff });
+                            if (can_hover) draw_input(&font_cond, &arg->data.text, input->data.arg.hint_text, BLOCK_TEXT_SIZE, (GuiColor) { 0x00, 0x00, 0x00, 0xff });
                         } else {
-                            draw_input(&font_cond_shadow, &arg->data.text, input->data.arg.hint_text, BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+                            if (can_hover) draw_input(&font_cond_shadow, &arg->data.text, input->data.arg.hint_text, BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
                         }
                     gui_element_end(gui);
                 gui_element_end(gui);
                 break;
             case ARGUMENT_BLOCK:
                 gui_element_begin(gui);
-                    gui_on_hover(gui, block_argument_on_hover);
+                    if (can_hover) gui_on_hover(gui, block_argument_on_hover);
                     gui_set_custom_data(gui, arg);
 
-                    draw_block(&arg->data.block, highlight);
+                    draw_block(&arg->data.block, highlight, can_hover);
                 gui_element_end(gui);
                 break;
             default:
@@ -462,7 +462,7 @@ static void draw_block(ScrBlock* block, bool highlight) {
                     gui_set_padding(gui, BLOCK_STRING_PADDING / 2, 0);
                     gui_set_direction(gui, DIRECTION_HORIZONTAL);
                     if (hover_info.select_argument == arg) gui_set_border(gui, (GuiColor) { 0x30, 0x30, 0x30, 0xff }, BLOCK_OUTLINE_SIZE);
-                    gui_on_hover(gui, argument_on_hover);
+                    if (can_hover) gui_on_hover(gui, argument_on_hover);
                     gui_set_custom_data(gui, arg);
 
                     gui_text(gui, &font_cond_shadow, arg->data.text, BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
@@ -479,7 +479,7 @@ static void draw_block(ScrBlock* block, bool highlight) {
                 gui_set_align(gui, ALIGN_CENTER);
                 gui_set_gap(gui, BLOCK_PADDING);
                 gui_set_custom_data(gui, arg);
-                gui_on_hover(gui, argument_on_hover);
+                if (can_hover) gui_on_hover(gui, argument_on_hover);
 
                 draw_blockdef(arg->data.blockdef, hover_info.editor.edit_blockdef == arg->data.blockdef);
 
@@ -710,14 +710,14 @@ static void draw_blockchain(ScrBlockChain* chain) {
                 gui_set_direction(gui, DIRECTION_VERTICAL);
                 gui_set_custom_data(gui, &chain->blocks[i]);
 
-                draw_block(&chain->blocks[i], highlight && block_highlight);
+                draw_block(&chain->blocks[i], highlight && block_highlight, true);
         } else {
             if (blockdef->type == BLOCKTYPE_CONTROL) {
                 gui_element_begin(gui);
                     gui_set_direction(gui, DIRECTION_VERTICAL);
                     gui_set_custom_data(gui, &chain->blocks[i]);
             }
-            draw_block(&chain->blocks[i], highlight && block_highlight);
+            draw_block(&chain->blocks[i], highlight && block_highlight, true);
         }
 
         if (blockdef->type == BLOCKTYPE_CONTROL || blockdef->type == BLOCKTYPE_CONTROLEND) {
@@ -850,7 +850,7 @@ static void draw_block_palette(void) {
         gui_set_scissor(gui);
 
         for (size_t i = 0; i < vector_size(palette.categories[palette.current_category].blocks); i++) {
-            draw_block(&palette.categories[palette.current_category].blocks[i], false);
+            draw_block(&palette.categories[palette.current_category].blocks[i], false, true);
         }
     gui_element_end(gui);
 }
@@ -1136,6 +1136,54 @@ static void draw_dropdown(void) {
     gui_element_end(gui);
 }
 
+static void search_on_hover(GuiElement* el) {
+    el->color = (GuiColor) { 0x40, 0x40, 0x40, 0xff };
+    hover_info.block = el->custom_data;
+}
+
+static void draw_search_list(void) {
+    gui_element_begin(gui);
+        gui_set_floating(gui);
+        gui_set_position(gui, search_list_pos.x, search_list_pos.y);
+        gui_set_rect(gui, (GuiColor) { 0x40, 0x40, 0x40, 0xff });
+        gui_set_gap(gui, BLOCK_OUTLINE_SIZE);
+        gui_set_padding(gui, BLOCK_OUTLINE_SIZE, BLOCK_OUTLINE_SIZE);
+
+        gui_element_begin(gui);
+            gui_set_rect(gui, (GuiColor) { 0x2b, 0x2b, 0x2b, 0xff });
+            gui_set_grow(gui, DIRECTION_HORIZONTAL);
+            gui_set_padding(gui, BLOCK_OUTLINE_SIZE, 0);
+            gui_set_min_size(gui, 0, conf.font_size);
+            gui_set_direction(gui, DIRECTION_HORIZONTAL);
+            gui_set_align(gui, ALIGN_CENTER);
+
+            gui_element_begin(gui);
+                draw_input(&font_cond, &search_list_search, "Search...", BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+            gui_element_end(gui);
+        gui_element_end(gui);
+
+        gui_element_begin(gui);
+            gui_set_fixed(gui, 0, conf.font_size * 5);
+            gui_set_fit(gui, DIRECTION_HORIZONTAL);
+            gui_set_gap(gui, BLOCK_OUTLINE_SIZE);
+            gui_set_scissor(gui);
+            gui_set_scroll(gui, &search_list_scroll);
+
+            for (size_t i = 0; i < vector_size(search_list); i++) {
+                gui_element_begin(gui);
+                    gui_set_rect(gui, (GuiColor) { 0x2b, 0x2b, 0x2b, 0xff });
+                    gui_set_grow(gui, DIRECTION_HORIZONTAL);
+                    gui_on_hover(gui, search_on_hover);
+                    gui_set_custom_data(gui, search_list[i]);
+
+                    draw_block(search_list[i], false, false);
+                gui_element_end(gui);
+            }
+
+        gui_element_end(gui);
+    gui_element_end(gui);
+}
+
 static void panel_editor_on_hover(GuiElement* el) {
     (void) el;
     if (!hover_info.is_panel_edit_mode) return;
@@ -1163,6 +1211,12 @@ void scrap_gui_process(void) {
 
             draw_blockchain(&mouse_blockchain);
         gui_element_end(gui);
+
+        if (hover_info.select_input == &search_list_search) {
+            draw_search_list();
+        } else {
+            search_list_pos = (Vector2) { gui->mouse_x, gui->mouse_y };
+        }
 
         if (hover_info.is_panel_edit_mode) {
             if (hover_info.mouse_panel != PANEL_NONE) {

@@ -82,19 +82,19 @@ static void editor_code_remove_blockdef(ScrBlockdef* blockdef) {
     }
 }
 
-static void edit_text(char** text) {
-    if (!text) return;
+static bool edit_text(char** text) {
+    if (!text) return false;
 
     if (IsKeyPressed(KEY_HOME)) {
         hover_info.select_input_ind = 0;
         render_surface_needs_redraw = true;
-        return;
+        return false;
     }
 
     if (IsKeyPressed(KEY_END)) {
         hover_info.select_input_ind = vector_size(*text) - 1;
         render_surface_needs_redraw = true;
-        return;
+        return false;
     }
 
     if (IsKeyPressed(KEY_LEFT) || IsKeyPressedRepeat(KEY_LEFT)) {
@@ -105,7 +105,7 @@ static void edit_text(char** text) {
             while (((unsigned char)(*text)[hover_info.select_input_ind] >> 6) == 2) hover_info.select_input_ind--;
         }
         render_surface_needs_redraw = true;
-        return;
+        return false;
     }
 
     if (IsKeyPressed(KEY_RIGHT) || IsKeyPressedRepeat(KEY_RIGHT)) {
@@ -116,11 +116,11 @@ static void edit_text(char** text) {
             while (((unsigned char)(*text)[hover_info.select_input_ind] >> 6) == 2) hover_info.select_input_ind++;
         }
         render_surface_needs_redraw = true;
-        return;
+        return false;
     }
 
     if (IsKeyPressed(KEY_DELETE) || IsKeyPressedRepeat(KEY_DELETE)) {
-        if (vector_size(*text) <= 1 || hover_info.select_input_ind == (int)vector_size(*text) - 1) return;
+        if (vector_size(*text) <= 1 || hover_info.select_input_ind == (int)vector_size(*text) - 1) return false;
 
         int remove_pos = hover_info.select_input_ind;
         int remove_size;
@@ -128,11 +128,11 @@ static void edit_text(char** text) {
 
         vector_erase(*text, remove_pos, remove_size);
         render_surface_needs_redraw = true;
-        return;
+        return true;
     }
 
     if (IsKeyPressed(KEY_BACKSPACE) || IsKeyPressedRepeat(KEY_BACKSPACE)) {
-        if (vector_size(*text) <= 1 || hover_info.select_input_ind == 0) return;
+        if (vector_size(*text) <= 1 || hover_info.select_input_ind == 0) return false;
 
         int remove_pos = hover_info.select_input_ind - 1;
         int remove_size = 1;
@@ -144,9 +144,10 @@ static void edit_text(char** text) {
         vector_erase(*text, remove_pos, remove_size);
         render_surface_needs_redraw = true;
         hover_info.select_input_ind -= remove_size;
-        return;
+        return true;
     }
 
+    bool input_changed = false;
     int char_val;
     while ((char_val = GetCharPressed())) {
         int utf_size = 0;
@@ -154,8 +155,10 @@ static void edit_text(char** text) {
         for (int i = 0; i < utf_size; i++) {
             vector_insert(text, hover_info.select_input_ind++, utf_char[i]);
         }
+        input_changed = true;
         render_surface_needs_redraw = true;
     }
+    return input_changed;
 }
 
 PanelTree* find_panel(PanelTree* root, PanelType panel) {
@@ -789,6 +792,19 @@ static bool handle_mouse_click(void) {
     camera_click_pos = camera_pos;
     hover_info.dragged_slider.value = NULL;
 
+    if (hover_info.select_input == &search_list_search) {
+        if (hover_info.block) {
+            blockchain_add_block(&mouse_blockchain, block_new_ms(hover_info.block->blockdef));
+            if (hover_info.block->blockdef->type == BLOCKTYPE_CONTROL && vm.end_blockdef) {
+                blockchain_add_block(&mouse_blockchain, block_new_ms(vm.blockdefs[vm.end_blockdef]));
+            }
+        }
+
+        hover_info.select_input = NULL;
+        hover_info.block = NULL;
+        return true;
+    }
+
     if (hover_info.input_info.input) get_input_ind();
     if (hover_info.input_info.input != hover_info.select_input) hover_info.select_input = hover_info.input_info.input;
 
@@ -993,6 +1009,24 @@ static bool handle_code_panel_key_press(void) {
     return false;
 }
 
+static bool search_blockdef(ScrBlockdef* blockdef) {
+    if (strcasestr(blockdef->id, search_list_search)) return true;
+    for (size_t i = 0; i < vector_size(blockdef->inputs); i++) {
+        if (blockdef->inputs[i].type != INPUT_TEXT_DISPLAY) continue;
+        if (strcasestr(blockdef->inputs[i].data.text, search_list_search)) return true;
+    }
+    return false;
+}
+
+void update_search(void) {
+    vector_clear(search_list);
+    for (size_t i = 0; i < vector_size(palette.categories); i++) {
+        for (size_t j = 0; j < vector_size(palette.categories[i].blocks); j++) {
+            if (search_blockdef(palette.categories[i].blocks[j].blockdef)) vector_add(&search_list, &palette.categories[i].blocks[j]);
+        }
+    }
+}
+
 static void handle_key_press(void) {
     if (IsKeyPressed(KEY_F5)) {
         start_vm();
@@ -1000,6 +1034,23 @@ static void handle_key_press(void) {
     }
     if (IsKeyPressed(KEY_F6)) {
         stop_vm();
+        return;
+    }
+    if (IsKeyPressed(KEY_S) && 
+        hover_info.select_input != &search_list_search && 
+        vector_size(mouse_blockchain.blocks) == 0 && 
+        !hover_info.is_panel_edit_mode && 
+        hover_info.panel &&
+        hover_info.panel->type == PANEL_CODE &&
+        !gui_window_is_shown() &&
+        !hover_info.select_input) 
+    {
+        vector_clear(search_list_search);
+        vector_add(&search_list_search, 0);
+        hover_info.select_input = &search_list_search;
+        hover_info.select_input_ind = 0;
+        render_surface_needs_redraw = true;
+        update_search();
         return;
     }
 
@@ -1041,7 +1092,9 @@ static void handle_key_press(void) {
     }
     if (hover_info.select_block && hover_info.select_argument && hover_info.select_block->blockdef->inputs[hover_info.select_argument->input_id].type == INPUT_DROPDOWN) return;
 
-    edit_text(hover_info.select_input);
+    if (edit_text(hover_info.select_input)) {
+        if (hover_info.select_input == &search_list_search) update_search();
+    }
 }
 
 static void handle_mouse_wheel(void) {

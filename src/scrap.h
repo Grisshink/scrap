@@ -268,10 +268,14 @@ extern BlockCode block_code;
 extern Dropdown dropdown;
 extern BlockPalette palette;
 extern ScrBlockChain* editor_code;
+extern ScrBlock** search_list;
 extern ScrBlockChain mouse_blockchain;
 extern ScrExec exec;
 extern Gui* gui;
+extern char* search_list_search;
 extern int categories_scroll;
+extern int search_list_scroll;
+extern Vector2 search_list_pos;
 
 extern SplitPreview split_preview;
 extern Tab* code_tabs;
@@ -352,6 +356,7 @@ bool handle_right_slider_button_click(void);
 bool handle_category_click(void);
 bool handle_settings_dropdown_click(void);
 PanelTree* find_panel(PanelTree* root, PanelType panel);
+void update_search(void);
 
 // util.c
 int leading_ones(unsigned char byte);

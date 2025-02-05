@@ -76,9 +76,13 @@ BlockCode block_code = {0};
 Dropdown dropdown = {0};
 BlockPalette palette = {0};
 ScrBlockChain* editor_code = {0};
+ScrBlock** search_list = NULL;
 ScrBlockChain mouse_blockchain = {0};
 Gui* gui = NULL;
+char* search_list_search = NULL;
 int categories_scroll = 0;
+int search_list_scroll = 0;
+Vector2 search_list_pos = {0};
 
 SplitPreview split_preview = {0};
 Tab* code_tabs = NULL;
@@ -423,6 +427,11 @@ void setup(void) {
     mouse_blockchain = blockchain_new();
     editor_code = vector_create();
 
+    search_list = vector_create();
+    search_list_search = vector_create();
+    vector_add(&search_list_search, 0);
+    update_search();
+
     term_init();
 
     gui = malloc(sizeof(Gui));
@@ -543,6 +552,7 @@ int main(void) {
     vm_free(&vm);
     free(gui);
     delete_all_tabs();
+    vector_free(search_list);
     vector_free(code_tabs);
     config_free(&conf);
     config_free(&window_conf);
