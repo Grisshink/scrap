@@ -324,6 +324,14 @@ static void block_on_hover(GuiElement* el) {
     if (!hover_info.block->parent) hover_info.prev_argument = NULL;
 }
 
+static void argument_on_render(GuiElement* el) {
+    hover_info.select_block_pos = (Vector2) { el->abs_x, el->abs_y };
+}
+
+static void block_on_render(GuiElement* el) {
+    hover_info.select_block_pos = (Vector2) { el->abs_x, el->abs_y };
+}
+
 static void block_argument_on_hover(GuiElement* el) {
     if (hover_info.top_bars.handler) return;
     if (hover_info.is_panel_edit_mode) return;
@@ -364,6 +372,7 @@ static void draw_block(ScrBlock* block, bool highlight) {
         gui_set_custom_data(gui, block);
         if (block->blockdef->type == BLOCKTYPE_HAT) gui_set_rect_type(gui, RECT_NOTCHED);
         gui_on_hover(gui, block_on_hover);
+        if (hover_info.select_block == block) gui_on_render(gui, block_on_render);
 
     gui_element_begin(gui);
         gui_set_direction(gui, DIRECTION_HORIZONTAL);
@@ -409,7 +418,10 @@ static void draw_block(ScrBlock* block, bool highlight) {
                         gui_set_direction(gui, DIRECTION_HORIZONTAL);
                         gui_set_min_size(gui, conf.font_size - BLOCK_OUTLINE_SIZE * 4, conf.font_size - BLOCK_OUTLINE_SIZE * 4);
                         gui_set_padding(gui, BLOCK_STRING_PADDING / 2, 0);
-                        if (hover_info.select_argument == arg) gui_set_border(gui, (GuiColor) { 0x30, 0x30, 0x30, 0xff }, BLOCK_OUTLINE_SIZE);
+                        if (hover_info.select_argument == arg) {
+                            gui_set_border(gui, (GuiColor) { 0x30, 0x30, 0x30, 0xff }, BLOCK_OUTLINE_SIZE);
+                            gui_on_render(gui, argument_on_render);
+                        }
                         gui_set_custom_data(gui, arg);
                         gui_on_hover(gui, argument_on_hover);
 
@@ -549,7 +561,7 @@ static void draw_panel_editor_button(const char* text, int size, GuiColor color,
     gui_element_end(gui);
 }
 
-static GuiElement* draw_button(const char* text, int size, bool selected, GuiHoverHandler on_hover, void* custom_data) {
+static GuiElement* draw_button(const char* text, int size, bool selected, GuiHandler on_hover, void* custom_data) {
     GuiElement* el;
     gui_element_begin(gui);
         gui_set_direction(gui, DIRECTION_HORIZONTAL);
@@ -843,6 +855,10 @@ static void draw_block_palette(void) {
     gui_element_end(gui);
 }
 
+static void code_area_on_render(GuiElement* el) {
+    hover_info.code_panel_bounds = (Rectangle) { el->abs_x, el->abs_y, el->w, el->h };
+}
+
 static void draw_code_area(void) {
     gui_element_begin(gui);
         gui_set_grow(gui, DIRECTION_HORIZONTAL);
@@ -851,6 +867,7 @@ static void draw_code_area(void) {
         gui_set_padding(gui, 0, conf.font_size * 2);
         gui_set_align(gui, ALIGN_CENTER);
         gui_set_scissor(gui);
+        gui_on_render(gui, code_area_on_render);
 
         draw_code();
 
@@ -1454,6 +1471,8 @@ static void write_debug_buffer(void) {
     print_debug(&i, "BlockChain: %p", hover_info.blockchain);
     print_debug(&i, "Prev argument: %p", hover_info.prev_argument);
     print_debug(&i, "Select block: %p, arg: %p, chain: %p", hover_info.select_block, hover_info.select_argument, hover_info.select_blockchain);
+    print_debug(&i, "Select block pos: (%.3f, %.3f)", hover_info.select_block_pos.x, hover_info.select_block_pos.y);
+    print_debug(&i, "Select block bounds Pos: (%.3f, %.3f), Size: (%.3f, %.3f)", hover_info.code_panel_bounds.x, hover_info.code_panel_bounds.y, hover_info.code_panel_bounds.width, hover_info.code_panel_bounds.height);
     print_debug(&i, "Category: %p", hover_info.category);
     print_debug(&i, "Mouse: %p, Time: %.3f, Pos: (%d, %d), Click: (%d, %d)", mouse_blockchain.blocks, hover_info.time_at_last_pos, GetMouseX(), GetMouseY(), (int)hover_info.mouse_click_pos.x, (int)hover_info.mouse_click_pos.y);
     print_debug(&i, "Camera: (%.3f, %.3f), Click: (%.3f, %.3f)", camera_pos.x, camera_pos.y, camera_click_pos.x, camera_click_pos.y);

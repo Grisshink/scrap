@@ -214,6 +214,7 @@ static void gui_render(Gui* gui, GuiElement* el, float pos_x, float pos_y) {
         if (el->handle_hover) el->handle_hover(el);
         hover = true;
     }
+    if (el->handle_pre_render) el->handle_pre_render(el);
 
     GuiDrawBounds el_bounds = (GuiDrawBounds) { 
         pos_x + (float)el->x * el->scaling, 
@@ -339,6 +340,7 @@ GuiElement* gui_element_begin(Gui* gui) {
     el->next = NULL;
     el->parent_anchor = NULL;
     el->handle_hover = NULL;
+    el->handle_pre_render = NULL;
     el->custom_data = NULL;
     el->custom_state = NULL;
     el->scroll_value = NULL;
@@ -509,9 +511,14 @@ GuiElement* gui_get_element(Gui* gui) {
     return gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
 }
 
-void gui_on_hover(Gui* gui, GuiHoverHandler handler) {
+void gui_on_hover(Gui* gui, GuiHandler handler) {
     GuiElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
     el->handle_hover = handler;
+}
+
+void gui_on_render(Gui* gui, GuiHandler handler) {
+    GuiElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
+    el->handle_pre_render = handler;
 }
 
 void gui_set_anchor(Gui* gui, GuiElement* anchor) {

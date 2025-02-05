@@ -157,6 +157,8 @@ typedef struct {
     ScrBlock* select_block;
     ScrArgument* select_argument;
     ScrBlockChain* select_blockchain;
+    Vector2 select_block_pos;
+    Rectangle code_panel_bounds;
 
     InputHoverInfo input_info;
     char** select_input;

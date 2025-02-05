@@ -119,7 +119,7 @@ typedef enum {
     DIRECTION_HORIZONTAL,
 } GuiElementDirection;
 
-typedef void (*GuiHoverHandler)(GuiElement* el);
+typedef void (*GuiHandler)(GuiElement* el);
 
 struct GuiElement {
     int x, y;
@@ -149,7 +149,8 @@ struct GuiElement {
     //   G - Does this element need to be resized? (internal flag)
     //   0 - Unused
     unsigned char flags;
-    GuiHoverHandler handle_hover;
+    GuiHandler handle_hover;
+    GuiHandler handle_pre_render;
     int* scroll_value;
     short scroll_scaling;
     void* custom_data;
@@ -246,7 +247,8 @@ void* gui_set_state(Gui* gui, void* state, unsigned short state_len);
 void* gui_get_state(GuiElement* el, unsigned short* state_len);
 GuiElement* gui_get_element(Gui* gui);
 
-void gui_on_hover(Gui* gui, GuiHoverHandler handler);
+void gui_on_hover(Gui* gui, GuiHandler handler);
+void gui_on_render(Gui* gui, GuiHandler handler);
 
 void gui_text_slice(Gui* gui, void* font, const char* text, unsigned int text_size, unsigned short font_size, GuiColor color);
 void gui_text(Gui* gui, void* font, const char* text, unsigned short size, GuiColor color);

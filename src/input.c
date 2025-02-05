@@ -938,6 +938,29 @@ static bool handle_code_panel_key_press(void) {
 
     if (!hover_info.select_blockchain || !hover_info.select_block || hover_info.select_input) return false;
 
+    int bounds_x = MIN(200, hover_info.code_panel_bounds.width / 2);
+    int bounds_y = MIN(200, hover_info.code_panel_bounds.height / 2);
+
+    if (hover_info.select_block_pos.x - (hover_info.code_panel_bounds.x + hover_info.code_panel_bounds.width) > -bounds_x) {
+        camera_pos.x += hover_info.select_block_pos.x - (hover_info.code_panel_bounds.x + hover_info.code_panel_bounds.width) + bounds_x;
+        render_surface_needs_redraw = true;
+    }
+
+    if (hover_info.select_block_pos.x - hover_info.code_panel_bounds.x < bounds_x) {
+        camera_pos.x += hover_info.select_block_pos.x - hover_info.code_panel_bounds.x - bounds_x;
+        render_surface_needs_redraw = true;
+    }
+
+    if (hover_info.select_block_pos.y - (hover_info.code_panel_bounds.y + hover_info.code_panel_bounds.height) > -bounds_y) {
+        camera_pos.y += hover_info.select_block_pos.y - (hover_info.code_panel_bounds.y + hover_info.code_panel_bounds.height) + bounds_y;
+        render_surface_needs_redraw = true;
+    }
+
+    if (hover_info.select_block_pos.y - hover_info.code_panel_bounds.y < bounds_y) {
+        camera_pos.y += hover_info.select_block_pos.y - hover_info.code_panel_bounds.y - bounds_y;
+        render_surface_needs_redraw = true;
+    }
+
     if (IsKeyPressed(KEY_RIGHT) || IsKeyPressedRepeat(KEY_RIGHT)) {
         block_next_argument();
         render_surface_needs_redraw = true;
@@ -1104,6 +1127,10 @@ void scrap_gui_process_input(void) {
     } else if (IsMouseButtonPressed(MOUSE_BUTTON_MIDDLE)) {
         hover_info.mouse_click_pos = (Vector2) { gui->mouse_x, gui->mouse_y };
         camera_click_pos = camera_pos;
+        hover_info.select_block = NULL;
+        hover_info.select_argument = NULL;
+        hover_info.select_input = NULL;
+        hover_info.select_blockchain = NULL;
         render_surface_needs_redraw = true;
     } else if (IsMouseButtonDown(MOUSE_BUTTON_MIDDLE) || IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
         handle_mouse_drag();
