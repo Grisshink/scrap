@@ -5,6 +5,7 @@
 - The terminal's background color has been changed to match with the color of other panels
 - All of the text boxes were upgraded to allow inserting or deleting at any position
 - Now if any block input is empty, it will show a small hint of what it needs
+- Added codebase movement through keyboard keys, see `README.md` for details
 
 ## Fixes
 - Fixed "crash" when vm overflows/underflows one its stacks
@@ -12,6 +13,7 @@
 - Fixed scrollbars sometimes appearing behind scroll container
 - Fixed text in the settings going out of bounds when the text is too large
 - Fixed codespace occasionally jumping far away when it is dragged outside of the window
+- Fixed code renderer not checking with proper culling bounds. This should slightly improve performance of the renderer
 
 # v0.3.1-beta
 
