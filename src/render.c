@@ -1069,8 +1069,8 @@ static void draw_code(void) {
             editor_code[i].x - camera_pos.x, 
             editor_code[i].y - camera_pos.y,
         };
-        // FIXME: code renderer does not properly check culling bounds
-        if (chain_pos.x > gui->win_w || chain_pos.y > gui->win_h) continue;
+        Rectangle code_size = hover_info.code_panel_bounds;
+        if (chain_pos.x > code_size.width || chain_pos.y > code_size.height) continue;
         if (editor_code[i].width > 0 && editor_code[i].height > 0 && 
             (chain_pos.x + editor_code[i].width < 0 || chain_pos.y + editor_code[i].height < 0)) continue;
         gui_element_begin(gui);
