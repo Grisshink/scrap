@@ -6,6 +6,7 @@
 - All of the text boxes were upgraded to allow inserting or deleting at any position
 - Now if any block input is empty, it will show a small hint of what it needs
 - Added codebase movement through keyboard keys, see `README.md` for details
+- Added block search menu. You can open it by pressing `S` in code area
 
 ## Fixes
 - Fixed "crash" when vm overflows/underflows one its stacks

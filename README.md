@@ -38,6 +38,7 @@ Scrap is currently in **Beta** stage. Some features may be missing or break, so 
 - Press `F5` to run the project. Press `F6` to stop it.
 - Press arrow keys while the block is highlighted to move the block cursor around
 - Press `Enter` to enter the highlighted text box and `Esc` to leave that text box
+- Press `S` to open block search menu
 
 ## Screenshots
 
