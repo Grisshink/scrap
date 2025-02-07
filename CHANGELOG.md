@@ -1,3 +1,12 @@
+# v0.4.1-beta
+
+## What's new?
+- Added Ukrainian translation *(by @jackmophin)*
+
+## Fixes
+- Fixed localizations sometimes not working on Windows
+- Fixed codebase scrolling with search menu at the same time
+
 # v0.4-beta
 
 ## What's new?
