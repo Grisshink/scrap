@@ -1010,12 +1010,12 @@ static bool handle_code_panel_key_press(void) {
     return false;
 }
 
-static bool search_string(char* str, char* substr) {
+static bool search_string(const char* str, const char* substr) {
     if (*substr == 0) return true;
 
     int next_ch, next_subch, cur_ch, cur_subch;
-    char* cur_substr = substr;
-    char* cur_str = str;
+    char* cur_substr = (char*)substr;
+    char* cur_str = (char*)str;
 
     while (*cur_str != 0 && *cur_substr != 0) {
         cur_ch = GetCodepointNext(cur_str, &next_ch);
@@ -1026,7 +1026,7 @@ static bool search_string(char* str, char* substr) {
             cur_str += next_ch;
         } else {
             if (cur_substr == substr) cur_str += next_ch;
-            cur_substr = substr;
+            cur_substr = (char*)substr;
         }
     }
     return *cur_substr == 0;
