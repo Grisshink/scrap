@@ -392,4 +392,7 @@ void draw_window(void);
 void register_blocks(ScrVm* vm);
 void register_categories(void);
 
+// platform.c
+void scrap_set_env(const char* name, const char* value);
+
 #endif // SCRAP_H

@@ -24,10 +24,6 @@
 #include <libintl.h>
 #include <locale.h>
 
-#ifdef _WIN32
-#define setenv(env, val, override) _putenv_s(env, val)
-#endif // _WIN32
-
 // Global Variables
 Image logo_img;
 
@@ -451,7 +447,13 @@ int main(void) {
     set_default_config(&conf);
     load_config(&conf);
 
-    if (conf.language != LANG_SYSTEM) setenv("LANGUAGE", language_to_code(conf.language), false);
+    if (conf.language != LANG_SYSTEM) {
+#ifdef _WIN32
+        scrap_set_env("LANG", language_to_code(conf.language));
+#else
+        scrap_set_env("LANGUAGE", language_to_code(conf.language));
+#endif
+    }
     setlocale(LC_MESSAGES, "");
     textdomain("scrap");
     bindtextdomain("scrap", into_data_path(LOCALE_PATH));
