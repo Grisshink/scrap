@@ -64,6 +64,7 @@ const char* language_to_code(Language lang) {
         case LANG_EN: return "en";
         case LANG_RU: return "ru";
         case LANG_KK: return "kk";
+        case LANG_UK: return "uk";
     }
     assert(false && "Unreachable");
 }
@@ -75,6 +76,8 @@ Language code_to_language(const char* code) {
         return LANG_RU;
     } else if (!strcmp(code, "kk")) {
         return LANG_KK;
+    } else if (!strcmp(code, "uk")) {
+        return LANG_UK;
     } else {
         return LANG_SYSTEM;
     }

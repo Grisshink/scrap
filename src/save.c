@@ -44,11 +44,12 @@ const int codepoint_regions[CODEPOINT_REGION_COUNT][2] = {
 };
 int codepoint_start_ranges[CODEPOINT_REGION_COUNT] = {0};
 
-char* language_list[4] = {
+char* language_list[5] = {
     "System",
     "English [en]",
     "Russian [ru]",
     "Kazakh [kk]",
+    "Ukrainian [uk]",
 };
 
 char scrap_ident[] = "SCRAP";
