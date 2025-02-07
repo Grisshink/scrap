@@ -1,6 +1,6 @@
 msgid ""
 msgstr ""
-"Language: ua\n"
+"Language: uk\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 
 #: blocks.c
@@ -480,5 +480,5 @@ msgid "Kazakh [kk]"
 msgstr "Казахська [kk]"
 
 #: save.c
-msgid "Ukrainian [ua]"
-msgstr "Українська [ua]"
+msgid "Ukrainian [uk]"
+msgstr "Українська [uk]"
