@@ -1,0 +1,484 @@
+msgid ""
+msgstr ""
+"Language: ua\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+
+#: blocks.c
+msgid "Hello, scrap!"
+msgstr "Привіт, сміттеїде!"
+
+#: blocks.c
+msgid "Control"
+msgstr "Керування"
+
+#: blocks.c
+msgid "Terminal"
+msgstr "Термінал"
+
+#: blocks.c
+msgid "Math"
+msgstr "Математика"
+
+#: blocks.c
+msgid "Logic"
+msgstr "Логіка"
+
+#: blocks.c
+msgid "Strings"
+msgstr "Рядки"
+
+#: blocks.c
+msgid "Misc."
+msgstr "Інше"
+
+#: blocks.c
+msgid "Data"
+msgstr "Дані"
+
+#: blocks.c
+msgid "When"
+msgstr "Коли"
+
+#: blocks.c
+msgid "clicked"
+msgstr "натиснутий"
+
+#: blocks.c
+msgid "Loop"
+msgstr "Цикл"
+
+#: blocks.c
+msgid "Repeat"
+msgstr "Повторити"
+
+#: blocks.c
+msgid "times"
+msgstr "разів"
+
+#: blocks.c
+msgid "While"
+msgstr "Поки"
+
+#: blocks.c
+msgid "If"
+msgstr "Якщо"
+
+#: blocks.c
+msgid ", then"
+msgstr ", тоді"
+
+#: blocks.c
+msgid "Else if"
+msgstr "Інакше якщо"
+
+#: blocks.c
+msgid "Else"
+msgstr "Інакше"
+
+#: blocks.c
+msgid "Do nothing"
+msgstr "Нічого не робити"
+
+#: blocks.c
+msgid "Sleep"
+msgstr "Чекати"
+
+#: blocks.c
+msgid "μs"
+msgstr "мкс"
+
+#: blocks.c
+msgid "Define"
+msgstr "Визначити"
+
+#: blocks.c
+msgid "Return"
+msgstr "Повернути"
+
+#: blocks.c
+msgid "Get input"
+msgstr "Отримати ввід"
+
+#: blocks.c
+msgid "Get char"
+msgstr "Отримати символ"
+
+#: blocks.c
+msgid "Print"
+msgstr "Вивести"
+
+#: blocks.c
+msgid "Print line"
+msgstr "Вивести лінію"
+
+#: blocks.c
+msgid "Cursor X"
+msgstr "X курсора"
+
+#: blocks.c
+msgid "Cursor Y"
+msgstr "Y курсора"
+
+#: blocks.c
+msgid "Terminal width"
+msgstr "Ширина терміналу"
+
+#: blocks.c
+msgid "Terminal height"
+msgstr "Висота терміналу"
+
+#: blocks.c
+msgid "Set cursor X:"
+msgstr "Задати позицію курсора X:"
+
+#: blocks.c
+msgid "Y:"
+msgstr "Y:"
+
+#: blocks.c
+msgid "Set text color"
+msgstr "Задати колір тексту"
+
+#: blocks.c
+msgid "Set background color"
+msgstr "Задати колір фону"
+
+#: blocks.c
+msgid "Reset color"
+msgstr "Скинути колір"
+
+#: blocks.c
+msgid "Clear terminal"
+msgstr "Очистити термінал"
+
+#: blocks.c
+msgid "Set clear color"
+msgstr "Задати колір очистки"
+
+#: blocks.c
+msgid "Pow"
+msgstr "Степінь"
+
+#: blocks.c
+msgid "Not"
+msgstr "Не"
+
+#: blocks.c
+msgid "and"
+msgstr "і"
+
+#: blocks.c
+msgid "or"
+msgstr "або"
+
+#: blocks.c
+msgid "True"
+msgstr "Істина"
+
+#: blocks.c
+msgid "False"
+msgstr "Хибний"
+
+#: blocks.c
+msgid "Random"
+msgstr "Випадкове ціле від"
+
+#: blocks.c
+msgid "to"
+msgstr "до"
+
+#: blocks.c
+msgid "Join"
+msgstr "З'єднати"
+
+#: blocks.c
+msgid "left and "
+msgstr "ліве і "
+
+#: blocks.c
+msgid "right"
+msgstr "праве"
+
+#: blocks.c
+msgid "Ord"
+msgstr "Ord"
+
+#: blocks.c
+msgid "Chr"
+msgstr "Chr"
+
+#: blocks.c
+msgid "Letter"
+msgstr "Буква"
+
+#: blocks.c
+msgid "in"
+msgstr "у"
+
+#: blocks.c
+msgid "Substring"
+msgstr "Підрядок"
+
+#: blocks.c
+msgid "Length"
+msgstr "Довжина"
+
+#: blocks.c
+msgid "string"
+msgstr "рядок"
+
+#: blocks.c
+msgid "Time since 1970"
+msgstr "Час після 1970"
+
+#: blocks.c
+msgid "Int"
+msgstr "Ціле"
+
+#: blocks.c
+msgid "Float"
+msgstr "Речове"
+
+#: blocks.c
+msgid "Str"
+msgstr "Рядкове"
+
+#: blocks.c
+msgid "Bool"
+msgstr "Булеве"
+
+#: blocks.c
+msgid "Nothing"
+msgstr "Нічого"
+
+#: blocks.c
+msgid "Declare"
+msgstr "Оголосити"
+
+#: blocks.c
+msgid "my variable"
+msgstr "моя змінна"
+
+#: blocks.c
+msgid "Get"
+msgstr "Отримати"
+
+#: blocks.c
+msgid "Set"
+msgstr "Надати"
+
+#: blocks.c
+msgid "Empty list"
+msgstr "Порожній список"
+
+#: blocks.c
+msgid "Add"
+msgstr "Додати"
+
+#: blocks.c
+msgid "value"
+msgstr "значення"
+
+#: blocks.c
+msgid "get at"
+msgstr "отримати по індексу"
+
+#: blocks.c
+msgid "set at"
+msgstr "задати по індексу"
+
+#: blocks.c
+msgid "My block"
+msgstr "Мій блок"
+
+#: render.c
+msgid "Scrap"
+msgstr "Scrap"
+
+#: input.c
+msgid "Code"
+msgstr "Код"
+
+#: input.c
+msgid "Output"
+msgstr "Вивід"
+
+#: input.c
+msgid "Block categories"
+msgstr "Категорії блоків"
+
+#: input.c
+msgid "Block palette"
+msgstr "Палітра блоків"
+
+#: render.c
+msgid "File"
+msgstr "Файл"
+
+#: render.c
+msgid "Settings"
+msgstr "Налаштування"
+
+#: render.c
+msgid "About"
+msgstr "Про програму"
+
+#: scrap.c
+msgid "Vm executed successfully"
+msgstr "Код виконаний успішно"
+
+#: scrap.c
+msgid "Vm stopped >:("
+msgstr "Код зупинений >:("
+
+#: scrap.c
+msgid "Vm shitted and died :("
+msgstr "Код не витримав навантаження та помер :("
+
+#: input.c
+msgid "File load failed :("
+msgstr "Завантаження файлу не вдалось :("
+
+#: input.c
+msgid "File load succeeded!"
+msgstr "Завантаження файлу вдалось!"
+
+#: input.c
+msgid "Jump to chain (%d/%d)"
+msgstr "Перехід на ланцюжок (%d/%d)"
+
+#: render.c
+msgid "Start failed!"
+msgstr "Запуск коду провалений!"
+
+#: render.c
+msgid "Started successfully!"
+msgstr "Код успішно запущений!"
+
+#: render.c
+msgid "New project"
+msgstr "Новий проект"
+
+#: render.c
+msgid "Save project"
+msgstr "Зберегти проект"
+
+#: render.c
+msgid "Load project"
+msgstr "Завантажити проект"
+
+#: window.c
+msgid "UI size"
+msgstr "Розмір інтерфейсу"
+
+#: window.c
+msgid "FPS limit"
+msgstr "Обмеження FPS"
+
+#: window.c
+msgid "Font path"
+msgstr "Шлях шрифта"
+
+#: window.c
+msgid "Bold font path"
+msgstr "Шлях жирного шрифта"
+
+#: window.c
+msgid "Monospaced font path"
+msgstr "Шлях моноширинного шрифта"
+
+#: window.c
+msgid "Panel editor"
+msgstr "Редактор панелей"
+
+#: window.c
+msgid "Open"
+msgstr "Відкрити"
+
+#: window.c
+msgid "Reset panels"
+msgstr "Скидання панелей"
+
+#: window.c
+msgid "Reset"
+msgstr "Скинути"
+
+#: window.c
+msgid "Apply"
+msgstr "Застосувати"
+
+#: window.c
+msgid "Needs restart for changes to take effect"
+msgstr "Потрібне перезавантаження, щоб зміни вступили у силу"
+
+#: window.c
+msgid "Scrap is a project that allows anyone to build"
+msgstr "Scrap - це проект, який надає можливість кожному"
+
+#: window.c
+msgid "software using simple, block based interface."
+msgstr "створювати програми, використовуючи легкий, блоковий інтерфейс"
+
+#: window.c
+msgid "License"
+msgstr "Ліцензія"
+
+#: render.c
+msgid "Panel edit mode"
+msgstr "Режим редагування панелей"
+
+#: render.c
+msgid "Click on panels to reposition them"
+msgstr "Натискайте на панелі щоб переміщати їх"
+
+#: render.c
+msgid "Drag panel edges to resize them"
+msgstr "Переміщайте края панелей, щоб змінити розмір"
+
+#: render.c
+msgid "Done"
+msgstr "Готово"
+
+#: render.c
+msgid "Save"
+msgstr "Зберегти"
+
+#: blocks.c
+msgid "any"
+msgstr "будь-яке"
+
+#: blocks.c
+msgid "cond."
+msgstr "умова"
+
+#: blocks.c
+msgid "Abc"
+msgstr "Абв"
+
+#: window.c
+msgid "path"
+msgstr "шлях"
+
+#: window.c
+msgid "Language"
+msgstr "Мова"
+
+#: save.c
+msgid "System"
+msgstr "Системний"
+
+#: save.c
+msgid "English [en]"
+msgstr "Англійська [en]"
+
+#: save.c
+msgid "Russian [ru]"
+msgstr "Російська [ru]"
+
+#: save.c
+msgid "Kazakh [kk]"
+msgstr "Казахська [kk]"
+
+#: save.c
+msgid "Ukrainian [ua]"
+msgstr "Українська [ua]"
