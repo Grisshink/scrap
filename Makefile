@@ -60,6 +60,8 @@ translations:
 	rm locale/ru/LC_MESSAGES/scrap.po
 	msgfmt -o locale/kk/LC_MESSAGES/scrap.mo locale/kk/LC_MESSAGES/scrap.po
 	rm locale/kk/LC_MESSAGES/scrap.po
+	msgfmt -o locale/uk/LC_MESSAGES/scrap.mo locale/uk/LC_MESSAGES/scrap.po
+	rm locale/uk/LC_MESSAGES/scrap.po
 
 windows-build: translations target
 	mkdir -p $(WINDOWS_DIR)
