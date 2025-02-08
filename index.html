@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Scrap project</title>
+        <link rel="stylesheet" href="style.css" />
+        <link rel="icon" href="assets/favicon.png" />
+    </head>
+    <body>
+        <nav>
+            <img src="assets/favicon.png" alt="Scrap logo" height="32" />
+            <a href="#downloads">Downloads</a>
+            <a href="https://github.com/Grisshink/scrap">Github</a>
+            <a href="#faq">FAQ</a>
+        </nav>
+
+        <canvas id="title-bg"></canvas>
+
+        <div class="center-h">
+            <div class="center">
+                <img src="assets/favicon.png" alt="Scrap logo" height="96" />
+                <div class="title-group">
+                    <p class="title">Scrap</p>
+                    <p class="subtitle">@Grisshink</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="content">
+            <h1>Scrap</h1>
+            <p>Scrap is a new block based programming language with the aim towards advanced users. 
+               It is written in pure C and mostly inspired by other block based languages such as <a href="https://scratch.mit.edu/">Scratch</a> 
+               and its forks such as <a href="https://turbowarp.org">Turbowarp</a>.</p>
+
+            <a class="anchor" id="downloads"></a>
+            <h2>Downloads</h2>
+
+            <div class="download-content">
+                <a class="download-button" 
+                   href="https://github.com/Grisshink/scrap/releases/download/v0.4.1-beta/scrap-v0.4.1-beta-windows64.zip"
+                   style="background-color: #09f"
+                >Download for Windows</a>
+                <a class="download-button" 
+                   href="https://github.com/Grisshink/scrap/releases/download/v0.4.1-beta/scrap-v0.4.1-beta-linux.tar.gz"
+                   style="background-color: #f90"
+                >Download for Linux</a>
+                <a class="download-button" 
+                   href="https://github.com/Grisshink/scrap/releases/download/v0.4.1-beta/Scrap-x86_64.AppImage"
+                >Download for Linux (AppImage)</a>
+            </div>
+
+            <h2>Notable advantages from scratch</h2>
+
+            <div class="section">
+                <p>Faster runtime <em>(Still not faster than Turbowarp because Scrap is interpreted for now)</em></p>
+            </div>
+            <div class="section">
+                <p>The code runs in a separate thread. This solves some performance issues compared to Scratch</p>
+            </div>
+            <div class="section">
+                <img src="assets/else-if.png" alt="Else if blocks demonstration">
+                <p>New, more advanced else if, else blocks, which 
+                    eliminate a lot of nested checks with if-else blocks <em>(i.e. more flexible variant of if-else block in <a href="https://snap.berkeley.edu">Snap!</a>)</em></p>
+            </div>
+            <div class="section">
+                <p style="text-align: right">Variables can have a lifetime, which avoids variable name conflicts and allows to make temporary variables</p>
+                <img src="assets/variables.png" alt="Variable lifetime demonstration">
+            </div>
+            <div class="section">
+                <img src="assets/return.png" alt="Block return demonstration">
+                <p>Custom blocks can return values and can be used as an argument for other block</p>
+            </div>
+            <div class="section">
+                <p style="text-align: right">Various string manipulation blocks and bitwise operator blocks</p>
+                <img src="assets/operators.png" alt="Bitwise and string operators demonstration">
+            </div>
+            <div class="section">
+                <img src="assets/convert.png" alt="Conversion operators demonstration">
+                <p>Data type conversion functions</p>
+            </div>
+            <div class="section">
+                <p style="text-align: right">More strict checks for [[] = []] and [[] != []] blocks. Now they are case sensitive and will check data type for equality</p>
+                <img src="assets/comparison.png" alt="Comparison blocks demonstration">
+            </div>
+            <div class="section">
+                <img src="assets/lists.png" alt="List blocks demonstration">
+                <p>Lists are now a data type instead of a different type of variable, this allows nesting lists inside a list (although it's not very convenient as of right now)</p>
+            </div>
+            <div class="section" style="flex-direction: column">
+                <p>Modularized interface. Most of the interface can be rearranged or moved to another tab</p>
+                <img src="assets/ui.png" alt="Modular UI demonstration" height=480>
+            </div>
+        </div>
+
+        <script src="index.js"></script>
+    </body>
+</html>
