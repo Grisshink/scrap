@@ -44,18 +44,21 @@ nav {
     position: fixed;
 }
 
-nav img {
-    margin-right: 0.5em;
-}
-
 nav a {
     font-family: inherit;
     font-size: inherit;
-    border: none;
     padding: 0.5em 0.5em;
     color: white;
     background-color: none;
     text-decoration: none;
+}
+
+.nav-image {
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 0.5em;
 }
 
 nav a:visited {
