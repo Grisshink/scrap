@@ -113,7 +113,7 @@ nav a:hover {
 }
 
 .content {
-    max-width: 60em;
+    max-width: 50em;
     margin: 0 auto;
 }
 
@@ -123,6 +123,12 @@ nav a:hover {
     gap: 1em;
     margin: 2em 0;
     align-items: center;
+}
+
+.qa {
+    display: flex;
+    flex-direction: column;
+    margin: 2em 0;
 }
 
 .section p {
@@ -156,6 +162,15 @@ nav a:hover {
     display: block;
 }
 
+.footer {
+    background-color: #1b1b1b;
+    padding: 1em 0;
+    gap: 1em;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
 h1, h2 {
     text-align: center;
     font-family: 'NK57 Monospace Bold';
@@ -171,4 +186,8 @@ a {
 
 a:visited {
     color: #bb66ff;
+}
+
+hr {
+    border-color: white;
 }
