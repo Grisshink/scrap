@@ -124,7 +124,7 @@
     let rows = [];
     let y = topBound;
     while (y + 32 + blockGap < bottomBound) {
-        rows.push(new BlockRow(y, Math.random() + 0.5));
+        rows.push(new BlockRow(y, Math.random() * 1.5 + 0.4));
         y += 32 + blockGap;
     }
 
@@ -132,7 +132,7 @@
         ctx.clearRect(0, 0, canv.width, canv.height);
         ctx.save();
         ctx.translate(canv.width / 2, canv.height / 2);
-        ctx.rotate(15 / 180 * Math.PI);
+        ctx.rotate(-15 / 180 * Math.PI);
         ctx.translate(-canv.width / 2, -canv.height / 2);
         for (const row of rows) {
             row.advance();
