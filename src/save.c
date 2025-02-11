@@ -609,6 +609,7 @@ bool load_blockdef_input(SaveArena* save, ScrInput* input) {
         if (!blockdef) return false;
 
         input->data.arg.text = "";
+        input->data.arg.hint_text = "any";
         input->data.arg.constr = constr;
         input->data.arg.blockdef = blockdef;
         input->data.arg.blockdef->ref_count++;
