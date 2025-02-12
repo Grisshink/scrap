@@ -1568,7 +1568,11 @@ void scrap_gui_process_render(void) {
             actionbar_show(gettext("Started successfully!"));
         }
 #else
-        actionbar_show(gettext("Start failed!"));
+        if (compile_program()) {
+            actionbar_show(gettext("Started successfully!"));
+        } else {
+            actionbar_show(gettext("Start failed!"));
+        }
 #endif
     }
 }

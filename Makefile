@@ -44,6 +44,11 @@ ifeq ($(USE_INTERPRETER), TRUE)
 	OBJFILES += src/interpreter.o
 	SCRAP_HEADERS += src/interpreter.h
 	CFLAGS += -DUSE_INTERPRETER
+else
+	OBJFILES += src/compiler.o
+	SCRAP_HEADERS += src/compiler.h
+	LDFLAGS += `llvm-config --ldflags --libs --system-libs`
+	CFLAGS += `llvm-config --cflags`
 endif
 
 LINUX_DIR := $(EXE_NAME)-v$(SCRAP_VERSION)-linux
@@ -134,7 +139,9 @@ src/platform.o: src/platform.c
 	$(CC) $(CFLAGS) -c -o $@ $<
 src/ast.o: src/ast.c src/ast.h
 	$(CC) $(CFLAGS) -c -o $@ $<
-src/interpreter.o: src/interpreter.c src/interpreter.h
+src/interpreter.o: src/interpreter.c $(SCRAP_HEADERS)
+	$(CC) $(CFLAGS) -c -o $@ $<
+src/compiler.o: src/compiler.c src/compiler.h
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 src/filedialogs.o: external/tinyfiledialogs.c
