@@ -23,7 +23,9 @@
 #include <assert.h>
 #include <math.h>
 #include <stdarg.h>
+#include <string.h>
 #include <libintl.h>
+#include <stdio.h>
 
 #define ARRLEN(x) (sizeof(x)/sizeof(x[0]))
 #define MOD(x, y) (((x) % (y) + (y)) % (y))
@@ -235,7 +237,7 @@ void draw_input(Font* font, char** input, const char* hint, unsigned short font_
     gui_element_end(gui);
 }
 
-static void draw_blockdef(ScrBlockdef* blockdef, bool editing) {
+static void draw_blockdef(Blockdef* blockdef, bool editing) {
     bool collision = hover_info.editor.prev_blockdef == blockdef;
     Color color = CONVERT_COLOR(blockdef->color, Color);
     Color block_color = ColorBrightness(color, collision ? 0.3 : 0.0);
@@ -257,7 +259,7 @@ static void draw_blockdef(ScrBlockdef* blockdef, bool editing) {
         gui_set_gap(gui, BLOCK_PADDING);
 
     for (size_t i = 0; i < vector_size(blockdef->inputs); i++) {
-        ScrInput* input = &blockdef->inputs[i];
+        Input* input = &blockdef->inputs[i];
 
         if (hover_info.editor.edit_blockdef == blockdef) {
             gui_element_begin(gui);
@@ -352,7 +354,7 @@ static void argument_on_hover(GuiElement* el) {
     el->data.border.type = BORDER_NORMAL;
 }
 
-static void draw_block(ScrBlock* block, bool highlight, bool can_hover) {
+static void draw_block(Block* block, bool highlight, bool can_hover) {
     bool collision = hover_info.prev_block == block || highlight;
     Color color = CONVERT_COLOR(block->blockdef->color, Color);
     Color block_color = collision ? ColorBrightness(color, 0.3) : color;
@@ -390,11 +392,11 @@ static void draw_block(ScrBlock* block, bool highlight, bool can_hover) {
         }
     
     size_t arg_id = 0;
-    ScrInput* inputs = block->blockdef->inputs;
+    Input* inputs = block->blockdef->inputs;
     size_t inputs_size = vector_size(inputs);
     for (size_t i = 0; i < inputs_size; i++) {
-        ScrInput* input = &inputs[i];
-        ScrArgument* arg = &block->arguments[arg_id];
+        Input* input = &inputs[i];
+        Argument* arg = &block->arguments[arg_id];
 
         switch (input->type) {
         case INPUT_TEXT_DISPLAY:
@@ -648,7 +650,7 @@ static void blockchain_on_hover(GuiElement* el) {
     hover_info.prev_blockchain = el->custom_data;
 }
 
-static void draw_blockchain(ScrBlockChain* chain) {
+static void draw_blockchain(BlockChain* chain) {
     int layer = 0;
     bool highlight = hover_info.exec_chain == chain;
 
@@ -660,7 +662,7 @@ static void draw_blockchain(ScrBlockChain* chain) {
         gui_set_padding(gui, 5, 5);
 
     for (size_t i = 0; i < vector_size(chain->blocks); i++) {
-        ScrBlockdef* blockdef = chain->blocks[i].blockdef;
+        Blockdef* blockdef = chain->blocks[i].blockdef;
         bool block_highlight = hover_info.exec_ind == i;
 
         if (blockdef->type == BLOCKTYPE_END) {
@@ -669,7 +671,7 @@ static void draw_blockchain(ScrBlockChain* chain) {
 
             GuiElement* el = gui_get_element(gui);
 
-            ScrBlock* block = el->custom_data;
+            Block* block = el->custom_data;
 
             bool collision = hover_info.prev_block == &chain->blocks[i] || (highlight && block_highlight);
             Color color = CONVERT_COLOR(block->blockdef->color, Color);

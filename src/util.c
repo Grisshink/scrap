@@ -17,9 +17,10 @@
 
 #include "scrap.h"
 #include "raylib.h"
-#include "blocks.h"
+#include "vec.h"
 
 #include <assert.h>
+#include <string.h>
 
 Timer start_timer(const char* name) {
     Timer timer;
@@ -49,8 +50,8 @@ const char* into_data_path(const char* path) {
     return TextFormat("%s%s", GetApplicationDirectory(), path);
 }
 
-ScrBlock block_new_ms(ScrBlockdef* blockdef) {
-    ScrBlock block = block_new(blockdef);
+Block block_new_ms(Blockdef* blockdef) {
+    Block block = block_new(blockdef);
     for (size_t i = 0; i < vector_size(block.arguments); i++) {
         if (block.arguments[i].type != ARGUMENT_BLOCKDEF) continue;
         block.arguments[i].data.blockdef->func = block_exec_custom;

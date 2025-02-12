@@ -34,9 +34,9 @@ else
 	CFLAGS += -g -O0 -DDEBUG
 endif
 
-OBJFILES := $(addprefix src/,filedialogs.o render.o save.o term.o blocks.o scrap.o vec.o util.o input.o scrap_gui.o window.o cfgpath.o platform.o)
+OBJFILES := $(addprefix src/,filedialogs.o render.o save.o term.o blocks.o scrap.o vec.o util.o input.o scrap_gui.o window.o cfgpath.o platform.o ast.o interpreter.o)
 BUNDLE_FILES := data examples extras locale LICENSE README.md CHANGELOG.md
-SCRAP_HEADERS := src/scrap.h src/vm.h src/config.h src/scrap_gui.h
+SCRAP_HEADERS := src/scrap.h src/ast.h src/interpreter.h src/config.h src/scrap_gui.h
 EXE_NAME := scrap
 
 LINUX_DIR := $(EXE_NAME)-v$(SCRAP_VERSION)-linux
@@ -115,7 +115,7 @@ src/save.o: src/save.c $(SCRAP_HEADERS) external/cfgpath.h
 	$(CC) $(CFLAGS) -c -o $@ $<
 src/term.o: src/term.c src/term.h $(SCRAP_HEADERS)
 	$(CC) $(CFLAGS) -c -o $@ $<
-src/blocks.o: src/blocks.c src/blocks.h $(SCRAP_HEADERS)
+src/blocks.o: src/blocks.c $(SCRAP_HEADERS)
 	$(CC) $(CFLAGS) -c -o $@ $<
 src/vec.o: src/vec.c
 	$(CC) $(CFLAGS) -c -o $@ $<
@@ -124,6 +124,10 @@ src/util.o: src/util.c $(SCRAP_HEADERS)
 src/input.o: src/input.c $(SCRAP_HEADERS)
 	$(CC) $(CFLAGS) -c -o $@ $<
 src/platform.o: src/platform.c
+	$(CC) $(CFLAGS) -c -o $@ $<
+src/ast.o: src/ast.c src/ast.h
+	$(CC) $(CFLAGS) -c -o $@ $<
+src/interpreter.o: src/interpreter.c src/interpreter.h
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 src/filedialogs.o: external/tinyfiledialogs.c

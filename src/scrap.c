@@ -18,11 +18,12 @@
 #define SCRVM_IMPLEMENTATION
 #include "term.h"
 #include "scrap.h"
-#include "blocks.h"
+#include "vec.h"
 
 #include <math.h>
 #include <libintl.h>
 #include <locale.h>
+#include <assert.h>
 
 // Global Variables
 Image logo_img;
@@ -32,7 +33,7 @@ RenderTexture2D render_surface;
 bool render_surface_needs_redraw = true;
 int shader_time_loc;
 
-ScrExec exec = {0};
+Exec exec = {0};
 
 Vector2 camera_pos = {0};
 Vector2 camera_click_pos = {0};
@@ -64,16 +65,16 @@ Texture2D arrow_left_tex;
 Texture2D arrow_right_tex;
 Texture2D pi_symbol_tex;
 
-ScrVm vm;
+Vm vm;
 int start_vm_timeout = -1;
 Vector2 camera_pos;
 ActionBar actionbar;
 BlockCode block_code = {0};
 Dropdown dropdown = {0};
 BlockPalette palette = {0};
-ScrBlockChain* editor_code = {0};
-ScrBlock** search_list = NULL;
-ScrBlockChain mouse_blockchain = {0};
+BlockChain* editor_code = {0};
+Block** search_list = NULL;
+BlockChain mouse_blockchain = {0};
 Gui* gui = NULL;
 char* search_list_search = NULL;
 int categories_scroll = 0;
@@ -136,7 +137,7 @@ char* tab_bar_buttons_text[2] = {
 };
 
 // Recursively checks nested blocks for correct structure and connection with the parent block
-void sanitize_block(ScrBlock* block) {
+void sanitize_block(Block* block) {
     for (vec_size_t i = 0; i < vector_size(block->arguments); i++) {
         if (block->arguments[i].type != ARGUMENT_BLOCK) continue;
         if (block->arguments[i].data.block.parent != block) {
@@ -151,7 +152,7 @@ void sanitize_block(ScrBlock* block) {
 // Checks the integrity and correctness of connections of all blocks of editor code and the mouse blockchain
 void sanitize_links(void) {
     for (vec_size_t i = 0; i < vector_size(editor_code); i++) {
-        ScrBlock* blocks = editor_code[i].blocks;
+        Block* blocks = editor_code[i].blocks;
         for (vec_size_t j = 0; j < vector_size(blocks); j++) {
             sanitize_block(&blocks[j]);
         }

@@ -17,11 +17,12 @@
 
 #include "scrap.h"
 #include "vec.h"
-#include "blocks.h"
 
 #include <string.h>
 #include <stdlib.h>
 #include <assert.h>
+#include <stdio.h>
+#include <libintl.h>
 
 #define ARRLEN(x) (sizeof(x)/sizeof(x[0]))
 #define MAX(x, y) ((x) > (y) ? (x) : (y))
@@ -54,16 +55,16 @@ char* language_list[5] = {
 
 char scrap_ident[] = "SCRAP";
 const char** save_block_ids = NULL;
-ScrBlockdef** save_blockdefs = NULL;
+Blockdef** save_blockdefs = NULL;
 static unsigned int ver = 0;
 
 int save_find_id(const char* id);
-void save_code(const char* file_path, ScrBlockChain* code);
-ScrBlockChain* load_code(const char* file_path);
-void save_block(SaveArena* save, ScrBlock* block);
-bool load_block(SaveArena* save, ScrBlock* block);
-void save_blockdef(SaveArena* save, ScrBlockdef* blockdef);
-ScrBlockdef* load_blockdef(SaveArena* save);
+void save_code(const char* file_path, BlockChain* code);
+BlockChain* load_code(const char* file_path);
+void save_block(SaveArena* save, Block* block);
+bool load_block(SaveArena* save, Block* block);
+void save_blockdef(SaveArena* save, Blockdef* blockdef);
+Blockdef* load_blockdef(SaveArena* save);
 
 void vector_set_string(char** vec, char* str) {
     vector_clear(*vec);
@@ -409,7 +410,7 @@ void free_save(SaveArena* save) {
     save->max_size = 0;
 }
 
-void save_blockdef_input(SaveArena* save, ScrInput* input) {
+void save_blockdef_input(SaveArena* save, Input* input) {
     save_add_varint(save, input->type);
     switch (input->type) {
     case INPUT_TEXT_DISPLAY:
@@ -425,7 +426,7 @@ void save_blockdef_input(SaveArena* save, ScrInput* input) {
     }
 }
 
-void save_blockdef(SaveArena* save, ScrBlockdef* blockdef) {
+void save_blockdef(SaveArena* save, Blockdef* blockdef) {
     save_add_array(save, blockdef->id, strlen(blockdef->id) + 1, sizeof(blockdef->id[0]));
     save_add(save, blockdef->color);
     save_add_varint(save, blockdef->type);
@@ -436,7 +437,7 @@ void save_blockdef(SaveArena* save, ScrBlockdef* blockdef) {
     for (int i = 0; i < input_count; i++) save_blockdef_input(save, &blockdef->inputs[i]);
 }
 
-void save_block_arguments(SaveArena* save, ScrArgument* arg) {
+void save_block_arguments(SaveArena* save, Argument* arg) {
     save_add_varint(save, arg->input_id);
     save_add_varint(save, arg->type);
 
@@ -462,7 +463,7 @@ void save_block_arguments(SaveArena* save, ScrArgument* arg) {
     }
 }
 
-void save_block(SaveArena* save, ScrBlock* block) {
+void save_block(SaveArena* save, Block* block) {
     assert(block->blockdef->id != NULL);
 
     int arg_count = vector_size(block->arguments);
@@ -474,7 +475,7 @@ void save_block(SaveArena* save, ScrBlock* block) {
     for (int i = 0; i < arg_count; i++) save_block_arguments(save, &block->arguments[i]);
 }
 
-void save_blockchain(SaveArena* save, ScrBlockChain* chain) {
+void save_blockchain(SaveArena* save, BlockChain* chain) {
     int blocks_count = vector_size(chain->blocks);
 
     save_add(save, chain->x);
@@ -483,7 +484,7 @@ void save_blockchain(SaveArena* save, ScrBlockChain* chain) {
     for (int i = 0; i < blocks_count; i++) save_block(save, &chain->blocks[i]);
 }
 
-void rename_blockdef(ScrBlockdef* blockdef, int id) {
+void rename_blockdef(Blockdef* blockdef, int id) {
     blockdef_set_id(blockdef, TextFormat("custom%d", id));
     int arg_id = 0;
     for (size_t i = 0; i < vector_size(blockdef->inputs); i++) {
@@ -504,7 +505,7 @@ void save_add_id(const char* id) {
     vector_add(&save_block_ids, id);
 }
 
-void block_collect_ids(ScrBlock* block) {
+void block_collect_ids(Block* block) {
     save_add_id(block->blockdef->id);
     for (size_t i = 0; i < vector_size(block->arguments); i++) {
         switch (block->arguments[i].type) {
@@ -525,26 +526,26 @@ void block_collect_ids(ScrBlock* block) {
     }
 }
 
-void collect_all_code_ids(ScrBlockChain* code) {
+void collect_all_code_ids(BlockChain* code) {
     for (size_t i = 0; i < vector_size(code); i++) {
-        ScrBlockChain* chain = &code[i];
+        BlockChain* chain = &code[i];
         for (size_t j = 0; j < vector_size(chain->blocks); j++) {
             block_collect_ids(&chain->blocks[j]);
         }
     }
 }
 
-void save_code(const char* file_path, ScrBlockChain* code) {
+void save_code(const char* file_path, BlockChain* code) {
     SaveArena save = new_save(32768);
     ver = 2;
     int chains_count = vector_size(code);
 
-    ScrBlockdef** blockdefs = vector_create();
+    Blockdef** blockdefs = vector_create();
     save_block_ids = vector_create();
 
     int id = 0;
     for (int i = 0; i < chains_count; i++) {
-        ScrBlock* block = &code[i].blocks[0];
+        Block* block = &code[i].blocks[0];
         for (size_t j = 0; j < vector_size(block->arguments); j++) {
             if (block->arguments[j].type != ARGUMENT_BLOCKDEF) continue;
             rename_blockdef(block->arguments[j].data.blockdef, id++);
@@ -575,20 +576,20 @@ void save_code(const char* file_path, ScrBlockChain* code) {
     free_save(&save);
 }
 
-ScrBlockdef* find_blockdef(ScrBlockdef** blockdefs, const char* id) {
+Blockdef* find_blockdef(Blockdef** blockdefs, const char* id) {
     for (size_t i = 0; i < vector_size(blockdefs); i++) {
         if (!strcmp(id, blockdefs[i]->id)) return blockdefs[i];
     }
     return NULL;
 }
 
-bool load_blockdef_input(SaveArena* save, ScrInput* input) {
-    ScrInputType type;
+bool load_blockdef_input(SaveArena* save, Input* input) {
+    InputType type;
     if (!save_read_varint(save, (unsigned int*)&type)) return false;
     input->type = type;
 
     unsigned int text_len;
-    ScrInputArgumentConstraint constr; 
+    InputArgumentConstraint constr; 
     char* text;
 
     switch (input->type) {
@@ -605,7 +606,7 @@ bool load_blockdef_input(SaveArena* save, ScrInput* input) {
     case INPUT_ARGUMENT:
         if (!save_read_varint(save, (unsigned int*)&constr)) return false;
 
-        ScrBlockdef* blockdef = load_blockdef(save);
+        Blockdef* blockdef = load_blockdef(save);
         if (!blockdef) return false;
 
         input->data.arg.text = "";
@@ -624,17 +625,17 @@ bool load_blockdef_input(SaveArena* save, ScrInput* input) {
     return true;
 }
 
-ScrBlockdef* load_blockdef(SaveArena* save) {
+Blockdef* load_blockdef(SaveArena* save) {
     unsigned int id_len;
     char* id = save_read_array(save, sizeof(char), &id_len);
     if (!id) return NULL;
     if (id_len == 0) return false;
     if (id[id_len - 1] != 0) return false;
 
-    ScrColor* color = save_read_item(save, sizeof(ScrColor));
+    BlockdefColor* color = save_read_item(save, sizeof(BlockdefColor));
     if (!color) return NULL;
 
-    ScrBlockdefType type;
+    BlockdefType type;
     if (!save_read_varint(save, (unsigned int*)&type)) return NULL;
 
     int arg_id;
@@ -643,11 +644,10 @@ ScrBlockdef* load_blockdef(SaveArena* save) {
     unsigned int input_count;
     if (!save_read_varint(save, &input_count)) return NULL;
 
-    ScrBlockdef* blockdef = malloc(sizeof(ScrBlockdef));
+    Blockdef* blockdef = malloc(sizeof(Blockdef));
     blockdef->id = strcpy(malloc(id_len * sizeof(char)), id);
     blockdef->color = *color;
     blockdef->type = type;
-    blockdef->hidden = false;
     blockdef->ref_count = 0;
     blockdef->inputs = vector_create();
     blockdef->func = block_exec_custom;
@@ -655,7 +655,7 @@ ScrBlockdef* load_blockdef(SaveArena* save) {
     blockdef->arg_id = arg_id;
 
     for (unsigned int i = 0; i < input_count; i++) {
-        ScrInput input;
+        Input input;
         if (!load_blockdef_input(save, &input)) {
             blockdef_free(blockdef);
             return NULL;
@@ -666,18 +666,18 @@ ScrBlockdef* load_blockdef(SaveArena* save) {
     return blockdef;
 }
 
-bool load_block_argument(SaveArena* save, ScrArgument* arg) {
+bool load_block_argument(SaveArena* save, Argument* arg) {
     unsigned int input_id;
     if (!save_read_varint(save, &input_id)) return false;
 
-    ScrArgumentType arg_type;
+    ArgumentType arg_type;
     if (!save_read_varint(save, (unsigned int*)&arg_type)) return false;
 
     arg->type = arg_type;
     arg->input_id = input_id;
 
     unsigned int text_id;
-    ScrBlock block;
+    Block block;
     unsigned int blockdef_id;
 
     switch (arg_type) {
@@ -701,7 +701,7 @@ bool load_block_argument(SaveArena* save, ScrArgument* arg) {
             return false;
         }
 
-        ScrBlockdef* blockdef = find_blockdef(save_blockdefs, save_block_ids[blockdef_id]);
+        Blockdef* blockdef = find_blockdef(save_blockdefs, save_block_ids[blockdef_id]);
         if (!blockdef) return false;
 
         arg->data.blockdef = blockdef;
@@ -714,11 +714,11 @@ bool load_block_argument(SaveArena* save, ScrArgument* arg) {
     return true;
 }
 
-bool load_block(SaveArena* save, ScrBlock* block) {
+bool load_block(SaveArena* save, Block* block) {
     unsigned int block_id;
     if (!save_read_varint(save, &block_id)) return false;
 
-    ScrBlockdef* blockdef = NULL;
+    Blockdef* blockdef = NULL;
     blockdef = find_blockdef(save_blockdefs, save_block_ids[block_id]);
     if (!blockdef) {
         blockdef = find_blockdef(vm.blockdefs, save_block_ids[block_id]);
@@ -738,7 +738,7 @@ bool load_block(SaveArena* save, ScrBlock* block) {
     blockdef->ref_count++;
 
     for (unsigned int i = 0; i < arg_count; i++) {
-        ScrArgument arg;
+        Argument arg;
         if (!load_block_argument(save, &arg)) {
             block_free(block);
             return false;
@@ -749,7 +749,7 @@ bool load_block(SaveArena* save, ScrBlock* block) {
     return true;
 }
 
-bool load_blockchain(SaveArena* save, ScrBlockChain* chain) {
+bool load_blockchain(SaveArena* save, BlockChain* chain) {
     int pos_x, pos_y;
     if (ver == 1) {
         struct { float x; float y; }* pos = save_read_item(save, sizeof(struct { float x; float y; }));
@@ -774,7 +774,7 @@ bool load_blockchain(SaveArena* save, ScrBlockChain* chain) {
     chain->y = pos_y;
 
     for (unsigned int i = 0; i < blocks_count; i++) {
-        ScrBlock block;
+        Block block;
         if (!load_block(save, &block)) {
             blockchain_free(chain);
             return false;
@@ -786,8 +786,8 @@ bool load_blockchain(SaveArena* save, ScrBlockChain* chain) {
     return true;
 }
 
-ScrBlockChain* load_code(const char* file_path) {
-    ScrBlockChain* code = vector_create();
+BlockChain* load_code(const char* file_path) {
+    BlockChain* code = vector_create();
     save_blockdefs = vector_create();
     save_block_ids = vector_create();
 
@@ -832,7 +832,7 @@ ScrBlockChain* load_code(const char* file_path) {
     unsigned int custom_block_len;
     if (!save_read_varint(&save, &custom_block_len)) goto load_fail;
     for (unsigned int i = 0; i < custom_block_len; i++) {
-        ScrBlockdef* blockdef = load_blockdef(&save);
+        Blockdef* blockdef = load_blockdef(&save);
         if (!blockdef) goto load_fail;
         vector_add(&save_blockdefs, blockdef);
     }
@@ -841,7 +841,7 @@ ScrBlockChain* load_code(const char* file_path) {
     if (!save_read_varint(&save, &code_len)) goto load_fail;
 
     for (unsigned int i = 0; i < code_len; i++) {
-        ScrBlockChain chain;
+        BlockChain chain;
         if (!load_blockchain(&save, &chain)) goto load_fail;
         vector_add(&code, chain);
     }

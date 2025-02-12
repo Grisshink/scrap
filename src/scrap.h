@@ -18,7 +18,10 @@
 #ifndef SCRAP_H
 #define SCRAP_H
 
-#include "vm.h"
+#include <time.h>
+
+#include "ast.h"
+#include "interpreter.h"
 #include "raylib.h"
 #include "config.h"
 #include "scrap_gui.h"
@@ -98,10 +101,10 @@ typedef enum {
 
 typedef struct {
     EditorHoverPart part;
-    ScrBlockdef* edit_blockdef;
-    ScrBlock* edit_block;
-    ScrBlockdef* prev_blockdef;
-    ScrBlockdef* blockdef;
+    Blockdef* edit_blockdef;
+    Block* edit_block;
+    Blockdef* prev_blockdef;
+    Blockdef* blockdef;
     size_t blockdef_input;
 } EditorHoverInfo;
 
@@ -138,7 +141,7 @@ typedef struct {
 typedef struct {
     const char* name;
     Color color;
-    ScrBlock* blocks;
+    Block* blocks;
 } BlockCategory;
 
 typedef struct {
@@ -147,17 +150,17 @@ typedef struct {
 
     BlockCategory* category;
 
-    ScrBlockChain* prev_blockchain;
-    ScrBlockChain* blockchain;
+    BlockChain* prev_blockchain;
+    BlockChain* blockchain;
 
-    ScrBlock* prev_block;
-    ScrBlock* block;
-    ScrArgument* argument;
-    ScrArgument* prev_argument;
+    Block* prev_block;
+    Block* block;
+    Argument* argument;
+    Argument* prev_argument;
 
-    ScrBlock* select_block;
-    ScrArgument* select_argument;
-    ScrBlockChain* select_blockchain;
+    Block* select_block;
+    Argument* select_argument;
+    BlockChain* select_blockchain;
     Vector2 select_block_pos;
     Rectangle code_panel_bounds;
 
@@ -168,9 +171,9 @@ typedef struct {
     Vector2 mouse_click_pos;
     float time_at_last_pos;
 
-    ScrBlockChain* exec_chain;
+    BlockChain* exec_chain;
     size_t exec_ind;
-    ScrBlockChain* prev_exec_chain;
+    BlockChain* prev_exec_chain;
     size_t prev_exec_ind;
 
     TopBars top_bars;
@@ -261,17 +264,17 @@ extern Texture2D arrow_left_tex;
 extern Texture2D arrow_right_tex;
 extern Texture2D pi_symbol_tex;
 
-extern ScrVm vm;
+extern Vm vm;
 extern int start_vm_timeout;
 extern Vector2 camera_pos;
 extern ActionBar actionbar;
 extern BlockCode block_code;
 extern Dropdown dropdown;
 extern BlockPalette palette;
-extern ScrBlockChain* editor_code;
-extern ScrBlock** search_list;
-extern ScrBlockChain mouse_blockchain;
-extern ScrExec exec;
+extern BlockChain* editor_code;
+extern Block** search_list;
+extern BlockChain mouse_blockchain;
+extern Exec exec;
 extern Gui* gui;
 extern char* search_list_search;
 extern int categories_scroll;
@@ -362,7 +365,7 @@ void update_search(void);
 // util.c
 int leading_ones(unsigned char byte);
 const char* into_data_path(const char* path);
-ScrBlock block_new_ms(ScrBlockdef* blockdef);
+Block block_new_ms(Blockdef* blockdef);
 Timer start_timer(const char* name);
 double end_timer(Timer timer);
 Language code_to_language(const char* code);
@@ -373,8 +376,8 @@ void set_default_config(Config* config);
 void apply_config(Config* dst, Config* src);
 void save_config(Config* config);
 void load_config(Config* config);
-void save_code(const char* file_path, ScrBlockChain* code);
-ScrBlockChain* load_code(const char* file_path);
+void save_code(const char* file_path, BlockChain* code);
+BlockChain* load_code(const char* file_path);
 void config_new(Config* config);
 void config_free(Config* config);
 void config_copy(Config* dst, Config* src);
@@ -390,8 +393,10 @@ void handle_window(void);
 void draw_window(void);
 
 // blocks.c
-void register_blocks(ScrVm* vm);
+void register_blocks(Vm* vm);
 void register_categories(void);
+Data block_custom_arg(Exec* exec, int argc, Data* argv);
+Data block_exec_custom(Exec* exec, int argc, Data* argv);
 
 // platform.c
 void scrap_set_env(const char* name, const char* value);

@@ -17,12 +17,15 @@
 
 #include "scrap.h"
 #include "term.h"
-#include "blocks.h"
 #include "../external/tinyfiledialogs.h"
+#include "vec.h"
 
 #include <assert.h>
 #include <math.h>
 #include <wctype.h>
+#include <libintl.h>
+#include <stdio.h>
+#include <string.h>
 
 #define ARRLEN(x) (sizeof(x)/sizeof(x[0]))
 #define MAX(x, y) ((x) > (y) ? (x) : (y))
@@ -42,7 +45,7 @@ char* file_menu_list[] = {
 };
 
 // Removes a block and all blocks within it if it matches the specified blockdef
-static void block_delete_blockdef(ScrBlock* block, ScrBlockdef* blockdef) {
+static void block_delete_blockdef(Block* block, Blockdef* blockdef) {
     for (size_t i = 0; i < vector_size(block->arguments); i++) {
         if (blockdef->ref_count <= 1) break;
         if (block->arguments[i].type != ARGUMENT_BLOCK) continue;
@@ -56,7 +59,7 @@ static void block_delete_blockdef(ScrBlock* block, ScrBlockdef* blockdef) {
 }
 
 // Deletes blocks in the chain that have a reference to the specified blockdef
-static void blockchain_delete_blockdef(ScrBlockChain* chain, ScrBlockdef* blockdef) {
+static void blockchain_delete_blockdef(BlockChain* chain, Blockdef* blockdef) {
     for (size_t i = 0; i < vector_size(chain->blocks); i++) {
         if (blockdef->ref_count <= 1) break;
         if (chain->blocks[i].blockdef == blockdef) {
@@ -71,7 +74,7 @@ static void blockchain_delete_blockdef(ScrBlockChain* chain, ScrBlockdef* blockd
 }
 
 // Removes blocks associated with blockdef, freeing memory
-static void editor_code_remove_blockdef(ScrBlockdef* blockdef) {
+static void editor_code_remove_blockdef(Blockdef* blockdef) {
     for (size_t i = 0; i < vector_size(editor_code); i++) {
         if (blockdef->ref_count <= 1) break;
         blockchain_delete_blockdef(&editor_code[i], blockdef);
@@ -267,7 +270,7 @@ bool handle_file_menu_click(void) {
         path = tinyfd_openFileDialog(NULL, project_name, ARRLEN(filters), filters, "Scrap project files (.scrp)", 0);
         if (!path) break;
 
-        ScrBlockChain* chain = load_code(path);
+        BlockChain* chain = load_code(path);
         if (!chain) {
             actionbar_show(gettext("File load failed :("));
             break;
@@ -439,7 +442,7 @@ bool handle_panel_editor_cancel_button(void) {
 }
 
 bool handle_editor_add_arg_button(void) {
-    ScrBlockdef* blockdef = hover_info.argument->data.blockdef;
+    Blockdef* blockdef = hover_info.argument->data.blockdef;
     size_t last_input = vector_size(blockdef->inputs);
     char str[32];
 
@@ -459,7 +462,7 @@ bool handle_editor_add_arg_button(void) {
     blockdef_add_argument(blockdef, "", gettext("any"), BLOCKCONSTR_UNLIMITED);
 
     sprintf(str, "arg%zu", last_input);
-    ScrBlockdef* arg_blockdef = blockdef->inputs[last_input].data.arg.blockdef;
+    Blockdef* arg_blockdef = blockdef->inputs[last_input].data.arg.blockdef;
     blockdef_add_text(arg_blockdef, str);
     arg_blockdef->func = block_custom_arg;
 
@@ -474,7 +477,7 @@ bool handle_editor_add_arg_button(void) {
 }
 
 bool handle_editor_add_text_button(void) {
-    ScrBlockdef* blockdef = hover_info.argument->data.blockdef;
+    Blockdef* blockdef = hover_info.argument->data.blockdef;
     size_t last_input = vector_size(blockdef->inputs);
     char str[32];
 
@@ -499,7 +502,7 @@ bool handle_editor_add_text_button(void) {
 }
 
 bool handle_editor_del_arg_button(void) {
-    ScrBlockdef* blockdef = hover_info.argument->data.blockdef;
+    Blockdef* blockdef = hover_info.argument->data.blockdef;
 
     assert(hover_info.editor.blockdef_input != (size_t)-1);
     if (blockdef->ref_count > 1) {
@@ -562,11 +565,11 @@ static bool handle_block_palette_click(bool mouse_empty) {
         TraceLog(LOG_INFO, "Drop block");
         for (size_t i = 0; i < vector_size(mouse_blockchain.blocks); i++) {
             for (size_t j = 0; j < vector_size(mouse_blockchain.blocks[i].arguments); j++) {
-                ScrArgument* arg = &mouse_blockchain.blocks[i].arguments[j];
+                Argument* arg = &mouse_blockchain.blocks[i].arguments[j];
                 if (arg->type != ARGUMENT_BLOCKDEF) continue;
                 if (arg->data.blockdef->ref_count > 1) editor_code_remove_blockdef(arg->data.blockdef);
                 for (size_t k = 0; k < vector_size(arg->data.blockdef->inputs); k++) {
-                    ScrInput* input = &arg->data.blockdef->inputs[k];
+                    Input* input = &arg->data.blockdef->inputs[k];
                     if (input->type != INPUT_ARGUMENT) continue;
                     if (input->data.arg.blockdef->ref_count > 1) editor_code_remove_blockdef(input->data.arg.blockdef);
                 }
@@ -610,7 +613,7 @@ static bool handle_code_editor_click(bool mouse_empty) {
                 TraceLog(LOG_INFO, "Swap argument");
                 if (hover_info.prev_argument->type != ARGUMENT_BLOCK) return true;
                 mouse_blockchain.blocks[0].parent = hover_info.block->parent;
-                ScrBlock temp = mouse_blockchain.blocks[0];
+                Block temp = mouse_blockchain.blocks[0];
                 mouse_blockchain.blocks[0] = *hover_info.block;
                 mouse_blockchain.blocks[0].parent = NULL;
                 block_update_parent_links(&mouse_blockchain.blocks[0]);
@@ -839,7 +842,7 @@ static bool handle_mouse_click(void) {
 
     if (mouse_empty) {
         if (hover_info.block && hover_info.argument) {
-            ScrInput block_input = hover_info.block->blockdef->inputs[hover_info.argument->input_id];
+            Input block_input = hover_info.block->blockdef->inputs[hover_info.argument->input_id];
             if (block_input.type == INPUT_DROPDOWN) {
                 size_t list_len = 0;
                 char** list = block_input.data.drop.list(hover_info.block, &list_len);
@@ -865,11 +868,11 @@ static bool handle_mouse_click(void) {
 }
 
 static void block_next_argument() {
-    ScrArgument* args = hover_info.select_block->arguments;
-    ScrArgument* arg = hover_info.select_argument ? hover_info.select_argument + 1 : &args[0];
+    Argument* args = hover_info.select_block->arguments;
+    Argument* arg = hover_info.select_argument ? hover_info.select_argument + 1 : &args[0];
     if (arg - args >= (int)vector_size(args)) {
         if (hover_info.select_block->parent) {
-            ScrArgument* parent_args = hover_info.select_block->parent->arguments;
+            Argument* parent_args = hover_info.select_block->parent->arguments;
             for (size_t i = 0; i < vector_size(parent_args); i++) {
                 if (parent_args[i].type == ARGUMENT_BLOCK && &parent_args[i].data.block == hover_info.select_block) hover_info.select_argument = &parent_args[i];
             }
@@ -890,15 +893,15 @@ static void block_next_argument() {
 }
 
 static void block_prev_argument() {
-    ScrArgument* args = hover_info.select_block->arguments;
-    ScrArgument* arg = hover_info.select_argument ? hover_info.select_argument - 1 : &args[-1];
+    Argument* args = hover_info.select_block->arguments;
+    Argument* arg = hover_info.select_argument ? hover_info.select_argument - 1 : &args[-1];
     if (arg - args < 0) {
         if (hover_info.select_argument) {
             hover_info.select_argument = NULL;
             return;
         }
         if (hover_info.select_block->parent) {
-            ScrArgument* parent_args = hover_info.select_block->parent->arguments;
+            Argument* parent_args = hover_info.select_block->parent->arguments;
             for (size_t i = 0; i < vector_size(parent_args); i++) {
                 if (parent_args[i].type == ARGUMENT_BLOCK && &parent_args[i].data.block == hover_info.select_block) hover_info.select_argument = &parent_args[i];
             }
@@ -1036,7 +1039,7 @@ static bool search_string(const char* str, const char* substr) {
     return *cur_substr == 0;
 }
 
-static bool search_blockdef(ScrBlockdef* blockdef) {
+static bool search_blockdef(Blockdef* blockdef) {
     if (search_string(blockdef->id, search_list_search)) return true;
     for (size_t i = 0; i < vector_size(blockdef->inputs); i++) {
         if (blockdef->inputs[i].type != INPUT_TEXT_DISPLAY) continue;

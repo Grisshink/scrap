@@ -15,9 +15,9 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-#include "blocks.h"
 #include "term.h"
 #include "scrap.h"
+#include "vec.h"
 
 #include <unistd.h>
 #include <stdlib.h>
@@ -49,13 +49,13 @@ char* term_color_list[TERM_COLOR_LIST_LEN] = {
     "black", "red", "yellow", "green", "blue", "purple", "cyan", "white",
 };
 
-char** math_list_access(ScrBlock* block, size_t* list_len) {
+char** math_list_access(Block* block, size_t* list_len) {
     (void) block;
     *list_len = MATH_LIST_LEN;
     return block_math_list;
 }
 
-char** term_color_list_access(ScrBlock* block, size_t* list_len) {
+char** term_color_list_access(Block* block, size_t* list_len) {
     (void) block;
     *list_len = TERM_COLOR_LIST_LEN;
     return term_color_list;
@@ -91,8 +91,8 @@ void string_add_array(String* string, const char* arr, int arr_len) {
     string->len = new_len;
 }
 
-ScrData string_make_managed(String* string) {
-    ScrData out;
+Data string_make_managed(String* string) {
+    Data out;
     out.type = DATA_STR;
     out.storage.type = DATA_STORAGE_MANAGED;
     out.storage.storage_len = string->len + 1;
@@ -104,14 +104,14 @@ void string_free(String string) {
     free(string.str);
 }
 
-ScrData block_noop(ScrExec* exec, int argc, ScrData* argv) {
+Data block_noop(Exec* exec, int argc, Data* argv) {
     (void) exec;
     (void) argc;
     (void) argv;
     RETURN_NOTHING;
 }
 
-ScrData block_loop(ScrExec* exec, int argc, ScrData* argv) {
+Data block_loop(Exec* exec, int argc, Data* argv) {
     if (argc < 1) RETURN_OMIT_ARGS;
     if (argv[0].type != DATA_CONTROL) RETURN_OMIT_ARGS;
 
@@ -125,7 +125,7 @@ ScrData block_loop(ScrExec* exec, int argc, ScrData* argv) {
     RETURN_OMIT_ARGS;
 }
 
-ScrData block_if(ScrExec* exec, int argc, ScrData* argv) {
+Data block_if(Exec* exec, int argc, Data* argv) {
     if (argc < 1) RETURN_BOOL(1);
     if (argv[0].type != DATA_CONTROL) RETURN_BOOL(1);
     if (argv[0].data.control_arg == CONTROL_ARG_BEGIN) {
@@ -144,7 +144,7 @@ ScrData block_if(ScrExec* exec, int argc, ScrData* argv) {
     RETURN_BOOL(1);
 }
 
-ScrData block_else_if(ScrExec* exec, int argc, ScrData* argv) {
+Data block_else_if(Exec* exec, int argc, Data* argv) {
     if (argc < 1) RETURN_BOOL(1);
     if (argv[0].type != DATA_CONTROL) RETURN_BOOL(1);
     if (argv[0].data.control_arg == CONTROL_ARG_BEGIN) {
@@ -165,7 +165,7 @@ ScrData block_else_if(ScrExec* exec, int argc, ScrData* argv) {
     RETURN_BOOL(1);
 }
 
-ScrData block_else(ScrExec* exec, int argc, ScrData* argv) {
+Data block_else(Exec* exec, int argc, Data* argv) {
     if (argc < 1) RETURN_BOOL(1);
     if (argv[0].type != DATA_CONTROL) RETURN_BOOL(1);
     if (argv[0].data.control_arg == CONTROL_ARG_BEGIN) {
@@ -186,7 +186,7 @@ ScrData block_else(ScrExec* exec, int argc, ScrData* argv) {
 //
 // If the loop should not loop then the stack will look like this:
 // - 0 <- indicator for end block that it should stop immediately
-ScrData block_repeat(ScrExec* exec, int argc, ScrData* argv) {
+Data block_repeat(Exec* exec, int argc, Data* argv) {
     if (argc < 1) RETURN_OMIT_ARGS;
     if (argv[0].type != DATA_CONTROL) RETURN_OMIT_ARGS;
 
@@ -223,7 +223,7 @@ ScrData block_repeat(ScrExec* exec, int argc, ScrData* argv) {
     RETURN_OMIT_ARGS;
 }
 
-ScrData block_while(ScrExec* exec, int argc, ScrData* argv) {
+Data block_while(Exec* exec, int argc, Data* argv) {
     if (argc < 2) RETURN_BOOL(0);
     if (argv[0].type != DATA_CONTROL) RETURN_BOOL(0);
 
@@ -248,7 +248,7 @@ ScrData block_while(ScrExec* exec, int argc, ScrData* argv) {
     RETURN_NOTHING;
 }
 
-ScrData block_sleep(ScrExec* exec, int argc, ScrData* argv) {
+Data block_sleep(Exec* exec, int argc, Data* argv) {
     (void) exec;
     if (argc < 1) RETURN_INT(0);
     int usecs = data_to_int(argv[0]);
@@ -262,31 +262,31 @@ ScrData block_sleep(ScrExec* exec, int argc, ScrData* argv) {
     RETURN_INT(usecs);
 }
 
-ScrData block_declare_var(ScrExec* exec, int argc, ScrData* argv) {
+Data block_declare_var(Exec* exec, int argc, Data* argv) {
     if (argc < 2) RETURN_NOTHING;
     if (argv[0].type != DATA_STR || argv[0].storage.type != DATA_STORAGE_STATIC) RETURN_NOTHING;
 
-    ScrData var_value = data_copy(argv[1]);
+    Data var_value = data_copy(argv[1]);
     if (var_value.storage.type == DATA_STORAGE_MANAGED) var_value.storage.type = DATA_STORAGE_UNMANAGED;
 
     variable_stack_push_var(exec, argv[0].data.str_arg, var_value);
     return var_value;
 }
 
-ScrData block_get_var(ScrExec* exec, int argc, ScrData* argv) {
+Data block_get_var(Exec* exec, int argc, Data* argv) {
     if (argc < 1) RETURN_NOTHING;
-    ScrVariable* var = variable_stack_get_variable(exec, data_to_str(argv[0]));
+    Variable* var = variable_stack_get_variable(exec, data_to_str(argv[0]));
     if (!var) RETURN_NOTHING;
     return var->value;
 }
 
-ScrData block_set_var(ScrExec* exec, int argc, ScrData* argv) {
+Data block_set_var(Exec* exec, int argc, Data* argv) {
     if (argc < 2) RETURN_NOTHING;
 
-    ScrVariable* var = variable_stack_get_variable(exec, data_to_str(argv[0]));
+    Variable* var = variable_stack_get_variable(exec, data_to_str(argv[0]));
     if (!var) RETURN_NOTHING;
 
-    ScrData new_value = data_copy(argv[1]);
+    Data new_value = data_copy(argv[1]);
     if (new_value.storage.type == DATA_STORAGE_MANAGED) new_value.storage.type = DATA_STORAGE_UNMANAGED;
 
     if (var->value.storage.type == DATA_STORAGE_UNMANAGED) {
@@ -297,12 +297,12 @@ ScrData block_set_var(ScrExec* exec, int argc, ScrData* argv) {
     return var->value;
 }
 
-ScrData block_create_list(ScrExec* exec, int argc, ScrData* argv) {
+Data block_create_list(Exec* exec, int argc, Data* argv) {
     (void) exec;
     (void) argc;
     (void) argv;
 
-    ScrData out;
+    Data out;
     out.type = DATA_LIST;
     out.storage.type = DATA_STORAGE_MANAGED;
     out.storage.storage_len = 0;
@@ -311,22 +311,22 @@ ScrData block_create_list(ScrExec* exec, int argc, ScrData* argv) {
     return out;
 }
 
-ScrData block_list_add(ScrExec* exec, int argc, ScrData* argv) {
+Data block_list_add(Exec* exec, int argc, Data* argv) {
     (void) exec;
     if (argc < 2) RETURN_NOTHING;
 
-    ScrVariable* var = variable_stack_get_variable(exec, data_to_str(argv[0]));
+    Variable* var = variable_stack_get_variable(exec, data_to_str(argv[0]));
     if (!var) RETURN_NOTHING;
     if (var->value.type != DATA_LIST) RETURN_NOTHING;
 
     if (!var->value.data.list_arg.items) {
-        var->value.data.list_arg.items = malloc(sizeof(ScrData));
+        var->value.data.list_arg.items = malloc(sizeof(Data));
         var->value.data.list_arg.len = 1;
     } else {
-        var->value.data.list_arg.items = realloc(var->value.data.list_arg.items, ++var->value.data.list_arg.len * sizeof(ScrData));
+        var->value.data.list_arg.items = realloc(var->value.data.list_arg.items, ++var->value.data.list_arg.len * sizeof(Data));
     }
-    var->value.storage.storage_len = var->value.data.list_arg.len * sizeof(ScrData);
-    ScrData* list_item = &var->value.data.list_arg.items[var->value.data.list_arg.len - 1];
+    var->value.storage.storage_len = var->value.data.list_arg.len * sizeof(Data);
+    Data* list_item = &var->value.data.list_arg.items[var->value.data.list_arg.len - 1];
     if (argv[1].storage.type == DATA_STORAGE_MANAGED) {
         argv[1].storage.type = DATA_STORAGE_UNMANAGED;
         *list_item = argv[1];
@@ -338,11 +338,11 @@ ScrData block_list_add(ScrExec* exec, int argc, ScrData* argv) {
     return *list_item;
 }
 
-ScrData block_list_get(ScrExec* exec, int argc, ScrData* argv) {
+Data block_list_get(Exec* exec, int argc, Data* argv) {
     (void) exec;
     if (argc < 2) RETURN_NOTHING;
 
-    ScrVariable* var = variable_stack_get_variable(exec, data_to_str(argv[0]));
+    Variable* var = variable_stack_get_variable(exec, data_to_str(argv[0]));
     if (!var) RETURN_NOTHING;
     if (var->value.type != DATA_LIST) RETURN_NOTHING;
     if (!var->value.data.list_arg.items || var->value.data.list_arg.len == 0) RETURN_NOTHING;
@@ -352,18 +352,18 @@ ScrData block_list_get(ScrExec* exec, int argc, ScrData* argv) {
     return var->value.data.list_arg.items[index];
 }
 
-ScrData block_list_set(ScrExec* exec, int argc, ScrData* argv) {
+Data block_list_set(Exec* exec, int argc, Data* argv) {
     (void) exec;
     if (argc < 3) RETURN_NOTHING;
 
-    ScrVariable* var = variable_stack_get_variable(exec, data_to_str(argv[0]));
+    Variable* var = variable_stack_get_variable(exec, data_to_str(argv[0]));
     if (!var) RETURN_NOTHING;
     if (var->value.type != DATA_LIST) RETURN_NOTHING;
     if (!var->value.data.list_arg.items || var->value.data.list_arg.len == 0) RETURN_NOTHING;
     int index = data_to_int(argv[1]);
     if (index < 0 || (size_t)index >= var->value.data.list_arg.len) RETURN_NOTHING;
 
-    ScrData new_value = data_copy(argv[2]);
+    Data new_value = data_copy(argv[2]);
     if (new_value.storage.type == DATA_STORAGE_MANAGED) new_value.storage.type = DATA_STORAGE_UNMANAGED;
 
     if (var->value.data.list_arg.items[index].storage.type == DATA_STORAGE_UNMANAGED) {
@@ -373,7 +373,7 @@ ScrData block_list_set(ScrExec* exec, int argc, ScrData* argv) {
     return var->value.data.list_arg.items[index];
 }
 
-ScrData block_print(ScrExec* exec, int argc, ScrData* argv) {
+Data block_print(Exec* exec, int argc, Data* argv) {
     (void) exec;
     if (argc >= 1) {
         int bytes_sent = 0;
@@ -408,13 +408,13 @@ ScrData block_print(ScrExec* exec, int argc, ScrData* argv) {
     RETURN_INT(0);
 }
 
-ScrData block_println(ScrExec* exec, int argc, ScrData* argv) {
-    ScrData out = block_print(exec, argc, argv);
+Data block_println(Exec* exec, int argc, Data* argv) {
+    Data out = block_print(exec, argc, argv);
     term_print_str("\r\n");
     return out;
 }
 
-ScrData block_cursor_x(ScrExec* exec, int argc, ScrData* argv) {
+Data block_cursor_x(Exec* exec, int argc, Data* argv) {
     (void) exec;
     (void) argv;
     (void) argc;
@@ -425,7 +425,7 @@ ScrData block_cursor_x(ScrExec* exec, int argc, ScrData* argv) {
     RETURN_INT(cur_x);
 }
 
-ScrData block_cursor_y(ScrExec* exec, int argc, ScrData* argv) {
+Data block_cursor_y(Exec* exec, int argc, Data* argv) {
     (void) exec;
     (void) argv;
     (void) argc;
@@ -436,7 +436,7 @@ ScrData block_cursor_y(ScrExec* exec, int argc, ScrData* argv) {
     RETURN_INT(cur_y);
 }
 
-ScrData block_cursor_max_x(ScrExec* exec, int argc, ScrData* argv) {
+Data block_cursor_max_x(Exec* exec, int argc, Data* argv) {
     (void) exec;
     (void) argv;
     (void) argc;
@@ -446,7 +446,7 @@ ScrData block_cursor_max_x(ScrExec* exec, int argc, ScrData* argv) {
     RETURN_INT(cur_max_x);
 }
 
-ScrData block_cursor_max_y(ScrExec* exec, int argc, ScrData* argv) {
+Data block_cursor_max_y(Exec* exec, int argc, Data* argv) {
     (void) exec;
     (void) argv;
     (void) argc;
@@ -456,7 +456,7 @@ ScrData block_cursor_max_y(ScrExec* exec, int argc, ScrData* argv) {
     RETURN_INT(cur_max_y);
 }
 
-ScrData block_set_cursor(ScrExec* exec, int argc, ScrData* argv) {
+Data block_set_cursor(Exec* exec, int argc, Data* argv) {
     (void) exec;
     if (argc < 2) RETURN_NOTHING;
     pthread_mutex_lock(&term.lock);
@@ -467,7 +467,7 @@ ScrData block_set_cursor(ScrExec* exec, int argc, ScrData* argv) {
     RETURN_NOTHING;
 }
 
-ScrData block_set_fg_color(ScrExec* exec, int argc, ScrData* argv) {
+Data block_set_fg_color(Exec* exec, int argc, Data* argv) {
     (void) exec;
     if (argc < 1) RETURN_NOTHING;
     if (argv[0].type != DATA_STR) RETURN_NOTHING;
@@ -493,7 +493,7 @@ ScrData block_set_fg_color(ScrExec* exec, int argc, ScrData* argv) {
     RETURN_NOTHING;
 }
 
-ScrData block_set_bg_color(ScrExec* exec, int argc, ScrData* argv) {
+Data block_set_bg_color(Exec* exec, int argc, Data* argv) {
     (void) exec;
     if (argc < 1) RETURN_NOTHING;
     if (argv[0].type != DATA_STR) RETURN_NOTHING;
@@ -519,7 +519,7 @@ ScrData block_set_bg_color(ScrExec* exec, int argc, ScrData* argv) {
     RETURN_NOTHING;
 }
 
-ScrData block_reset_color(ScrExec* exec, int argc, ScrData* argv) {
+Data block_reset_color(Exec* exec, int argc, Data* argv) {
     (void) exec;
     (void) argv;
     (void) argc;
@@ -528,7 +528,7 @@ ScrData block_reset_color(ScrExec* exec, int argc, ScrData* argv) {
     RETURN_NOTHING;
 }
 
-ScrData block_term_clear(ScrExec* exec, int argc, ScrData* argv) {
+Data block_term_clear(Exec* exec, int argc, Data* argv) {
     (void) exec;
     (void) argv;
     (void) argc;
@@ -536,7 +536,7 @@ ScrData block_term_clear(ScrExec* exec, int argc, ScrData* argv) {
     RETURN_NOTHING;
 }
 
-ScrData block_term_set_clear(ScrExec* exec, int argc, ScrData* argv) {
+Data block_term_set_clear(Exec* exec, int argc, Data* argv) {
     (void) exec;
     if (argc < 1) RETURN_NOTHING;
     if (argv[0].type != DATA_STR) RETURN_NOTHING;
@@ -562,7 +562,7 @@ ScrData block_term_set_clear(ScrExec* exec, int argc, ScrData* argv) {
     RETURN_NOTHING;
 }
 
-ScrData block_input(ScrExec* exec, int argc, ScrData* argv) {
+Data block_input(Exec* exec, int argc, Data* argv) {
     (void) exec;
     (void) argv;
     (void) argc;
@@ -582,7 +582,7 @@ ScrData block_input(ScrExec* exec, int argc, ScrData* argv) {
     return string_make_managed(&string);
 }
 
-ScrData block_get_char(ScrExec* exec, int argc, ScrData* argv) {
+Data block_get_char(Exec* exec, int argc, Data* argv) {
     (void) exec;
     (void) argv;
     (void) argc;
@@ -599,7 +599,7 @@ ScrData block_get_char(ScrExec* exec, int argc, ScrData* argv) {
     return string_make_managed(&string);
 }
 
-ScrData block_random(ScrExec* exec, int argc, ScrData* argv) {
+Data block_random(Exec* exec, int argc, Data* argv) {
     (void) exec;
     if (argc < 2) RETURN_INT(0);
     int min = data_to_int(argv[0]);
@@ -613,7 +613,7 @@ ScrData block_random(ScrExec* exec, int argc, ScrData* argv) {
     RETURN_INT(val);
 }
 
-ScrData block_join(ScrExec* exec, int argc, ScrData* argv) {
+Data block_join(Exec* exec, int argc, Data* argv) {
     (void) exec;
     if (argc < 2) RETURN_NOTHING;
 
@@ -623,7 +623,7 @@ ScrData block_join(ScrExec* exec, int argc, ScrData* argv) {
     return string_make_managed(&string);
 }
 
-ScrData block_ord(ScrExec* exec, int argc, ScrData* argv) {
+Data block_ord(Exec* exec, int argc, Data* argv) {
     (void) exec;
     if (argc < 1) RETURN_INT(0);
 
@@ -634,7 +634,7 @@ ScrData block_ord(ScrExec* exec, int argc, ScrData* argv) {
     RETURN_INT(codepoint);
 }
 
-ScrData block_chr(ScrExec* exec, int argc, ScrData* argv) {
+Data block_chr(Exec* exec, int argc, Data* argv) {
     (void) exec;
     if (argc < 1) RETURN_NOTHING;
 
@@ -646,7 +646,7 @@ ScrData block_chr(ScrExec* exec, int argc, ScrData* argv) {
     return string_make_managed(&string);
 }
 
-ScrData block_letter_in(ScrExec* exec, int argc, ScrData* argv) {
+Data block_letter_in(Exec* exec, int argc, Data* argv) {
     (void) exec;
     if (argc < 2) RETURN_NOTHING;
 
@@ -670,7 +670,7 @@ ScrData block_letter_in(ScrExec* exec, int argc, ScrData* argv) {
     RETURN_NOTHING;
 }
 
-ScrData block_substring(ScrExec* exec, int argc, ScrData* argv) {
+Data block_substring(Exec* exec, int argc, Data* argv) {
     (void) exec;
     if (argc < 3) RETURN_NOTHING;
 
@@ -714,7 +714,7 @@ ScrData block_substring(ScrExec* exec, int argc, ScrData* argv) {
     RETURN_NOTHING;
 }
 
-ScrData block_length(ScrExec* exec, int argc, ScrData* argv) {
+Data block_length(Exec* exec, int argc, Data* argv) {
     (void) exec;
     if (argc < 1) RETURN_INT(0);
     if (argv[0].type == DATA_LIST) RETURN_INT(argv[0].data.list_arg.len);
@@ -729,26 +729,26 @@ ScrData block_length(ScrExec* exec, int argc, ScrData* argv) {
     RETURN_INT(len);
 }
 
-ScrData block_unix_time(ScrExec* exec, int argc, ScrData* argv) {
+Data block_unix_time(Exec* exec, int argc, Data* argv) {
     (void) exec;
     (void) argc;
     (void) argv;
     RETURN_INT(time(NULL));
 }
 
-ScrData block_convert_int(ScrExec* exec, int argc, ScrData* argv) {
+Data block_convert_int(Exec* exec, int argc, Data* argv) {
     (void) exec;
     if (argc < 1) RETURN_INT(0);
     RETURN_INT(data_to_int(argv[0]));
 }
 
-ScrData block_convert_float(ScrExec* exec, int argc, ScrData* argv) {
+Data block_convert_float(Exec* exec, int argc, Data* argv) {
     (void) exec;
     if (argc < 1) RETURN_DOUBLE(0.0);
     RETURN_DOUBLE(data_to_double(argv[0]));
 }
 
-ScrData block_convert_str(ScrExec* exec, int argc, ScrData* argv) {
+Data block_convert_str(Exec* exec, int argc, Data* argv) {
     (void) exec;
     String string = string_new(0);
     if (argc < 1) return string_make_managed(&string);
@@ -756,13 +756,13 @@ ScrData block_convert_str(ScrExec* exec, int argc, ScrData* argv) {
     return string_make_managed(&string);
 }
 
-ScrData block_convert_bool(ScrExec* exec, int argc, ScrData* argv) {
+Data block_convert_bool(Exec* exec, int argc, Data* argv) {
     (void) exec;
     if (argc < 1) RETURN_BOOL(0);
     RETURN_BOOL(data_to_bool(argv[0]));
 }
 
-ScrData block_plus(ScrExec* exec, int argc, ScrData* argv) {
+Data block_plus(Exec* exec, int argc, Data* argv) {
     (void) exec;
     if (argc < 2) RETURN_INT(0);
     if (argv[0].type == DATA_DOUBLE) {
@@ -772,7 +772,7 @@ ScrData block_plus(ScrExec* exec, int argc, ScrData* argv) {
     }
 }
 
-ScrData block_minus(ScrExec* exec, int argc, ScrData* argv) {
+Data block_minus(Exec* exec, int argc, Data* argv) {
     (void) exec;
     if (argc < 2) RETURN_INT(0);
     if (argv[0].type == DATA_DOUBLE) {
@@ -782,7 +782,7 @@ ScrData block_minus(ScrExec* exec, int argc, ScrData* argv) {
     }
 }
 
-ScrData block_mult(ScrExec* exec, int argc, ScrData* argv) {
+Data block_mult(Exec* exec, int argc, Data* argv) {
     (void) exec;
     if (argc < 2) RETURN_INT(0);
     if (argv[0].type == DATA_DOUBLE) {
@@ -792,7 +792,7 @@ ScrData block_mult(ScrExec* exec, int argc, ScrData* argv) {
     }
 }
 
-ScrData block_div(ScrExec* exec, int argc, ScrData* argv) {
+Data block_div(Exec* exec, int argc, Data* argv) {
     (void) exec;
     if (argc < 2) RETURN_INT(0);
     if (argv[0].type == DATA_DOUBLE) {
@@ -808,7 +808,7 @@ ScrData block_div(ScrExec* exec, int argc, ScrData* argv) {
     }
 }
 
-ScrData block_pow(ScrExec* exec, int argc, ScrData* argv) {
+Data block_pow(Exec* exec, int argc, Data* argv) {
     (void) exec;
     if (argc < 2) RETURN_INT(0);
     if (argv[0].type == DATA_DOUBLE) RETURN_DOUBLE(pow(argv[0].data.double_arg, data_to_double(argv[1])));
@@ -826,7 +826,7 @@ ScrData block_pow(ScrExec* exec, int argc, ScrData* argv) {
     RETURN_INT(result);
 }
 
-ScrData block_math(ScrExec* exec, int argc, ScrData* argv) {
+Data block_math(Exec* exec, int argc, Data* argv) {
     (void) exec;
     if (argc < 2) RETURN_DOUBLE(0.0);
     if (argv[0].type != DATA_STR) RETURN_DOUBLE(0.0);
@@ -856,40 +856,40 @@ ScrData block_math(ScrExec* exec, int argc, ScrData* argv) {
     }
 }
 
-ScrData block_pi(ScrExec* exec, int argc, ScrData* argv) {
+Data block_pi(Exec* exec, int argc, Data* argv) {
     (void) exec;
     (void) argc;
     (void) argv;
     RETURN_DOUBLE(M_PI);
 }
 
-ScrData block_bit_not(ScrExec* exec, int argc, ScrData* argv) {
+Data block_bit_not(Exec* exec, int argc, Data* argv) {
     (void) exec;
     if (argc < 1) RETURN_INT(~0);
     RETURN_INT(~data_to_int(argv[0]));
 }
 
-ScrData block_bit_and(ScrExec* exec, int argc, ScrData* argv) {
+Data block_bit_and(Exec* exec, int argc, Data* argv) {
     (void) exec;
     if (argc < 2) RETURN_INT(0);
     RETURN_INT(data_to_int(argv[0]) & data_to_int(argv[1]));
 }
 
-ScrData block_bit_xor(ScrExec* exec, int argc, ScrData* argv) {
+Data block_bit_xor(Exec* exec, int argc, Data* argv) {
     (void) exec;
     if (argc < 1) RETURN_INT(0);
     if (argc < 2) RETURN_INT(data_to_int(argv[0]));
     RETURN_INT(data_to_int(argv[0]) ^ data_to_int(argv[1]));
 }
 
-ScrData block_bit_or(ScrExec* exec, int argc, ScrData* argv) {
+Data block_bit_or(Exec* exec, int argc, Data* argv) {
     (void) exec;
     if (argc < 1) RETURN_INT(0);
     if (argc < 2) RETURN_INT(data_to_int(argv[0]));
     RETURN_INT(data_to_int(argv[0]) | data_to_int(argv[1]));
 }
 
-ScrData block_rem(ScrExec* exec, int argc, ScrData* argv) {
+Data block_rem(Exec* exec, int argc, Data* argv) {
     (void) exec;
     if (argc < 2) RETURN_INT(0);
     if (argv[0].type == DATA_DOUBLE) {
@@ -899,7 +899,7 @@ ScrData block_rem(ScrExec* exec, int argc, ScrData* argv) {
     }
 }
 
-ScrData block_less(ScrExec* exec, int argc, ScrData* argv) {
+Data block_less(Exec* exec, int argc, Data* argv) {
     (void) exec;
     if (argc < 1) RETURN_BOOL(0);
     if (argc < 2) RETURN_BOOL(data_to_int(argv[0]) < 0);
@@ -910,7 +910,7 @@ ScrData block_less(ScrExec* exec, int argc, ScrData* argv) {
     }
 }
 
-ScrData block_less_eq(ScrExec* exec, int argc, ScrData* argv) {
+Data block_less_eq(Exec* exec, int argc, Data* argv) {
     (void) exec;
     if (argc < 1) RETURN_BOOL(0);
     if (argc < 2) RETURN_BOOL(data_to_int(argv[0]) <= 0);
@@ -921,7 +921,7 @@ ScrData block_less_eq(ScrExec* exec, int argc, ScrData* argv) {
     }
 }
 
-ScrData block_more(ScrExec* exec, int argc, ScrData* argv) {
+Data block_more(Exec* exec, int argc, Data* argv) {
     (void) exec;
     if (argc < 1) RETURN_BOOL(0);
     if (argc < 2) RETURN_BOOL(data_to_int(argv[0]) > 0);
@@ -932,7 +932,7 @@ ScrData block_more(ScrExec* exec, int argc, ScrData* argv) {
     }
 }
 
-ScrData block_more_eq(ScrExec* exec, int argc, ScrData* argv) {
+Data block_more_eq(Exec* exec, int argc, Data* argv) {
     (void) exec;
     if (argc < 1) RETURN_BOOL(0);
     if (argc < 2) RETURN_BOOL(data_to_int(argv[0]) >= 0);
@@ -943,39 +943,39 @@ ScrData block_more_eq(ScrExec* exec, int argc, ScrData* argv) {
     }
 }
 
-ScrData block_not(ScrExec* exec, int argc, ScrData* argv) {
+Data block_not(Exec* exec, int argc, Data* argv) {
     (void) exec;
     if (argc < 1) RETURN_BOOL(1);
     RETURN_BOOL(!data_to_bool(argv[0]));
 }
 
-ScrData block_and(ScrExec* exec, int argc, ScrData* argv) {
+Data block_and(Exec* exec, int argc, Data* argv) {
     (void) exec;
     if (argc < 2) RETURN_BOOL(0);
     RETURN_BOOL(data_to_bool(argv[0]) && data_to_bool(argv[1]));
 }
 
-ScrData block_or(ScrExec* exec, int argc, ScrData* argv) {
+Data block_or(Exec* exec, int argc, Data* argv) {
     (void) exec;
     if (argc < 2) RETURN_BOOL(0);
     RETURN_BOOL(data_to_bool(argv[0]) || data_to_bool(argv[1]));
 }
 
-ScrData block_true(ScrExec* exec, int argc, ScrData* argv) {
+Data block_true(Exec* exec, int argc, Data* argv) {
     (void) exec;
     (void) argc;
     (void) argv;
     RETURN_BOOL(1);
 }
 
-ScrData block_false(ScrExec* exec, int argc, ScrData* argv) {
+Data block_false(Exec* exec, int argc, Data* argv) {
     (void) exec;
     (void) argc;
     (void) argv;
     RETURN_BOOL(0);
 }
 
-ScrData block_eq(ScrExec* exec, int argc, ScrData* argv) {
+Data block_eq(Exec* exec, int argc, Data* argv) {
     (void) exec;
     if (argc < 2) RETURN_BOOL(0);
     if (argv[0].type != argv[1].type) RETURN_BOOL(0);
@@ -995,22 +995,22 @@ ScrData block_eq(ScrExec* exec, int argc, ScrData* argv) {
     }
 }
 
-ScrData block_not_eq(ScrExec* exec, int argc, ScrData* argv) {
-    ScrData out = block_eq(exec, argc, argv);
+Data block_not_eq(Exec* exec, int argc, Data* argv) {
+    Data out = block_eq(exec, argc, argv);
     out.data.int_arg = !out.data.int_arg;
     return out;
 }
 
-ScrData block_exec_custom(ScrExec* exec, int argc, ScrData* argv) {
+Data block_exec_custom(Exec* exec, int argc, Data* argv) {
     if (argc < 1) RETURN_NOTHING;
     if (argv[0].type != DATA_CHAIN) RETURN_NOTHING;
-    ScrData return_val;
-    exec_run_custom(exec, argv[0].data.chain_arg, argc - 1, argv + 1, &return_val);
+    Data return_val;
+    exec_run_chain(exec, argv[0].data.chain_arg, argc - 1, argv + 1, &return_val);
     return return_val;
 }
 
 // Checks the arguments and returns the value from custom_argv at index if all conditions are met
-ScrData block_custom_arg(ScrExec* exec, int argc, ScrData* argv) {
+Data block_custom_arg(Exec* exec, int argc, Data* argv) {
     if (argc < 1) RETURN_NOTHING;
     if (argv[0].type != DATA_INT) RETURN_NOTHING;
     if (argv[0].data.int_arg >= exec->chain_stack[exec->chain_stack_len - 1].custom_argc) RETURN_NOTHING;
@@ -1018,7 +1018,7 @@ ScrData block_custom_arg(ScrExec* exec, int argc, ScrData* argv) {
 }
 
 // Modifies the internal state of the current code chain so that it returns early with the data written to .return_arg
-ScrData block_return(ScrExec* exec, int argc, ScrData* argv) {
+Data block_return(Exec* exec, int argc, Data* argv) {
     if (argc < 1) RETURN_NOTHING;
     exec->chain_stack[exec->chain_stack_len - 1].return_arg = data_copy(argv[0]);
     exec->chain_stack[exec->chain_stack_len - 1].is_returning = true;
@@ -1033,7 +1033,7 @@ BlockCategory* find_category(const char* name) {
     return NULL;
 }
 
-void add_to_category(ScrBlockdef* blockdef, BlockCategory* category) {
+void add_to_category(Blockdef* blockdef, BlockCategory* category) {
     vector_add(&category->blocks, block_new(blockdef));
 }
 
@@ -1043,13 +1043,13 @@ void register_categories(void) {
     vector_add(&palette.categories, block_category_new(gettext("Terminal"), (Color) CATEGORY_TERMINAL_COLOR));
     vector_add(&palette.categories, block_category_new(gettext("Math"),     (Color) CATEGORY_MATH_COLOR));
     vector_add(&palette.categories, block_category_new(gettext("Logic"),    (Color) CATEGORY_LOGIC_COLOR));
-    vector_add(&palette.categories, block_category_new(gettext("Strings"),   (Color) CATEGORY_STRING_COLOR));
+    vector_add(&palette.categories, block_category_new(gettext("Strings"),  (Color) CATEGORY_STRING_COLOR));
     vector_add(&palette.categories, block_category_new(gettext("Misc."),    (Color) CATEGORY_MISC_COLOR));
     vector_add(&palette.categories, block_category_new(gettext("Data"),     (Color) CATEGORY_DATA_COLOR));
 }
 
-// Creates and registers blocks (commands) for the ScrVm/ScrExec virtual machine
-void register_blocks(ScrVm* vm) {
+// Creates and registers blocks (commands) for the Vm/Exec virtual machine
+void register_blocks(Vm* vm) {
     BlockCategory* cat_control = find_category(gettext("Control"));
     assert(cat_control != NULL);
     BlockCategory* cat_terminal = find_category(gettext("Terminal"));
@@ -1065,65 +1065,65 @@ void register_blocks(ScrVm* vm) {
     BlockCategory* cat_data = find_category(gettext("Data"));
     assert(cat_data != NULL);
 
-    ScrBlockdef* on_start = blockdef_new("on_start", BLOCKTYPE_HAT, (ScrColor) { 0xff, 0x77, 0x00, 0xFF }, block_noop);
+    Blockdef* on_start = blockdef_new("on_start", BLOCKTYPE_HAT, (BlockdefColor) { 0xff, 0x77, 0x00, 0xFF }, block_noop);
     blockdef_add_text(on_start, gettext("When"));
-    blockdef_add_image(on_start, (ScrImage) { .image_ptr = &run_tex });
+    blockdef_add_image(on_start, (BlockdefImage) { .image_ptr = &run_tex });
     blockdef_add_text(on_start, gettext("clicked"));
     blockdef_register(vm, on_start);
     add_to_category(on_start, cat_control);
 
-    ScrBlockdef* sc_input = blockdef_new("input", BLOCKTYPE_NORMAL, (ScrColor) CATEGORY_TERMINAL_COLOR, block_input);
-    blockdef_add_image(sc_input, (ScrImage) { .image_ptr = &term_tex });
+    Blockdef* sc_input = blockdef_new("input", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_TERMINAL_COLOR, block_input);
+    blockdef_add_image(sc_input, (BlockdefImage) { .image_ptr = &term_tex });
     blockdef_add_text(sc_input, gettext("Get input"));
     blockdef_register(vm, sc_input);
     add_to_category(sc_input, cat_terminal);
 
-    ScrBlockdef* sc_char = blockdef_new("get_char", BLOCKTYPE_NORMAL, (ScrColor) CATEGORY_TERMINAL_COLOR, block_get_char);
-    blockdef_add_image(sc_char, (ScrImage) { .image_ptr = &term_tex });
+    Blockdef* sc_char = blockdef_new("get_char", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_TERMINAL_COLOR, block_get_char);
+    blockdef_add_image(sc_char, (BlockdefImage) { .image_ptr = &term_tex });
     blockdef_add_text(sc_char, gettext("Get char"));
     blockdef_register(vm, sc_char);
     add_to_category(sc_char, cat_terminal);
 
-    ScrBlockdef* sc_print = blockdef_new("print", BLOCKTYPE_NORMAL, (ScrColor) CATEGORY_TERMINAL_COLOR, block_print);
-    blockdef_add_image(sc_print, (ScrImage) { .image_ptr = &term_tex });
+    Blockdef* sc_print = blockdef_new("print", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_TERMINAL_COLOR, block_print);
+    blockdef_add_image(sc_print, (BlockdefImage) { .image_ptr = &term_tex });
     blockdef_add_text(sc_print, gettext("Print"));
     blockdef_add_argument(sc_print, gettext("Hello, scrap!"), gettext("Abc"), BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_print);
     add_to_category(sc_print, cat_terminal);
 
-    ScrBlockdef* sc_println = blockdef_new("println", BLOCKTYPE_NORMAL, (ScrColor) CATEGORY_TERMINAL_COLOR, block_println);
-    blockdef_add_image(sc_println, (ScrImage) { .image_ptr = &term_tex });
+    Blockdef* sc_println = blockdef_new("println", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_TERMINAL_COLOR, block_println);
+    blockdef_add_image(sc_println, (BlockdefImage) { .image_ptr = &term_tex });
     blockdef_add_text(sc_println, gettext("Print line"));
     blockdef_add_argument(sc_println, gettext("Hello, scrap!"), gettext("Abc"), BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_println);
     add_to_category(sc_println, cat_terminal);
 
-    ScrBlockdef* sc_cursor_x = blockdef_new("cursor_x", BLOCKTYPE_NORMAL, (ScrColor) CATEGORY_TERMINAL_COLOR, block_cursor_x);
-    blockdef_add_image(sc_cursor_x, (ScrImage) { .image_ptr = &term_tex });
+    Blockdef* sc_cursor_x = blockdef_new("cursor_x", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_TERMINAL_COLOR, block_cursor_x);
+    blockdef_add_image(sc_cursor_x, (BlockdefImage) { .image_ptr = &term_tex });
     blockdef_add_text(sc_cursor_x, gettext("Cursor X"));
     blockdef_register(vm, sc_cursor_x);
     add_to_category(sc_cursor_x, cat_terminal);
 
-    ScrBlockdef* sc_cursor_y = blockdef_new("cursor_y", BLOCKTYPE_NORMAL, (ScrColor) CATEGORY_TERMINAL_COLOR, block_cursor_y);
-    blockdef_add_image(sc_cursor_y, (ScrImage) { .image_ptr = &term_tex });
+    Blockdef* sc_cursor_y = blockdef_new("cursor_y", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_TERMINAL_COLOR, block_cursor_y);
+    blockdef_add_image(sc_cursor_y, (BlockdefImage) { .image_ptr = &term_tex });
     blockdef_add_text(sc_cursor_y, gettext("Cursor Y"));
     blockdef_register(vm, sc_cursor_y);
     add_to_category(sc_cursor_y, cat_terminal);
 
-    ScrBlockdef* sc_cursor_max_x = blockdef_new("cursor_max_x", BLOCKTYPE_NORMAL, (ScrColor) CATEGORY_TERMINAL_COLOR, block_cursor_max_x);
-    blockdef_add_image(sc_cursor_max_x, (ScrImage) { .image_ptr = &term_tex });
+    Blockdef* sc_cursor_max_x = blockdef_new("cursor_max_x", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_TERMINAL_COLOR, block_cursor_max_x);
+    blockdef_add_image(sc_cursor_max_x, (BlockdefImage) { .image_ptr = &term_tex });
     blockdef_add_text(sc_cursor_max_x, gettext("Terminal width"));
     blockdef_register(vm, sc_cursor_max_x);
     add_to_category(sc_cursor_max_x, cat_terminal);
 
-    ScrBlockdef* sc_cursor_max_y = blockdef_new("cursor_max_y", BLOCKTYPE_NORMAL, (ScrColor) CATEGORY_TERMINAL_COLOR, block_cursor_max_y);
-    blockdef_add_image(sc_cursor_max_y, (ScrImage) { .image_ptr = &term_tex });
+    Blockdef* sc_cursor_max_y = blockdef_new("cursor_max_y", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_TERMINAL_COLOR, block_cursor_max_y);
+    blockdef_add_image(sc_cursor_max_y, (BlockdefImage) { .image_ptr = &term_tex });
     blockdef_add_text(sc_cursor_max_y, gettext("Terminal height"));
     blockdef_register(vm, sc_cursor_max_y);
     add_to_category(sc_cursor_max_y, cat_terminal);
 
-    ScrBlockdef* sc_set_cursor = blockdef_new("set_cursor", BLOCKTYPE_NORMAL, (ScrColor) CATEGORY_TERMINAL_COLOR, block_set_cursor);
-    blockdef_add_image(sc_set_cursor, (ScrImage) { .image_ptr = &term_tex });
+    Blockdef* sc_set_cursor = blockdef_new("set_cursor", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_TERMINAL_COLOR, block_set_cursor);
+    blockdef_add_image(sc_set_cursor, (BlockdefImage) { .image_ptr = &term_tex });
     blockdef_add_text(sc_set_cursor, gettext("Set cursor X:"));
     blockdef_add_argument(sc_set_cursor, "0", "0", BLOCKCONSTR_UNLIMITED);
     blockdef_add_text(sc_set_cursor, gettext("Y:"));
@@ -1131,245 +1131,245 @@ void register_blocks(ScrVm* vm) {
     blockdef_register(vm, sc_set_cursor);
     add_to_category(sc_set_cursor, cat_terminal);
 
-    ScrBlockdef* sc_set_fg_color = blockdef_new("set_fg_color", BLOCKTYPE_NORMAL, (ScrColor) CATEGORY_TERMINAL_COLOR, block_set_fg_color);
-    blockdef_add_image(sc_set_fg_color, (ScrImage) { .image_ptr = &term_tex });
+    Blockdef* sc_set_fg_color = blockdef_new("set_fg_color", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_TERMINAL_COLOR, block_set_fg_color);
+    blockdef_add_image(sc_set_fg_color, (BlockdefImage) { .image_ptr = &term_tex });
     blockdef_add_text(sc_set_fg_color, gettext("Set text color"));
     blockdef_add_dropdown(sc_set_fg_color, DROPDOWN_SOURCE_LISTREF, term_color_list_access);
     blockdef_register(vm, sc_set_fg_color);
     add_to_category(sc_set_fg_color, cat_terminal);
 
-    ScrBlockdef* sc_set_bg_color = blockdef_new("set_bg_color", BLOCKTYPE_NORMAL, (ScrColor) CATEGORY_TERMINAL_COLOR, block_set_bg_color);
-    blockdef_add_image(sc_set_bg_color, (ScrImage) { .image_ptr = &term_tex });
+    Blockdef* sc_set_bg_color = blockdef_new("set_bg_color", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_TERMINAL_COLOR, block_set_bg_color);
+    blockdef_add_image(sc_set_bg_color, (BlockdefImage) { .image_ptr = &term_tex });
     blockdef_add_text(sc_set_bg_color, gettext("Set background color"));
     blockdef_add_dropdown(sc_set_bg_color, DROPDOWN_SOURCE_LISTREF, term_color_list_access);
     blockdef_register(vm, sc_set_bg_color);
     add_to_category(sc_set_bg_color, cat_terminal);
 
-    ScrBlockdef* sc_reset_color = blockdef_new("reset_color", BLOCKTYPE_NORMAL, (ScrColor) CATEGORY_TERMINAL_COLOR, block_reset_color);
-    blockdef_add_image(sc_reset_color, (ScrImage) { .image_ptr = &term_tex });
+    Blockdef* sc_reset_color = blockdef_new("reset_color", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_TERMINAL_COLOR, block_reset_color);
+    blockdef_add_image(sc_reset_color, (BlockdefImage) { .image_ptr = &term_tex });
     blockdef_add_text(sc_reset_color, gettext("Reset color"));
     blockdef_register(vm, sc_reset_color);
     add_to_category(sc_reset_color, cat_terminal);
 
-    ScrBlockdef* sc_term_clear = blockdef_new("term_clear", BLOCKTYPE_NORMAL, (ScrColor) CATEGORY_TERMINAL_COLOR, block_term_clear);
-    blockdef_add_image(sc_term_clear, (ScrImage) { .image_ptr = &term_tex });
+    Blockdef* sc_term_clear = blockdef_new("term_clear", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_TERMINAL_COLOR, block_term_clear);
+    blockdef_add_image(sc_term_clear, (BlockdefImage) { .image_ptr = &term_tex });
     blockdef_add_text(sc_term_clear, gettext("Clear terminal"));
     blockdef_register(vm, sc_term_clear);
     add_to_category(sc_term_clear, cat_terminal);
     
-    ScrBlockdef* sc_term_set_clear = blockdef_new("term_set_clear", BLOCKTYPE_NORMAL, (ScrColor) CATEGORY_TERMINAL_COLOR, block_term_set_clear);
-    blockdef_add_image(sc_term_set_clear, (ScrImage) { .image_ptr = &term_tex });
+    Blockdef* sc_term_set_clear = blockdef_new("term_set_clear", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_TERMINAL_COLOR, block_term_set_clear);
+    blockdef_add_image(sc_term_set_clear, (BlockdefImage) { .image_ptr = &term_tex });
     blockdef_add_text(sc_term_set_clear, gettext("Set clear color"));
     blockdef_add_dropdown(sc_term_set_clear, DROPDOWN_SOURCE_LISTREF, term_color_list_access);
     blockdef_register(vm, sc_term_set_clear);
     add_to_category(sc_term_set_clear, cat_terminal);
 
-    ScrBlockdef* sc_loop = blockdef_new("loop", BLOCKTYPE_CONTROL, (ScrColor) CATEGORY_CONTROL_COLOR, block_loop);
+    Blockdef* sc_loop = blockdef_new("loop", BLOCKTYPE_CONTROL, (BlockdefColor) CATEGORY_CONTROL_COLOR, block_loop);
     blockdef_add_text(sc_loop, gettext("Loop"));
     blockdef_register(vm, sc_loop);
     add_to_category(sc_loop, cat_control);
 
-    ScrBlockdef* sc_repeat = blockdef_new("repeat", BLOCKTYPE_CONTROL, (ScrColor) CATEGORY_CONTROL_COLOR, block_repeat);
+    Blockdef* sc_repeat = blockdef_new("repeat", BLOCKTYPE_CONTROL, (BlockdefColor) CATEGORY_CONTROL_COLOR, block_repeat);
     blockdef_add_text(sc_repeat, gettext("Repeat"));
     blockdef_add_argument(sc_repeat, "10", "0", BLOCKCONSTR_UNLIMITED);
     blockdef_add_text(sc_repeat, gettext("times"));
     blockdef_register(vm, sc_repeat);
     add_to_category(sc_repeat, cat_control);
 
-    ScrBlockdef* sc_while = blockdef_new("while", BLOCKTYPE_CONTROL, (ScrColor) CATEGORY_CONTROL_COLOR, block_while);
+    Blockdef* sc_while = blockdef_new("while", BLOCKTYPE_CONTROL, (BlockdefColor) CATEGORY_CONTROL_COLOR, block_while);
     blockdef_add_text(sc_while, gettext("While"));
     blockdef_add_argument(sc_while, "", gettext("cond."), BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_while);
     add_to_category(sc_while, cat_control);
 
-    ScrBlockdef* sc_if = blockdef_new("if", BLOCKTYPE_CONTROL, (ScrColor) CATEGORY_CONTROL_COLOR, block_if);
+    Blockdef* sc_if = blockdef_new("if", BLOCKTYPE_CONTROL, (BlockdefColor) CATEGORY_CONTROL_COLOR, block_if);
     blockdef_add_text(sc_if, gettext("If"));
     blockdef_add_argument(sc_if, "", gettext("cond."), BLOCKCONSTR_UNLIMITED);
     blockdef_add_text(sc_if, gettext(", then"));
     blockdef_register(vm, sc_if);
     add_to_category(sc_if, cat_control);
 
-    ScrBlockdef* sc_else_if = blockdef_new("else_if", BLOCKTYPE_CONTROLEND, (ScrColor) CATEGORY_CONTROL_COLOR, block_else_if);
+    Blockdef* sc_else_if = blockdef_new("else_if", BLOCKTYPE_CONTROLEND, (BlockdefColor) CATEGORY_CONTROL_COLOR, block_else_if);
     blockdef_add_text(sc_else_if, gettext("Else if"));
     blockdef_add_argument(sc_else_if, "", gettext("cond."), BLOCKCONSTR_UNLIMITED);
     blockdef_add_text(sc_else_if, gettext(", then"));
     blockdef_register(vm, sc_else_if);
     add_to_category(sc_else_if, cat_control);
 
-    ScrBlockdef* sc_else = blockdef_new("else", BLOCKTYPE_CONTROLEND, (ScrColor) CATEGORY_CONTROL_COLOR, block_else);
+    Blockdef* sc_else = blockdef_new("else", BLOCKTYPE_CONTROLEND, (BlockdefColor) CATEGORY_CONTROL_COLOR, block_else);
     blockdef_add_text(sc_else, gettext("Else"));
     blockdef_register(vm, sc_else);
     add_to_category(sc_else, cat_control);
 
-    ScrBlockdef* sc_do_nothing = blockdef_new("do_nothing", BLOCKTYPE_CONTROL, (ScrColor) { 0x77, 0x77, 0x77, 0xff }, block_noop);
+    Blockdef* sc_do_nothing = blockdef_new("do_nothing", BLOCKTYPE_CONTROL, (BlockdefColor) { 0x77, 0x77, 0x77, 0xff }, block_noop);
     blockdef_add_text(sc_do_nothing, gettext("Do nothing"));
     blockdef_register(vm, sc_do_nothing);
     add_to_category(sc_do_nothing, cat_control);
 
-    ScrBlockdef* sc_sleep = blockdef_new("sleep", BLOCKTYPE_NORMAL, (ScrColor) CATEGORY_CONTROL_COLOR, block_sleep);
+    Blockdef* sc_sleep = blockdef_new("sleep", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_CONTROL_COLOR, block_sleep);
     blockdef_add_text(sc_sleep, gettext("Sleep"));
     blockdef_add_argument(sc_sleep, "", "0", BLOCKCONSTR_UNLIMITED);
     blockdef_add_text(sc_sleep, gettext("μs"));
     blockdef_register(vm, sc_sleep);
     add_to_category(sc_sleep, cat_control);
 
-    ScrBlockdef* sc_end = blockdef_new("end", BLOCKTYPE_END, (ScrColor) { 0x77, 0x77, 0x77, 0xff }, block_noop);
+    Blockdef* sc_end = blockdef_new("end", BLOCKTYPE_END, (BlockdefColor) { 0x77, 0x77, 0x77, 0xff }, block_noop);
     blockdef_add_text(sc_end, gettext("End"));
     blockdef_register(vm, sc_end);
 
-    ScrBlockdef* sc_plus = blockdef_new("plus", BLOCKTYPE_NORMAL, (ScrColor) CATEGORY_MATH_COLOR, block_plus);
+    Blockdef* sc_plus = blockdef_new("plus", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_MATH_COLOR, block_plus);
     blockdef_add_argument(sc_plus, "9", "0", BLOCKCONSTR_UNLIMITED);
     blockdef_add_text(sc_plus, "+");
     blockdef_add_argument(sc_plus, "10", "0", BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_plus);
     add_to_category(sc_plus, cat_math);
 
-    ScrBlockdef* sc_minus = blockdef_new("minus", BLOCKTYPE_NORMAL, (ScrColor) CATEGORY_MATH_COLOR, block_minus);
+    Blockdef* sc_minus = blockdef_new("minus", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_MATH_COLOR, block_minus);
     blockdef_add_argument(sc_minus, "9", "0", BLOCKCONSTR_UNLIMITED);
     blockdef_add_text(sc_minus, "-");
     blockdef_add_argument(sc_minus, "10", "0", BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_minus);
     add_to_category(sc_minus, cat_math);
 
-    ScrBlockdef* sc_mult = blockdef_new("mult", BLOCKTYPE_NORMAL, (ScrColor) CATEGORY_MATH_COLOR, block_mult);
+    Blockdef* sc_mult = blockdef_new("mult", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_MATH_COLOR, block_mult);
     blockdef_add_argument(sc_mult, "9", "0", BLOCKCONSTR_UNLIMITED);
     blockdef_add_text(sc_mult, "*");
     blockdef_add_argument(sc_mult, "10", "0", BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_mult);
     add_to_category(sc_mult, cat_math);
 
-    ScrBlockdef* sc_div = blockdef_new("div", BLOCKTYPE_NORMAL, (ScrColor) CATEGORY_MATH_COLOR, block_div);
+    Blockdef* sc_div = blockdef_new("div", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_MATH_COLOR, block_div);
     blockdef_add_argument(sc_div, "39", "0", BLOCKCONSTR_UNLIMITED);
     blockdef_add_text(sc_div, "/");
     blockdef_add_argument(sc_div, "5", "0", BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_div);
     add_to_category(sc_div, cat_math);
 
-    ScrBlockdef* sc_pow = blockdef_new("pow", BLOCKTYPE_NORMAL, (ScrColor) CATEGORY_MATH_COLOR, block_pow);
+    Blockdef* sc_pow = blockdef_new("pow", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_MATH_COLOR, block_pow);
     blockdef_add_text(sc_pow, gettext("Pow"));
     blockdef_add_argument(sc_pow, "5", "0", BLOCKCONSTR_UNLIMITED);
     blockdef_add_argument(sc_pow, "5", "0", BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_pow);
     add_to_category(sc_pow, cat_math);
 
-    ScrBlockdef* sc_math = blockdef_new("math", BLOCKTYPE_NORMAL, (ScrColor) CATEGORY_MATH_COLOR, block_math);
+    Blockdef* sc_math = blockdef_new("math", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_MATH_COLOR, block_math);
     blockdef_add_dropdown(sc_math, DROPDOWN_SOURCE_LISTREF, math_list_access);
     blockdef_add_argument(sc_math, "", "0.0", BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_math);
     add_to_category(sc_math, cat_math);
 
-    ScrBlockdef* sc_pi = blockdef_new("pi", BLOCKTYPE_NORMAL, (ScrColor) CATEGORY_MATH_COLOR, block_pi);
-    blockdef_add_image(sc_pi, (ScrImage) { .image_ptr = &pi_symbol_tex });
+    Blockdef* sc_pi = blockdef_new("pi", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_MATH_COLOR, block_pi);
+    blockdef_add_image(sc_pi, (BlockdefImage) { .image_ptr = &pi_symbol_tex });
     blockdef_register(vm, sc_pi);
     add_to_category(sc_pi, cat_math);
 
-    ScrBlockdef* sc_bit_not = blockdef_new("bit_not", BLOCKTYPE_NORMAL, (ScrColor) CATEGORY_LOGIC_COLOR, block_bit_not);
+    Blockdef* sc_bit_not = blockdef_new("bit_not", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_LOGIC_COLOR, block_bit_not);
     blockdef_add_text(sc_bit_not, "~");
     blockdef_add_argument(sc_bit_not, "39", "0", BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_bit_not);
     add_to_category(sc_bit_not, cat_logic);
 
-    ScrBlockdef* sc_bit_and = blockdef_new("bit_and", BLOCKTYPE_NORMAL, (ScrColor) CATEGORY_LOGIC_COLOR, block_bit_and);
+    Blockdef* sc_bit_and = blockdef_new("bit_and", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_LOGIC_COLOR, block_bit_and);
     blockdef_add_argument(sc_bit_and, "39", "0", BLOCKCONSTR_UNLIMITED);
     blockdef_add_text(sc_bit_and, "&");
     blockdef_add_argument(sc_bit_and, "5", "0", BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_bit_and);
     add_to_category(sc_bit_and, cat_logic);
 
-    ScrBlockdef* sc_bit_or = blockdef_new("bit_or", BLOCKTYPE_NORMAL, (ScrColor) CATEGORY_LOGIC_COLOR, block_bit_or);
+    Blockdef* sc_bit_or = blockdef_new("bit_or", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_LOGIC_COLOR, block_bit_or);
     blockdef_add_argument(sc_bit_or, "39", "0", BLOCKCONSTR_UNLIMITED);
     blockdef_add_text(sc_bit_or, "|");
     blockdef_add_argument(sc_bit_or, "5", "0", BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_bit_or);
     add_to_category(sc_bit_or, cat_logic);
 
-    ScrBlockdef* sc_bit_xor = blockdef_new("bit_xor", BLOCKTYPE_NORMAL, (ScrColor) CATEGORY_LOGIC_COLOR, block_bit_xor);
+    Blockdef* sc_bit_xor = blockdef_new("bit_xor", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_LOGIC_COLOR, block_bit_xor);
     blockdef_add_argument(sc_bit_xor, "39", "0", BLOCKCONSTR_UNLIMITED);
     blockdef_add_text(sc_bit_xor, "^");
     blockdef_add_argument(sc_bit_xor, "5", "0", BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_bit_xor);
     add_to_category(sc_bit_xor, cat_logic);
 
-    ScrBlockdef* sc_rem = blockdef_new("rem", BLOCKTYPE_NORMAL, (ScrColor) CATEGORY_MATH_COLOR, block_rem);
+    Blockdef* sc_rem = blockdef_new("rem", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_MATH_COLOR, block_rem);
     blockdef_add_argument(sc_rem, "39", "0", BLOCKCONSTR_UNLIMITED);
     blockdef_add_text(sc_rem, "%");
     blockdef_add_argument(sc_rem, "5", "0", BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_rem);
     add_to_category(sc_rem, cat_math);
 
-    ScrBlockdef* sc_less = blockdef_new("less", BLOCKTYPE_NORMAL, (ScrColor) CATEGORY_LOGIC_COLOR, block_less);
+    Blockdef* sc_less = blockdef_new("less", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_LOGIC_COLOR, block_less);
     blockdef_add_argument(sc_less, "9", "0", BLOCKCONSTR_UNLIMITED);
     blockdef_add_text(sc_less, "<");
     blockdef_add_argument(sc_less, "11", "0", BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_less);
     add_to_category(sc_less, cat_logic);
 
-    ScrBlockdef* sc_less_eq = blockdef_new("less_eq", BLOCKTYPE_NORMAL, (ScrColor) CATEGORY_LOGIC_COLOR, block_less_eq);
+    Blockdef* sc_less_eq = blockdef_new("less_eq", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_LOGIC_COLOR, block_less_eq);
     blockdef_add_argument(sc_less_eq, "9", "0", BLOCKCONSTR_UNLIMITED);
     blockdef_add_text(sc_less_eq, "<=");
     blockdef_add_argument(sc_less_eq, "11", "0", BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_less_eq);
     add_to_category(sc_less_eq, cat_logic);
 
-    ScrBlockdef* sc_eq = blockdef_new("eq", BLOCKTYPE_NORMAL, (ScrColor) CATEGORY_LOGIC_COLOR, block_eq);
+    Blockdef* sc_eq = blockdef_new("eq", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_LOGIC_COLOR, block_eq);
     blockdef_add_argument(sc_eq, "", gettext("any"), BLOCKCONSTR_UNLIMITED);
     blockdef_add_text(sc_eq, "=");
     blockdef_add_argument(sc_eq, "", gettext("any"), BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_eq);
     add_to_category(sc_eq, cat_logic);
 
-    ScrBlockdef* sc_not_eq = blockdef_new("not_eq", BLOCKTYPE_NORMAL, (ScrColor) CATEGORY_LOGIC_COLOR, block_not_eq);
+    Blockdef* sc_not_eq = blockdef_new("not_eq", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_LOGIC_COLOR, block_not_eq);
     blockdef_add_argument(sc_not_eq, "", gettext("any"), BLOCKCONSTR_UNLIMITED);
     blockdef_add_text(sc_not_eq, "!=");
     blockdef_add_argument(sc_not_eq, "", gettext("any"), BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_not_eq);
     add_to_category(sc_not_eq, cat_logic);
 
-    ScrBlockdef* sc_more_eq = blockdef_new("more_eq", BLOCKTYPE_NORMAL, (ScrColor) CATEGORY_LOGIC_COLOR, block_more_eq);
+    Blockdef* sc_more_eq = blockdef_new("more_eq", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_LOGIC_COLOR, block_more_eq);
     blockdef_add_argument(sc_more_eq, "9", "0", BLOCKCONSTR_UNLIMITED);
     blockdef_add_text(sc_more_eq, ">=");
     blockdef_add_argument(sc_more_eq, "11", "0", BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_more_eq);
     add_to_category(sc_more_eq, cat_logic);
 
-    ScrBlockdef* sc_more = blockdef_new("more", BLOCKTYPE_NORMAL, (ScrColor) CATEGORY_LOGIC_COLOR, block_more);
+    Blockdef* sc_more = blockdef_new("more", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_LOGIC_COLOR, block_more);
     blockdef_add_argument(sc_more, "9", "0", BLOCKCONSTR_UNLIMITED);
     blockdef_add_text(sc_more, ">");
     blockdef_add_argument(sc_more, "11", "0", BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_more);
     add_to_category(sc_more, cat_logic);
 
-    ScrBlockdef* sc_not = blockdef_new("not", BLOCKTYPE_NORMAL, (ScrColor) CATEGORY_LOGIC_COLOR, block_not);
+    Blockdef* sc_not = blockdef_new("not", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_LOGIC_COLOR, block_not);
     blockdef_add_text(sc_not, gettext("Not"));
     blockdef_add_argument(sc_not, "", gettext("cond."), BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_not);
     add_to_category(sc_not, cat_logic);
 
-    ScrBlockdef* sc_and = blockdef_new("and", BLOCKTYPE_NORMAL, (ScrColor) CATEGORY_LOGIC_COLOR, block_and);
+    Blockdef* sc_and = blockdef_new("and", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_LOGIC_COLOR, block_and);
     blockdef_add_argument(sc_and, "", gettext("cond."), BLOCKCONSTR_UNLIMITED);
     blockdef_add_text(sc_and, gettext("and"));
     blockdef_add_argument(sc_and, "", gettext("cond."), BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_and);
     add_to_category(sc_and, cat_logic);
 
-    ScrBlockdef* sc_or = blockdef_new("or", BLOCKTYPE_NORMAL, (ScrColor) CATEGORY_LOGIC_COLOR, block_or);
+    Blockdef* sc_or = blockdef_new("or", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_LOGIC_COLOR, block_or);
     blockdef_add_argument(sc_or, "", gettext("cond."), BLOCKCONSTR_UNLIMITED);
     blockdef_add_text(sc_or, gettext("or"));
     blockdef_add_argument(sc_or, "", gettext("cond."), BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_or);
     add_to_category(sc_or, cat_logic);
 
-    ScrBlockdef* sc_true = blockdef_new("true", BLOCKTYPE_NORMAL, (ScrColor) CATEGORY_LOGIC_COLOR, block_true);
+    Blockdef* sc_true = blockdef_new("true", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_LOGIC_COLOR, block_true);
     blockdef_add_text(sc_true, gettext("True"));
     blockdef_register(vm, sc_true);
     add_to_category(sc_true, cat_logic);
 
-    ScrBlockdef* sc_false = blockdef_new("false", BLOCKTYPE_NORMAL, (ScrColor) CATEGORY_LOGIC_COLOR, block_false);
+    Blockdef* sc_false = blockdef_new("false", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_LOGIC_COLOR, block_false);
     blockdef_add_text(sc_false, gettext("False"));
     blockdef_register(vm, sc_false);
     add_to_category(sc_false, cat_logic);
 
-    ScrBlockdef* sc_random = blockdef_new("random", BLOCKTYPE_NORMAL, (ScrColor) CATEGORY_LOGIC_COLOR, block_random);
+    Blockdef* sc_random = blockdef_new("random", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_LOGIC_COLOR, block_random);
     blockdef_add_text(sc_random, gettext("Random"));
     blockdef_add_argument(sc_random, "0", "0", BLOCKCONSTR_UNLIMITED);
     blockdef_add_text(sc_random, gettext("to"));
@@ -1377,26 +1377,26 @@ void register_blocks(ScrVm* vm) {
     blockdef_register(vm, sc_random);
     add_to_category(sc_random, cat_logic);
 
-    ScrBlockdef* sc_join = blockdef_new("join", BLOCKTYPE_NORMAL, (ScrColor) CATEGORY_STRING_COLOR, block_join);
+    Blockdef* sc_join = blockdef_new("join", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_STRING_COLOR, block_join);
     blockdef_add_text(sc_join, gettext("Join"));
     blockdef_add_argument(sc_join, gettext("left and "), gettext("Abc"), BLOCKCONSTR_UNLIMITED);
     blockdef_add_argument(sc_join, gettext("right"), gettext("Abc"), BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_join);
     add_to_category(sc_join, cat_string);
 
-    ScrBlockdef* sc_ord = blockdef_new("ord", BLOCKTYPE_NORMAL, (ScrColor) CATEGORY_STRING_COLOR, block_ord);
+    Blockdef* sc_ord = blockdef_new("ord", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_STRING_COLOR, block_ord);
     blockdef_add_text(sc_ord, gettext("Ord"));
     blockdef_add_argument(sc_ord, "A", gettext("Abc"), BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_ord);
     add_to_category(sc_ord, cat_string);
 
-    ScrBlockdef* sc_chr = blockdef_new("chr", BLOCKTYPE_NORMAL, (ScrColor) CATEGORY_STRING_COLOR, block_chr);
+    Blockdef* sc_chr = blockdef_new("chr", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_STRING_COLOR, block_chr);
     blockdef_add_text(sc_chr, gettext("Chr"));
     blockdef_add_argument(sc_chr, "65", "0", BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_chr);
     add_to_category(sc_chr, cat_string);
 
-    ScrBlockdef* sc_letter_in = blockdef_new("letter_in", BLOCKTYPE_NORMAL, (ScrColor) CATEGORY_STRING_COLOR, block_letter_in);
+    Blockdef* sc_letter_in = blockdef_new("letter_in", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_STRING_COLOR, block_letter_in);
     blockdef_add_text(sc_letter_in, gettext("Letter"));
     blockdef_add_argument(sc_letter_in, "1", "0", BLOCKCONSTR_UNLIMITED);
     blockdef_add_text(sc_letter_in, gettext("in"));
@@ -1404,7 +1404,7 @@ void register_blocks(ScrVm* vm) {
     blockdef_register(vm, sc_letter_in);
     add_to_category(sc_letter_in, cat_string);
 
-    ScrBlockdef* sc_substring = blockdef_new("substring", BLOCKTYPE_NORMAL, (ScrColor) CATEGORY_STRING_COLOR, block_substring);
+    Blockdef* sc_substring = blockdef_new("substring", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_STRING_COLOR, block_substring);
     blockdef_add_text(sc_substring, gettext("Substring"));
     blockdef_add_argument(sc_substring, "2", "0", BLOCKCONSTR_UNLIMITED);
     blockdef_add_text(sc_substring, gettext("to"));
@@ -1414,53 +1414,53 @@ void register_blocks(ScrVm* vm) {
     blockdef_register(vm, sc_substring);
     add_to_category(sc_substring, cat_string);
 
-    ScrBlockdef* sc_length = blockdef_new("length", BLOCKTYPE_NORMAL, (ScrColor) CATEGORY_STRING_COLOR, block_length);
+    Blockdef* sc_length = blockdef_new("length", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_STRING_COLOR, block_length);
     blockdef_add_text(sc_length, gettext("Length"));
     blockdef_add_argument(sc_length, gettext("string"), gettext("Abc"), BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_length);
     add_to_category(sc_length, cat_string);
 
-    ScrBlockdef* sc_unix_time = blockdef_new("unix_time", BLOCKTYPE_NORMAL, (ScrColor) CATEGORY_MISC_COLOR, block_unix_time);
+    Blockdef* sc_unix_time = blockdef_new("unix_time", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_MISC_COLOR, block_unix_time);
     blockdef_add_text(sc_unix_time, gettext("Time since 1970"));
     blockdef_register(vm, sc_unix_time);
     add_to_category(sc_unix_time, cat_misc);
     
-    ScrBlockdef* sc_int = blockdef_new("convert_int", BLOCKTYPE_NORMAL, (ScrColor) CATEGORY_MISC_COLOR, block_convert_int);
+    Blockdef* sc_int = blockdef_new("convert_int", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_MISC_COLOR, block_convert_int);
     blockdef_add_text(sc_int, gettext("Int"));
     blockdef_add_argument(sc_int, "", gettext("any"), BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_int);
     add_to_category(sc_int, cat_misc);
 
-    ScrBlockdef* sc_float = blockdef_new("convert_float", BLOCKTYPE_NORMAL, (ScrColor) CATEGORY_MISC_COLOR, block_convert_float);
+    Blockdef* sc_float = blockdef_new("convert_float", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_MISC_COLOR, block_convert_float);
     blockdef_add_text(sc_float, gettext("Float"));
     blockdef_add_argument(sc_float, "", gettext("any"), BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_float);
     add_to_category(sc_float, cat_misc);
 
-    ScrBlockdef* sc_str = blockdef_new("convert_str", BLOCKTYPE_NORMAL, (ScrColor) CATEGORY_MISC_COLOR, block_convert_str);
+    Blockdef* sc_str = blockdef_new("convert_str", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_MISC_COLOR, block_convert_str);
     blockdef_add_text(sc_str, gettext("Str"));
     blockdef_add_argument(sc_str, "", gettext("any"), BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_str);
     add_to_category(sc_str, cat_misc);
 
-    ScrBlockdef* sc_bool = blockdef_new("convert_bool", BLOCKTYPE_NORMAL, (ScrColor) CATEGORY_MISC_COLOR, block_convert_bool);
+    Blockdef* sc_bool = blockdef_new("convert_bool", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_MISC_COLOR, block_convert_bool);
     blockdef_add_text(sc_bool, gettext("Bool"));
     blockdef_add_argument(sc_bool, "", gettext("any"), BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_bool);
     add_to_category(sc_bool, cat_misc);
 
-    ScrBlockdef* sc_nothing = blockdef_new("nothing", BLOCKTYPE_NORMAL, (ScrColor) { 0x77, 0x77, 0x77, 0xff }, block_noop);
+    Blockdef* sc_nothing = blockdef_new("nothing", BLOCKTYPE_NORMAL, (BlockdefColor) { 0x77, 0x77, 0x77, 0xff }, block_noop);
     blockdef_add_text(sc_nothing, gettext("Nothing"));
     blockdef_register(vm, sc_nothing);
     add_to_category(sc_nothing, cat_misc);
 
-    ScrBlockdef* sc_comment = blockdef_new("comment", BLOCKTYPE_NORMAL, (ScrColor) { 0x77, 0x77, 0x77, 0xff }, block_noop);
+    Blockdef* sc_comment = blockdef_new("comment", BLOCKTYPE_NORMAL, (BlockdefColor) { 0x77, 0x77, 0x77, 0xff }, block_noop);
     blockdef_add_text(sc_comment, "//");
     blockdef_add_argument(sc_comment, "", gettext("any"), BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_comment);
     add_to_category(sc_comment, cat_misc);
 
-    ScrBlockdef* sc_decl_var = blockdef_new("decl_var", BLOCKTYPE_NORMAL, (ScrColor) CATEGORY_DATA_COLOR, block_declare_var);
+    Blockdef* sc_decl_var = blockdef_new("decl_var", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_DATA_COLOR, block_declare_var);
     blockdef_add_text(sc_decl_var, gettext("Declare"));
     blockdef_add_argument(sc_decl_var, gettext("my variable"), gettext("Abc"), BLOCKCONSTR_STRING);
     blockdef_add_text(sc_decl_var, "=");
@@ -1468,13 +1468,13 @@ void register_blocks(ScrVm* vm) {
     blockdef_register(vm, sc_decl_var);
     add_to_category(sc_decl_var, cat_data);
 
-    ScrBlockdef* sc_get_var = blockdef_new("get_var", BLOCKTYPE_NORMAL, (ScrColor) CATEGORY_DATA_COLOR, block_get_var);
+    Blockdef* sc_get_var = blockdef_new("get_var", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_DATA_COLOR, block_get_var);
     blockdef_add_text(sc_get_var, gettext("Get"));
     blockdef_add_argument(sc_get_var, gettext("my variable"), gettext("Abc"), BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_get_var);
     add_to_category(sc_get_var, cat_data);
 
-    ScrBlockdef* sc_set_var = blockdef_new("set_var", BLOCKTYPE_NORMAL, (ScrColor) CATEGORY_DATA_COLOR, block_set_var);
+    Blockdef* sc_set_var = blockdef_new("set_var", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_DATA_COLOR, block_set_var);
     blockdef_add_text(sc_set_var, gettext("Set"));
     blockdef_add_argument(sc_set_var, gettext("my variable"), gettext("Abc"), BLOCKCONSTR_UNLIMITED);
     blockdef_add_text(sc_set_var, "=");
@@ -1482,14 +1482,14 @@ void register_blocks(ScrVm* vm) {
     blockdef_register(vm, sc_set_var);
     add_to_category(sc_set_var, cat_data);
 
-    ScrBlockdef* sc_create_list = blockdef_new("create_list", BLOCKTYPE_NORMAL, (ScrColor) { 0xff, 0x44, 0x00, 0xff }, block_create_list);
-    blockdef_add_image(sc_create_list, (ScrImage) { .image_ptr = &list_tex });
+    Blockdef* sc_create_list = blockdef_new("create_list", BLOCKTYPE_NORMAL, (BlockdefColor) { 0xff, 0x44, 0x00, 0xff }, block_create_list);
+    blockdef_add_image(sc_create_list, (BlockdefImage) { .image_ptr = &list_tex });
     blockdef_add_text(sc_create_list, gettext("Empty list"));
     blockdef_register(vm, sc_create_list);
     add_to_category(sc_create_list, cat_data);
 
-    ScrBlockdef* sc_list_add = blockdef_new("list_add", BLOCKTYPE_NORMAL, (ScrColor) { 0xff, 0x44, 0x00, 0xff }, block_list_add);
-    blockdef_add_image(sc_list_add, (ScrImage) { .image_ptr = &list_tex });
+    Blockdef* sc_list_add = blockdef_new("list_add", BLOCKTYPE_NORMAL, (BlockdefColor) { 0xff, 0x44, 0x00, 0xff }, block_list_add);
+    blockdef_add_image(sc_list_add, (BlockdefImage) { .image_ptr = &list_tex });
     blockdef_add_text(sc_list_add, gettext("Add"));
     blockdef_add_argument(sc_list_add, gettext("my variable"), gettext("Abc"), BLOCKCONSTR_UNLIMITED);
     blockdef_add_text(sc_list_add, gettext("value"));
@@ -1497,16 +1497,16 @@ void register_blocks(ScrVm* vm) {
     blockdef_register(vm, sc_list_add);
     add_to_category(sc_list_add, cat_data);
 
-    ScrBlockdef* sc_list_get = blockdef_new("list_get", BLOCKTYPE_NORMAL, (ScrColor) { 0xff, 0x44, 0x00, 0xff }, block_list_get);
-    blockdef_add_image(sc_list_get, (ScrImage) { .image_ptr = &list_tex });
+    Blockdef* sc_list_get = blockdef_new("list_get", BLOCKTYPE_NORMAL, (BlockdefColor) { 0xff, 0x44, 0x00, 0xff }, block_list_get);
+    blockdef_add_image(sc_list_get, (BlockdefImage) { .image_ptr = &list_tex });
     blockdef_add_argument(sc_list_get, gettext("my variable"), gettext("Abc"), BLOCKCONSTR_UNLIMITED);
     blockdef_add_text(sc_list_get, gettext("get at"));
     blockdef_add_argument(sc_list_get, "0", "0", BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_list_get);
     add_to_category(sc_list_get, cat_data);
 
-    ScrBlockdef* sc_list_set = blockdef_new("list_set", BLOCKTYPE_NORMAL, (ScrColor) { 0xff, 0x44, 0x00, 0xff }, block_list_set);
-    blockdef_add_image(sc_list_set, (ScrImage) { .image_ptr = &list_tex });
+    Blockdef* sc_list_set = blockdef_new("list_set", BLOCKTYPE_NORMAL, (BlockdefColor) { 0xff, 0x44, 0x00, 0xff }, block_list_set);
+    blockdef_add_image(sc_list_set, (BlockdefImage) { .image_ptr = &list_tex });
     blockdef_add_argument(sc_list_set, gettext("my variable"), gettext("Abc"), BLOCKCONSTR_UNLIMITED);
     blockdef_add_text(sc_list_set, gettext("set at"));
     blockdef_add_argument(sc_list_set, "0", "0", BLOCKCONSTR_UNLIMITED);
@@ -1515,15 +1515,15 @@ void register_blocks(ScrVm* vm) {
     blockdef_register(vm, sc_list_set);
     add_to_category(sc_list_set, cat_data);
 
-    ScrBlockdef* sc_define_block = blockdef_new("define_block", BLOCKTYPE_HAT, (ScrColor) { 0x99, 0x00, 0xff, 0xff }, block_noop);
-    blockdef_add_image(sc_define_block, (ScrImage) { .image_ptr = &special_tex });
+    Blockdef* sc_define_block = blockdef_new("define_block", BLOCKTYPE_HAT, (BlockdefColor) { 0x99, 0x00, 0xff, 0xff }, block_noop);
+    blockdef_add_image(sc_define_block, (BlockdefImage) { .image_ptr = &special_tex });
     blockdef_add_text(sc_define_block, gettext("Define"));
     blockdef_add_blockdef_editor(sc_define_block);
     blockdef_register(vm, sc_define_block);
     add_to_category(sc_define_block, cat_control);
 
-    ScrBlockdef* sc_return = blockdef_new("return", BLOCKTYPE_NORMAL, (ScrColor) { 0x99, 0x00, 0xff, 0xff }, block_return);
-    blockdef_add_image(sc_return, (ScrImage) { .image_ptr = &special_tex });
+    Blockdef* sc_return = blockdef_new("return", BLOCKTYPE_NORMAL, (BlockdefColor) { 0x99, 0x00, 0xff, 0xff }, block_return);
+    blockdef_add_image(sc_return, (BlockdefImage) { .image_ptr = &special_tex });
     blockdef_add_text(sc_return, gettext("Return"));
     blockdef_add_argument(sc_return, "", gettext("any"), BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_return);
