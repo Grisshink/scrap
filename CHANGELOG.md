@@ -1,8 +1,10 @@
 # v0.4.2-beta
 
 ## Fixes
-- Fix loaded custom blocks having undefined hints
-- Small translation fixes
+- Fixed loaded custom blocks having undefined hints
+- Fixed textboxed being interactable while vm is running
+- Fixed code area floating away when editing panel while the block is selected
+- Minor translation fixes
 
 # v0.4.1-beta
 
