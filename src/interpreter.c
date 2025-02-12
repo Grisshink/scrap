@@ -16,7 +16,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-#include "interpreter.h"
+#include "scrap.h"
 #include "ast.h"
 #include "vec.h"
 
@@ -132,22 +132,6 @@ const char* data_to_str(Data arg) {
     default:
         return "";
     }
-}
-
-Vm vm_new(void) {
-    Vm vm = (Vm) {
-        .blockdefs = vector_create(),
-        .end_blockdef = -1,
-        .is_running = false,
-    };
-    return vm;
-}
-
-void vm_free(Vm* vm) {
-    for (ssize_t i = (ssize_t)vector_size(vm->blockdefs) - 1; i >= 0 ; i--) {
-        blockdef_unregister(vm, i);
-    }
-    vector_free(vm->blockdefs);
 }
 
 Exec exec_new(void) {
@@ -503,21 +487,4 @@ void arg_stack_undo_args(Exec* exec, size_t count) {
         data_free(arg);
     }
     exec->arg_stack_len -= count;
-}
-
-size_t blockdef_register(Vm* vm, Blockdef* blockdef) {
-    if (!blockdef->func) TraceLog(LOG_WARNING, "[VM] Block \"%s\" has not defined its implementation!", blockdef->id);
-
-    vector_add(&vm->blockdefs, blockdef);
-    blockdef->ref_count++;
-    if (blockdef->type == BLOCKTYPE_END && vm->end_blockdef == (size_t)-1) {
-        vm->end_blockdef = vector_size(vm->blockdefs) - 1;
-    }
-
-    return vector_size(vm->blockdefs) - 1;
-}
-
-void blockdef_unregister(Vm* vm, size_t block_id) {
-    blockdef_free(vm->blockdefs[block_id]);
-    vector_remove(vm->blockdefs, block_id);
 }

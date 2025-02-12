@@ -3,6 +3,7 @@ SCRAP_VERSION := 0.4.2-beta
 MAKE ?= make
 TARGET ?= LINUX
 BUILD_MODE ?= RELEASE
+USE_INTERPRETER ?= FALSE
 
 CFLAGS := -Wall -Wextra -std=c11 -D_GNU_SOURCE -DSCRAP_VERSION=\"$(SCRAP_VERSION)\" -I./raylib/src
 
@@ -34,10 +35,16 @@ else
 	CFLAGS += -g -O0 -DDEBUG
 endif
 
-OBJFILES := $(addprefix src/,filedialogs.o render.o save.o term.o blocks.o scrap.o vec.o util.o input.o scrap_gui.o window.o cfgpath.o platform.o ast.o interpreter.o)
+OBJFILES := $(addprefix src/,filedialogs.o render.o save.o term.o blocks.o scrap.o vec.o util.o input.o scrap_gui.o window.o cfgpath.o platform.o ast.o)
 BUNDLE_FILES := data examples extras locale LICENSE README.md CHANGELOG.md
-SCRAP_HEADERS := src/scrap.h src/ast.h src/interpreter.h src/config.h src/scrap_gui.h
+SCRAP_HEADERS := src/scrap.h src/ast.h src/config.h src/scrap_gui.h
 EXE_NAME := scrap
+
+ifeq ($(USE_INTERPRETER), TRUE)
+	OBJFILES += src/interpreter.o
+	SCRAP_HEADERS += src/interpreter.h
+	CFLAGS += -DUSE_INTERPRETER
+endif
 
 LINUX_DIR := $(EXE_NAME)-v$(SCRAP_VERSION)-linux
 MACOS_DIR := $(EXE_NAME)-v$(SCRAP_VERSION)-macos
@@ -49,7 +56,7 @@ all: target translations
 
 clean:
 	$(MAKE) -C raylib/src clean
-	rm -f $(OBJFILES) $(EXE_NAME) $(EXE_NAME).exe Scrap-x86_64.AppImage $(LINUX_DIR).tar.gz $(WINDOWS_DIR).zip $(MACOS_DIR).zip scrap.res
+	rm -f src/*.o $(EXE_NAME) $(EXE_NAME).exe Scrap-x86_64.AppImage $(LINUX_DIR).tar.gz $(WINDOWS_DIR).zip $(MACOS_DIR).zip scrap.res
 	rm -rf locale
 
 translations:

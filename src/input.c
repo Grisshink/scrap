@@ -203,7 +203,9 @@ static bool start_vm(void) {
 static bool stop_vm(void) {
     if (!vm.is_running) return false;
     TraceLog(LOG_INFO, "STOP");
+#ifdef USE_INTERPRETER
     exec_stop(&vm, &exec);
+#endif
     render_surface_needs_redraw = true;
     return true;
 }

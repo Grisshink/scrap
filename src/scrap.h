@@ -21,10 +21,15 @@
 #include <time.h>
 
 #include "ast.h"
-#include "interpreter.h"
 #include "raylib.h"
 #include "config.h"
 #include "scrap_gui.h"
+
+typedef struct Vm Vm;
+
+#ifdef USE_INTERPRETER
+#include "interpreter.h"
+#endif
 
 typedef struct PanelTree PanelTree;
 
@@ -234,6 +239,13 @@ typedef struct {
     const char* name;
 } Timer;
 
+struct Vm {
+    Blockdef** blockdefs;
+    // TODO: Maybe remove end_blockdef from here
+    size_t end_blockdef;
+    bool is_running;
+};
+
 extern Config conf;
 extern Config window_conf;
 extern HoverInfo hover_info;
@@ -264,6 +276,10 @@ extern Texture2D arrow_left_tex;
 extern Texture2D arrow_right_tex;
 extern Texture2D pi_symbol_tex;
 
+#ifdef USE_INTERPRETER
+extern Exec exec;
+#endif
+
 extern Vm vm;
 extern int start_vm_timeout;
 extern Vector2 camera_pos;
@@ -274,7 +290,6 @@ extern BlockPalette palette;
 extern BlockChain* editor_code;
 extern Block** search_list;
 extern BlockChain mouse_blockchain;
-extern Exec exec;
 extern Gui* gui;
 extern char* search_list_search;
 extern int categories_scroll;
@@ -319,6 +334,10 @@ PanelTree* panel_new(PanelType type);
 void panel_delete(PanelTree* panel);
 void tab_insert(char* name, PanelTree* root_panel, size_t position);
 BlockCategory block_category_new(const char* name, Color color);
+Vm vm_new(void);
+void vm_free(Vm* vm);
+size_t blockdef_register(Vm* vm, Blockdef* blockdef);
+void blockdef_unregister(Vm* vm, size_t id);
 
 // render.c
 void actionbar_show(const char* text);
@@ -395,8 +414,14 @@ void draw_window(void);
 // blocks.c
 void register_blocks(Vm* vm);
 void register_categories(void);
+
+#ifdef USE_INTERPRETER
 Data block_custom_arg(Exec* exec, int argc, Data* argv);
 Data block_exec_custom(Exec* exec, int argc, Data* argv);
+#else
+void block_custom_arg();
+void block_exec_custom();
+#endif
 
 // platform.c
 void scrap_set_env(const char* name, const char* value);

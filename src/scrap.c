@@ -33,7 +33,9 @@ RenderTexture2D render_surface;
 bool render_surface_needs_redraw = true;
 int shader_time_loc;
 
+#ifdef USE_INTERPRETER
 Exec exec = {0};
+#endif
 
 Vector2 camera_pos = {0};
 Vector2 camera_click_pos = {0};
@@ -361,6 +363,39 @@ void init_panels(void) {
     tab_new("Output", panel_new(PANEL_TERM));
 }
 
+size_t blockdef_register(Vm* vm, Blockdef* blockdef) {
+    if (!blockdef->func) TraceLog(LOG_WARNING, "[VM] Block \"%s\" has not defined its implementation!", blockdef->id);
+
+    vector_add(&vm->blockdefs, blockdef);
+    blockdef->ref_count++;
+    if (blockdef->type == BLOCKTYPE_END && vm->end_blockdef == (size_t)-1) {
+        vm->end_blockdef = vector_size(vm->blockdefs) - 1;
+    }
+
+    return vector_size(vm->blockdefs) - 1;
+}
+
+void blockdef_unregister(Vm* vm, size_t block_id) {
+    blockdef_free(vm->blockdefs[block_id]);
+    vector_remove(vm->blockdefs, block_id);
+}
+
+Vm vm_new(void) {
+    Vm vm = (Vm) {
+        .blockdefs = vector_create(),
+        .end_blockdef = -1,
+        .is_running = false,
+    };
+    return vm;
+}
+
+void vm_free(Vm* vm) {
+    for (ssize_t i = (ssize_t)vector_size(vm->blockdefs) - 1; i >= 0 ; i--) {
+        blockdef_unregister(vm, i);
+    }
+    vector_free(vm->blockdefs);
+}
+
 // Initializes resources and settings by loading textures, fonts, and configurations, and sets up GUI and panel interface
 void setup(void) {
     SetExitKey(KEY_NULL);
@@ -474,6 +509,7 @@ int main(void) {
         hover_info.exec_ind = -1;
         hover_info.exec_chain = NULL;
 
+#ifdef USE_INTERPRETER
         size_t vm_return = -1;
         if (exec_try_join(&vm, &exec, &vm_return)) {
             if (vm_return == 1) {
@@ -501,6 +537,7 @@ int main(void) {
             }
             pthread_mutex_unlock(&term.lock);
         }
+#endif // USE_INTERPRETER
 
         actionbar.show_time -= GetFrameTime();
         if (actionbar.show_time < 0) {
@@ -542,12 +579,14 @@ int main(void) {
         EndDrawing();
     }
 
+#ifdef USE_INTERPRETER
     if (vm.is_running) {
         exec_stop(&vm, &exec);
         size_t bin;
         exec_join(&vm, &exec, &bin);
         exec_free(&exec);
     }
+#endif
     term_free();
     blockchain_free(&mouse_blockchain);
     for (vec_size_t i = 0; i < vector_size(editor_code); i++) blockchain_free(&editor_code[i]);

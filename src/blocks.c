@@ -91,6 +91,12 @@ void string_add_array(String* string, const char* arr, int arr_len) {
     string->len = new_len;
 }
 
+void string_free(String string) {
+    free(string.str);
+}
+
+#ifdef USE_INTERPRETER
+
 Data string_make_managed(String* string) {
     Data out;
     out.type = DATA_STR;
@@ -98,10 +104,6 @@ Data string_make_managed(String* string) {
     out.storage.storage_len = string->len + 1;
     out.data.str_arg = string->str;
     return out;
-}
-
-void string_free(String string) {
-    free(string.str);
 }
 
 Data block_noop(Exec* exec, int argc, Data* argv) {
@@ -1024,6 +1026,79 @@ Data block_return(Exec* exec, int argc, Data* argv) {
     exec->chain_stack[exec->chain_stack_len - 1].is_returning = true;
     RETURN_NOTHING;
 }
+
+#else
+
+// Dummy functions
+void block_return() {}
+void block_custom_arg() {}
+void block_exec_custom() {}
+void block_not_eq() {}
+void block_eq() {}
+void block_false() {}
+void block_true() {}
+void block_or() {}
+void block_and() {}
+void block_not() {}
+void block_more_eq() {}
+void block_more() {}
+void block_less_eq() {}
+void block_less() {}
+void block_rem() {}
+void block_bit_or() {}
+void block_bit_xor() {}
+void block_bit_and() {}
+void block_bit_not() {}
+void block_pi() {}
+void block_math() {}
+void block_pow() {}
+void block_div() {}
+void block_mult() {}
+void block_minus() {}
+void block_plus() {}
+void block_convert_bool() {}
+void block_convert_str() {}
+void block_convert_float() {}
+void block_convert_int() {}
+void block_unix_time() {}
+void block_length() {}
+void block_substring() {}
+void block_letter_in() {}
+void block_chr() {}
+void block_ord() {}
+void block_join() {}
+void block_random() {}
+void block_get_char() {}
+void block_input() {}
+void block_term_set_clear() {}
+void block_term_clear() {}
+void block_reset_color() {}
+void block_set_bg_color() {}
+void block_set_fg_color() {}
+void block_set_cursor() {}
+void block_cursor_max_y() {}
+void block_cursor_max_x() {}
+void block_cursor_y() {}
+void block_cursor_x() {}
+void block_println() {}
+void block_print() {}
+void block_list_set() {}
+void block_list_get() {}
+void block_list_add() {}
+void block_create_list() {}
+void block_set_var() {}
+void block_get_var() {}
+void block_declare_var() {}
+void block_sleep() {}
+void block_while() {}
+void block_repeat() {}
+void block_else() {}
+void block_else_if() {}
+void block_if() {}
+void block_loop() {}
+void block_noop() {}
+
+#endif // USE_INTERPRETER
 
 BlockCategory* find_category(const char* name) {
     if (!palette.categories) return NULL;

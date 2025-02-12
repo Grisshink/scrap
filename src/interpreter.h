@@ -31,7 +31,6 @@
 
 typedef struct Variable Variable;
 typedef struct Exec Exec;
-typedef struct Vm Vm;
 typedef struct ChainStackData ChainStackData;
 
 typedef enum DataControlArgType DataControlArgType;
@@ -135,13 +134,6 @@ struct Exec {
     BlockChain* running_chain;
 };
 
-struct Vm {
-    Blockdef** blockdefs;
-    // TODO: Maybe remove end_blockdef from here
-    size_t end_blockdef;
-    bool is_running;
-};
-
 #ifdef _WIN32
 // Winpthreads for some reason does not trigger cleanup functions, so we are explicitly doing cleanup here
 #define PTHREAD_FAIL(exec) \
@@ -218,9 +210,6 @@ struct Vm {
     }, \
 }
 
-Vm vm_new(void);
-void vm_free(Vm* vm);
-
 Exec exec_new(void);
 void exec_free(Exec* exec);
 void exec_add_chain(Vm* vm, Exec* exec, BlockChain chain);
@@ -243,8 +232,5 @@ const char* data_to_str(Data arg);
 double data_to_double(Data arg);
 Data data_copy(Data arg);
 void data_free(Data data);
-
-size_t blockdef_register(Vm* vm, Blockdef* blockdef);
-void blockdef_unregister(Vm* vm, size_t id);
 
 #endif // INTERPRETER_H
