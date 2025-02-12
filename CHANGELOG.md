@@ -1,3 +1,9 @@
+# v0.4.2-beta
+
+## Fixes
+- Fix loaded custom blocks having undefined hints
+- Small translation fixes
+
 # v0.4.1-beta
 
 ## What's new?
