@@ -478,3 +478,7 @@ msgstr "Русский [ru]"
 #: save.c
 msgid "Kazakh [kk]"
 msgstr "Казахский [kk]"
+
+#: save.c
+msgid "Ukrainian [uk]"
+msgstr "Украинский [uk]"
