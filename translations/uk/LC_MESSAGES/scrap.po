@@ -465,7 +465,7 @@ msgstr "Мова"
 
 #: save.c
 msgid "System"
-msgstr "Системний"
+msgstr "Системна"
 
 #: save.c
 msgid "English [en]"
