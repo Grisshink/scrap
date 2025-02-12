@@ -376,6 +376,10 @@ bool handle_window_gui_close_button_click(void) {
 bool handle_settings_panel_editor_button_click(void) {
     gui_window_hide();
     hover_info.is_panel_edit_mode = true;
+    hover_info.select_input = NULL;
+    hover_info.select_argument = NULL;
+    hover_info.select_block = NULL;
+    hover_info.select_blockchain = NULL;
     return true;
 }
 
@@ -806,9 +810,6 @@ static bool handle_mouse_click(void) {
         return true;
     }
 
-    if (hover_info.input_info.input) get_input_ind();
-    if (hover_info.input_info.input != hover_info.select_input) hover_info.select_input = hover_info.input_info.input;
-
     if (hover_info.top_bars.handler) return hover_info.top_bars.handler();
     if (hover_info.hover_slider.value) {
         hover_info.dragged_slider = hover_info.hover_slider;
@@ -824,6 +825,9 @@ static bool handle_mouse_click(void) {
     if (hover_info.is_panel_edit_mode) return handle_editor_panel_click();
     if (hover_info.panel->type == PANEL_TERM) return true;
     if (vm.is_running) return false;
+
+    if (hover_info.input_info.input) get_input_ind();
+    if (hover_info.input_info.input != hover_info.select_input) hover_info.select_input = hover_info.input_info.input;
 
     bool mouse_empty = vector_size(mouse_blockchain.blocks) == 0;
 
