@@ -14,7 +14,18 @@ jobs:
             - uses: actions/checkout@v4
 
             - name: Install dependencies
-              run: sudo apt-get update -y && sudo apt-get install -y --no-install-recommends libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev gettext
+              run: |
+                sudo apt-get update -y
+                sudo apt-get install -y --no-install-recommends libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev gettext
+
+            - name: Install LLVM
+              run: |
+                sudo add-apt-repository "deb http://apt.llvm.org/focal/ llvm-toolchain-focal-19 main"
+                sudo apt-get update -y
+                sudo apt-get install -y --no-install-recommends llvm-19-dev
 
             - name: Build project
-              run: git submodule init && git submodule update && make CC=gcc-9
+              run: |
+                git submodule init
+                git submodule update
+                make CC=gcc-9 USE_COMPILER=TRUE LLVM_CONFIG=llvm-config-19
