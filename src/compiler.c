@@ -58,8 +58,9 @@ bool compile_program(void) {
 
     LLVMExecutionEngineRef engine;
     LLVMInitializeNativeTarget();
-    LLVMInitializeNativeAsmPrinter();
     LLVMInitializeNativeAsmParser();
+    LLVMInitializeNativeAsmPrinter();
+    LLVMLinkInMCJIT();
 
     if (LLVMCreateExecutionEngineForModule(&engine, mod, &error)) {
         TraceLog(LOG_ERROR, "[LLVM] Failed to create execution engine!");

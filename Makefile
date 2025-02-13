@@ -3,7 +3,7 @@ SCRAP_VERSION := 0.4.2-beta
 MAKE ?= make
 TARGET ?= LINUX
 BUILD_MODE ?= RELEASE
-USE_INTERPRETER ?= FALSE
+USE_COMPILER ?= FALSE
 
 CFLAGS := -Wall -Wextra -std=c11 -D_GNU_SOURCE -DSCRAP_VERSION=\"$(SCRAP_VERSION)\" -I./raylib/src
 
@@ -40,15 +40,23 @@ BUNDLE_FILES := data examples extras locale LICENSE README.md CHANGELOG.md
 SCRAP_HEADERS := src/scrap.h src/ast.h src/config.h src/scrap_gui.h
 EXE_NAME := scrap
 
-ifeq ($(USE_INTERPRETER), TRUE)
+ifeq ($(USE_COMPILER), FALSE)
 	OBJFILES += src/interpreter.o
 	SCRAP_HEADERS += src/interpreter.h
 	CFLAGS += -DUSE_INTERPRETER
 else
+	LLVM_CONFIG ?= llvm-config
 	OBJFILES += src/compiler.o
 	SCRAP_HEADERS += src/compiler.h
-	LDFLAGS += `llvm-config --ldflags --libs --system-libs`
-	CFLAGS += `llvm-config --cflags`
+	LLVM_LDFLAGS := --ldflags --system-libs --libs core executionengine mcjit analysis native
+	ifeq ($(LLVM_LINK_STATIC), TRUE)
+		LDFLAGS += -Wl,-Bstatic `$(LLVM_CONFIG) $(LLVM_FLAGS) --link-static $(LLVM_LDFLAGS)` -Wl,-Bdynamic
+	else
+		LDFLAGS += `$(LLVM_CONFIG) $(LLVM_FLAGS) $(LLVM_LDFLAGS)`
+	endif
+	LDFLAGS += -lstdc++
+
+	CFLAGS += `$(LLVM_CONFIG) --cflags`
 endif
 
 LINUX_DIR := $(EXE_NAME)-v$(SCRAP_VERSION)-linux
@@ -109,11 +117,11 @@ endif
 $(EXE_NAME).exe: $(OBJFILES)
 	$(MAKE) -C raylib/src CC=$(CC) CUSTOM_CFLAGS=-DSUPPORT_FILEFORMAT_SVG PLATFORM_OS=$(TARGET)
 	x86_64-w64-mingw32-windres scrap.rc -O coff -o scrap.res
-	$(CC) $(CFLAGS) -o $@ $^ raylib/src/libraylib.a scrap.res $(LDFLAGS)
+	$(CC) -o $@ $^ raylib/src/libraylib.a scrap.res $(LDFLAGS)
 
 $(EXE_NAME): $(OBJFILES)
 	$(MAKE) -C raylib/src CC=$(CC) CUSTOM_CFLAGS=-DSUPPORT_FILEFORMAT_SVG PLATFORM_OS=$(TARGET)
-	$(CC) $(CFLAGS) -o $@ $^ raylib/src/libraylib.a $(LDFLAGS)
+	$(CC) -o $@ $^ raylib/src/libraylib.a $(LDFLAGS)
 
 src/scrap.o: src/scrap.c $(SCRAP_HEADERS)
 	$(CC) $(CFLAGS) -c -o $@ $<
