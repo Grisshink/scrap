@@ -15,66 +15,218 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+#include "scrap.h"
 #include "term.h"
-#include "compiler.h"
+#include "vec.h"
 
-#include <llvm-c/Core.h>
-#include <llvm-c/ExecutionEngine.h>
 #include <llvm-c/Analysis.h>
+#include <assert.h>
 
 #define ARRLEN(arr) (sizeof(arr) / sizeof(arr[0]))
 
-bool compile_program(void) {
-    LLVMModuleRef mod = LLVMModuleCreateWithName("scrap_module");
+static bool compile_program(Exec* exec);
+static bool run_program(Exec* exec);
 
+Exec exec_new(void) {
+    Exec exec = (Exec) {
+        .code = NULL,
+        //.thread = (pthread_t) {0},
+        //.is_running = false,
+    };
+    return exec;
+}
+
+void exec_free(Exec* exec) {
+    (void) exec;
+}
+
+bool exec_start(Vm* vm, Exec* exec) {
+    if (vm->is_running) return false;
+    //if (exec->is_running) return false;
+
+    //if (pthread_create(&exec->thread, NULL, exec_thread_entry, exec)) return false;
+    //exec->is_running = true;
+
+    if (!compile_program(exec)) return false;
+    if (!run_program(exec)) return false;
+
+    vm->is_running = true;
+    return true;
+}
+
+bool exec_stop(Vm* vm, Exec* exec) {
+    (void) exec;
+    if (!vm->is_running) return false;
+    //if (!exec->is_running) return false;
+    //if (pthread_cancel(exec->thread)) return false;
+    return true;
+}
+
+void exec_copy_code(Vm* vm, Exec* exec, BlockChain* code) {
+    if (vm->is_running) return;
+    exec->code = code;
+}
+
+bool exec_join(Vm* vm, Exec* exec, size_t* return_code) {
+    (void) exec;
+    if (!vm->is_running) return false;
+    //if (!exec->is_running) return false;
+    
+    //void* return_val;
+    //if (pthread_join(exec->thread, &return_val)) return false;
+    vm->is_running = false;
+    //*return_code = (size_t)return_val;
+    *return_code = 1;
+    return true;
+}
+
+bool exec_try_join(Vm* vm, Exec* exec, size_t* return_code) {
+    (void) exec;
+    if (!vm->is_running) return false;
+    // if (exec->is_running) return false;
+
+    // void* return_val;
+    // if (pthread_join(exec->thread, &return_val)) return false;
+    vm->is_running = false;
+    // *return_code = (size_t)return_val;
+    *return_code = 1;
+    return true;
+}
+
+static bool evaluate_block(Exec* exec, Block* block) {
+    if (!block->blockdef) {
+        TraceLog(LOG_ERROR, "[LLVM] Tried to compile block without definition!");
+        return false;
+    }
+    if (!block->blockdef->func) {
+        TraceLog(LOG_ERROR, "[LLVM] Tried to compile block without implementation!");
+        TraceLog(LOG_ERROR, "[LLVM] Relevant block id: %s", block->blockdef->id);
+        return false;
+    }
+    BlockCompileFunc compile_block = block->blockdef->func;
+
+    LLVMValueRef* args = vector_create();
+    for (size_t i = 0; i < vector_size(block->arguments); i++) {
+        switch (block->arguments[i].type) {
+        case ARGUMENT_TEXT:
+        case ARGUMENT_CONST_STRING:
+            vector_add(&args, LLVMBuildGlobalStringPtr(exec->builder, block->arguments[i].data.text, "const_str"));
+            break;
+        case ARGUMENT_BLOCK:
+            assert(false && "Unimplemented compile block argument");
+            break;
+        case ARGUMENT_BLOCKDEF:
+            assert(false && "Unimplemented compile blockdef argument");
+            break;
+        }
+    }
+
+    if (!compile_block(exec, vector_size(args), args)) {
+        vector_free(args);
+        TraceLog(LOG_ERROR, "[LLVM] Got error while compiling block id: \"%s\" (at block %p)", block->blockdef->id, block);
+        return false;
+    }
+
+    vector_free(args);
+
+    return true;
+}
+
+static bool evaluate_chain(Exec* exec, BlockChain* chain) {
+    if (vector_size(chain->blocks) == 0 || chain->blocks[0].blockdef->type != BLOCKTYPE_HAT) return true;
+
+    for (size_t i = 0; i < vector_size(chain->blocks); i++) {
+        if (!evaluate_block(exec, &chain->blocks[i])) return false;
+    }
+
+    return true;
+}
+
+static LLVMBasicBlockRef register_globals(Exec* exec) {
     LLVMTypeRef print_func_params[] = { LLVMPointerType(LLVMInt8Type(), 0) };
-    LLVMTypeRef print_func_type = LLVMFunctionType(LLVMInt32Type(), print_func_params, ARRLEN(print_func_params), 0);
-    LLVMValueRef print_func_value = LLVMAddFunction(mod, "term_print_str", print_func_type);
+    LLVMTypeRef print_func_type = LLVMFunctionType(LLVMInt32Type(), print_func_params, ARRLEN(print_func_params), false);
+    LLVMAddFunction(exec->module, "term_print_str", print_func_type);
 
-    LLVMTypeRef main_func_type = LLVMFunctionType(LLVMVoidType(), NULL, 0, 0);
-    LLVMValueRef main_func = LLVMAddFunction(mod, "llvm_main", main_func_type);
+    LLVMTypeRef main_func_type = LLVMFunctionType(LLVMVoidType(), NULL, 0, false);
+    LLVMValueRef main_func = LLVMAddFunction(exec->module, "llvm_main", main_func_type);
 
-    LLVMBasicBlockRef entry = LLVMAppendBasicBlock(main_func, "entry");
+    return LLVMAppendBasicBlock(main_func, "entry");
+}
 
-    LLVMBuilderRef builder = LLVMCreateBuilder();
-    LLVMPositionBuilderAtEnd(builder, entry);
+static bool compile_program(Exec* exec) {
+    exec->module = LLVMModuleCreateWithName("scrap_module");
 
-    LLVMValueRef call_args[] = { LLVMBuildGlobalStringPtr(builder, "Hello from LLVM!", "") };
-    LLVMBuildCall2(builder, print_func_type, print_func_value, call_args, ARRLEN(call_args), "");
-    LLVMBuildRetVoid(builder);
+    LLVMBasicBlockRef entry = register_globals(exec);
 
-    LLVMDisposeBuilder(builder);
+    exec->builder = LLVMCreateBuilder();
+    LLVMPositionBuilderAtEnd(exec->builder, entry);
+
+    // Call print function
+    //LLVMValueRef call_args[] = { LLVMBuildGlobalStringPtr(exec->builder, "Hello from LLVM!", "") };
+    //LLVMValueRef print_func_value = LLVMGetNamedFunction(exec->module, "term_print_str");
+    //LLVMTypeRef print_func_type = LLVMTypeOf(print_func_value);
+
+    //TraceLog(LOG_INFO, "Value kind: %d", LLVMGetValueKind(print_func_value));
+    //TraceLog(LOG_INFO, "Type kind: %d", LLVMGetTypeKind(print_func_type));
+
+    //LLVMBuildCall2(exec->builder, print_func_type, print_func_value, call_args, ARRLEN(call_args), "");
+    //LLVMBuildCall2(builder, print_func_type, print_func_value, call_args, ARRLEN(call_args), "");
+
+    for (size_t i = 0; i < vector_size(exec->code); i++) {
+        if (!evaluate_chain(exec, &exec->code[i])) {
+            LLVMDisposeModule(exec->module);
+            LLVMDisposeBuilder(exec->builder);
+            return false;
+        }
+    }
+
+    LLVMBuildRetVoid(exec->builder);
+    LLVMDisposeBuilder(exec->builder);
 
     char *error = NULL;
-    if (LLVMVerifyModule(mod, LLVMPrintMessageAction, &error)) {
+    if (LLVMVerifyModule(exec->module, LLVMPrintMessageAction, &error)) {
         TraceLog(LOG_ERROR, "[LLVM] Failed to build module!");
         LLVMDisposeMessage(error);
+        LLVMDisposeModule(exec->module);
         return false;
     }
-    LLVMDisposeMessage(error);
-    error = NULL;
     
-    LLVMDumpModule(mod);
+    LLVMDumpModule(exec->module);
 
-    LLVMExecutionEngineRef engine;
-    LLVMInitializeNativeTarget();
-    LLVMInitializeNativeAsmParser();
-    LLVMInitializeNativeAsmPrinter();
+    return true;
+}
+
+static bool run_program(Exec* exec) {
+    if (LLVMInitializeNativeTarget()) {
+        TraceLog(LOG_ERROR, "[LLVM] Native target initialization failed!");
+        LLVMDisposeModule(exec->module);
+        return false;
+    }
+    if (LLVMInitializeNativeAsmParser()) {
+        TraceLog(LOG_ERROR, "[LLVM] Native asm parser initialization failed!");
+        LLVMDisposeModule(exec->module);
+        return false;
+    }
+    if (LLVMInitializeNativeAsmPrinter()) {
+        TraceLog(LOG_ERROR, "[LLVM] Native asm printer initialization failed!");
+        LLVMDisposeModule(exec->module);
+        return false;
+    }
     LLVMLinkInMCJIT();
 
-    if (LLVMCreateExecutionEngineForModule(&engine, mod, &error)) {
+    char *error = NULL;
+    if (LLVMCreateExecutionEngineForModule(&exec->engine, exec->module, &error)) {
         TraceLog(LOG_ERROR, "[LLVM] Failed to create execution engine!");
-        if (error) TraceLog(LOG_ERROR, "[LLVM] Error: %s", error);
+        TraceLog(LOG_ERROR, "[LLVM] Error: %s", error);
         LLVMDisposeMessage(error);
+        LLVMDisposeModule(exec->module);
         return false;
     }
-    LLVMDisposeMessage(error);
-    error = NULL;
     
-    LLVMAddGlobalMapping(engine, print_func_value, term_print_str);
+    LLVMAddGlobalMapping(exec->engine, LLVMGetNamedFunction(exec->module, "term_print_str"), term_print_str);
 
-    LLVMRunFunction(engine, main_func, 0, NULL);
+    LLVMRunFunction(exec->engine, LLVMGetNamedFunction(exec->module, "llvm_main"), 0, NULL);
 
-    LLVMDisposeExecutionEngine(engine);
+    LLVMDisposeExecutionEngine(exec->engine);
     return true;
 }

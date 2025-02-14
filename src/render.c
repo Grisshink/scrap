@@ -1559,7 +1559,6 @@ void scrap_gui_process_render(void) {
 
     if (start_vm_timeout == 0) {
         term_restart();
-#ifdef USE_INTERPRETER
         exec = exec_new();
         exec_copy_code(&vm, &exec, editor_code);
         if (!exec_start(&vm, &exec)) {
@@ -1567,12 +1566,5 @@ void scrap_gui_process_render(void) {
         } else {
             actionbar_show(gettext("Started successfully!"));
         }
-#else
-        if (compile_program()) {
-            actionbar_show(gettext("Started successfully!"));
-        } else {
-            actionbar_show(gettext("Start failed!"));
-        }
-#endif
     }
 }

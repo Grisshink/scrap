@@ -33,9 +33,7 @@ RenderTexture2D render_surface;
 bool render_surface_needs_redraw = true;
 int shader_time_loc;
 
-#ifdef USE_INTERPRETER
 Exec exec = {0};
-#endif
 
 Vector2 camera_pos = {0};
 Vector2 camera_click_pos = {0};
@@ -509,7 +507,6 @@ int main(void) {
         hover_info.exec_ind = -1;
         hover_info.exec_chain = NULL;
 
-#ifdef USE_INTERPRETER
         size_t vm_return = -1;
         if (exec_try_join(&vm, &exec, &vm_return)) {
             if (vm_return == 1) {
@@ -522,8 +519,13 @@ int main(void) {
             exec_free(&exec);
             render_surface_needs_redraw = true;
         } else if (vm.is_running) {
+#ifdef USE_INTERPRETER
             hover_info.exec_chain = exec.running_chain;
             hover_info.exec_ind = exec.chain_stack[exec.chain_stack_len - 1].running_ind;
+#else
+            hover_info.exec_chain = NULL;
+            hover_info.exec_ind = 0;
+#endif
             if (hover_info.prev_exec_chain != hover_info.exec_chain) render_surface_needs_redraw = true;
             if (hover_info.prev_exec_ind != hover_info.exec_ind) render_surface_needs_redraw = true;
 
@@ -537,7 +539,6 @@ int main(void) {
             }
             pthread_mutex_unlock(&term.lock);
         }
-#endif // USE_INTERPRETER
 
         actionbar.show_time -= GetFrameTime();
         if (actionbar.show_time < 0) {
@@ -579,14 +580,12 @@ int main(void) {
         EndDrawing();
     }
 
-#ifdef USE_INTERPRETER
     if (vm.is_running) {
         exec_stop(&vm, &exec);
         size_t bin;
         exec_join(&vm, &exec, &bin);
         exec_free(&exec);
     }
-#endif
     term_free();
     blockchain_free(&mouse_blockchain);
     for (vec_size_t i = 0; i < vector_size(editor_code); i++) blockchain_free(&editor_code[i]);

@@ -29,6 +29,7 @@
 #define MIN(x, y) ((x) < (y) ? (x) : (y))
 #define MAX(x, y) ((x) > (y) ? (x) : (y))
 #define CLAMP(x, min, max) (MIN(MAX(min, x), max))
+#define ARRLEN(arr) (sizeof(arr) / sizeof(arr[0]))
 
 #define MATH_LIST_LEN 10
 #define TERM_COLOR_LIST_LEN 8
@@ -1029,74 +1030,570 @@ Data block_return(Exec* exec, int argc, Data* argv) {
 
 #else
 
-// Dummy functions
-void block_return() {}
-void block_custom_arg() {}
-void block_exec_custom() {}
-void block_not_eq() {}
-void block_eq() {}
-void block_false() {}
-void block_true() {}
-void block_or() {}
-void block_and() {}
-void block_not() {}
-void block_more_eq() {}
-void block_more() {}
-void block_less_eq() {}
-void block_less() {}
-void block_rem() {}
-void block_bit_or() {}
-void block_bit_xor() {}
-void block_bit_and() {}
-void block_bit_not() {}
-void block_pi() {}
-void block_math() {}
-void block_pow() {}
-void block_div() {}
-void block_mult() {}
-void block_minus() {}
-void block_plus() {}
-void block_convert_bool() {}
-void block_convert_str() {}
-void block_convert_float() {}
-void block_convert_int() {}
-void block_unix_time() {}
-void block_length() {}
-void block_substring() {}
-void block_letter_in() {}
-void block_chr() {}
-void block_ord() {}
-void block_join() {}
-void block_random() {}
-void block_get_char() {}
-void block_input() {}
-void block_term_set_clear() {}
-void block_term_clear() {}
-void block_reset_color() {}
-void block_set_bg_color() {}
-void block_set_fg_color() {}
-void block_set_cursor() {}
-void block_cursor_max_y() {}
-void block_cursor_max_x() {}
-void block_cursor_y() {}
-void block_cursor_x() {}
-void block_println() {}
-void block_print() {}
-void block_list_set() {}
-void block_list_get() {}
-void block_list_add() {}
-void block_create_list() {}
-void block_set_var() {}
-void block_get_var() {}
-void block_declare_var() {}
-void block_sleep() {}
-void block_while() {}
-void block_repeat() {}
-void block_else() {}
-void block_else_if() {}
-void block_if() {}
-void block_loop() {}
-void block_noop() {}
+#define MIN_ARG_COUNT(count) \
+    if (argc < count) { \
+        TraceLog(LOG_ERROR, "[LLVM] Not enough arguments! Expected: %d or more, Got: %d", count, argc); \
+        return false; \
+    }
+
+bool block_return(Exec* exec, int argc, LLVMValueRef* argv) {
+    (void) exec;
+    (void) argc;
+    (void) argv;
+    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_return");
+    return false;
+}
+
+bool block_custom_arg(Exec* exec, int argc, LLVMValueRef* argv) {
+    (void) exec;
+    (void) argc;
+    (void) argv;
+    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_custom_arg");
+    return false;
+}
+
+bool block_exec_custom(Exec* exec, int argc, LLVMValueRef* argv) {
+    (void) exec;
+    (void) argc;
+    (void) argv;
+    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_exec_custom");
+    return false;
+}
+
+bool block_not_eq(Exec* exec, int argc, LLVMValueRef* argv) {
+    (void) exec;
+    (void) argc;
+    (void) argv;
+    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_not_eq");
+    return false;
+}
+
+bool block_eq(Exec* exec, int argc, LLVMValueRef* argv) {
+    (void) exec;
+    (void) argc;
+    (void) argv;
+    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_eq");
+    return false;
+}
+
+bool block_false(Exec* exec, int argc, LLVMValueRef* argv) {
+    (void) exec;
+    (void) argc;
+    (void) argv;
+    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_false");
+    return false;
+}
+
+bool block_true(Exec* exec, int argc, LLVMValueRef* argv) {
+    (void) exec;
+    (void) argc;
+    (void) argv;
+    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_true");
+    return false;
+}
+
+bool block_or(Exec* exec, int argc, LLVMValueRef* argv) {
+    (void) exec;
+    (void) argc;
+    (void) argv;
+    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_or");
+    return false;
+}
+
+bool block_and(Exec* exec, int argc, LLVMValueRef* argv) {
+    (void) exec;
+    (void) argc;
+    (void) argv;
+    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_and");
+    return false;
+}
+
+bool block_not(Exec* exec, int argc, LLVMValueRef* argv) {
+    (void) exec;
+    (void) argc;
+    (void) argv;
+    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_not");
+    return false;
+}
+
+bool block_more_eq(Exec* exec, int argc, LLVMValueRef* argv) {
+    (void) exec;
+    (void) argc;
+    (void) argv;
+    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_more_eq");
+    return false;
+}
+
+bool block_more(Exec* exec, int argc, LLVMValueRef* argv) {
+    (void) exec;
+    (void) argc;
+    (void) argv;
+    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_more");
+    return false;
+}
+
+bool block_less_eq(Exec* exec, int argc, LLVMValueRef* argv) {
+    (void) exec;
+    (void) argc;
+    (void) argv;
+    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_less_eq");
+    return false;
+}
+
+bool block_less(Exec* exec, int argc, LLVMValueRef* argv) {
+    (void) exec;
+    (void) argc;
+    (void) argv;
+    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_less");
+    return false;
+}
+
+bool block_rem(Exec* exec, int argc, LLVMValueRef* argv) {
+    (void) exec;
+    (void) argc;
+    (void) argv;
+    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_rem");
+    return false;
+}
+
+bool block_bit_or(Exec* exec, int argc, LLVMValueRef* argv) {
+    (void) exec;
+    (void) argc;
+    (void) argv;
+    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_bit_or");
+    return false;
+}
+
+bool block_bit_xor(Exec* exec, int argc, LLVMValueRef* argv) {
+    (void) exec;
+    (void) argc;
+    (void) argv;
+    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_bit_xor");
+    return false;
+}
+
+bool block_bit_and(Exec* exec, int argc, LLVMValueRef* argv) {
+    (void) exec;
+    (void) argc;
+    (void) argv;
+    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_bit_and");
+    return false;
+}
+
+bool block_bit_not(Exec* exec, int argc, LLVMValueRef* argv) {
+    (void) exec;
+    (void) argc;
+    (void) argv;
+    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_bit_not");
+    return false;
+}
+
+bool block_pi(Exec* exec, int argc, LLVMValueRef* argv) {
+    (void) exec;
+    (void) argc;
+    (void) argv;
+    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_pi");
+    return false;
+}
+
+bool block_math(Exec* exec, int argc, LLVMValueRef* argv) {
+    (void) exec;
+    (void) argc;
+    (void) argv;
+    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_math");
+    return false;
+}
+
+bool block_pow(Exec* exec, int argc, LLVMValueRef* argv) {
+    (void) exec;
+    (void) argc;
+    (void) argv;
+    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_pow");
+    return false;
+}
+
+bool block_div(Exec* exec, int argc, LLVMValueRef* argv) {
+    (void) exec;
+    (void) argc;
+    (void) argv;
+    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_div");
+    return false;
+}
+
+bool block_mult(Exec* exec, int argc, LLVMValueRef* argv) {
+    (void) exec;
+    (void) argc;
+    (void) argv;
+    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_mult");
+    return false;
+}
+
+bool block_minus(Exec* exec, int argc, LLVMValueRef* argv) {
+    (void) exec;
+    (void) argc;
+    (void) argv;
+    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_minus");
+    return false;
+}
+
+bool block_plus(Exec* exec, int argc, LLVMValueRef* argv) {
+    (void) exec;
+    (void) argc;
+    (void) argv;
+    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_plus");
+    return false;
+}
+
+bool block_convert_bool(Exec* exec, int argc, LLVMValueRef* argv) {
+    (void) exec;
+    (void) argc;
+    (void) argv;
+    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_convert_bool");
+    return false;
+}
+
+bool block_convert_str(Exec* exec, int argc, LLVMValueRef* argv) {
+    (void) exec;
+    (void) argc;
+    (void) argv;
+    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_convert_str");
+    return false;
+}
+
+bool block_convert_float(Exec* exec, int argc, LLVMValueRef* argv) {
+    (void) exec;
+    (void) argc;
+    (void) argv;
+    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_convert_float");
+    return false;
+}
+
+bool block_convert_int(Exec* exec, int argc, LLVMValueRef* argv) {
+    (void) exec;
+    (void) argc;
+    (void) argv;
+    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_convert_int");
+    return false;
+}
+
+bool block_unix_time(Exec* exec, int argc, LLVMValueRef* argv) {
+    (void) exec;
+    (void) argc;
+    (void) argv;
+    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_unix_time");
+    return false;
+}
+
+bool block_length(Exec* exec, int argc, LLVMValueRef* argv) {
+    (void) exec;
+    (void) argc;
+    (void) argv;
+    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_length");
+    return false;
+}
+
+bool block_substring(Exec* exec, int argc, LLVMValueRef* argv) {
+    (void) exec;
+    (void) argc;
+    (void) argv;
+    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_substring");
+    return false;
+}
+
+bool block_letter_in(Exec* exec, int argc, LLVMValueRef* argv) {
+    (void) exec;
+    (void) argc;
+    (void) argv;
+    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_letter_in");
+    return false;
+}
+
+bool block_chr(Exec* exec, int argc, LLVMValueRef* argv) {
+    (void) exec;
+    (void) argc;
+    (void) argv;
+    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_chr");
+    return false;
+}
+
+bool block_ord(Exec* exec, int argc, LLVMValueRef* argv) {
+    (void) exec;
+    (void) argc;
+    (void) argv;
+    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_ord");
+    return false;
+}
+
+bool block_join(Exec* exec, int argc, LLVMValueRef* argv) {
+    (void) exec;
+    (void) argc;
+    (void) argv;
+    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_join");
+    return false;
+}
+
+bool block_random(Exec* exec, int argc, LLVMValueRef* argv) {
+    (void) exec;
+    (void) argc;
+    (void) argv;
+    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_random");
+    return false;
+}
+
+bool block_get_char(Exec* exec, int argc, LLVMValueRef* argv) {
+    (void) exec;
+    (void) argc;
+    (void) argv;
+    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_get_char");
+    return false;
+}
+
+bool block_input(Exec* exec, int argc, LLVMValueRef* argv) {
+    (void) exec;
+    (void) argc;
+    (void) argv;
+    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_input");
+    return false;
+}
+
+bool block_term_set_clear(Exec* exec, int argc, LLVMValueRef* argv) {
+    (void) exec;
+    (void) argc;
+    (void) argv;
+    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_term_set_clear");
+    return false;
+}
+
+bool block_term_clear(Exec* exec, int argc, LLVMValueRef* argv) {
+    (void) exec;
+    (void) argc;
+    (void) argv;
+    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_term_clear");
+    return false;
+}
+
+bool block_reset_color(Exec* exec, int argc, LLVMValueRef* argv) {
+    (void) exec;
+    (void) argc;
+    (void) argv;
+    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_reset_color");
+    return false;
+}
+
+bool block_set_bg_color(Exec* exec, int argc, LLVMValueRef* argv) {
+    (void) exec;
+    (void) argc;
+    (void) argv;
+    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_set_bg_color");
+    return false;
+}
+
+bool block_set_fg_color(Exec* exec, int argc, LLVMValueRef* argv) {
+    (void) exec;
+    (void) argc;
+    (void) argv;
+    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_set_fg_color");
+    return false;
+}
+
+bool block_set_cursor(Exec* exec, int argc, LLVMValueRef* argv) {
+    (void) exec;
+    (void) argc;
+    (void) argv;
+    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_set_cursor");
+    return false;
+}
+
+bool block_cursor_max_y(Exec* exec, int argc, LLVMValueRef* argv) {
+    (void) exec;
+    (void) argc;
+    (void) argv;
+    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_cursor_max_y");
+    return false;
+}
+
+bool block_cursor_max_x(Exec* exec, int argc, LLVMValueRef* argv) {
+    (void) exec;
+    (void) argc;
+    (void) argv;
+    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_cursor_max_x");
+    return false;
+}
+
+bool block_cursor_y(Exec* exec, int argc, LLVMValueRef* argv) {
+    (void) exec;
+    (void) argc;
+    (void) argv;
+    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_cursor_y");
+    return false;
+}
+
+bool block_cursor_x(Exec* exec, int argc, LLVMValueRef* argv) {
+    (void) exec;
+    (void) argc;
+    (void) argv;
+    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_cursor_x");
+    return false;
+}
+
+bool block_println(Exec* exec, int argc, LLVMValueRef* argv) {
+    (void) exec;
+    (void) argc;
+    (void) argv;
+    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_println");
+    return false;
+}
+
+bool value_is_string(LLVMValueRef value) {
+    LLVMTypeRef type = LLVMTypeOf(value);
+    if (LLVMGetTypeKind(type) != LLVMArrayTypeKind) return false;
+
+    LLVMTypeRef elem_type = LLVMGetElementType(type);
+    if (LLVMGetTypeKind(elem_type) != LLVMIntegerTypeKind) return false;
+    if (LLVMGetIntTypeWidth(elem_type) != 8) return false;
+    return true;
+}
+
+bool block_print(Exec* exec, int argc, LLVMValueRef* argv) {
+    MIN_ARG_COUNT(1);
+
+    if (LLVMGetTypeKind(LLVMTypeOf(argv[0])) == LLVMPointerTypeKind) {
+        TraceLog(LOG_INFO, "[PRINT] Got string value, yipee!");
+        LLVMValueRef print_func = LLVMGetNamedFunction(exec->module, "term_print_str");
+        LLVMTypeRef print_func_type = LLVMGlobalGetValueType(print_func);
+
+        LLVMBuildCall2(exec->builder, print_func_type, print_func, argv, 1, "");
+    } else {
+        TraceLog(LOG_INFO, "[PRINT] Got non string value, idk i will just crash >:( !");
+        LLVMTypeRef type = LLVMTypeOf(argv[0]);
+
+        char* type_str = LLVMPrintTypeToString(type);
+        TraceLog(LOG_INFO, "[PRINT] The type is: %s", type_str);
+        LLVMDisposeMessage(type_str);
+        return false;
+    }
+    return true;
+}
+
+bool block_list_set(Exec* exec, int argc, LLVMValueRef* argv) {
+    (void) exec;
+    (void) argc;
+    (void) argv;
+    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_list_set");
+    return false;
+}
+
+bool block_list_get(Exec* exec, int argc, LLVMValueRef* argv) {
+    (void) exec;
+    (void) argc;
+    (void) argv;
+    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_list_get");
+    return false;
+}
+
+bool block_list_add(Exec* exec, int argc, LLVMValueRef* argv) {
+    (void) exec;
+    (void) argc;
+    (void) argv;
+    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_list_add");
+    return false;
+}
+
+bool block_create_list(Exec* exec, int argc, LLVMValueRef* argv) {
+    (void) exec;
+    (void) argc;
+    (void) argv;
+    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_create_list");
+    return false;
+}
+
+bool block_set_var(Exec* exec, int argc, LLVMValueRef* argv) {
+    (void) exec;
+    (void) argc;
+    (void) argv;
+    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_set_var");
+    return false;
+}
+
+bool block_get_var(Exec* exec, int argc, LLVMValueRef* argv) {
+    (void) exec;
+    (void) argc;
+    (void) argv;
+    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_get_var");
+    return false;
+}
+
+bool block_declare_var(Exec* exec, int argc, LLVMValueRef* argv) {
+    (void) exec;
+    (void) argc;
+    (void) argv;
+    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_declare_var");
+    return false;
+}
+
+bool block_sleep(Exec* exec, int argc, LLVMValueRef* argv) {
+    (void) exec;
+    (void) argc;
+    (void) argv;
+    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_sleep");
+    return false;
+}
+
+bool block_while(Exec* exec, int argc, LLVMValueRef* argv) {
+    (void) exec;
+    (void) argc;
+    (void) argv;
+    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_while");
+    return false;
+}
+
+bool block_repeat(Exec* exec, int argc, LLVMValueRef* argv) {
+    (void) exec;
+    (void) argc;
+    (void) argv;
+    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_repeat");
+    return false;
+}
+
+bool block_else(Exec* exec, int argc, LLVMValueRef* argv) {
+    (void) exec;
+    (void) argc;
+    (void) argv;
+    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_else");
+    return false;
+}
+
+bool block_else_if(Exec* exec, int argc, LLVMValueRef* argv) {
+    (void) exec;
+    (void) argc;
+    (void) argv;
+    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_else_if");
+    return false;
+}
+
+bool block_if(Exec* exec, int argc, LLVMValueRef* argv) {
+    (void) exec;
+    (void) argc;
+    (void) argv;
+    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_if");
+    return false;
+}
+
+bool block_loop(Exec* exec, int argc, LLVMValueRef* argv) {
+    (void) exec;
+    (void) argc;
+    (void) argv;
+    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_loop");
+    return false;
+}
+
+bool block_noop(Exec* exec, int argc, LLVMValueRef* argv) {
+    (void) exec;
+    (void) argc;
+    (void) argv;
+    // Do nothing
+    return true;
+}
 
 #endif // USE_INTERPRETER
 

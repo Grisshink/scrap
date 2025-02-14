@@ -278,9 +278,7 @@ extern Texture2D arrow_left_tex;
 extern Texture2D arrow_right_tex;
 extern Texture2D pi_symbol_tex;
 
-#ifdef USE_INTERPRETER
 extern Exec exec;
-#endif
 
 extern Vm vm;
 extern int start_vm_timeout;
@@ -421,8 +419,8 @@ void register_categories(void);
 Data block_custom_arg(Exec* exec, int argc, Data* argv);
 Data block_exec_custom(Exec* exec, int argc, Data* argv);
 #else
-void block_custom_arg();
-void block_exec_custom();
+bool block_custom_arg(Exec* exec, int argc, LLVMValueRef* argv);
+bool block_exec_custom(Exec* exec, int argc, LLVMValueRef* argv);
 #endif
 
 // platform.c

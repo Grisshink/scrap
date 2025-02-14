@@ -212,8 +212,6 @@ struct Exec {
 
 Exec exec_new(void);
 void exec_free(Exec* exec);
-void exec_add_chain(Vm* vm, Exec* exec, BlockChain chain);
-void exec_remove_chain(Vm* vm, Exec* exec, size_t ind);
 void exec_copy_code(Vm* vm, Exec* exec, BlockChain* code);
 bool exec_run_chain(Exec* exec, BlockChain* chain, int argc, Data* argv, Data* return_val);
 bool exec_start(Vm* vm, Exec* exec);
