@@ -93,7 +93,7 @@ bool exec_try_join(Vm* vm, Exec* exec, size_t* return_code) {
     return true;
 }
 
-static bool evaluate_block(Exec* exec, Block* block) {
+static bool evaluate_block(Exec* exec, Block* block, LLVMValueRef* return_val) {
     if (!block->blockdef) {
         TraceLog(LOG_ERROR, "[LLVM] Tried to compile block without definition!");
         return false;
@@ -105,15 +105,26 @@ static bool evaluate_block(Exec* exec, Block* block) {
     }
     BlockCompileFunc compile_block = block->blockdef->func;
 
-    LLVMValueRef* args = vector_create();
+    FuncArg* args = vector_create();
     for (size_t i = 0; i < vector_size(block->arguments); i++) {
+        LLVMValueRef block_return;
+        FuncArg* arg;
         switch (block->arguments[i].type) {
         case ARGUMENT_TEXT:
         case ARGUMENT_CONST_STRING:
-            vector_add(&args, LLVMBuildGlobalStringPtr(exec->builder, block->arguments[i].data.text, "const_str"));
+            arg = vector_add_dst(&args);
+            arg->type = FUNC_ARG_STRING;
+            arg->data.str = block->arguments[i].data.text;
             break;
         case ARGUMENT_BLOCK:
-            assert(false && "Unimplemented compile block argument");
+            if (!evaluate_block(exec, &block->arguments[i].data.block, &block_return)) {
+                TraceLog(LOG_ERROR, "[LLVM] While compiling block id: \"%s\" (argument #%d) (at block %p)", block->blockdef->id, i + 1, block);
+                vector_free(args);
+                return false;       
+            }
+            arg = vector_add_dst(&args);
+            arg->type = FUNC_ARG_VALUE;
+            arg->data.value = block_return;
             break;
         case ARGUMENT_BLOCKDEF:
             assert(false && "Unimplemented compile blockdef argument");
@@ -121,7 +132,7 @@ static bool evaluate_block(Exec* exec, Block* block) {
         }
     }
 
-    if (!compile_block(exec, vector_size(args), args)) {
+    if (!compile_block(exec, vector_size(args), args, return_val)) {
         vector_free(args);
         TraceLog(LOG_ERROR, "[LLVM] Got error while compiling block id: \"%s\" (at block %p)", block->blockdef->id, block);
         return false;
@@ -136,7 +147,8 @@ static bool evaluate_chain(Exec* exec, BlockChain* chain) {
     if (vector_size(chain->blocks) == 0 || chain->blocks[0].blockdef->type != BLOCKTYPE_HAT) return true;
 
     for (size_t i = 0; i < vector_size(chain->blocks); i++) {
-        if (!evaluate_block(exec, &chain->blocks[i])) return false;
+        LLVMValueRef bin;
+        if (!evaluate_block(exec, &chain->blocks[i], &bin)) return false;
     }
 
     return true;
@@ -146,6 +158,10 @@ static LLVMBasicBlockRef register_globals(Exec* exec) {
     LLVMTypeRef print_func_params[] = { LLVMPointerType(LLVMInt8Type(), 0) };
     LLVMTypeRef print_func_type = LLVMFunctionType(LLVMInt32Type(), print_func_params, ARRLEN(print_func_params), false);
     LLVMAddFunction(exec->module, "term_print_str", print_func_type);
+
+    LLVMTypeRef print_int_func_params[] = { LLVMInt32Type() };
+    LLVMTypeRef print_int_func_type = LLVMFunctionType(LLVMInt32Type(), print_int_func_params, ARRLEN(print_int_func_params), false);
+    LLVMAddFunction(exec->module, "term_print_int", print_int_func_type);
 
     LLVMTypeRef main_func_type = LLVMFunctionType(LLVMVoidType(), NULL, 0, false);
     LLVMValueRef main_func = LLVMAddFunction(exec->module, "llvm_main", main_func_type);
@@ -224,6 +240,7 @@ static bool run_program(Exec* exec) {
     }
     
     LLVMAddGlobalMapping(exec->engine, LLVMGetNamedFunction(exec->module, "term_print_str"), term_print_str);
+    LLVMAddGlobalMapping(exec->engine, LLVMGetNamedFunction(exec->module, "term_print_int"), term_print_int);
 
     LLVMRunFunction(exec->engine, LLVMGetNamedFunction(exec->module, "llvm_main"), 0, NULL);
 

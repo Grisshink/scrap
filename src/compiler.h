@@ -18,7 +18,22 @@ typedef struct {
     //atomic_bool is_running;
 } Exec;
 
-typedef bool (*BlockCompileFunc)(Exec* exec, int argc, LLVMValueRef* argv);
+typedef enum {
+    FUNC_ARG_STRING,
+    FUNC_ARG_VALUE,
+} FuncArgType;
+
+typedef union {
+    LLVMValueRef value;
+    const char* str;
+} FuncArgData;
+
+typedef struct {
+    FuncArgType type;
+    FuncArgData data;
+} FuncArg;
+
+typedef bool (*BlockCompileFunc)(Exec* exec, int argc, FuncArg* argv, LLVMValueRef* return_val);
 
 Exec exec_new(void);
 void exec_free(Exec* exec);
