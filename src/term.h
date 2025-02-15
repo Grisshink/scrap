@@ -61,6 +61,7 @@ void term_set_clear_color(Color color);
 int term_print_str(const char* str);
 int term_print_int(int value);
 int term_print_double(double value);
+int term_print_bool(bool value);
 void term_clear(void);
 void term_resize(float screen_w, float screen_h);
 void term_free(void);

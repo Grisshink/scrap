@@ -1036,8 +1036,36 @@ Data block_return(Exec* exec, int argc, Data* argv) {
         return false; \
     }
 
+#define INTEGER(val) LLVMConstInt(LLVMInt32Type(), val, true)
+#define BOOLEAN(val) LLVMConstInt(LLVMInt1Type(), val, false)
+#define DOUBLE(val) LLVMConstReal(LLVMDoubleType(), val)
+
+LLVMValueRef arg_to_bool(Exec* exec, FuncArg arg) {
+    if (arg.type == FUNC_ARG_STRING) return BOOLEAN(*arg.data.str != 0);
+
+    LLVMTypeRef type = LLVMTypeOf(arg.data.value);
+    LLVMTypeKind type_kind = LLVMGetTypeKind(type);
+    unsigned int width;
+
+    switch (type_kind) {
+    case LLVMIntegerTypeKind:
+        width = LLVMGetIntTypeWidth(type);
+        if (width == 1) return arg.data.value;
+        if (width != 32) {
+            TraceLog(LOG_WARNING, "Non 32-bit int conversion (%u) to bool", width);
+            return BOOLEAN(0);
+        }
+        return LLVMBuildICmp(exec->builder, LLVMIntNE, arg.data.value, INTEGER(0), "bool_cast");
+    case LLVMDoubleTypeKind:
+        return LLVMBuildFCmp(exec->builder, LLVMRealONE, arg.data.value, DOUBLE(0.0), "bool_cast");
+    default:
+        TraceLog(LOG_ERROR, "Unknown type: %d", type_kind);
+        return BOOLEAN(0);
+    }
+}
+
 LLVMValueRef arg_to_int(Exec* exec, FuncArg arg) {
-    if (arg.type == FUNC_ARG_STRING) return LLVMConstIntOfString(LLVMInt32Type(), arg.data.str, 10);
+    if (arg.type == FUNC_ARG_STRING) return INTEGER(atoi(arg.data.str));
 
     LLVMTypeKind type_kind = LLVMGetTypeKind(LLVMTypeOf(arg.data.value));
     switch (type_kind) {
@@ -1047,7 +1075,22 @@ LLVMValueRef arg_to_int(Exec* exec, FuncArg arg) {
         return LLVMBuildFPToSI(exec->builder, arg.data.value, LLVMInt32Type(), "int_cast");
     default:
         TraceLog(LOG_ERROR, "Unknown type: %d", type_kind);
-        return LLVMConstInt(LLVMInt32Type(), 0, true);
+        return INTEGER(0);
+    }
+}
+
+LLVMValueRef arg_to_double(Exec* exec, FuncArg arg) {
+    if (arg.type == FUNC_ARG_STRING) return DOUBLE(atof(arg.data.str));
+
+    LLVMTypeKind type_kind = LLVMGetTypeKind(LLVMTypeOf(arg.data.value));
+    switch (type_kind) {
+    case LLVMIntegerTypeKind:
+        return LLVMBuildSIToFP(exec->builder, arg.data.value, LLVMDoubleType(), "double_cast");
+    case LLVMDoubleTypeKind:
+        return arg.data.value;
+    default:
+        TraceLog(LOG_ERROR, "Unknown type: %d", type_kind);
+        return DOUBLE(0.0);
     }
 }
 
@@ -1059,6 +1102,18 @@ static LLVMValueRef call_print(Exec* exec, LLVMValueRef str) {
 
 static LLVMValueRef call_print_int(Exec* exec, LLVMValueRef int_val) {
     LLVMValueRef print_func = LLVMGetNamedFunction(exec->module, "term_print_int");
+    LLVMTypeRef print_func_type = LLVMGlobalGetValueType(print_func);
+    return LLVMBuildCall2(exec->builder, print_func_type, print_func, &int_val, 1, "print");
+}
+
+static LLVMValueRef call_print_bool(Exec* exec, LLVMValueRef bool_val) {
+    LLVMValueRef print_func = LLVMGetNamedFunction(exec->module, "term_print_bool");
+    LLVMTypeRef print_func_type = LLVMGlobalGetValueType(print_func);
+    return LLVMBuildCall2(exec->builder, print_func_type, print_func, &bool_val, 1, "print");
+}
+
+static LLVMValueRef call_print_double(Exec* exec, LLVMValueRef int_val) {
+    LLVMValueRef print_func = LLVMGetNamedFunction(exec->module, "term_print_double");
     LLVMTypeRef print_func_type = LLVMGlobalGetValueType(print_func);
     return LLVMBuildCall2(exec->builder, print_func_type, print_func, &int_val, 1, "print");
 }
@@ -1112,135 +1167,107 @@ bool block_false(Exec* exec, int argc, FuncArg* argv, LLVMValueRef* return_val) 
     (void) exec;
     (void) argc;
     (void) argv;
-    (void) return_val;
-    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_false");
-    return false;
+    *return_val = BOOLEAN(0);
+    return true;
 }
 
 bool block_true(Exec* exec, int argc, FuncArg* argv, LLVMValueRef* return_val) {
     (void) exec;
     (void) argc;
     (void) argv;
-    (void) return_val;
-    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_true");
-    return false;
+    *return_val = BOOLEAN(1);
+    return true;
 }
 
 bool block_or(Exec* exec, int argc, FuncArg* argv, LLVMValueRef* return_val) {
-    (void) exec;
-    (void) argc;
-    (void) argv;
-    (void) return_val;
-    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_or");
-    return false;
+    MIN_ARG_COUNT(2);
+    *return_val = LLVMBuildOr(exec->builder, arg_to_bool(exec, argv[0]), arg_to_bool(exec, argv[1]), "non_const_bool_or");
+    return true;
 }
 
 bool block_and(Exec* exec, int argc, FuncArg* argv, LLVMValueRef* return_val) {
-    (void) exec;
-    (void) argc;
-    (void) argv;
-    (void) return_val;
-    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_and");
-    return false;
+    MIN_ARG_COUNT(2);
+    *return_val = LLVMBuildAnd(exec->builder, arg_to_bool(exec, argv[0]), arg_to_bool(exec, argv[1]), "non_const_bool_and");
+    return true;
 }
 
 bool block_not(Exec* exec, int argc, FuncArg* argv, LLVMValueRef* return_val) {
-    (void) exec;
-    (void) argc;
-    (void) argv;
-    (void) return_val;
-    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_not");
-    return false;
+    MIN_ARG_COUNT(1);
+    *return_val = LLVMBuildXor(exec->builder, arg_to_bool(exec, argv[0]), BOOLEAN(1), "non_const_not");
+    return true;
 }
 
 bool block_more_eq(Exec* exec, int argc, FuncArg* argv, LLVMValueRef* return_val) {
-    (void) exec;
-    (void) argc;
-    (void) argv;
-    (void) return_val;
-    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_more_eq");
-    return false;
+    MIN_ARG_COUNT(2);
+    if (argv[0].type == FUNC_ARG_STRING || LLVMGetTypeKind(LLVMTypeOf(argv[0].data.value)) != LLVMDoubleTypeKind) {
+        *return_val = LLVMBuildICmp(exec->builder, LLVMIntSGE, arg_to_int(exec, argv[0]), arg_to_int(exec, argv[1]), "non_const_int_more_or_eq");
+    } else {
+        *return_val = LLVMBuildFCmp(exec->builder, LLVMRealOGE, argv[0].data.value, arg_to_double(exec, argv[1]), "non_const_double_more_or_eq");
+    }
+    return true;
 }
 
 bool block_more(Exec* exec, int argc, FuncArg* argv, LLVMValueRef* return_val) {
-    (void) exec;
-    (void) argc;
-    (void) argv;
-    (void) return_val;
-    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_more");
-    return false;
+    MIN_ARG_COUNT(2);
+    if (argv[0].type == FUNC_ARG_STRING || LLVMGetTypeKind(LLVMTypeOf(argv[0].data.value)) != LLVMDoubleTypeKind) {
+        *return_val = LLVMBuildICmp(exec->builder, LLVMIntSGT, arg_to_int(exec, argv[0]), arg_to_int(exec, argv[1]), "non_const_int_more");
+    } else {
+        *return_val = LLVMBuildFCmp(exec->builder, LLVMRealOGT, argv[0].data.value, arg_to_double(exec, argv[1]), "non_const_double_more");
+    }
+    return true;
 }
 
 bool block_less_eq(Exec* exec, int argc, FuncArg* argv, LLVMValueRef* return_val) {
-    (void) exec;
-    (void) argc;
-    (void) argv;
-    (void) return_val;
-    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_less_eq");
-    return false;
+    MIN_ARG_COUNT(2);
+    if (argv[0].type == FUNC_ARG_STRING || LLVMGetTypeKind(LLVMTypeOf(argv[0].data.value)) != LLVMDoubleTypeKind) {
+        *return_val = LLVMBuildICmp(exec->builder, LLVMIntSLE, arg_to_int(exec, argv[0]), arg_to_int(exec, argv[1]), "non_const_int_less_or_eq");
+    } else {
+        *return_val = LLVMBuildFCmp(exec->builder, LLVMRealOLE, argv[0].data.value, arg_to_double(exec, argv[1]), "non_const_double_less_or_eq");
+    }
+    return true;
 }
 
 bool block_less(Exec* exec, int argc, FuncArg* argv, LLVMValueRef* return_val) {
-    (void) exec;
-    (void) argc;
-    (void) argv;
-    (void) return_val;
-    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_less");
-    return false;
-}
-
-bool block_rem(Exec* exec, int argc, FuncArg* argv, LLVMValueRef* return_val) {
-    (void) exec;
-    (void) argc;
-    (void) argv;
-    (void) return_val;
-    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_rem");
-    return false;
+    MIN_ARG_COUNT(2);
+    if (argv[0].type == FUNC_ARG_STRING || LLVMGetTypeKind(LLVMTypeOf(argv[0].data.value)) != LLVMDoubleTypeKind) {
+        *return_val = LLVMBuildICmp(exec->builder, LLVMIntSLT, arg_to_int(exec, argv[0]), arg_to_int(exec, argv[1]), "non_const_int_less");
+    } else {
+        *return_val = LLVMBuildFCmp(exec->builder, LLVMRealOLT, argv[0].data.value, arg_to_double(exec, argv[1]), "non_const_double_less");
+    }
+    return true;
 }
 
 bool block_bit_or(Exec* exec, int argc, FuncArg* argv, LLVMValueRef* return_val) {
-    (void) exec;
-    (void) argc;
-    (void) argv;
-    (void) return_val;
-    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_bit_or");
-    return false;
+    MIN_ARG_COUNT(2);
+    *return_val = LLVMBuildOr(exec->builder, arg_to_int(exec, argv[0]), arg_to_int(exec, argv[1]), "non_const_or");
+    return true;
 }
 
 bool block_bit_xor(Exec* exec, int argc, FuncArg* argv, LLVMValueRef* return_val) {
-    (void) exec;
-    (void) argc;
-    (void) argv;
-    (void) return_val;
-    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_bit_xor");
-    return false;
+    MIN_ARG_COUNT(2);
+    *return_val = LLVMBuildXor(exec->builder, arg_to_int(exec, argv[0]), arg_to_int(exec, argv[1]), "non_const_xor");
+    return true;
 }
 
 bool block_bit_and(Exec* exec, int argc, FuncArg* argv, LLVMValueRef* return_val) {
-    (void) exec;
-    (void) argc;
-    (void) argv;
-    (void) return_val;
-    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_bit_and");
-    return false;
+    MIN_ARG_COUNT(2);
+    *return_val = LLVMBuildAnd(exec->builder, arg_to_int(exec, argv[0]), arg_to_int(exec, argv[1]), "non_const_and");
+    return true;
 }
 
 bool block_bit_not(Exec* exec, int argc, FuncArg* argv, LLVMValueRef* return_val) {
-    (void) exec;
-    (void) argc;
-    (void) argv;
-    (void) return_val;
-    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_bit_not");
-    return false;
+    MIN_ARG_COUNT(1);
+    LLVMValueRef add_op = LLVMBuildAdd(exec->builder, arg_to_int(exec, argv[0]), INTEGER(1), "");
+    *return_val = LLVMBuildNeg(exec->builder, add_op, "bit_not");
+    return true;
 }
 
 bool block_pi(Exec* exec, int argc, FuncArg* argv, LLVMValueRef* return_val) {
     (void) exec;
     (void) argc;
     (void) argv;
-    (void) return_val;
-    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_pi");
-    return false;
+    *return_val = DOUBLE(M_PI);
+    return true;
 }
 
 bool block_math(Exec* exec, int argc, FuncArg* argv, LLVMValueRef* return_val) {
@@ -1253,17 +1280,38 @@ bool block_math(Exec* exec, int argc, FuncArg* argv, LLVMValueRef* return_val) {
 }
 
 bool block_pow(Exec* exec, int argc, FuncArg* argv, LLVMValueRef* return_val) {
-    (void) exec;
-    (void) argc;
-    (void) argv;
-    (void) return_val;
-    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_pow");
-    return false;
+    MIN_ARG_COUNT(2);
+    LLVMValueRef pow_func = LLVMGetNamedFunction(exec->module, "int_pow");
+    LLVMTypeRef pow_func_type = LLVMGlobalGetValueType(pow_func);
+    LLVMValueRef pow_func_params[] = { arg_to_int(exec, argv[0]), arg_to_int(exec, argv[1]) };
+    *return_val = LLVMBuildCall2(exec->builder, pow_func_type, pow_func, pow_func_params, ARRLEN(pow_func_params), "pow");
+    return true;
+}
+
+bool block_rem(Exec* exec, int argc, FuncArg* argv, LLVMValueRef* return_val) {
+    MIN_ARG_COUNT(2);
+    if (argv[0].type == FUNC_ARG_STRING || LLVMGetTypeKind(LLVMTypeOf(argv[0].data.value)) != LLVMDoubleTypeKind) {
+        *return_val = LLVMBuildSRem(exec->builder, arg_to_int(exec, argv[0]), arg_to_int(exec, argv[1]), "non_const_rem");
+    } else {
+        *return_val = LLVMBuildFRem(exec->builder, argv[0].data.value, arg_to_double(exec, argv[1]), "non_const_rem");
+    }
+    
+    if (LLVMIsPoison(*return_val)) {
+        // TODO: Uncorporate runtime checks for division by zero
+        TraceLog(LOG_ERROR, "[LLVM] Division by zero!");
+        return false;
+    }
+    return true;
 }
 
 bool block_div(Exec* exec, int argc, FuncArg* argv, LLVMValueRef* return_val) {
     MIN_ARG_COUNT(2);
-    *return_val = LLVMBuildSDiv(exec->builder, arg_to_int(exec, argv[0]), arg_to_int(exec, argv[1]), "non_const_div");
+    if (argv[0].type == FUNC_ARG_STRING || LLVMGetTypeKind(LLVMTypeOf(argv[0].data.value)) != LLVMDoubleTypeKind) {
+        *return_val = LLVMBuildSDiv(exec->builder, arg_to_int(exec, argv[0]), arg_to_int(exec, argv[1]), "non_const_div");
+    } else {
+        *return_val = LLVMBuildFDiv(exec->builder, argv[0].data.value, arg_to_double(exec, argv[1]), "non_const_div");
+    }
+    
     if (LLVMIsPoison(*return_val)) {
         // TODO: Uncorporate runtime checks for division by zero
         TraceLog(LOG_ERROR, "[LLVM] Division by zero!");
@@ -1274,29 +1322,38 @@ bool block_div(Exec* exec, int argc, FuncArg* argv, LLVMValueRef* return_val) {
 
 bool block_mult(Exec* exec, int argc, FuncArg* argv, LLVMValueRef* return_val) {
     MIN_ARG_COUNT(2);
-    *return_val = LLVMBuildMul(exec->builder, arg_to_int(exec, argv[0]), arg_to_int(exec, argv[1]), "non_const_mul");
+    if (argv[0].type == FUNC_ARG_STRING || LLVMGetTypeKind(LLVMTypeOf(argv[0].data.value)) != LLVMDoubleTypeKind) {
+        *return_val = LLVMBuildMul(exec->builder, arg_to_int(exec, argv[0]), arg_to_int(exec, argv[1]), "non_const_mul");
+    } else {
+        *return_val = LLVMBuildFMul(exec->builder, argv[0].data.value, arg_to_double(exec, argv[1]), "non_const_mul");
+    }
     return true;
 }
 
 bool block_minus(Exec* exec, int argc, FuncArg* argv, LLVMValueRef* return_val) {
     MIN_ARG_COUNT(2);
-    *return_val = LLVMBuildSub(exec->builder, arg_to_int(exec, argv[0]), arg_to_int(exec, argv[1]), "non_const_sub");
+    if (argv[0].type == FUNC_ARG_STRING || LLVMGetTypeKind(LLVMTypeOf(argv[0].data.value)) != LLVMDoubleTypeKind) {
+        *return_val = LLVMBuildSub(exec->builder, arg_to_int(exec, argv[0]), arg_to_int(exec, argv[1]), "non_const_sub");
+    } else {
+        *return_val = LLVMBuildFSub(exec->builder, argv[0].data.value, arg_to_double(exec, argv[1]), "non_const_sub");
+    }
     return true;
 }
 
 bool block_plus(Exec* exec, int argc, FuncArg* argv, LLVMValueRef* return_val) {
     MIN_ARG_COUNT(2);
-    *return_val = LLVMBuildAdd(exec->builder, arg_to_int(exec, argv[0]), arg_to_int(exec, argv[1]), "non_const_add");
+    if (argv[0].type == FUNC_ARG_STRING || LLVMGetTypeKind(LLVMTypeOf(argv[0].data.value)) != LLVMDoubleTypeKind) {
+        *return_val = LLVMBuildAdd(exec->builder, arg_to_int(exec, argv[0]), arg_to_int(exec, argv[1]), "non_const_add");
+    } else {
+        *return_val = LLVMBuildFAdd(exec->builder, argv[0].data.value, arg_to_double(exec, argv[1]), "non_const_add");
+    }
     return true;
 }
 
 bool block_convert_bool(Exec* exec, int argc, FuncArg* argv, LLVMValueRef* return_val) {
-    (void) exec;
-    (void) argc;
-    (void) argv;
-    (void) return_val;
-    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_convert_bool");
-    return false;
+    MIN_ARG_COUNT(1);
+    *return_val = arg_to_bool(exec, argv[0]);
+    return true;
 }
 
 bool block_convert_str(Exec* exec, int argc, FuncArg* argv, LLVMValueRef* return_val) {
@@ -1309,21 +1366,15 @@ bool block_convert_str(Exec* exec, int argc, FuncArg* argv, LLVMValueRef* return
 }
 
 bool block_convert_float(Exec* exec, int argc, FuncArg* argv, LLVMValueRef* return_val) {
-    (void) exec;
-    (void) argc;
-    (void) argv;
-    (void) return_val;
-    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_convert_float");
-    return false;
+    MIN_ARG_COUNT(1);
+    *return_val = arg_to_double(exec, argv[0]);
+    return true;
 }
 
 bool block_convert_int(Exec* exec, int argc, FuncArg* argv, LLVMValueRef* return_val) {
-    (void) exec;
-    (void) argc;
-    (void) argv;
-    (void) return_val;
-    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_convert_int");
-    return false;
+    MIN_ARG_COUNT(1);
+    *return_val = arg_to_int(exec, argv[0]);
+    return true;
 }
 
 bool block_unix_time(Exec* exec, int argc, FuncArg* argv, LLVMValueRef* return_val) {
@@ -1510,16 +1561,25 @@ bool block_print(Exec* exec, int argc, FuncArg* argv, LLVMValueRef* return_val) 
     MIN_ARG_COUNT(1);
 
     if (argv[0].type == FUNC_ARG_STRING) {
-        *return_val = call_print(exec, LLVMBuildGlobalStringPtr(exec->builder, argv[0].data.str, ""));
+        *return_val = *argv[0].data.str 
+                      ? call_print(exec, LLVMBuildGlobalStringPtr(exec->builder, argv[0].data.str, ""))
+                      : INTEGER(0);
         return true;
     }
 
-    switch (LLVMGetTypeKind(LLVMTypeOf(argv[0].data.value))) {
+    LLVMTypeRef type = LLVMTypeOf(argv[0].data.value);
+    switch (LLVMGetTypeKind(type)) {
     case LLVMPointerTypeKind:
         *return_val = call_print(exec, argv[0].data.value);
         return true;
     case LLVMIntegerTypeKind:
-        *return_val = call_print_int(exec, argv[0].data.value);
+        *return_val = LLVMGetIntTypeWidth(type) == 1 ? call_print_bool(exec, argv[0].data.value) : call_print_int(exec, argv[0].data.value);
+        return true;
+    case LLVMDoubleTypeKind:
+        *return_val = call_print_double(exec, argv[0].data.value);
+        return true;
+    case LLVMVoidTypeKind:
+        *return_val = INTEGER(0);
         return true;
     default:
         TraceLog(LOG_INFO, "[PRINT] Got non string value, idk i will just crash >:( !");
@@ -1669,8 +1729,7 @@ bool block_noop(Exec* exec, int argc, FuncArg* argv, LLVMValueRef* return_val) {
     (void) exec;
     (void) argc;
     (void) argv;
-    (void) return_val;
-    // Do nothing
+    *return_val = LLVMConstPointerNull(LLVMVoidType());
     return true;
 }
 

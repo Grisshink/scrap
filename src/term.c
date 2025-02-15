@@ -157,6 +157,10 @@ int term_print_double(double value) {
     return term_print_str(converted);
 }
 
+int term_print_bool(bool value) {
+    return term_print_str(value ? "true" : "false");
+}
+
 void term_clear(void) {
     pthread_mutex_lock(&term.lock);
     for (int i = 0; i < term.char_w * term.char_h; i++) {

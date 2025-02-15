@@ -154,6 +154,19 @@ static bool evaluate_chain(Exec* exec, BlockChain* chain) {
     return true;
 }
 
+
+static int int_pow(int base, int exp) {
+    if (exp == 0) return 1;
+
+    int result = 1;
+    while (exp) {
+        if (exp & 1) result *= base;
+        exp >>= 1;
+        base *= base;
+    }
+    return result;
+}
+
 static LLVMBasicBlockRef register_globals(Exec* exec) {
     LLVMTypeRef print_func_params[] = { LLVMPointerType(LLVMInt8Type(), 0) };
     LLVMTypeRef print_func_type = LLVMFunctionType(LLVMInt32Type(), print_func_params, ARRLEN(print_func_params), false);
@@ -162,6 +175,18 @@ static LLVMBasicBlockRef register_globals(Exec* exec) {
     LLVMTypeRef print_int_func_params[] = { LLVMInt32Type() };
     LLVMTypeRef print_int_func_type = LLVMFunctionType(LLVMInt32Type(), print_int_func_params, ARRLEN(print_int_func_params), false);
     LLVMAddFunction(exec->module, "term_print_int", print_int_func_type);
+
+    LLVMTypeRef print_double_func_params[] = { LLVMDoubleType() };
+    LLVMTypeRef print_double_func_type = LLVMFunctionType(LLVMInt32Type(), print_double_func_params, ARRLEN(print_double_func_params), false);
+    LLVMAddFunction(exec->module, "term_print_double", print_double_func_type);
+
+    LLVMTypeRef print_bool_func_params[] = { LLVMInt1Type() };
+    LLVMTypeRef print_bool_func_type = LLVMFunctionType(LLVMInt32Type(), print_bool_func_params, ARRLEN(print_bool_func_params), false);
+    LLVMAddFunction(exec->module, "term_print_bool", print_bool_func_type);
+
+    LLVMTypeRef int_pow_func_params[] = { LLVMInt32Type(), LLVMInt32Type() };
+    LLVMTypeRef int_pow_func_type = LLVMFunctionType(LLVMInt32Type(), int_pow_func_params, ARRLEN(int_pow_func_params), false);
+    LLVMAddFunction(exec->module, "int_pow", int_pow_func_type);
 
     LLVMTypeRef main_func_type = LLVMFunctionType(LLVMVoidType(), NULL, 0, false);
     LLVMValueRef main_func = LLVMAddFunction(exec->module, "llvm_main", main_func_type);
@@ -241,6 +266,9 @@ static bool run_program(Exec* exec) {
     
     LLVMAddGlobalMapping(exec->engine, LLVMGetNamedFunction(exec->module, "term_print_str"), term_print_str);
     LLVMAddGlobalMapping(exec->engine, LLVMGetNamedFunction(exec->module, "term_print_int"), term_print_int);
+    LLVMAddGlobalMapping(exec->engine, LLVMGetNamedFunction(exec->module, "term_print_double"), term_print_double);
+    LLVMAddGlobalMapping(exec->engine, LLVMGetNamedFunction(exec->module, "term_print_bool"), term_print_bool);
+    LLVMAddGlobalMapping(exec->engine, LLVMGetNamedFunction(exec->module, "int_pow"), int_pow);
 
     LLVMRunFunction(exec->engine, LLVMGetNamedFunction(exec->module, "llvm_main"), 0, NULL);
 
