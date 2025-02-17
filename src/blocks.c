@@ -1155,7 +1155,7 @@ bool block_not_eq(Exec* exec, int argc, FuncArg* argv, LLVMValueRef* return_val)
     if (argv[0].type == FUNC_ARG_STRING) {
         LLVMTypeRef type = LLVMTypeOf(argv[1].data.value);
         switch (LLVMGetTypeKind(type)) {
-        case LLVMIntegerTypeKind:
+        case LLVMIntegerTypeKind: ;
             unsigned int width = LLVMGetIntTypeWidth(type);
             if (width == 1) {
                 *return_val = LLVMBuildICmp(exec->builder, LLVMIntNE, arg_to_bool(exec, argv[0]), argv[1].data.value, "bool_eq");
