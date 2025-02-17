@@ -1146,21 +1146,179 @@ bool block_exec_custom(Exec* exec, int argc, FuncArg* argv, LLVMValueRef* return
 }
 
 bool block_not_eq(Exec* exec, int argc, FuncArg* argv, LLVMValueRef* return_val) {
-    (void) exec;
-    (void) argc;
-    (void) argv;
-    (void) return_val;
-    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_not_eq");
-    return false;
+    MIN_ARG_COUNT(2);
+    if (argv[0].type == FUNC_ARG_STRING && argv[1].type == FUNC_ARG_STRING) {
+        *return_val = BOOLEAN(!!strcmp(argv[0].data.str, argv[1].data.str));
+        return true;
+    }
+
+    if (argv[0].type == FUNC_ARG_STRING) {
+        LLVMTypeRef type = LLVMTypeOf(argv[1].data.value);
+        switch (LLVMGetTypeKind(type)) {
+        case LLVMIntegerTypeKind:
+            unsigned int width = LLVMGetIntTypeWidth(type);
+            if (width == 1) {
+                *return_val = LLVMBuildICmp(exec->builder, LLVMIntNE, arg_to_bool(exec, argv[0]), argv[1].data.value, "bool_eq");
+            } else {
+                *return_val = LLVMBuildICmp(exec->builder, LLVMIntNE, arg_to_int(exec, argv[0]), argv[1].data.value, "int_eq");
+            }
+            break;
+        case LLVMDoubleTypeKind:
+            *return_val = LLVMBuildFCmp(exec->builder, LLVMRealONE, arg_to_double(exec, argv[0]), argv[1].data.value, "double_eq");
+            break;
+        case LLVMVoidTypeKind:
+            *return_val = BOOLEAN(1);
+            break;
+        default:
+            TraceLog(LOG_ERROR, "Unknown compare types!");
+            return false;
+        }
+        return true;
+    } else if (argv[1].type == FUNC_ARG_STRING) {
+        LLVMTypeRef type = LLVMTypeOf(argv[0].data.value);
+        switch (LLVMGetTypeKind(type)) {
+        case LLVMIntegerTypeKind: ;
+            unsigned int width = LLVMGetIntTypeWidth(type);
+            if (width == 1) {
+                *return_val = LLVMBuildICmp(exec->builder, LLVMIntNE, argv[0].data.value, arg_to_bool(exec, argv[1]), "bool_eq");
+            } else {
+                *return_val = LLVMBuildICmp(exec->builder, LLVMIntNE, argv[0].data.value, arg_to_int(exec, argv[1]), "int_eq");
+            }
+            break;
+        case LLVMDoubleTypeKind:
+            *return_val = LLVMBuildFCmp(exec->builder, LLVMRealONE, argv[0].data.value, arg_to_double(exec, argv[1]), "double_eq");
+            break;
+        case LLVMVoidTypeKind:
+            *return_val = BOOLEAN(1);
+            break;
+        default:
+            TraceLog(LOG_ERROR, "Unknown compare types!");
+            return false;
+        }
+        return true;
+    }
+
+    LLVMTypeRef left_type = LLVMTypeOf(argv[0].data.value);
+    LLVMTypeRef right_type = LLVMTypeOf(argv[1].data.value);
+    if (LLVMGetTypeKind(left_type) != LLVMGetTypeKind(right_type)) {
+        *return_val = BOOLEAN(1);
+        return true;
+    }
+
+    switch (LLVMGetTypeKind(LLVMTypeOf(argv[0].data.value))) {
+    case LLVMIntegerTypeKind: ;
+        unsigned int left_width = LLVMGetIntTypeWidth(left_type);
+        unsigned int right_width = LLVMGetIntTypeWidth(right_type);
+        if (left_width != right_width) {
+            *return_val = BOOLEAN(1);
+            return true;
+        }
+        if (left_width == 1) {
+            *return_val = LLVMBuildICmp(exec->builder, LLVMIntNE, argv[0].data.value, argv[1].data.value, "bool_eq");
+        } else {
+            *return_val = LLVMBuildICmp(exec->builder, LLVMIntNE, argv[0].data.value, argv[1].data.value, "int_eq");
+        }
+        break;
+    case LLVMDoubleTypeKind:
+        *return_val = LLVMBuildFCmp(exec->builder, LLVMRealONE, argv[0].data.value, argv[1].data.value, "double_eq");
+        break;
+    case LLVMVoidTypeKind:
+        *return_val = BOOLEAN(0);
+        break;
+    default:
+        TraceLog(LOG_ERROR, "Unknown compare types!");
+        return false;
+    }
+
+    return true;
 }
 
 bool block_eq(Exec* exec, int argc, FuncArg* argv, LLVMValueRef* return_val) {
-    (void) exec;
-    (void) argc;
-    (void) argv;
-    (void) return_val;
-    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_eq");
-    return false;
+    MIN_ARG_COUNT(2);
+    if (argv[0].type == FUNC_ARG_STRING && argv[1].type == FUNC_ARG_STRING) {
+        *return_val = BOOLEAN(!strcmp(argv[0].data.str, argv[1].data.str));
+        return true;
+    }
+
+    if (argv[0].type == FUNC_ARG_STRING) {
+        LLVMTypeRef type = LLVMTypeOf(argv[1].data.value);
+        switch (LLVMGetTypeKind(LLVMTypeOf(argv[1].data.value))) {
+        case LLVMIntegerTypeKind: ;
+            unsigned int width = LLVMGetIntTypeWidth(type);
+            if (width == 1) {
+                *return_val = LLVMBuildICmp(exec->builder, LLVMIntEQ, arg_to_bool(exec, argv[0]), argv[1].data.value, "bool_eq");
+            } else {
+                *return_val = LLVMBuildICmp(exec->builder, LLVMIntEQ, arg_to_int(exec, argv[0]), argv[1].data.value, "int_eq");
+            }
+            break;
+        case LLVMDoubleTypeKind:
+            *return_val = LLVMBuildFCmp(exec->builder, LLVMRealOEQ, arg_to_double(exec, argv[0]), argv[1].data.value, "double_eq");
+            break;
+        case LLVMVoidTypeKind:
+            *return_val = BOOLEAN(0);
+            break;
+        default:
+            TraceLog(LOG_ERROR, "Unknown compare types!");
+            return false;
+        }
+        return true;
+    } else if (argv[1].type == FUNC_ARG_STRING) {
+        LLVMTypeRef type = LLVMTypeOf(argv[0].data.value);
+        switch (LLVMGetTypeKind(type)) {
+        case LLVMIntegerTypeKind: ;
+            unsigned int width = LLVMGetIntTypeWidth(type);
+            if (width == 1) {
+                *return_val = LLVMBuildICmp(exec->builder, LLVMIntEQ, argv[0].data.value, arg_to_bool(exec, argv[1]), "bool_eq");
+            } else {
+                *return_val = LLVMBuildICmp(exec->builder, LLVMIntEQ, argv[0].data.value, arg_to_int(exec, argv[1]), "int_eq");
+            }
+            break;
+        case LLVMDoubleTypeKind:
+            *return_val = LLVMBuildFCmp(exec->builder, LLVMRealOEQ, argv[0].data.value, arg_to_double(exec, argv[1]), "double_eq");
+            break;
+        case LLVMVoidTypeKind:
+            *return_val = BOOLEAN(0);
+            break;
+        default:
+            TraceLog(LOG_ERROR, "Unknown compare types!");
+            return false;
+        }
+        return true;
+    }
+
+    LLVMTypeRef left_type = LLVMTypeOf(argv[0].data.value);
+    LLVMTypeRef right_type = LLVMTypeOf(argv[1].data.value);
+    if (LLVMGetTypeKind(left_type) != LLVMGetTypeKind(right_type)) {
+        *return_val = BOOLEAN(0);
+        return true;
+    }
+
+    switch (LLVMGetTypeKind(left_type)) {
+    case LLVMIntegerTypeKind: ;
+        unsigned int left_width = LLVMGetIntTypeWidth(left_type);
+        unsigned int right_width = LLVMGetIntTypeWidth(right_type);
+        if (left_width != right_width) {
+            *return_val = BOOLEAN(0);
+            return true;
+        }
+        if (left_width == 1) {
+            *return_val = LLVMBuildICmp(exec->builder, LLVMIntEQ, argv[0].data.value, argv[1].data.value, "bool_eq");
+        } else {
+            *return_val = LLVMBuildICmp(exec->builder, LLVMIntEQ, argv[0].data.value, argv[1].data.value, "int_eq");
+        }
+        break;
+    case LLVMDoubleTypeKind:
+        *return_val = LLVMBuildFCmp(exec->builder, LLVMRealOEQ, argv[0].data.value, argv[1].data.value, "double_eq");
+        break;
+    case LLVMVoidTypeKind:
+        *return_val = BOOLEAN(1);
+        break;
+    default:
+        TraceLog(LOG_ERROR, "Unknown compare types!");
+        return false;
+    }
+
+    return true;
 }
 
 bool block_false(Exec* exec, int argc, FuncArg* argv, LLVMValueRef* return_val) {
