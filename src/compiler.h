@@ -7,6 +7,24 @@
 #include <llvm-c/ExecutionEngine.h>
 
 #define VM_ARG_STACK_SIZE 1024
+#define VM_CONTROL_STACK_SIZE 1024
+#define VM_CONTROL_DATA_STACK_SIZE 32768
+
+#define control_data_stack_push_data(data, type) \
+    if (exec->control_data_stack_len + sizeof(type) > VM_CONTROL_DATA_STACK_SIZE) { \
+        TraceLog(LOG_ERROR, "[LLVM] Control stack overflow"); \
+        return false; \
+    } \
+    *(type *)(exec->control_data_stack + exec->control_data_stack_len) = (data); \
+    exec->control_data_stack_len += sizeof(type);
+
+#define control_data_stack_pop_data(data, type) \
+    if (sizeof(type) > exec->control_data_stack_len) { \
+        TraceLog(LOG_ERROR, "[LLVM] Control stack underflow"); \
+        return false; \
+    } \
+    exec->control_data_stack_len -= sizeof(type); \
+    data = *(type*)(exec->control_data_stack + exec->control_data_stack_len);
 
 typedef struct {
     BlockChain* code;
@@ -14,17 +32,30 @@ typedef struct {
     LLVMBuilderRef builder;
     LLVMExecutionEngineRef engine;
 
+    Block* control_stack[VM_CONTROL_STACK_SIZE];
+    size_t control_stack_len;
+
+    unsigned char control_data_stack[VM_CONTROL_DATA_STACK_SIZE];
+    size_t control_data_stack_len;
+
     //pthread_t thread;
     //atomic_bool is_running;
 } Exec;
 
 typedef enum {
+    CONTROL_BEGIN,
+    CONTROL_END,
+} FuncArgControlType;
+
+typedef enum {
     FUNC_ARG_STRING,
     FUNC_ARG_VALUE,
+    FUNC_ARG_CONTROL,
 } FuncArgType;
 
 typedef union {
     LLVMValueRef value;
+    FuncArgControlType control;
     const char* str;
 } FuncArgData;
 

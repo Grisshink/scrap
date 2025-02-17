@@ -93,7 +93,24 @@ bool exec_try_join(Vm* vm, Exec* exec, size_t* return_code) {
     return true;
 }
 
-static bool evaluate_block(Exec* exec, Block* block, LLVMValueRef* return_val) {
+static bool control_stack_push(Exec* exec, Block* block) {
+    if (exec->control_stack_len >= VM_CONTROL_STACK_SIZE) {
+        TraceLog(LOG_ERROR, "[VM] Chain stack overflow");
+        return false;
+    }
+    exec->control_stack[exec->control_stack_len++] = block;
+    return true;
+}
+
+static Block* control_stack_pop(Exec* exec) {
+    if (exec->control_stack_len == 0) {
+        TraceLog(LOG_ERROR, "[VM] Chain stack underflow");
+        return NULL;
+    }
+    return exec->control_stack[--exec->control_stack_len];
+}
+
+static bool evaluate_block(Exec* exec, Block* block, LLVMValueRef* return_val, bool end_block) {
     if (!block->blockdef) {
         TraceLog(LOG_ERROR, "[LLVM] Tried to compile block without definition!");
         return false;
@@ -103,32 +120,41 @@ static bool evaluate_block(Exec* exec, Block* block, LLVMValueRef* return_val) {
         TraceLog(LOG_ERROR, "[LLVM] Relevant block id: %s", block->blockdef->id);
         return false;
     }
-    BlockCompileFunc compile_block = block->blockdef->func;
 
+    BlockCompileFunc compile_block = block->blockdef->func;
     FuncArg* args = vector_create();
-    for (size_t i = 0; i < vector_size(block->arguments); i++) {
-        LLVMValueRef block_return;
-        FuncArg* arg;
-        switch (block->arguments[i].type) {
-        case ARGUMENT_TEXT:
-        case ARGUMENT_CONST_STRING:
-            arg = vector_add_dst(&args);
-            arg->type = FUNC_ARG_STRING;
-            arg->data.str = block->arguments[i].data.text;
-            break;
-        case ARGUMENT_BLOCK:
-            if (!evaluate_block(exec, &block->arguments[i].data.block, &block_return)) {
-                TraceLog(LOG_ERROR, "[LLVM] While compiling block id: \"%s\" (argument #%d) (at block %p)", block->blockdef->id, i + 1, block);
-                vector_free(args);
-                return false;       
+    FuncArg* arg;
+
+    if (block->blockdef->type == BLOCKTYPE_CONTROL) {
+        arg = vector_add_dst(&args);
+        arg->type = FUNC_ARG_CONTROL;
+        arg->data.control = end_block ? CONTROL_END : CONTROL_BEGIN;
+    }
+
+    if (block->blockdef->type != BLOCKTYPE_CONTROL || !end_block) {
+        for (size_t i = 0; i < vector_size(block->arguments); i++) {
+            LLVMValueRef block_return;
+            switch (block->arguments[i].type) {
+            case ARGUMENT_TEXT:
+            case ARGUMENT_CONST_STRING:
+                arg = vector_add_dst(&args);
+                arg->type = FUNC_ARG_STRING;
+                arg->data.str = block->arguments[i].data.text;
+                break;
+            case ARGUMENT_BLOCK:
+                if (!evaluate_block(exec, &block->arguments[i].data.block, &block_return, false)) {
+                    TraceLog(LOG_ERROR, "[LLVM] While compiling block id: \"%s\" (argument #%d) (at block %p)", block->blockdef->id, i + 1, block);
+                    vector_free(args);
+                    return false;       
+                }
+                arg = vector_add_dst(&args);
+                arg->type = FUNC_ARG_VALUE;
+                arg->data.value = block_return;
+                break;
+            case ARGUMENT_BLOCKDEF:
+                assert(false && "Unimplemented compile blockdef argument");
+                break;
             }
-            arg = vector_add_dst(&args);
-            arg->type = FUNC_ARG_VALUE;
-            arg->data.value = block_return;
-            break;
-        case ARGUMENT_BLOCKDEF:
-            assert(false && "Unimplemented compile blockdef argument");
-            break;
         }
     }
 
@@ -139,7 +165,6 @@ static bool evaluate_block(Exec* exec, Block* block, LLVMValueRef* return_val) {
     }
 
     vector_free(args);
-
     return true;
 }
 
@@ -147,8 +172,21 @@ static bool evaluate_chain(Exec* exec, BlockChain* chain) {
     if (vector_size(chain->blocks) == 0 || chain->blocks[0].blockdef->type != BLOCKTYPE_HAT) return true;
 
     for (size_t i = 0; i < vector_size(chain->blocks); i++) {
+        Block* exec_block = &chain->blocks[i];
+        bool is_end = false;
+
+        if (chain->blocks[i].blockdef->type == BLOCKTYPE_END) {
+            exec_block = control_stack_pop(exec);
+            if (!exec_block) return false;
+            is_end = true;
+        }
+
         LLVMValueRef bin;
-        if (!evaluate_block(exec, &chain->blocks[i], &bin)) return false;
+        if (!evaluate_block(exec, exec_block, &bin, is_end)) return false;
+
+        if (chain->blocks[i].blockdef->type == BLOCKTYPE_CONTROL) {
+            if (!control_stack_push(exec, &chain->blocks[i])) return false;
+        }
     }
 
     return true;
