@@ -389,6 +389,7 @@ Timer start_timer(const char* name);
 double end_timer(Timer timer);
 Language code_to_language(const char* code);
 const char* language_to_code(Language lang);
+void scrap_log(int log_level, const char *text, va_list args);
 
 // save.c
 void set_default_config(Config* config);

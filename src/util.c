@@ -21,6 +21,7 @@
 
 #include <assert.h>
 #include <string.h>
+#include <stdio.h>
 
 Timer start_timer(const char* name) {
     Timer timer;
@@ -82,4 +83,39 @@ Language code_to_language(const char* code) {
     } else {
         return LANG_SYSTEM;
     }
+}
+
+#define CSI_DARK_GRAY "\e[90m"
+#define CSI_YELLOW "\e[93m"
+#define CSI_RED "\e[91m"
+#define CSI_RESET "\e[0m"
+
+void scrap_log(int log_level, const char *text, va_list args) {
+    switch (log_level) {
+    case LOG_TRACE:
+        printf(CSI_DARK_GRAY "[TRACE] ");
+        break;
+    case LOG_DEBUG:
+        printf("[DEBUG] ");
+        break;
+    case LOG_INFO:
+        printf("[INFO] ");
+        break;
+    case LOG_WARNING:
+        printf(CSI_YELLOW "[WARN] ");
+        break;
+    case LOG_ERROR:
+        printf(CSI_RED "[ERROR] ");
+        break;
+    case LOG_FATAL:
+        printf(CSI_RED "[FATAL] ");
+        break;
+    default:
+        printf(CSI_RED "[UNKNOWN] ");
+        break;
+    }
+
+    vprintf(text, args);
+
+    printf(CSI_RESET "\n");
 }

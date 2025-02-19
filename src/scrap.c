@@ -475,6 +475,7 @@ void setup(void) {
 
 // Main function: Initializes configurations, sets up window, processes input, renders GUI, and cleans up resources on exit
 int main(void) {
+    SetTraceLogCallback(scrap_log);
     config_new(&conf);
     config_new(&window_conf);
     code_tabs = vector_create();
