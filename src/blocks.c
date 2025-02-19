@@ -1848,21 +1848,90 @@ bool block_repeat(Exec* exec, int argc, FuncArg* argv, LLVMValueRef* return_val)
 }
 
 bool block_else(Exec* exec, int argc, FuncArg* argv, LLVMValueRef* return_val) {
-    (void) exec;
-    (void) argc;
-    (void) argv;
-    (void) return_val;
-    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_else");
-    return false;
+    MIN_ARG_COUNT(1);
+    if (argv[0].type != FUNC_ARG_CONTROL) {
+        TraceLog(LOG_ERROR, "[LLVM] First argument is not control argument!");
+        return false;
+    }
+
+    if (argv[0].data.control == CONTROL_BEGIN) {
+        MIN_ARG_COUNT(2);
+
+        LLVMBasicBlockRef current_branch = LLVMGetInsertBlock(exec->builder);
+        LLVMBasicBlockRef else_branch = LLVMInsertBasicBlock(current_branch, "else");
+        LLVMBasicBlockRef end_branch = LLVMInsertBasicBlock(current_branch, "end_else");
+
+        LLVMMoveBasicBlockAfter(end_branch, current_branch);
+        LLVMMoveBasicBlockAfter(else_branch, current_branch);
+
+        LLVMBuildCondBr(exec->builder, arg_to_bool(exec, argv[1]), end_branch, else_branch);
+
+        LLVMPositionBuilderAtEnd(exec->builder, else_branch);
+        control_data_stack_push_data(end_branch, LLVMBasicBlockRef);
+    } else {
+        LLVMBasicBlockRef end_branch;
+        control_data_stack_pop_data(end_branch, LLVMBasicBlockRef);
+
+        LLVMBuildBr(exec->builder, end_branch);
+        LLVMPositionBuilderAtEnd(exec->builder, end_branch);
+        *return_val = BOOLEAN(1);
+    }
+
+    return true;
 }
 
 bool block_else_if(Exec* exec, int argc, FuncArg* argv, LLVMValueRef* return_val) {
-    (void) exec;
-    (void) argc;
-    (void) argv;
-    (void) return_val;
-    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_else_if");
-    return false;
+    MIN_ARG_COUNT(1);
+    if (argv[0].type != FUNC_ARG_CONTROL) {
+        TraceLog(LOG_ERROR, "[LLVM] First argument is not control argument!");
+        return false;
+    }
+
+    if (argv[0].data.control == CONTROL_BEGIN) {
+        MIN_ARG_COUNT(3);
+
+        LLVMBasicBlockRef current_branch = LLVMGetInsertBlock(exec->builder);
+        LLVMBasicBlockRef else_if_check_branch = LLVMInsertBasicBlock(current_branch, "else_if_check");
+        LLVMBasicBlockRef else_if_branch = LLVMInsertBasicBlock(current_branch, "else_if");
+        LLVMBasicBlockRef else_if_fail_branch = LLVMInsertBasicBlock(current_branch, "else_if_fail");
+        LLVMBasicBlockRef end_branch = LLVMInsertBasicBlock(current_branch, "end_else_if");
+
+        LLVMMoveBasicBlockAfter(end_branch, current_branch);
+        LLVMMoveBasicBlockAfter(else_if_fail_branch, current_branch);
+        LLVMMoveBasicBlockAfter(else_if_branch, current_branch);
+        LLVMMoveBasicBlockAfter(else_if_check_branch, current_branch);
+
+        LLVMBuildCondBr(exec->builder, arg_to_bool(exec, argv[1]), end_branch, else_if_check_branch);
+        control_data_stack_push_data(current_branch, LLVMBasicBlockRef);
+
+        LLVMPositionBuilderAtEnd(exec->builder, else_if_check_branch);
+        LLVMBuildCondBr(exec->builder, arg_to_bool(exec, argv[2]), else_if_branch, else_if_fail_branch);
+
+        LLVMPositionBuilderAtEnd(exec->builder, else_if_fail_branch);
+        LLVMBuildBr(exec->builder, end_branch);
+
+        LLVMPositionBuilderAtEnd(exec->builder, else_if_branch);
+
+        control_data_stack_push_data(else_if_fail_branch, LLVMBasicBlockRef);
+        control_data_stack_push_data(end_branch, LLVMBasicBlockRef);
+    } else {
+        LLVMBasicBlockRef else_if_branch = LLVMGetInsertBlock(exec->builder);
+        LLVMBasicBlockRef top_branch, fail_branch, end_branch;
+        control_data_stack_pop_data(end_branch, LLVMBasicBlockRef);
+        control_data_stack_pop_data(fail_branch, LLVMBasicBlockRef);
+        control_data_stack_pop_data(top_branch, LLVMBasicBlockRef);
+
+        LLVMBuildBr(exec->builder, end_branch);
+
+        LLVMPositionBuilderAtEnd(exec->builder, end_branch);
+        *return_val = LLVMBuildPhi(exec->builder, LLVMInt1Type(), "");
+
+        LLVMValueRef vals[] = { BOOLEAN(1), BOOLEAN(1), BOOLEAN(0) };
+        LLVMBasicBlockRef blocks[] = { top_branch, else_if_branch, fail_branch };
+        LLVMAddIncoming(*return_val, vals, blocks, ARRLEN(blocks));
+    }
+
+    return true;
 }
 
 bool block_if(Exec* exec, int argc, FuncArg* argv, LLVMValueRef* return_val) {
@@ -1877,22 +1946,37 @@ bool block_if(Exec* exec, int argc, FuncArg* argv, LLVMValueRef* return_val) {
 
         LLVMBasicBlockRef current_branch = LLVMGetInsertBlock(exec->builder);
         LLVMBasicBlockRef then_branch = LLVMInsertBasicBlock(current_branch, "if_cond");
+        // This is needed for a phi block to determine if this condition has failed. The result of this phi node is then passed into a C-end block
+        LLVMBasicBlockRef fail_branch = LLVMInsertBasicBlock(current_branch, "if_fail");
         LLVMBasicBlockRef end_branch = LLVMInsertBasicBlock(current_branch, "end_if");
 
         LLVMMoveBasicBlockAfter(end_branch, current_branch);
+        LLVMMoveBasicBlockAfter(fail_branch, current_branch);
         LLVMMoveBasicBlockAfter(then_branch, current_branch);
 
-        LLVMBuildCondBr(exec->builder, arg_to_bool(exec, argv[1]), then_branch, end_branch);
+        LLVMBuildCondBr(exec->builder, arg_to_bool(exec, argv[1]), then_branch, fail_branch);
+
+        LLVMPositionBuilderAtEnd(exec->builder, fail_branch);
+        LLVMBuildBr(exec->builder, end_branch);
 
         LLVMPositionBuilderAtEnd(exec->builder, then_branch);
 
+        control_data_stack_push_data(fail_branch, LLVMBasicBlockRef);
         control_data_stack_push_data(end_branch, LLVMBasicBlockRef);
     } else {
-        LLVMBasicBlockRef end_branch;
+        LLVMBasicBlockRef then_branch = LLVMGetInsertBlock(exec->builder);
+        LLVMBasicBlockRef fail_branch, end_branch;
         control_data_stack_pop_data(end_branch, LLVMBasicBlockRef);
+        control_data_stack_pop_data(fail_branch, LLVMBasicBlockRef);
 
         LLVMBuildBr(exec->builder, end_branch);
+
         LLVMPositionBuilderAtEnd(exec->builder, end_branch);
+        *return_val = LLVMBuildPhi(exec->builder, LLVMInt1Type(), "");
+
+        LLVMValueRef vals[] = { BOOLEAN(1), BOOLEAN(0) };
+        LLVMBasicBlockRef blocks[] = { then_branch, fail_branch };
+        LLVMAddIncoming(*return_val, vals, blocks, ARRLEN(blocks));
     }
 
     return true;
@@ -1924,6 +2008,7 @@ bool block_loop(Exec* exec, int argc, FuncArg* argv, LLVMValueRef* return_val) {
         LLVMBasicBlockRef loop = LLVMGetInsertBlock(exec->builder);
         LLVMBuildBr(exec->builder, loop);
         LLVMPositionBuilderAtEnd(exec->builder, loop_end);
+        *return_val = BOOLEAN(0);
     }
 
     return true;
