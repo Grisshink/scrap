@@ -1550,12 +1550,16 @@ bool block_convert_int(Exec* exec, int argc, FuncArg* argv, LLVMValueRef* return
 }
 
 bool block_unix_time(Exec* exec, int argc, FuncArg* argv, LLVMValueRef* return_val) {
-    (void) exec;
-    (void) argc;
-    (void) argv;
-    (void) return_val;
-    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_unix_time");
-    return false;
+    LLVMValueRef time_func = LLVMGetNamedFunction(exec->module, "time");
+    LLVMTypeRef time_func_type = LLVMGlobalGetValueType(time_func);
+
+    LLVMTypeRef* types = malloc(LLVMCountParamTypes(time_func_type) * sizeof(LLVMTypeRef));
+    LLVMGetParamTypes(time_func_type, types);
+    LLVMValueRef time_func_params[] = { LLVMConstPointerNull(types[0]) };
+    free(types);
+
+    *return_val = LLVMBuildCall2(exec->builder, time_func_type, time_func, time_func_params, ARRLEN(time_func_params), "time");
+    return true;
 }
 
 bool block_length(Exec* exec, int argc, FuncArg* argv, LLVMValueRef* return_val) {

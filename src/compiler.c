@@ -22,6 +22,7 @@
 #include <llvm-c/Analysis.h>
 #include <assert.h>
 #include <string.h>
+#include <time.h>
 
 #define ARRLEN(arr) (sizeof(arr) / sizeof(arr[0]))
 
@@ -291,6 +292,10 @@ static LLVMBasicBlockRef register_globals(Exec* exec) {
     LLVMTypeRef int_pow_func_type = LLVMFunctionType(LLVMInt32Type(), int_pow_func_params, ARRLEN(int_pow_func_params), false);
     LLVMAddFunction(exec->module, "int_pow", int_pow_func_type);
 
+    LLVMTypeRef time_func_params[] = { LLVMPointerType(LLVMVoidType(), 0) };
+    LLVMTypeRef time_func_type = LLVMFunctionType(LLVMInt32Type(), time_func_params, ARRLEN(time_func_params), false);
+    LLVMAddFunction(exec->module, "time", time_func_type);
+
     LLVMTypeRef main_func_type = LLVMFunctionType(LLVMVoidType(), NULL, 0, false);
     LLVMValueRef main_func = LLVMAddFunction(exec->module, "llvm_main", main_func_type);
 
@@ -366,6 +371,7 @@ static bool run_program(Exec* exec) {
     LLVMAddGlobalMapping(exec->engine, LLVMGetNamedFunction(exec->module, "term_print_double"), term_print_double);
     LLVMAddGlobalMapping(exec->engine, LLVMGetNamedFunction(exec->module, "term_print_bool"), term_print_bool);
     LLVMAddGlobalMapping(exec->engine, LLVMGetNamedFunction(exec->module, "int_pow"), int_pow);
+    LLVMAddGlobalMapping(exec->engine, LLVMGetNamedFunction(exec->module, "time"), time);
 
     LLVMRunFunction(exec->engine, LLVMGetNamedFunction(exec->module, "llvm_main"), 0, NULL);
 
