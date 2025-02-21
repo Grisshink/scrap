@@ -1049,6 +1049,8 @@ LLVMValueRef arg_to_value(Exec* exec, FuncArg arg) {
     case FUNC_ARG_CONTROL:
         TraceLog(LOG_ERROR, "[LLVM] Control argument in variable declaration");
         return NULL;
+    default:
+        assert(false && "Unhandled arg_to_value");
     }
 }
 
@@ -2594,13 +2596,13 @@ void register_blocks(Vm* vm) {
 
     Blockdef* sc_get_var = blockdef_new("get_var", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_DATA_COLOR, block_get_var);
     blockdef_add_text(sc_get_var, gettext("Get"));
-    blockdef_add_argument(sc_get_var, gettext("my variable"), gettext("Abc"), BLOCKCONSTR_UNLIMITED);
+    blockdef_add_argument(sc_get_var, gettext("my variable"), gettext("Abc"), BLOCKCONSTR_STRING);
     blockdef_register(vm, sc_get_var);
     add_to_category(sc_get_var, cat_data);
 
     Blockdef* sc_set_var = blockdef_new("set_var", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_DATA_COLOR, block_set_var);
     blockdef_add_text(sc_set_var, gettext("Set"));
-    blockdef_add_argument(sc_set_var, gettext("my variable"), gettext("Abc"), BLOCKCONSTR_UNLIMITED);
+    blockdef_add_argument(sc_set_var, gettext("my variable"), gettext("Abc"), BLOCKCONSTR_STRING);
     blockdef_add_text(sc_set_var, "=");
     blockdef_add_argument(sc_set_var, "", gettext("any"), BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_set_var);
