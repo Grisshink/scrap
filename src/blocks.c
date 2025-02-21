@@ -1181,7 +1181,7 @@ bool block_not_eq(Exec* exec, int argc, FuncArg* argv, LLVMValueRef* return_val)
                 *return_val = LLVMBuildICmp(exec->builder, LLVMIntNE, int_val, argv[1].data.value, "int_eq");
             }
             break;
-        case LLVMDoubleTypeKind:
+        case LLVMDoubleTypeKind: ;
             LLVMValueRef double_val = arg_to_double(exec, argv[0]);
             if (!double_val) return false;
             *return_val = LLVMBuildFCmp(exec->builder, LLVMRealONE, double_val, argv[1].data.value, "double_eq");
@@ -1209,7 +1209,7 @@ bool block_not_eq(Exec* exec, int argc, FuncArg* argv, LLVMValueRef* return_val)
                 *return_val = LLVMBuildICmp(exec->builder, LLVMIntNE, argv[0].data.value, int_val, "int_eq");
             }
             break;
-        case LLVMDoubleTypeKind:
+        case LLVMDoubleTypeKind: ;
             LLVMValueRef double_val = arg_to_double(exec, argv[1]);
             if (!double_val) return false;
             *return_val = LLVMBuildFCmp(exec->builder, LLVMRealONE, argv[0].data.value, double_val, "double_eq");
@@ -1281,7 +1281,7 @@ bool block_eq(Exec* exec, int argc, FuncArg* argv, LLVMValueRef* return_val) {
                 *return_val = LLVMBuildICmp(exec->builder, LLVMIntEQ, int_val, argv[1].data.value, "int_eq");
             }
             break;
-        case LLVMDoubleTypeKind:
+        case LLVMDoubleTypeKind: ;
             LLVMValueRef double_val = arg_to_double(exec, argv[0]);
             if (!double_val) return false;
             *return_val = LLVMBuildFCmp(exec->builder, LLVMRealOEQ, double_val, argv[1].data.value, "double_eq");
@@ -1309,7 +1309,7 @@ bool block_eq(Exec* exec, int argc, FuncArg* argv, LLVMValueRef* return_val) {
                 *return_val = LLVMBuildICmp(exec->builder, LLVMIntEQ, argv[0].data.value, int_val, "int_eq");
             }
             break;
-        case LLVMDoubleTypeKind:
+        case LLVMDoubleTypeKind: ;
             LLVMValueRef double_val = arg_to_double(exec, argv[1]);
             if (!double_val) return false;
             *return_val = LLVMBuildFCmp(exec->builder, LLVMRealOEQ, argv[0].data.value, double_val, "double_eq");
@@ -1650,6 +1650,9 @@ bool block_convert_int(Exec* exec, int argc, FuncArg* argv, LLVMValueRef* return
 }
 
 bool block_unix_time(Exec* exec, int argc, FuncArg* argv, LLVMValueRef* return_val) {
+    (void) argc;
+    (void) argv;
+
     LLVMValueRef time_func = LLVMGetNamedFunction(exec->module, "time");
     LLVMTypeRef time_func_type = LLVMGlobalGetValueType(time_func);
 
