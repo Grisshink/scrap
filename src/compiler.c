@@ -21,6 +21,7 @@
 
 #include <llvm-c/Analysis.h>
 #include <assert.h>
+#include <string.h>
 
 #define ARRLEN(arr) (sizeof(arr) / sizeof(arr[0]))
 
@@ -95,7 +96,7 @@ bool exec_try_join(Vm* vm, Exec* exec, size_t* return_code) {
 
 static bool control_stack_push(Exec* exec, Block* block) {
     if (exec->control_stack_len >= VM_CONTROL_STACK_SIZE) {
-        TraceLog(LOG_ERROR, "[VM] Chain stack overflow");
+        TraceLog(LOG_ERROR, "[LLVM] Chain stack overflow");
         return false;
     }
     exec->control_stack[exec->control_stack_len++] = block;
@@ -104,10 +105,44 @@ static bool control_stack_push(Exec* exec, Block* block) {
 
 static Block* control_stack_pop(Exec* exec) {
     if (exec->control_stack_len == 0) {
-        TraceLog(LOG_ERROR, "[VM] Chain stack underflow");
+        TraceLog(LOG_ERROR, "[LLVM] Chain stack underflow");
         return NULL;
     }
     return exec->control_stack[--exec->control_stack_len];
+}
+
+bool variable_stack_push(Exec* exec, Variable variable) {
+    if (exec->variable_stack_len >= VM_CONTROL_STACK_SIZE) {
+        TraceLog(LOG_ERROR, "[LLVM] Variable stack overflow");
+        return false;
+    }
+    exec->variable_stack[exec->variable_stack_len++] = variable;
+    return true;
+}
+
+Variable* variable_stack_get(Exec* exec, const char* var_name) {
+    for (ssize_t i = exec->variable_stack_len - 1; i >= 0; i--) {
+        if (!strcmp(var_name, exec->variable_stack[i].name)) return &exec->variable_stack[i];
+    }
+    return NULL;
+}
+
+static bool variable_stack_frame_push(Exec* exec) {
+    if (exec->variable_stack_frames_len >= VM_CONTROL_STACK_SIZE) {
+        TraceLog(LOG_ERROR, "[LLVM] Variable stack overflow");
+        return false;
+    }
+    exec->variable_stack_frames[exec->variable_stack_frames_len++] = exec->variable_stack_len;
+    return true;
+}
+
+static bool variable_stack_frame_pop(Exec* exec) {
+    if (exec->variable_stack_frames_len == 0) {
+        TraceLog(LOG_ERROR, "[LLVM] Variable stack underflow");
+        return false;
+    }
+    exec->variable_stack_len = exec->variable_stack_frames[--exec->variable_stack_frames_len];
+    return true;
 }
 
 static bool evaluate_block(Exec* exec, Block* block, LLVMValueRef* return_val, bool end_block, LLVMValueRef input_val) {
@@ -134,6 +169,10 @@ static bool evaluate_block(Exec* exec, Block* block, LLVMValueRef* return_val, b
 
             LLVMBuildBr(exec->builder, control_block);
             LLVMPositionBuilderAtEnd(exec->builder, control_block);
+
+            variable_stack_frame_push(exec);
+        } else {
+            variable_stack_frame_pop(exec);
         }
 
         arg = vector_add_dst(&args);
@@ -259,23 +298,17 @@ static LLVMBasicBlockRef register_globals(Exec* exec) {
 }
 
 static bool compile_program(Exec* exec) {
+    exec->control_stack_len = 0;
+    exec->control_data_stack_len = 0;
+    exec->variable_stack_len = 0;
+    exec->variable_stack_frames_len = 0;
+
     exec->module = LLVMModuleCreateWithName("scrap_module");
 
     LLVMBasicBlockRef entry = register_globals(exec);
 
     exec->builder = LLVMCreateBuilder();
     LLVMPositionBuilderAtEnd(exec->builder, entry);
-
-    // Call print function
-    //LLVMValueRef call_args[] = { LLVMBuildGlobalStringPtr(exec->builder, "Hello from LLVM!", "") };
-    //LLVMValueRef print_func_value = LLVMGetNamedFunction(exec->module, "term_print_str");
-    //LLVMTypeRef print_func_type = LLVMTypeOf(print_func_value);
-
-    //TraceLog(LOG_INFO, "Value kind: %d", LLVMGetValueKind(print_func_value));
-    //TraceLog(LOG_INFO, "Type kind: %d", LLVMGetTypeKind(print_func_type));
-
-    //LLVMBuildCall2(exec->builder, print_func_type, print_func_value, call_args, ARRLEN(call_args), "");
-    //LLVMBuildCall2(builder, print_func_type, print_func_value, call_args, ARRLEN(call_args), "");
 
     for (size_t i = 0; i < vector_size(exec->code); i++) {
         if (!evaluate_chain(exec, &exec->code[i])) {

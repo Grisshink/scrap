@@ -1040,6 +1040,18 @@ Data block_return(Exec* exec, int argc, Data* argv) {
 #define BOOLEAN(val) LLVMConstInt(LLVMInt1Type(), val, false)
 #define DOUBLE(val) LLVMConstReal(LLVMDoubleType(), val)
 
+LLVMValueRef arg_to_value(Exec* exec, FuncArg arg) {
+    switch (arg.type) {
+    case FUNC_ARG_STRING:
+        return LLVMBuildGlobalStringPtr(exec->builder, arg.data.str, "");
+    case FUNC_ARG_VALUE:
+        return arg.data.value;
+    case FUNC_ARG_CONTROL:
+        TraceLog(LOG_ERROR, "[LLVM] Control argument in variable declaration");
+        return NULL;
+    }
+}
+
 LLVMValueRef arg_to_bool(Exec* exec, FuncArg arg) {
     if (arg.type == FUNC_ARG_STRING) return BOOLEAN(*arg.data.str != 0);
 
@@ -1794,30 +1806,61 @@ bool block_create_list(Exec* exec, int argc, FuncArg* argv, LLVMValueRef* return
 }
 
 bool block_set_var(Exec* exec, int argc, FuncArg* argv, LLVMValueRef* return_val) {
-    (void) exec;
-    (void) argc;
-    (void) argv;
-    (void) return_val;
-    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_set_var");
-    return false;
+    MIN_ARG_COUNT(2);
+    if (argv[0].type != FUNC_ARG_STRING) {
+        TraceLog(LOG_ERROR, "[LLVM] Received non constant string argument");
+        return false;
+    }
+
+    Variable* var = variable_stack_get(exec, argv[0].data.str);
+    if (!var) {
+        TraceLog(LOG_ERROR, "[LLVM] Variable with name \"%s\" does not exist in the current scope", argv[0].data.str);
+        return false;
+    }
+
+    LLVMValueRef new_value = arg_to_value(exec, argv[1]);
+    if (!new_value) return false;
+
+    LLVMBuildStore(exec->builder, new_value, var->ptr);
+    *return_val = new_value;
+    return true;
 }
 
 bool block_get_var(Exec* exec, int argc, FuncArg* argv, LLVMValueRef* return_val) {
-    (void) exec;
-    (void) argc;
-    (void) argv;
-    (void) return_val;
-    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_get_var");
-    return false;
+    MIN_ARG_COUNT(1);
+    if (argv[0].type != FUNC_ARG_STRING) {
+        TraceLog(LOG_ERROR, "[LLVM] Received non constant string argument");
+        return false;
+    }
+
+    Variable* var = variable_stack_get(exec, argv[0].data.str);
+    if (!var) {
+        TraceLog(LOG_ERROR, "[LLVM] Variable with name \"%s\" does not exist in the current scope", argv[0].data.str);
+        return false;
+    }
+
+    *return_val = LLVMBuildLoad2(exec->builder, var->type, var->ptr, "get_var");
+    return true;
 }
 
 bool block_declare_var(Exec* exec, int argc, FuncArg* argv, LLVMValueRef* return_val) {
-    (void) exec;
-    (void) argc;
-    (void) argv;
-    (void) return_val;
-    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_declare_var");
-    return false;
+    MIN_ARG_COUNT(2);
+    if (argv[0].type != FUNC_ARG_STRING) {
+        TraceLog(LOG_ERROR, "[LLVM] Received non constant string argument");
+        return false;
+    }
+
+    LLVMValueRef var_value = arg_to_value(exec, argv[1]);
+    if (!var_value) return false;
+
+    Variable var;
+    var.type = LLVMTypeOf(var_value);
+    var.ptr = LLVMBuildAlloca(exec->builder, var.type, "declare_var");
+    var.name = argv[0].data.str;
+    variable_stack_push(exec, var);
+    LLVMBuildStore(exec->builder, var_value, var.ptr);
+    *return_val = var_value;
+    return true;
 }
 
 bool block_sleep(Exec* exec, int argc, FuncArg* argv, LLVMValueRef* return_val) {
