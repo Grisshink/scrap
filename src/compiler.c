@@ -326,6 +326,8 @@ static bool compile_program(Exec* exec) {
     LLVMBuildRetVoid(exec->builder);
     LLVMDisposeBuilder(exec->builder);
 
+    LLVMDumpModule(exec->module);
+
     char *error = NULL;
     if (LLVMVerifyModule(exec->module, LLVMPrintMessageAction, &error)) {
         TraceLog(LOG_ERROR, "[LLVM] Failed to build module!");
@@ -334,7 +336,6 @@ static bool compile_program(Exec* exec) {
         return false;
     }
     
-    LLVMDumpModule(exec->module);
 
     return true;
 }

@@ -2234,12 +2234,14 @@ bool block_loop(Exec* exec, int argc, FuncArg* argv, LLVMValueRef* return_val) {
         LLVMBuildBr(exec->builder, loop);
         LLVMPositionBuilderAtEnd(exec->builder, loop);
 
+        control_data_stack_push_data(loop, LLVMBasicBlockRef);
         control_data_stack_push_data(loop_end, LLVMBasicBlockRef);
     } else {
+        LLVMBasicBlockRef loop;
         LLVMBasicBlockRef loop_end;
         control_data_stack_pop_data(loop_end, LLVMBasicBlockRef);
+        control_data_stack_pop_data(loop, LLVMBasicBlockRef);
 
-        LLVMBasicBlockRef loop = LLVMGetInsertBlock(exec->builder);
         LLVMBuildBr(exec->builder, loop);
         LLVMPositionBuilderAtEnd(exec->builder, loop_end);
         *return_val = BOOLEAN(0);
