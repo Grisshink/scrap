@@ -53,9 +53,14 @@ typedef enum {
     FUNC_ARG_CONTROL,
 } FuncArgType;
 
+typedef struct {
+    FuncArgControlType type;
+    LLVMBasicBlockRef block;
+} ControlData;
+
 typedef union {
     LLVMValueRef value;
-    FuncArgControlType control;
+    ControlData control;
     const char* str;
 } FuncArgData;
 

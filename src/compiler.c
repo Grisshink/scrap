@@ -126,9 +126,22 @@ static bool evaluate_block(Exec* exec, Block* block, LLVMValueRef* return_val, b
     FuncArg* arg;
 
     if (block->blockdef->type == BLOCKTYPE_CONTROL || block->blockdef->type == BLOCKTYPE_CONTROLEND) {
+        LLVMBasicBlockRef control_block = NULL;
+        if (!end_block) {
+            LLVMBasicBlockRef current = LLVMGetInsertBlock(exec->builder);
+            control_block = LLVMInsertBasicBlock(current, "control_block");
+            LLVMMoveBasicBlockAfter(control_block, current);
+
+            LLVMBuildBr(exec->builder, control_block);
+            LLVMPositionBuilderAtEnd(exec->builder, control_block);
+        }
+
         arg = vector_add_dst(&args);
         arg->type = FUNC_ARG_CONTROL;
-        arg->data.control = end_block ? CONTROL_END : CONTROL_BEGIN;
+        arg->data.control = (ControlData) {
+            .type = end_block ? CONTROL_END : CONTROL_BEGIN,
+            .block = control_block,
+        };
     }
 
     if (block->blockdef->type == BLOCKTYPE_CONTROLEND && !end_block) {

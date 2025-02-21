@@ -1830,21 +1830,103 @@ bool block_sleep(Exec* exec, int argc, FuncArg* argv, LLVMValueRef* return_val) 
 }
 
 bool block_while(Exec* exec, int argc, FuncArg* argv, LLVMValueRef* return_val) {
-    (void) exec;
-    (void) argc;
-    (void) argv;
-    (void) return_val;
-    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_while");
-    return false;
+    MIN_ARG_COUNT(1);
+    if (argv[0].type != FUNC_ARG_CONTROL) {
+        TraceLog(LOG_ERROR, "[LLVM] First argument is not control argument!");
+        return false;
+    }
+
+    if (argv[0].data.control.type == CONTROL_BEGIN) {
+        MIN_ARG_COUNT(2);
+
+        LLVMBasicBlockRef control_block = argv[0].data.control.block;
+        LLVMBasicBlockRef while_body_branch = LLVMInsertBasicBlock(control_block, "while");
+        LLVMBasicBlockRef while_end_branch = LLVMInsertBasicBlock(control_block, "while_end");
+
+        LLVMMoveBasicBlockAfter(while_end_branch, control_block);
+        LLVMMoveBasicBlockAfter(while_body_branch, control_block);
+
+        LLVMBuildCondBr(exec->builder, arg_to_bool(exec, argv[1]), while_body_branch, while_end_branch);
+
+        LLVMPositionBuilderAtEnd(exec->builder, while_body_branch);
+
+        control_data_stack_push_data(control_block, LLVMBasicBlockRef);
+        control_data_stack_push_data(while_end_branch, LLVMBasicBlockRef);
+    } else {
+        LLVMBasicBlockRef control_block, while_end_branch;
+        control_data_stack_pop_data(while_end_branch, LLVMBasicBlockRef);
+        control_data_stack_pop_data(control_block, LLVMBasicBlockRef);
+
+        LLVMBuildBr(exec->builder, control_block);
+
+        LLVMPositionBuilderAtEnd(exec->builder, while_end_branch);
+
+        *return_val = BOOLEAN(1);
+    }
+
+    return true;
 }
 
 bool block_repeat(Exec* exec, int argc, FuncArg* argv, LLVMValueRef* return_val) {
-    (void) exec;
-    (void) argc;
-    (void) argv;
-    (void) return_val;
-    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_repeat");
-    return false;
+    MIN_ARG_COUNT(1);
+    if (argv[0].type != FUNC_ARG_CONTROL) {
+        TraceLog(LOG_ERROR, "[LLVM] First argument is not control argument!");
+        return false;
+    }
+
+    if (argv[0].data.control.type == CONTROL_BEGIN) {
+        MIN_ARG_COUNT(2);
+
+        LLVMBasicBlockRef current = LLVMGetInsertBlock(exec->builder);
+        LLVMBasicBlockRef repeat_branch = LLVMInsertBasicBlock(current, "repeat");
+        LLVMBasicBlockRef repeat_body_branch = LLVMInsertBasicBlock(current, "repeat_body");
+        LLVMBasicBlockRef repeat_end_branch = LLVMInsertBasicBlock(current, "repeat_end");
+
+        LLVMMoveBasicBlockAfter(repeat_end_branch, current);
+        LLVMMoveBasicBlockAfter(repeat_body_branch, current);
+        LLVMMoveBasicBlockAfter(repeat_branch, current);
+
+        LLVMBuildBr(exec->builder, repeat_branch);
+        LLVMPositionBuilderAtEnd(exec->builder, repeat_branch);
+
+        LLVMValueRef phi_node = LLVMBuildPhi(exec->builder, LLVMInt32Type(), "repeat_phi");
+        LLVMValueRef index = LLVMBuildSub(exec->builder, phi_node, INTEGER(1), "repeat_index_sub");
+        LLVMValueRef index_test = LLVMBuildICmp(exec->builder, LLVMIntSLT, index, INTEGER(0), "repeat_loop_check");
+        LLVMBuildCondBr(exec->builder, index_test, repeat_end_branch, repeat_body_branch);
+
+        LLVMValueRef vals[] = { arg_to_int(exec, argv[1]) };
+        LLVMBasicBlockRef blocks[] = { current };
+        LLVMAddIncoming(phi_node, vals, blocks, ARRLEN(blocks));
+
+        LLVMPositionBuilderAtEnd(exec->builder, repeat_body_branch);
+
+        control_data_stack_push_data(phi_node, LLVMValueRef);
+        control_data_stack_push_data(vals[0], LLVMValueRef);
+        control_data_stack_push_data(index, LLVMValueRef);
+        control_data_stack_push_data(repeat_branch, LLVMBasicBlockRef);
+        control_data_stack_push_data(repeat_end_branch, LLVMBasicBlockRef);
+    } else {
+        LLVMBasicBlockRef current = LLVMGetInsertBlock(exec->builder);
+        LLVMBasicBlockRef loop_end, loop;
+        LLVMValueRef phi_node, index, start_index;
+        control_data_stack_pop_data(loop_end, LLVMBasicBlockRef);
+        control_data_stack_pop_data(loop, LLVMBasicBlockRef);
+        control_data_stack_pop_data(index, LLVMValueRef);
+        control_data_stack_pop_data(start_index, LLVMValueRef);
+        control_data_stack_pop_data(phi_node, LLVMValueRef);
+
+        LLVMBuildBr(exec->builder, loop);
+
+        LLVMValueRef vals[] = { index };
+        LLVMBasicBlockRef blocks[] = { current };
+        LLVMAddIncoming(phi_node, vals, blocks, ARRLEN(blocks));
+
+        LLVMPositionBuilderAtEnd(exec->builder, loop_end);
+
+        *return_val = LLVMBuildICmp(exec->builder, LLVMIntSGT, start_index, INTEGER(0), "");
+    }
+
+    return true;
 }
 
 bool block_else(Exec* exec, int argc, FuncArg* argv, LLVMValueRef* return_val) {
@@ -1854,7 +1936,7 @@ bool block_else(Exec* exec, int argc, FuncArg* argv, LLVMValueRef* return_val) {
         return false;
     }
 
-    if (argv[0].data.control == CONTROL_BEGIN) {
+    if (argv[0].data.control.type == CONTROL_BEGIN) {
         MIN_ARG_COUNT(2);
 
         LLVMBasicBlockRef current_branch = LLVMGetInsertBlock(exec->builder);
@@ -1887,7 +1969,7 @@ bool block_else_if(Exec* exec, int argc, FuncArg* argv, LLVMValueRef* return_val
         return false;
     }
 
-    if (argv[0].data.control == CONTROL_BEGIN) {
+    if (argv[0].data.control.type == CONTROL_BEGIN) {
         MIN_ARG_COUNT(3);
 
         LLVMBasicBlockRef current_branch = LLVMGetInsertBlock(exec->builder);
@@ -1941,7 +2023,7 @@ bool block_if(Exec* exec, int argc, FuncArg* argv, LLVMValueRef* return_val) {
         return false;
     }
 
-    if (argv[0].data.control == CONTROL_BEGIN) {
+    if (argv[0].data.control.type == CONTROL_BEGIN) {
         MIN_ARG_COUNT(2);
 
         LLVMBasicBlockRef current_branch = LLVMGetInsertBlock(exec->builder);
@@ -1989,7 +2071,7 @@ bool block_loop(Exec* exec, int argc, FuncArg* argv, LLVMValueRef* return_val) {
         return false;
     }
 
-    if (argv[0].data.control == CONTROL_BEGIN) {
+    if (argv[0].data.control.type == CONTROL_BEGIN) {
         LLVMBasicBlockRef current = LLVMGetInsertBlock(exec->builder);
         LLVMBasicBlockRef loop = LLVMInsertBasicBlock(current, "loop");
         LLVMBasicBlockRef loop_end = LLVMInsertBasicBlock(current, "loop_end");
