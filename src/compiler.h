@@ -5,6 +5,7 @@
 
 #include <llvm-c/Core.h>
 #include <llvm-c/ExecutionEngine.h>
+#include <stdatomic.h>
 
 #define VM_ARG_STACK_SIZE 1024
 #define VM_CONTROL_STACK_SIZE 1024
@@ -51,8 +52,8 @@ typedef struct {
     size_t variable_stack_frames[VM_VARIABLE_STACK_SIZE];
     size_t variable_stack_frames_len;
 
-    //pthread_t thread;
-    //atomic_bool is_running;
+    pthread_t thread;
+    atomic_bool is_running;
 } Exec;
 
 typedef enum {

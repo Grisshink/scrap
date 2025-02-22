@@ -32,8 +32,8 @@ static bool run_program(Exec* exec);
 Exec exec_new(void) {
     Exec exec = (Exec) {
         .code = NULL,
-        //.thread = (pthread_t) {0},
-        //.is_running = false,
+        .thread = (pthread_t) {0},
+        .is_running = false,
     };
     return exec;
 }
@@ -42,25 +42,45 @@ void exec_free(Exec* exec) {
     (void) exec;
 }
 
+void exec_thread_exit(void* thread_exec) {
+    Exec* exec = thread_exec;
+    exec->is_running = false;
+}
+
+void* exec_thread_entry(void* thread_exec) {
+    Exec* exec = thread_exec;
+    exec->is_running = true;
+    pthread_cleanup_push(exec_thread_exit, thread_exec);
+
+    if (!compile_program(exec)) {
+        exec->is_running = false;
+        return (void*)0;
+    }
+
+    if (!run_program(exec)) {
+        exec->is_running = false;
+        return (void*)0;
+    }
+
+    pthread_cleanup_pop(1);
+    return (void*)1;
+}
+
 bool exec_start(Vm* vm, Exec* exec) {
     if (vm->is_running) return false;
-    //if (exec->is_running) return false;
+    if (exec->is_running) return false;
 
-    //if (pthread_create(&exec->thread, NULL, exec_thread_entry, exec)) return false;
-    //exec->is_running = true;
-
-    if (!compile_program(exec)) return false;
-    if (!run_program(exec)) return false;
+    if (pthread_create(&exec->thread, NULL, exec_thread_entry, exec)) return false;
+    exec->is_running = true;
 
     vm->is_running = true;
     return true;
 }
 
 bool exec_stop(Vm* vm, Exec* exec) {
-    (void) exec;
     if (!vm->is_running) return false;
-    //if (!exec->is_running) return false;
-    //if (pthread_cancel(exec->thread)) return false;
+    if (!exec->is_running) return false;
+    if (pthread_cancel(exec->thread)) return false;
     return true;
 }
 
@@ -72,26 +92,24 @@ void exec_copy_code(Vm* vm, Exec* exec, BlockChain* code) {
 bool exec_join(Vm* vm, Exec* exec, size_t* return_code) {
     (void) exec;
     if (!vm->is_running) return false;
-    //if (!exec->is_running) return false;
+    if (!exec->is_running) return false;
     
-    //void* return_val;
-    //if (pthread_join(exec->thread, &return_val)) return false;
+    void* return_val;
+    if (pthread_join(exec->thread, &return_val)) return false;
     vm->is_running = false;
-    //*return_code = (size_t)return_val;
-    *return_code = 1;
+    *return_code = (size_t)return_val;
     return true;
 }
 
 bool exec_try_join(Vm* vm, Exec* exec, size_t* return_code) {
     (void) exec;
     if (!vm->is_running) return false;
-    // if (exec->is_running) return false;
+    if (exec->is_running) return false;
 
-    // void* return_val;
-    // if (pthread_join(exec->thread, &return_val)) return false;
+    void* return_val;
+    if (pthread_join(exec->thread, &return_val)) return false;
     vm->is_running = false;
-    // *return_code = (size_t)return_val;
-    *return_code = 1;
+    *return_code = (size_t)return_val;
     return true;
 }
 
@@ -173,6 +191,10 @@ static bool evaluate_block(Exec* exec, Block* block, LLVMValueRef* return_val, b
 
             variable_stack_frame_push(exec);
         } else {
+            LLVMValueRef testcancel_func = LLVMGetNamedFunction(exec->module, "test_cancel");
+            LLVMTypeRef testcancel_func_type = LLVMGlobalGetValueType(testcancel_func);
+            LLVMBuildCall2(exec->builder, testcancel_func_type, testcancel_func, NULL, 0, "");
+
             variable_stack_frame_pop(exec);
         }
 
@@ -237,10 +259,7 @@ static bool evaluate_chain(Exec* exec, BlockChain* chain) {
 
         if (chain->blocks[i].blockdef->type == BLOCKTYPE_END || chain->blocks[i].blockdef->type == BLOCKTYPE_CONTROLEND) {
             exec_block = control_stack_pop(exec);
-            if (!exec_block) {
-                TraceLog(LOG_WARNING, "Top level end block in the chain at %p, skipping", &chain->blocks[i]);
-                continue;
-            }
+            if (!exec_block) return false;
             is_end = true;
         }
 
@@ -295,6 +314,9 @@ static LLVMBasicBlockRef register_globals(Exec* exec) {
     LLVMTypeRef time_func_params[] = { LLVMPointerType(LLVMVoidType(), 0) };
     LLVMTypeRef time_func_type = LLVMFunctionType(LLVMInt32Type(), time_func_params, ARRLEN(time_func_params), false);
     LLVMAddFunction(exec->module, "time", time_func_type);
+
+    LLVMTypeRef testcancel_func_type = LLVMFunctionType(LLVMVoidType(), NULL, 0, false);
+    LLVMAddFunction(exec->module, "test_cancel", testcancel_func_type);
 
     LLVMTypeRef main_func_type = LLVMFunctionType(LLVMVoidType(), NULL, 0, false);
     LLVMValueRef main_func = LLVMAddFunction(exec->module, "llvm_main", main_func_type);
@@ -373,6 +395,7 @@ static bool run_program(Exec* exec) {
     LLVMAddGlobalMapping(exec->engine, LLVMGetNamedFunction(exec->module, "term_print_bool"), term_print_bool);
     LLVMAddGlobalMapping(exec->engine, LLVMGetNamedFunction(exec->module, "int_pow"), int_pow);
     LLVMAddGlobalMapping(exec->engine, LLVMGetNamedFunction(exec->module, "time"), time);
+    LLVMAddGlobalMapping(exec->engine, LLVMGetNamedFunction(exec->module, "test_cancel"), pthread_testcancel);
 
     LLVMRunFunction(exec->engine, LLVMGetNamedFunction(exec->module, "llvm_main"), 0, NULL);
 
