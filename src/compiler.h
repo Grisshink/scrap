@@ -28,8 +28,41 @@
     exec->control_data_stack_len -= sizeof(type); \
     data = *(type*)(exec->control_data_stack + exec->control_data_stack_len);
 
+typedef enum {
+    CONTROL_BEGIN,
+    CONTROL_END,
+} FuncArgControlType;
+
 typedef struct {
-    LLVMValueRef ptr;
+    FuncArgControlType type;
+    LLVMBasicBlockRef block;
+} ControlData;
+
+typedef enum {
+    FUNC_ARG_UNKNOWN = 0,
+    FUNC_ARG_NOTHING,
+    FUNC_ARG_INT,
+    FUNC_ARG_DOUBLE,
+    FUNC_ARG_STRING_LITERAL,
+    // FUNC_ARG_STRING,
+    FUNC_ARG_BOOL,
+    // FUNC_ARG_LIST,
+    FUNC_ARG_CONTROL,
+} FuncArgType;
+
+typedef union {
+    LLVMValueRef value;
+    ControlData control;
+    const char* str;
+} FuncArgData;
+
+typedef struct {
+    FuncArgType type;
+    FuncArgData data;
+} FuncArg;
+
+typedef struct {
+    FuncArg value;
     LLVMTypeRef type;
     const char* name;
 } Variable;
@@ -56,34 +89,45 @@ typedef struct {
     atomic_bool is_running;
 } Exec;
 
-typedef enum {
-    CONTROL_BEGIN,
-    CONTROL_END,
-} FuncArgControlType;
+#define CONST_NOTHING LLVMConstPointerNull(LLVMVoidType())
+#define CONST_INTEGER(val) LLVMConstInt(LLVMInt32Type(), val, true)
+#define CONST_BOOLEAN(val) LLVMConstInt(LLVMInt1Type(), val, false)
+#define CONST_DOUBLE(val) LLVMConstReal(LLVMDoubleType(), val)
 
-typedef enum {
-    FUNC_ARG_STRING,
-    FUNC_ARG_VALUE,
-    FUNC_ARG_CONTROL,
-} FuncArgType;
+#define DATA_BOOLEAN(val) (FuncArg) { \
+    .type = FUNC_ARG_BOOL, \
+    .data = (FuncArgData) { \
+        .value = val, \
+    }, \
+}
 
-typedef struct {
-    FuncArgControlType type;
-    LLVMBasicBlockRef block;
-} ControlData;
+#define DATA_INTEGER(val) (FuncArg) { \
+    .type = FUNC_ARG_INT, \
+    .data = (FuncArgData) { \
+        .value = val, \
+    }, \
+}
 
-typedef union {
-    LLVMValueRef value;
-    ControlData control;
-    const char* str;
-} FuncArgData;
+#define DATA_DOUBLE(val) (FuncArg) { \
+    .type = FUNC_ARG_DOUBLE, \
+    .data = (FuncArgData) { \
+        .value = val, \
+    }, \
+}
 
-typedef struct {
-    FuncArgType type;
-    FuncArgData data;
-} FuncArg;
+#define DATA_UNKNOWN (FuncArg) { \
+    .type = FUNC_ARG_UNKNOWN, \
+    .data = (FuncArgData) {0}, \
+}
 
-typedef bool (*BlockCompileFunc)(Exec* exec, int argc, FuncArg* argv, LLVMValueRef* return_val);
+#define DATA_NOTHING (FuncArg) { \
+    .type = FUNC_ARG_NOTHING, \
+    .data = (FuncArgData) { \
+        .value = CONST_NOTHING, \
+    }, \
+}
+
+typedef bool (*BlockCompileFunc)(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val);
 
 Exec exec_new(void);
 void exec_free(Exec* exec);

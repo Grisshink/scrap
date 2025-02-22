@@ -164,7 +164,7 @@ static bool variable_stack_frame_pop(Exec* exec) {
     return true;
 }
 
-static bool evaluate_block(Exec* exec, Block* block, LLVMValueRef* return_val, bool end_block, LLVMValueRef input_val) {
+static bool evaluate_block(Exec* exec, Block* block, FuncArg* return_val, bool end_block, FuncArg input_val) {
     if (!block->blockdef) {
         TraceLog(LOG_ERROR, "[LLVM] Tried to compile block without definition!");
         return false;
@@ -206,31 +206,25 @@ static bool evaluate_block(Exec* exec, Block* block, LLVMValueRef* return_val, b
         };
     }
 
-    if (block->blockdef->type == BLOCKTYPE_CONTROLEND && !end_block) {
-        arg = vector_add_dst(&args);
-        arg->type = FUNC_ARG_VALUE;
-        arg->data.value = input_val;
-    }
+    if (block->blockdef->type == BLOCKTYPE_CONTROLEND && !end_block) vector_add(&args, input_val);
 
     if ((block->blockdef->type != BLOCKTYPE_CONTROL && block->blockdef->type != BLOCKTYPE_CONTROLEND) || !end_block) {
         for (size_t i = 0; i < vector_size(block->arguments); i++) {
-            LLVMValueRef block_return;
+            FuncArg block_return;
             switch (block->arguments[i].type) {
             case ARGUMENT_TEXT:
             case ARGUMENT_CONST_STRING:
                 arg = vector_add_dst(&args);
-                arg->type = FUNC_ARG_STRING;
+                arg->type = FUNC_ARG_STRING_LITERAL;
                 arg->data.str = block->arguments[i].data.text;
                 break;
             case ARGUMENT_BLOCK:
-                if (!evaluate_block(exec, &block->arguments[i].data.block, &block_return, false, LLVMConstInt(LLVMInt1Type(), 0, false))) {
+                if (!evaluate_block(exec, &block->arguments[i].data.block, &block_return, false, DATA_NOTHING)) {
                     TraceLog(LOG_ERROR, "[LLVM] While compiling block id: \"%s\" (argument #%d) (at block %p)", block->blockdef->id, i + 1, block);
                     vector_free(args);
                     return false;       
                 }
-                arg = vector_add_dst(&args);
-                arg->type = FUNC_ARG_VALUE;
-                arg->data.value = block_return;
+                vector_add(&args, block_return);
                 break;
             case ARGUMENT_BLOCKDEF:
                 assert(false && "Unimplemented compile blockdef argument");
@@ -253,7 +247,7 @@ static bool evaluate_chain(Exec* exec, BlockChain* chain) {
     if (vector_size(chain->blocks) == 0 || chain->blocks[0].blockdef->type != BLOCKTYPE_HAT) return true;
 
     for (size_t i = 0; i < vector_size(chain->blocks); i++) {
-        LLVMValueRef block_return;
+        FuncArg block_return;
         Block* exec_block = &chain->blocks[i];
         bool is_end = false;
 
@@ -263,9 +257,9 @@ static bool evaluate_chain(Exec* exec, BlockChain* chain) {
             is_end = true;
         }
 
-        if (!evaluate_block(exec, exec_block, &block_return, is_end, LLVMConstInt(LLVMInt1Type(), 0, false))) return false;
+        if (!evaluate_block(exec, exec_block, &block_return, is_end, DATA_NOTHING)) return false;
         if (chain->blocks[i].blockdef->type == BLOCKTYPE_CONTROLEND) {
-            LLVMValueRef bin;
+            FuncArg bin;
             if (!evaluate_block(exec, &chain->blocks[i], &bin, false, block_return)) return false;
         }
 
@@ -348,8 +342,6 @@ static bool compile_program(Exec* exec) {
     LLVMBuildRetVoid(exec->builder);
     LLVMDisposeBuilder(exec->builder);
 
-    LLVMDumpModule(exec->module);
-
     char *error = NULL;
     if (LLVMVerifyModule(exec->module, LLVMPrintMessageAction, &error)) {
         TraceLog(LOG_ERROR, "[LLVM] Failed to build module!");
@@ -358,6 +350,7 @@ static bool compile_program(Exec* exec) {
         return false;
     }
     
+    LLVMDumpModule(exec->module);
 
     return true;
 }

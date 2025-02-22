@@ -420,8 +420,8 @@ void register_categories(void);
 Data block_custom_arg(Exec* exec, int argc, Data* argv);
 Data block_exec_custom(Exec* exec, int argc, Data* argv);
 #else
-bool block_custom_arg(Exec* exec, int argc, FuncArg* argv, LLVMValueRef* return_val);
-bool block_exec_custom(Exec* exec, int argc, FuncArg* argv, LLVMValueRef* return_val);
+bool block_custom_arg(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val);
+bool block_exec_custom(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val);
 #endif
 
 // platform.c
