@@ -1137,6 +1137,13 @@ static void handle_mouse_wheel(void) {
     Vector2 wheel = GetMouseWheelMoveV();
     camera_pos.x -= wheel.x * conf.font_size * 2;
     camera_pos.y -= wheel.y * conf.font_size * 2;
+
+    if (wheel.x != 0 || wheel.y != 0) {
+        hover_info.select_block = NULL;
+        hover_info.select_argument = NULL;
+        hover_info.select_input = NULL;
+        hover_info.select_blockchain = NULL;
+    }
 }
 
 static void handle_mouse_drag(void) {
