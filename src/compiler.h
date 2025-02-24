@@ -44,7 +44,7 @@ typedef enum {
     FUNC_ARG_INT,
     FUNC_ARG_DOUBLE,
     FUNC_ARG_STRING_LITERAL,
-    // FUNC_ARG_STRING,
+    FUNC_ARG_STRING,
     FUNC_ARG_BOOL,
     // FUNC_ARG_LIST,
     FUNC_ARG_CONTROL,
@@ -93,39 +93,21 @@ typedef struct {
 #define CONST_INTEGER(val) LLVMConstInt(LLVMInt32Type(), val, true)
 #define CONST_BOOLEAN(val) LLVMConstInt(LLVMInt1Type(), val, false)
 #define CONST_DOUBLE(val) LLVMConstReal(LLVMDoubleType(), val)
+#define CONST_STRING(val) LLVMBuildGlobalStringPtr(exec->builder, val, "")
 
-#define DATA_BOOLEAN(val) (FuncArg) { \
-    .type = FUNC_ARG_BOOL, \
+#define _DATA(t, val) (FuncArg) { \
+    .type = t, \
     .data = (FuncArgData) { \
         .value = val, \
     }, \
 }
 
-#define DATA_INTEGER(val) (FuncArg) { \
-    .type = FUNC_ARG_INT, \
-    .data = (FuncArgData) { \
-        .value = val, \
-    }, \
-}
-
-#define DATA_DOUBLE(val) (FuncArg) { \
-    .type = FUNC_ARG_DOUBLE, \
-    .data = (FuncArgData) { \
-        .value = val, \
-    }, \
-}
-
-#define DATA_UNKNOWN (FuncArg) { \
-    .type = FUNC_ARG_UNKNOWN, \
-    .data = (FuncArgData) {0}, \
-}
-
-#define DATA_NOTHING (FuncArg) { \
-    .type = FUNC_ARG_NOTHING, \
-    .data = (FuncArgData) { \
-        .value = CONST_NOTHING, \
-    }, \
-}
+#define DATA_BOOLEAN(val) _DATA(FUNC_ARG_BOOL, val)
+#define DATA_STRING(val) _DATA(FUNC_ARG_STRING, val)
+#define DATA_INTEGER(val) _DATA(FUNC_ARG_INT, val)
+#define DATA_DOUBLE(val) _DATA(FUNC_ARG_DOUBLE, val)
+#define DATA_UNKNOWN _DATA(FUNC_ARG_UNKNOWN, NULL)
+#define DATA_NOTHING _DATA(FUNC_ARG_NOTHING, CONST_NOTHING)
 
 typedef bool (*BlockCompileFunc)(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val);
 

@@ -23,6 +23,7 @@
 #include <assert.h>
 #include <string.h>
 #include <time.h>
+#include <stdio.h>
 
 #define ARRLEN(arr) (sizeof(arr) / sizeof(arr[0]))
 
@@ -273,7 +274,6 @@ static bool evaluate_chain(Exec* exec, BlockChain* chain) {
     return true;
 }
 
-
 static int int_pow(int base, int exp) {
     if (exp == 0) return 1;
 
@@ -284,6 +284,54 @@ static int int_pow(int base, int exp) {
         base *= base;
     }
     return result;
+}
+
+typedef struct {
+    unsigned int size;
+    unsigned int capacity;
+    char str[];
+} StringHeader;
+
+// FIXME: This function leaks memory at runtime
+static char* string_from_literal(const char* literal, unsigned int size) {
+    StringHeader* out_str = malloc(sizeof(StringHeader) + size + 1);
+    memcpy(out_str->str, literal, size);
+    out_str->size = size;
+    out_str->capacity = size;
+    out_str->str[size] = 0;
+    return out_str->str;
+}
+
+static char* string_from_int(int value) {
+    char str[20];
+    unsigned int len = snprintf(str, 20, "%d", value);
+    return string_from_literal(str, len);
+}
+
+static char* string_from_bool(bool value) {
+    return value ? string_from_literal("true", 4) : string_from_literal("false", 5);
+}
+
+static char* string_from_double(double value) {
+    char str[20];
+    unsigned int len = snprintf(str, 20, "%f", value);
+    return string_from_literal(str, len);
+}
+
+static bool string_is_eq(char* left, char* right) {
+    StringHeader* left_header = ((StringHeader*)left) - 1;
+    StringHeader* right_header = ((StringHeader*)right) - 1;
+    
+    if (left_header->size != right_header->size) return false;
+    for (unsigned int i = 0; i < left_header->size; i++) {
+        if (left_header->str[i] != right_header->str[i]) return false;
+    }
+    return true;
+}
+
+static unsigned int string_length(char* str) {
+    StringHeader* header = ((StringHeader*)str) - 1;
+    return header->size;
 }
 
 static LLVMBasicBlockRef register_globals(Exec* exec) {
@@ -302,6 +350,38 @@ static LLVMBasicBlockRef register_globals(Exec* exec) {
     LLVMTypeRef print_bool_func_params[] = { LLVMInt1Type() };
     LLVMTypeRef print_bool_func_type = LLVMFunctionType(LLVMInt32Type(), print_bool_func_params, ARRLEN(print_bool_func_params), false);
     LLVMAddFunction(exec->module, "term_print_bool", print_bool_func_type);
+
+    LLVMTypeRef string_literal_func_params[] = { LLVMPointerType(LLVMInt8Type(), 0), LLVMInt32Type() };
+    LLVMTypeRef string_literal_func_type = LLVMFunctionType(LLVMPointerType(LLVMInt8Type(), 0), string_literal_func_params, ARRLEN(string_literal_func_params), false);
+    LLVMAddFunction(exec->module, "string_from_literal", string_literal_func_type);
+
+    LLVMTypeRef string_int_func_params[] = { LLVMInt32Type() };
+    LLVMTypeRef string_int_func_type = LLVMFunctionType(LLVMPointerType(LLVMInt8Type(), 0), string_int_func_params, ARRLEN(string_int_func_params), false);
+    LLVMAddFunction(exec->module, "string_from_int", string_int_func_type);
+
+    LLVMTypeRef string_bool_func_params[] = { LLVMInt1Type() };
+    LLVMTypeRef string_bool_func_type = LLVMFunctionType(LLVMPointerType(LLVMInt8Type(), 0), string_bool_func_params, ARRLEN(string_bool_func_params), false);
+    LLVMAddFunction(exec->module, "string_from_bool", string_bool_func_type);
+
+    LLVMTypeRef string_double_func_params[] = { LLVMDoubleType() };
+    LLVMTypeRef string_double_func_type = LLVMFunctionType(LLVMPointerType(LLVMInt8Type(), 0), string_double_func_params, ARRLEN(string_double_func_params), false);
+    LLVMAddFunction(exec->module, "string_from_double", string_double_func_type);
+
+    LLVMTypeRef string_length_func_params[] = { LLVMPointerType(LLVMInt8Type(), 0) };
+    LLVMTypeRef string_length_func_type = LLVMFunctionType(LLVMInt32Type(), string_length_func_params, ARRLEN(string_length_func_params), false);
+    LLVMAddFunction(exec->module, "string_length", string_length_func_type);
+
+    LLVMTypeRef string_eq_func_params[] = { LLVMPointerType(LLVMInt8Type(), 0), LLVMPointerType(LLVMInt8Type(), 0) };
+    LLVMTypeRef string_eq_func_type = LLVMFunctionType(LLVMInt1Type(), string_eq_func_params, ARRLEN(string_eq_func_params), false);
+    LLVMAddFunction(exec->module, "string_is_eq", string_eq_func_type);
+
+    LLVMTypeRef atoi_func_params[] = { LLVMPointerType(LLVMInt8Type(), 0) };
+    LLVMTypeRef atoi_func_type = LLVMFunctionType(LLVMInt32Type(), atoi_func_params, ARRLEN(atoi_func_params), false);
+    LLVMAddFunction(exec->module, "atoi", atoi_func_type);
+
+    LLVMTypeRef atof_func_params[] = { LLVMPointerType(LLVMInt8Type(), 0) };
+    LLVMTypeRef atof_func_type = LLVMFunctionType(LLVMDoubleType(), atof_func_params, ARRLEN(atof_func_params), false);
+    LLVMAddFunction(exec->module, "atof", atof_func_type);
 
     LLVMTypeRef int_pow_func_params[] = { LLVMInt32Type(), LLVMInt32Type() };
     LLVMTypeRef int_pow_func_type = LLVMFunctionType(LLVMInt32Type(), int_pow_func_params, ARRLEN(int_pow_func_params), false);
@@ -389,6 +469,14 @@ static bool run_program(Exec* exec) {
     LLVMAddGlobalMapping(exec->engine, LLVMGetNamedFunction(exec->module, "term_print_int"), term_print_int);
     LLVMAddGlobalMapping(exec->engine, LLVMGetNamedFunction(exec->module, "term_print_double"), term_print_double);
     LLVMAddGlobalMapping(exec->engine, LLVMGetNamedFunction(exec->module, "term_print_bool"), term_print_bool);
+    LLVMAddGlobalMapping(exec->engine, LLVMGetNamedFunction(exec->module, "string_from_literal"), string_from_literal);
+    LLVMAddGlobalMapping(exec->engine, LLVMGetNamedFunction(exec->module, "string_from_int"), string_from_int);
+    LLVMAddGlobalMapping(exec->engine, LLVMGetNamedFunction(exec->module, "string_from_bool"), string_from_bool);
+    LLVMAddGlobalMapping(exec->engine, LLVMGetNamedFunction(exec->module, "string_from_double"), string_from_double);
+    LLVMAddGlobalMapping(exec->engine, LLVMGetNamedFunction(exec->module, "string_length"), string_length);
+    LLVMAddGlobalMapping(exec->engine, LLVMGetNamedFunction(exec->module, "string_is_eq"), string_is_eq);
+    LLVMAddGlobalMapping(exec->engine, LLVMGetNamedFunction(exec->module, "atoi"), atoi);
+    LLVMAddGlobalMapping(exec->engine, LLVMGetNamedFunction(exec->module, "atof"), atof);
     LLVMAddGlobalMapping(exec->engine, LLVMGetNamedFunction(exec->module, "int_pow"), int_pow);
     LLVMAddGlobalMapping(exec->engine, LLVMGetNamedFunction(exec->module, "time"), time);
     LLVMAddGlobalMapping(exec->engine, LLVMGetNamedFunction(exec->module, "test_cancel"), pthread_testcancel);
