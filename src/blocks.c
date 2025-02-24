@@ -2244,6 +2244,12 @@ void register_categories(void) {
     vector_add(&palette.categories, block_category_new(gettext("Data"),     (Color) CATEGORY_DATA_COLOR));
 }
 
+void unregister_categories(void) {
+    if (!palette.categories) return;
+    for (size_t i = 0; i < vector_size(palette.categories); i++) block_category_free(&palette.categories[i]);
+    vector_free(palette.categories);
+}
+
 // Creates and registers blocks (commands) for the Vm/Exec virtual machine
 void register_blocks(Vm* vm) {
     BlockCategory* cat_control = find_category(gettext("Control"));

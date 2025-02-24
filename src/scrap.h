@@ -334,6 +334,7 @@ PanelTree* panel_new(PanelType type);
 void panel_delete(PanelTree* panel);
 void tab_insert(char* name, PanelTree* root_panel, size_t position);
 BlockCategory block_category_new(const char* name, Color color);
+void block_category_free(BlockCategory* category);
 Vm vm_new(void);
 void vm_free(Vm* vm);
 size_t blockdef_register(Vm* vm, Blockdef* blockdef);
@@ -415,6 +416,7 @@ void draw_window(void);
 // blocks.c
 void register_blocks(Vm* vm);
 void register_categories(void);
+void unregister_categories(void);
 
 #ifdef USE_INTERPRETER
 Data block_custom_arg(Exec* exec, int argc, Data* argv);

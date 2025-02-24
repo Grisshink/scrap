@@ -137,6 +137,9 @@ void prerender_font_shadow(Font* font) {
     UnloadTexture(font->texture);
     font->texture = LoadTextureFromImage(render_img);
     SetTextureFilter(font->texture, TEXTURE_FILTER_BILINEAR);
+
+    UnloadImage(font_img);
+    UnloadImage(render_img);
 }
 
 static void blockdef_on_hover(GuiElement* el) {

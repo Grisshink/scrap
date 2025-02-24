@@ -230,6 +230,7 @@ BlockCategory block_category_new(const char* name, Color color) {
 }
 
 void block_category_free(BlockCategory* category) {
+    for (size_t i = 0; i < vector_size(category->blocks); i++) block_free(&category->blocks[i]);
     vector_free(category->blocks);
 }
 
@@ -594,8 +595,10 @@ int main(void) {
     vm_free(&vm);
     free(gui);
     delete_all_tabs();
+    vector_free(search_list_search);
     vector_free(search_list);
     vector_free(code_tabs);
+    unregister_categories();
     config_free(&conf);
     config_free(&window_conf);
     CloseWindow();

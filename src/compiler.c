@@ -351,6 +351,7 @@ static bool compile_program(Exec* exec) {
         LLVMDisposeModule(exec->module);
         return false;
     }
+    LLVMDisposeMessage(error);
     
     LLVMDumpModule(exec->module);
 
@@ -392,7 +393,8 @@ static bool run_program(Exec* exec) {
     LLVMAddGlobalMapping(exec->engine, LLVMGetNamedFunction(exec->module, "time"), time);
     LLVMAddGlobalMapping(exec->engine, LLVMGetNamedFunction(exec->module, "test_cancel"), pthread_testcancel);
 
-    LLVMRunFunction(exec->engine, LLVMGetNamedFunction(exec->module, "llvm_main"), 0, NULL);
+    LLVMGenericValueRef val = LLVMRunFunction(exec->engine, LLVMGetNamedFunction(exec->module, "llvm_main"), 0, NULL);
+    LLVMDisposeGenericValue(val);
 
     LLVMDisposeExecutionEngine(exec->engine);
     return true;
