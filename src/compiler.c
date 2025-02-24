@@ -54,11 +54,13 @@ void* exec_thread_entry(void* thread_exec) {
 
     if (!compile_program(exec)) {
         exec->is_running = false;
+        exec_thread_exit(thread_exec);
         return (void*)0;
     }
 
     if (!run_program(exec)) {
         exec->is_running = false;
+        exec_thread_exit(thread_exec);
         return (void*)0;
     }
 
