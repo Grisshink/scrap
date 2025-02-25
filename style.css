@@ -135,24 +135,51 @@ nav a:hover {
     flex-grow: 1;
 }
 
-.download-content {
+.download-content ul{
     display: flex;
     flex-direction: column;
     gap: 0.5em;
-    width: fit-content;
+    width: 110%;
     margin: 0 auto;
+    padding: 0;
+    list-style: none;
+    align-items: center;
+}
+
+.download-content li {
+    display: flex;
+    justify-content: center;
+    padding: 0;
+    width: 40%;
+    transition: padding .2s;
+}
+
+.windows {
+    background-color: #09f;
+}
+
+.linux {
+    background-color: #f90;
+}
+
+.appimage {
+    background-color: #777;
 }
 
 .download-button {
     font-size: 20px;
     color: black;
-    background-color: #777;
-    padding: 0.5em;
     text-decoration: none;
+    padding: 0.5em;
 }
 
 .download-button:visited {
     color: black;
+}
+
+.download-content li:hover {
+    padding: 0 0.8em;
+    filter: brightness(120%)
 }
 
 .anchor {
