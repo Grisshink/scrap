@@ -37,7 +37,7 @@ nav {
     display: flex;
     flex-direction: row;
     align-items: center;
-    padding: 0;
+    padding: 0 0.5em;
     background-color: #303030;
     width: 100%;
     position: fixed;
