@@ -37,10 +37,9 @@ nav {
     display: flex;
     flex-direction: row;
     align-items: center;
-    padding: 0 0.5em;
+    padding: 0;
     background-color: #303030;
     width: 100%;
-    height: calc(32px * 1.2);
     position: fixed;
 }
 
@@ -135,11 +134,17 @@ nav a:hover {
     flex-grow: 1;
 }
 
+/* new added  */
+.download-content {
+    display: flex;
+    justify-content: center;
+}
+
 .download-content ul{
     display: flex;
     flex-direction: column;
     gap: 0.5em;
-    width: 110%;
+    width: fit-content;
     margin: 0 auto;
     padding: 0;
     list-style: none;
@@ -150,7 +155,7 @@ nav a:hover {
     display: flex;
     justify-content: center;
     padding: 0;
-    width: 40%;
+    width: 100%;
     transition: padding .2s;
 }
 
@@ -178,9 +183,10 @@ nav a:hover {
 }
 
 .download-content li:hover {
-    padding: 0 0.8em;
+    padding: 0 5%;
     filter: brightness(120%)
 }
+/* new added  */
 
 .anchor {
     position: relative;
@@ -218,3 +224,4 @@ a:visited {
 hr {
     border-color: white;
 }
+
