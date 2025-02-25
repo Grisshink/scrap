@@ -1972,12 +1972,13 @@ bool block_declare_var(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val)
         return true;
     }
 
+    LLVMTypeRef data_type = LLVMTypeOf(argv[1].data.value);
     Variable var = (Variable) {
-        .type = LLVMTypeOf(argv[1].data.value),
+        .type = data_type,
         .value = (FuncArg) {
             .type = argv[1].type,
             .data = (FuncArgData) {
-                .value = LLVMBuildAlloca(exec->builder, LLVMTypeOf(argv[1].data.value), "declare_var"),
+                .value = LLVMBuildAlloca(exec->builder, data_type, argv[0].data.str),
             },
         },
         .name = argv[0].data.str,

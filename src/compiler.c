@@ -154,7 +154,15 @@ static bool variable_stack_frame_push(Exec* exec) {
         TraceLog(LOG_ERROR, "[LLVM] Variable stack overflow");
         return false;
     }
-    exec->variable_stack_frames[exec->variable_stack_frames_len++] = exec->variable_stack_len;
+    VariableStackFrame frame;
+    frame.base_size = exec->variable_stack_len;
+    
+    LLVMValueRef stack_save_func = LLVMGetNamedFunction(exec->module, "llvm.stacksave.p0");
+    assert(stack_save_func != NULL);
+    LLVMTypeRef stack_save_func_type = LLVMGlobalGetValueType(stack_save_func);
+    frame.base_stack = LLVMBuildCall2(exec->builder, stack_save_func_type, stack_save_func, NULL, 0, "stack_save");
+
+    exec->variable_stack_frames[exec->variable_stack_frames_len++] = frame;
     return true;
 }
 
@@ -163,7 +171,15 @@ static bool variable_stack_frame_pop(Exec* exec) {
         TraceLog(LOG_ERROR, "[LLVM] Variable stack underflow");
         return false;
     }
-    exec->variable_stack_len = exec->variable_stack_frames[--exec->variable_stack_frames_len];
+    VariableStackFrame frame = exec->variable_stack_frames[--exec->variable_stack_frames_len];
+    
+    LLVMValueRef stack_restore_func = LLVMGetNamedFunction(exec->module, "llvm.stackrestore.p0");
+    assert(stack_restore_func != NULL);
+    LLVMTypeRef stack_restore_func_type = LLVMGlobalGetValueType(stack_restore_func);
+    LLVMValueRef stack_restore_func_params[] = { frame.base_stack };
+    LLVMBuildCall2(exec->builder, stack_restore_func_type, stack_restore_func, stack_restore_func_params, ARRLEN(stack_restore_func_params), "");
+
+    exec->variable_stack_len = frame.base_size;
     return true;
 }
 
@@ -393,6 +409,13 @@ static LLVMBasicBlockRef register_globals(Exec* exec) {
 
     LLVMTypeRef testcancel_func_type = LLVMFunctionType(LLVMVoidType(), NULL, 0, false);
     LLVMAddFunction(exec->module, "test_cancel", testcancel_func_type);
+
+    LLVMTypeRef stack_save_func_type = LLVMFunctionType(LLVMPointerType(LLVMVoidType(), 0), NULL, 0, false);
+    LLVMAddFunction(exec->module, "llvm.stacksave.p0", stack_save_func_type);
+
+    LLVMTypeRef stack_restore_func_params[] = { LLVMPointerType(LLVMVoidType(), 0) };
+    LLVMTypeRef stack_restore_func_type = LLVMFunctionType(LLVMVoidType(), stack_restore_func_params, ARRLEN(stack_restore_func_params), false);
+    LLVMAddFunction(exec->module, "llvm.stackrestore.p0", stack_restore_func_type);
 
     LLVMTypeRef main_func_type = LLVMFunctionType(LLVMVoidType(), NULL, 0, false);
     LLVMValueRef main_func = LLVMAddFunction(exec->module, "llvm_main", main_func_type);
