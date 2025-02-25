@@ -134,13 +134,12 @@ nav a:hover {
     flex-grow: 1;
 }
 
-/* new added  */
 .download-content {
     display: flex;
     justify-content: center;
 }
 
-.download-content ul{
+.download-content ul {
     display: flex;
     flex-direction: column;
     gap: 0.5em;
@@ -186,7 +185,6 @@ nav a:hover {
     padding: 0 5%;
     filter: brightness(120%)
 }
-/* new added  */
 
 .anchor {
     position: relative;
@@ -224,4 +222,3 @@ a:visited {
 hr {
     border-color: white;
 }
-
