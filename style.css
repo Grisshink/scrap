@@ -155,19 +155,21 @@ nav a:hover {
     justify-content: center;
     padding: 0;
     width: 100%;
-    transition: padding .2s;
 }
 
 .windows {
     background-color: #09f;
+    border: 2px solid #06a;
 }
 
 .linux {
     background-color: #f90;
+    border: 2px solid #a60;
 }
 
 .appimage {
     background-color: #777;
+    border: 2px solid #444;
 }
 
 .download-button {
@@ -182,7 +184,6 @@ nav a:hover {
 }
 
 .download-content li:hover {
-    padding: 0 5%;
     filter: brightness(120%)
 }
 
