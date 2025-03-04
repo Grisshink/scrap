@@ -69,8 +69,13 @@
 
 # v0.1.1-beta
 
+## What's new?
+- Added icon to the executable
+- Added experimental MacOS release provided by @arducat
+
 ## Fixes
 - Fixed AppImage paths issue
+- Fixed some resizing issues on linux
 
 # v0.1-beta
 - First beta release!
