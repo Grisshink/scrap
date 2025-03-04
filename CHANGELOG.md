@@ -1,4 +1,4 @@
-# v0.4.2-beta
+# v0.4.2-beta *(12-02-2025)*
 
 ## Fixes
 - Fixed loaded custom blocks having undefined hints
@@ -6,7 +6,7 @@
 - Fixed code area floating away when editing panel while the block is selected
 - Minor translation fixes
 
-# v0.4.1-beta
+# v0.4.1-beta *(07-02-2025)*
 
 ## What's new?
 - Added Ukrainian translation *(by @jackmophin)*
@@ -15,7 +15,7 @@
 - Fixed localizations sometimes not working on Windows
 - Fixed codebase scrolling with search menu at the same time
 
-# v0.4-beta
+# v0.4-beta *(05-02-2025)*
 
 ## What's new?
 - Added translations for 2 languages: Russian *(by @Grisshink)* and Kazakh *(by @unknownkeyNB)*
@@ -34,13 +34,13 @@
 - Fixed codespace occasionally jumping far away when it is being dragged outside of the window
 - Fixed code renderer not checking with proper culling bounds. This should slightly improve performance of the renderer
 
-# v0.3.1-beta
+# v0.3.1-beta *(28-01-2025)*
 
 ## Fixes
 - Fixed a crash when attaching a block on a chain which overlaps on top of another block which is an argument to another block in different chain
 - Fixed scroll containers not updating their lower bounds when resized
 
-# v0.3-beta
+# v0.3-beta *(26-01-2025)*
 
 ## What's new?
 - The whole gui system was reworked to remove cluttered code and to allow more flexible UI. As a result some parts of the UI may have changed slightly
@@ -52,7 +52,7 @@
 - Added terminal colors support
 - Added `colors.scrp` example to demonstrate the use of colors
 
-# v0.2-beta
+# v0.2-beta *(06-01-2025)*
 
 ## What's new?
 - Added various string manipulation blocks
@@ -67,7 +67,7 @@
 - Fixed AppImage paths issue again
 - Fixed block highlighting with custom blocks
 
-# v0.1.1-beta
+# v0.1.1-beta *(30-12-2024)*
 
 ## What's new?
 - Added icon to the executable
@@ -77,5 +77,5 @@
 - Fixed AppImage paths issue
 - Fixed some resizing issues on linux
 
-# v0.1-beta
+# v0.1-beta *(29-12-2024)*
 - First beta release!
