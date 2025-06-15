@@ -1040,7 +1040,7 @@ LLVMValueRef arg_to_value(Exec* exec, FuncArg arg) {
     switch (arg.type) {
     case FUNC_ARG_STRING_LITERAL:
         return CONST_STRING(arg.data.str);
-    case FUNC_ARG_STRING:
+    case FUNC_ARG_STRING_REF:
     case FUNC_ARG_NOTHING:
     case FUNC_ARG_INT:
     case FUNC_ARG_DOUBLE:
@@ -1055,7 +1055,7 @@ LLVMValueRef arg_to_bool(Exec* exec, FuncArg arg) {
     switch (arg.type) {
     case FUNC_ARG_STRING_LITERAL:
         return CONST_BOOLEAN(*arg.data.str != 0);
-    case FUNC_ARG_STRING: ;
+    case FUNC_ARG_STRING_REF: ;
         LLVMValueRef first_char = LLVMBuildLoad2(exec->builder, LLVMInt8Type(), arg.data.value, "bool_cast");
         return LLVMBuildICmp(exec->builder, LLVMIntNE, first_char, LLVMConstInt(LLVMInt8Type(), 0, true), "bool_cast");
     case FUNC_ARG_NOTHING:
@@ -1075,7 +1075,7 @@ LLVMValueRef arg_to_int(Exec* exec, FuncArg arg) {
     switch (arg.type) {
     case FUNC_ARG_STRING_LITERAL:
         return CONST_INTEGER(atoi(arg.data.str));
-    case FUNC_ARG_STRING: ;
+    case FUNC_ARG_STRING_REF: ;
         LLVMValueRef atoi_func = LLVMGetNamedFunction(exec->module, "atoi");
         LLVMTypeRef atoi_func_type = LLVMGlobalGetValueType(atoi_func);
         LLVMValueRef atoi_func_params[] = { arg.data.value };
@@ -1097,7 +1097,7 @@ LLVMValueRef arg_to_double(Exec* exec, FuncArg arg) {
     switch (arg.type) {
     case FUNC_ARG_STRING_LITERAL:
         return CONST_DOUBLE(atof(arg.data.str));
-    case FUNC_ARG_STRING: ;
+    case FUNC_ARG_STRING_REF: ;
         LLVMValueRef atof_func = LLVMGetNamedFunction(exec->module, "atof");
         LLVMTypeRef atof_func_type = LLVMGlobalGetValueType(atof_func);
         LLVMValueRef atof_func_params[] = { arg.data.value };
@@ -1126,7 +1126,7 @@ LLVMValueRef arg_to_string(Exec* exec, FuncArg arg) {
         LLVMValueRef string_func_params[] = { CONST_STRING(arg.data.str), CONST_INTEGER(strlen(arg.data.str)) };
         return LLVMBuildCall2(exec->builder, string_func_type, string_func, string_func_params, ARRLEN(string_func_params), "string_cast");
     }
-    case FUNC_ARG_STRING: {
+    case FUNC_ARG_STRING_REF: {
         return arg.data.value;
     }
     case FUNC_ARG_INT: {
@@ -1158,7 +1158,7 @@ FuncArg arg_cast(Exec* exec, FuncArg arg, FuncArgType cast_to_type) {
     case FUNC_ARG_STRING_LITERAL:
         if (arg.type == FUNC_ARG_STRING_LITERAL) return arg;
         assert(false && "Attempted to cast LLVM value to string literal");
-    case FUNC_ARG_STRING:
+    case FUNC_ARG_STRING_REF:
         return DATA_STRING(arg_to_string(exec, arg));
     case FUNC_ARG_NOTHING:
         TraceLog(LOG_ERROR, "Attempt to cast value to nothing");
@@ -1255,7 +1255,7 @@ bool block_not_eq(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
     case FUNC_ARG_NOTHING:
         *return_val = DATA_BOOLEAN(CONST_BOOLEAN(0));
         break;
-    case FUNC_ARG_STRING: ;
+    case FUNC_ARG_STRING_REF: ;
         LLVMValueRef eq_func = LLVMGetNamedFunction(exec->module, "string_is_eq");
         LLVMTypeRef eq_func_type = LLVMGlobalGetValueType(eq_func);
         LLVMValueRef eq_func_params[] = { left.data.value, right.data.value };
@@ -1308,7 +1308,7 @@ bool block_eq(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
     case FUNC_ARG_NOTHING:
         *return_val = DATA_BOOLEAN(CONST_BOOLEAN(1));
         break;
-    case FUNC_ARG_STRING: ;
+    case FUNC_ARG_STRING_REF: ;
         LLVMValueRef eq_func = LLVMGetNamedFunction(exec->module, "string_is_eq");
         LLVMTypeRef eq_func_type = LLVMGlobalGetValueType(eq_func);
         LLVMValueRef eq_func_params[] = { left.data.value, right.data.value };
@@ -1830,7 +1830,7 @@ bool block_print(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
                                    ? call_print(exec, CONST_STRING(argv[0].data.str))
                                    : CONST_INTEGER(0));
         return true;
-    case FUNC_ARG_STRING:
+    case FUNC_ARG_STRING_REF:
         *return_val = DATA_INTEGER(call_print(exec, argv[0].data.value));
         return true;
     case FUNC_ARG_NOTHING:

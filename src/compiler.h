@@ -43,8 +43,8 @@ typedef enum {
     FUNC_ARG_NOTHING,
     FUNC_ARG_INT,
     FUNC_ARG_DOUBLE,
-    FUNC_ARG_STRING_LITERAL,
-    FUNC_ARG_STRING,
+    FUNC_ARG_STRING_LITERAL, // Literal string, stored in global memory
+    FUNC_ARG_STRING_REF, // Pointer to a string type, managed by the current memory allocator (GC)
     FUNC_ARG_BOOL,
     // FUNC_ARG_LIST,
     FUNC_ARG_CONTROL,
@@ -108,7 +108,7 @@ typedef struct {
 }
 
 #define DATA_BOOLEAN(val) _DATA(FUNC_ARG_BOOL, val)
-#define DATA_STRING(val) _DATA(FUNC_ARG_STRING, val)
+#define DATA_STRING(val) _DATA(FUNC_ARG_STRING_REF, val)
 #define DATA_INTEGER(val) _DATA(FUNC_ARG_INT, val)
 #define DATA_DOUBLE(val) _DATA(FUNC_ARG_DOUBLE, val)
 #define DATA_UNKNOWN _DATA(FUNC_ARG_UNKNOWN, NULL)
