@@ -247,7 +247,7 @@ Data block_while(Exec* exec, int argc, Data* argv) {
         if (!data_to_bool(argv[1])) {
             size_t bin;
             control_stack_pop_data(bin, size_t)
-            (void) bin; 
+            (void) bin;
             RETURN_BOOL(1);
         }
 
@@ -1527,7 +1527,7 @@ bool block_rem(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
         if (!right) return false;
         *return_val = DATA_DOUBLE(LLVMBuildFRem(exec->builder, argv[0].data.value, right, "rem"));
     }
-    
+
     if (LLVMIsPoison(return_val->data.value)) {
         // TODO: Uncorporate runtime checks for division by zero
         TraceLog(LOG_ERROR, "[LLVM] Division by zero!");
@@ -1549,7 +1549,7 @@ bool block_div(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
         if (!right) return false;
         *return_val = DATA_DOUBLE(LLVMBuildFDiv(exec->builder, argv[0].data.value, right, "div"));
     }
-    
+
     if (LLVMIsPoison(return_val->data.value)) {
         // TODO: Uncorporate runtime checks for division by zero
         TraceLog(LOG_ERROR, "[LLVM] Division by zero!");
@@ -1833,7 +1833,7 @@ bool block_print(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
 
     switch (argv[0].type) {
     case FUNC_ARG_STRING_LITERAL:
-        *return_val = DATA_INTEGER(*argv[0].data.str 
+        *return_val = DATA_INTEGER(*argv[0].data.str
                                    ? call_print(exec, CONST_STRING(argv[0].data.str))
                                    : CONST_INTEGER(0));
         return true;
@@ -2026,7 +2026,7 @@ bool block_while(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
         LLVMMoveBasicBlockAfter(while_body_branch, control_block);
 
         LLVMBuildCondBr(exec->builder, condition, while_body_branch, while_end_branch);
-        
+
         LLVMPositionBuilderBefore(exec->builder, LLVMGetFirstInstruction(control_block));
         build_gc_root_begin(exec);
 
@@ -2471,7 +2471,7 @@ void register_blocks(Vm* vm) {
     blockdef_add_text(sc_term_clear, gettext("Clear terminal"));
     blockdef_register(vm, sc_term_clear);
     add_to_category(sc_term_clear, cat_terminal);
-    
+
     Blockdef* sc_term_set_clear = blockdef_new("term_set_clear", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_TERMINAL_COLOR, block_term_set_clear);
     blockdef_add_image(sc_term_set_clear, (BlockdefImage) { .image_ptr = &term_tex });
     blockdef_add_text(sc_term_set_clear, gettext("Set clear color"));
@@ -2739,7 +2739,7 @@ void register_blocks(Vm* vm) {
     blockdef_add_text(sc_unix_time, gettext("Time since 1970"));
     blockdef_register(vm, sc_unix_time);
     add_to_category(sc_unix_time, cat_misc);
-    
+
     Blockdef* sc_int = blockdef_new("convert_int", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_MISC_COLOR, block_convert_int);
     blockdef_add_text(sc_int, gettext("Int"));
     blockdef_add_argument(sc_int, "", gettext("any"), BLOCKCONSTR_UNLIMITED);

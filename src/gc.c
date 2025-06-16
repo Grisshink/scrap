@@ -90,7 +90,7 @@ void* gc_malloc(Gc* gc, size_t size) {
 
     void* mem = malloc(size);
     if (mem == NULL) return NULL;
-    
+
     GcChunk chunk = (GcChunk) {
         .ptr = mem,
         .len = size,

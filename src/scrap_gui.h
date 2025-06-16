@@ -141,7 +141,7 @@ struct GuiElement {
     unsigned char sizing;
     // Flags layout:
     // 00GSFAAD
-    // Where: 
+    // Where:
     //   D - GuiElementDirection
     //   A - GuiAlignmentType
     //   F - Is floating element

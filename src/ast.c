@@ -31,7 +31,7 @@ Block block_new(Blockdef* blockdef) {
     blockdef->ref_count++;
 
     for (size_t i = 0; i < vector_size(blockdef->inputs); i++) {
-        if (block.blockdef->inputs[i].type != INPUT_ARGUMENT && 
+        if (block.blockdef->inputs[i].type != INPUT_ARGUMENT &&
             block.blockdef->inputs[i].type != INPUT_DROPDOWN &&
             block.blockdef->inputs[i].type != INPUT_BLOCKDEF_EDITOR) continue;
         Argument* arg = vector_add_dst((Argument**)&block.arguments);

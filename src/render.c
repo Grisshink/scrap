@@ -121,17 +121,17 @@ void prerender_font_shadow(Font* font) {
     Image render_img = ImageCopy(font_img);
     ImageClearBackground(&render_img, BLANK);
     ImageDraw(
-        &render_img, 
-        font_img, 
-        (Rectangle) { 0, 0, font_img.width, font_img.height }, 
-        (Rectangle) { SHADOW_DISTANCE, SHADOW_DISTANCE, font_img.width, font_img.height }, 
+        &render_img,
+        font_img,
+        (Rectangle) { 0, 0, font_img.width, font_img.height },
+        (Rectangle) { SHADOW_DISTANCE, SHADOW_DISTANCE, font_img.width, font_img.height },
         (Color) { 0x00, 0x00, 0x00, 0x88 }
     );
     ImageDraw(
-        &render_img, 
-        font_img, 
-        (Rectangle) { 0, 0, font_img.width, font_img.height }, 
-        (Rectangle) { 0, 0, font_img.width, font_img.height }, 
+        &render_img,
+        font_img,
+        (Rectangle) { 0, 0, font_img.width, font_img.height },
+        (Rectangle) { 0, 0, font_img.width, font_img.height },
         WHITE
     );
     UnloadTexture(font->texture);
@@ -216,7 +216,7 @@ void draw_input(Font* font, char** input, const char* hint, unsigned short font_
         gui_set_state(gui, &info, sizeof(info));
 
         gui_element_begin(gui);
-            gui_set_direction(gui, DIRECTION_HORIZONTAL);   
+            gui_set_direction(gui, DIRECTION_HORIZONTAL);
             gui_set_align(gui, ALIGN_CENTER);
             gui_set_grow(gui, DIRECTION_VERTICAL);
 
@@ -393,7 +393,7 @@ static void draw_block(Block* block, bool highlight, bool can_hover) {
         } else if (block->blockdef->type == BLOCKTYPE_HAT) {
             gui_set_border_type(gui, BORDER_NOTCHED);
         }
-    
+
     size_t arg_id = 0;
     Input* inputs = block->blockdef->inputs;
     size_t inputs_size = vector_size(inputs);
@@ -627,7 +627,7 @@ static void draw_tab_bar(void) {
         gui_grow(gui, DIRECTION_HORIZONTAL);
         gui_text(gui, &font_cond, project_name, BLOCK_TEXT_SIZE, (GuiColor) { 0x80, 0x80, 0x80, 0xff });
         gui_grow(gui, DIRECTION_HORIZONTAL);
-        
+
         gui_element_begin(gui);
             gui_on_hover(gui, button_on_hover);
             gui_set_custom_data(gui, handle_stop_button_click);
@@ -1049,7 +1049,7 @@ static void draw_panel(PanelTree* panel) {
                     gui_set_rect(gui, (GuiColor) { 0xff, 0xff, 0xff, hover_info.drag_panel == panel ? 0x20 : hover_info.prev_panel == panel ? 0x80 : 0x40 });
                 gui_element_end(gui);
             }
-            
+
             gui_element_begin(gui);
                 gui_set_grow(gui, DIRECTION_VERTICAL);
                 gui_set_grow(gui, DIRECTION_HORIZONTAL);
@@ -1071,12 +1071,12 @@ static void draw_panel(PanelTree* panel) {
 static void draw_code(void) {
     for (size_t i = 0; i < vector_size(editor_code); i++) {
         Vector2 chain_pos = (Vector2) {
-            editor_code[i].x - camera_pos.x, 
+            editor_code[i].x - camera_pos.x,
             editor_code[i].y - camera_pos.y,
         };
         Rectangle code_size = hover_info.code_panel_bounds;
         if (chain_pos.x > code_size.width || chain_pos.y > code_size.height) continue;
-        if (editor_code[i].width > 0 && editor_code[i].height > 0 && 
+        if (editor_code[i].width > 0 && editor_code[i].height > 0 &&
             (chain_pos.x + editor_code[i].width < 0 || chain_pos.y + editor_code[i].height < 0)) continue;
         gui_element_begin(gui);
             gui_set_floating(gui);
@@ -1132,8 +1132,8 @@ static void draw_dropdown(void) {
                 gui_on_hover(gui, dropdown_on_hover);
                 gui_set_custom_data(gui, (void*)(size_t)i);
 
-                const char* list_value = hover_info.dropdown.location != LOCATION_BLOCK_DROPDOWN ? 
-                                         gettext(hover_info.dropdown.list[i]) : 
+                const char* list_value = hover_info.dropdown.location != LOCATION_BLOCK_DROPDOWN ?
+                                         gettext(hover_info.dropdown.list[i]) :
                                          hover_info.dropdown.list[i];
                 gui_text(gui, &font_cond, list_value, BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
             gui_element_end(gui);
@@ -1282,7 +1282,7 @@ void scrap_gui_process(void) {
 // Draw order for render_border_control()
 //
 //           1
-//   +---------------+ 
+//   +---------------+
 // 4 |               | 2
 //   +     +---------+
 //             3
@@ -1334,7 +1334,7 @@ static void render_border_control_end(GuiDrawCommand* cmd) {
 //              1
 //   +     +---------+
 // 4 |               | 2
-//   +---------------+ 
+//   +---------------+
 //           3
 static void render_border_end(GuiDrawCommand* cmd) {
     unsigned short border_w = cmd->data.border.width;
@@ -1352,7 +1352,7 @@ static void render_border_end(GuiDrawCommand* cmd) {
 //   +--------------+ 2
 //   |               +
 // 5 |               | 3
-//   +---------------+ 
+//   +---------------+
 //           4
 static void render_border_notched(GuiDrawCommand* cmd) {
     unsigned short border_w = cmd->data.border.width;
@@ -1378,9 +1378,9 @@ static void render_rect_notched(GuiDrawCommand* cmd) {
     DrawRectangle(cmd->pos_x, cmd->pos_y, cmd->width - notch_size, cmd->height, color);
     DrawRectangle(cmd->pos_x, cmd->pos_y + notch_size, cmd->width, cmd->height - notch_size, color);
     DrawTriangle(
-        (Vector2) { cmd->pos_x + cmd->width - notch_size - 1, cmd->pos_y }, 
-        (Vector2) { cmd->pos_x + cmd->width - notch_size - 1, cmd->pos_y + notch_size }, 
-        (Vector2) { cmd->pos_x + cmd->width, cmd->pos_y + notch_size }, 
+        (Vector2) { cmd->pos_x + cmd->width - notch_size - 1, cmd->pos_y },
+        (Vector2) { cmd->pos_x + cmd->width - notch_size - 1, cmd->pos_y + notch_size },
+        (Vector2) { cmd->pos_x + cmd->width, cmd->pos_y + notch_size },
         color
     );
 }
@@ -1424,8 +1424,8 @@ static void scrap_gui_render(void) {
             switch (command->data.border.type) {
             case BORDER_NORMAL:
                 DrawRectangleLinesEx(
-                    (Rectangle) { command->pos_x, command->pos_y, command->width, command->height }, 
-                    command->data.border.width, 
+                    (Rectangle) { command->pos_x, command->pos_y, command->width, command->height },
+                    command->data.border.width,
                     CONVERT_COLOR(command->color, Color)
                 );
                 break;
@@ -1468,25 +1468,25 @@ static void scrap_gui_render(void) {
             break;
         case DRAWTYPE_TEXT:
             draw_text_slice(
-                *(Font*)command->data.text.font, 
-                command->data.text.text, 
-                command->pos_x, 
-                command->pos_y, 
-                command->data.text.text_size, 
-                command->height, 
+                *(Font*)command->data.text.font,
+                command->data.text.text,
+                command->pos_x,
+                command->pos_y,
+                command->data.text.text_size,
+                command->height,
                 CONVERT_COLOR(command->color, Color)
             );
             break;
         case DRAWTYPE_IMAGE:
             DrawTextureEx(
-                *image, 
+                *image,
                 (Vector2) { command->pos_x + SHADOW_DISTANCE, command->pos_y + SHADOW_DISTANCE },
                 0.0,
                 (float)command->height / (float)image->height,
                 (Color) { 0x00, 0x00, 0x00, 0x80 }
             );
             DrawTextureEx(
-                *image, 
+                *image,
                 (Vector2) { command->pos_x, command->pos_y},
                 0.0,
                 (float)command->height / (float)image->height,

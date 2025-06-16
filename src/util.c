@@ -33,7 +33,7 @@ Timer start_timer(const char* name) {
 double end_timer(Timer timer) {
     struct timespec end;
     clock_gettime(CLOCK_MONOTONIC, &end);
- 
+
     double time_taken = (end.tv_sec - timer.start.tv_sec) * 1e+6 + (end.tv_nsec - timer.start.tv_nsec) * 1e-3;
     return time_taken;
 }

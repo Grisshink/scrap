@@ -99,7 +99,7 @@ bool exec_join(Vm* vm, Exec* exec, size_t* return_code) {
     (void) exec;
     if (!vm->is_running) return false;
     if (!exec->is_running) return false;
-    
+
     void* return_val;
     if (pthread_join(exec->thread, &return_val)) return false;
     vm->is_running = false;
@@ -159,7 +159,7 @@ static bool variable_stack_frame_push(Exec* exec) {
     }
     VariableStackFrame frame;
     frame.base_size = exec->variable_stack_len;
-    
+
     LLVMValueRef stack_save_func = LLVMGetNamedFunction(exec->module, "llvm.stacksave.p0");
     assert(stack_save_func != NULL);
     LLVMTypeRef stack_save_func_type = LLVMGlobalGetValueType(stack_save_func);
@@ -175,7 +175,7 @@ static bool variable_stack_frame_pop(Exec* exec) {
         return false;
     }
     VariableStackFrame frame = exec->variable_stack_frames[--exec->variable_stack_frames_len];
-    
+
     LLVMValueRef stack_restore_func = LLVMGetNamedFunction(exec->module, "llvm.stackrestore.p0");
     assert(stack_restore_func != NULL);
     LLVMTypeRef stack_restore_func_type = LLVMGlobalGetValueType(stack_restore_func);
@@ -244,7 +244,7 @@ static bool evaluate_block(Exec* exec, Block* block, FuncArg* return_val, bool e
                 if (!evaluate_block(exec, &block->arguments[i].data.block, &block_return, false, DATA_NOTHING)) {
                     TraceLog(LOG_ERROR, "[LLVM] While compiling block id: \"%s\" (argument #%d) (at block %p)", block->blockdef->id, i + 1, block);
                     vector_free(args);
-                    return false;       
+                    return false;
                 }
                 vector_add(&args, block_return);
                 break;
@@ -339,7 +339,7 @@ static char* string_from_double(Gc* gc, double value) {
 static bool string_is_eq(char* left, char* right) {
     StringHeader* left_header = ((StringHeader*)left) - 1;
     StringHeader* right_header = ((StringHeader*)right) - 1;
-    
+
     if (left_header->size != right_header->size) return false;
     for (unsigned int i = 0; i < left_header->size; i++) {
         if (left_header->str[i] != right_header->str[i]) return false;
@@ -486,7 +486,7 @@ static bool compile_program(Exec* exec) {
         return false;
     }
     LLVMDisposeMessage(error);
-    
+
     LLVMDumpModule(exec->module);
 
     return true;

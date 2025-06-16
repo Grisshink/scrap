@@ -125,9 +125,9 @@ void save_panel_config(char* file_str, int* cursor, PanelTree* panel) {
         break;
     case PANEL_SPLIT:
         *cursor += sprintf(
-            file_str + *cursor, 
-            "PANEL_SPLIT %s %f ", 
-            panel->direction == DIRECTION_HORIZONTAL ? "DIRECTION_HORIZONTAL" : "DIRECTION_VERTICAL", 
+            file_str + *cursor,
+            "PANEL_SPLIT %s %f ",
+            panel->direction == DIRECTION_HORIZONTAL ? "DIRECTION_HORIZONTAL" : "DIRECTION_VERTICAL",
             panel->split_percent
         );
         save_panel_config(file_str, cursor, panel->left);
@@ -143,7 +143,7 @@ static char* read_panel_token(char** str, bool* is_eof) {
     if (*is_eof) return NULL;
     while (**str == ' ' || **str == '\0') {
         (*str)++;
-        if (**str == '\0') return NULL; 
+        if (**str == '\0') return NULL;
     }
 
     char* out = *str;
@@ -184,7 +184,7 @@ PanelTree* load_panel_config(char** config) {
             panel_delete(left);
             return NULL;
         }
-        
+
         PanelTree* panel = malloc(sizeof(PanelTree));
         panel->type = PANEL_SPLIT;
         panel->direction = dir;
@@ -270,7 +270,7 @@ void load_config(Config* config) {
 
     char* file = LoadFileText(config_path);
     if (!file) {
-        init_panels(); 
+        init_panels();
         current_tab = 0;
         return;
     }
@@ -281,7 +281,7 @@ void load_config(Config* config) {
         char* field = &file[cursor];
         while(file[cursor] != '=' && file[cursor] != '\n' && file[cursor] != '\0') cursor++;
         if (file[cursor] == '\n') {
-            cursor++; 
+            cursor++;
             continue;
         };
         if (file[cursor] == '\0') break;
@@ -325,14 +325,14 @@ void load_config(Config* config) {
     }
 
     add_missing_panels();
-    if (vector_size(code_tabs) == 0) init_panels(); 
+    if (vector_size(code_tabs) == 0) init_panels();
     if (current_tab >= (int)vector_size(code_tabs)) current_tab = vector_size(code_tabs) - 1;
 
     UnloadFileText(file);
 }
 
 SaveArena new_save(size_t size) {
-    void* ptr = malloc(size); 
+    void* ptr = malloc(size);
     return (SaveArena) {
         .ptr = ptr,
         .next = ptr,
@@ -589,7 +589,7 @@ bool load_blockdef_input(SaveArena* save, Input* input) {
     input->type = type;
 
     unsigned int text_len;
-    InputArgumentConstraint constr; 
+    InputArgumentConstraint constr;
     char* text;
 
     switch (input->type) {
@@ -691,7 +691,7 @@ bool load_block_argument(SaveArena* save, Argument* arg) {
         break;
     case ARGUMENT_BLOCK:
         if (!load_block(save, &block)) return false;
-        
+
         arg->data.block = block;
         break;
     case ARGUMENT_BLOCKDEF:
@@ -753,15 +753,15 @@ bool load_blockchain(SaveArena* save, BlockChain* chain) {
     int pos_x, pos_y;
     if (ver == 1) {
         struct { float x; float y; }* pos = save_read_item(save, sizeof(struct { float x; float y; }));
-        if (!pos) return false;   
+        if (!pos) return false;
         pos_x = pos->x;
         pos_y = pos->y;
     } else {
-        int* pos = save_read_item(save, sizeof(int));          
+        int* pos = save_read_item(save, sizeof(int));
         if (!pos) return false;
         pos_x = *pos;
 
-        pos = save_read_item(save, sizeof(int));          
+        pos = save_read_item(save, sizeof(int));
         if (!pos) return false;
         pos_y = *pos;
     }

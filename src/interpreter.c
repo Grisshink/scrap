@@ -172,7 +172,7 @@ bool exec_block(Exec* exec, Block block, Data* block_return, bool from_end, bool
             },
         });
     }
-    
+
     if (block.blockdef->chain) {
         arg_stack_push_arg(exec, (Data) {
             .type = DATA_CHAIN,
@@ -301,7 +301,7 @@ bool exec_run_chain(Exec* exec, BlockChain* chain, int argc, Data* argv, Data* r
             if (chain_data->skip_block && skip_layer == -1) skip_layer = chain_data->layer;
             return_used = true;
             chain_data->layer++;
-        } 
+        }
         if (!return_used && block_return.storage.type == DATA_STORAGE_MANAGED) {
             data_free(block_return);
         }
@@ -386,7 +386,7 @@ bool exec_stop(Vm* vm, Exec* exec) {
 bool exec_join(Vm* vm, Exec* exec, size_t* return_code) {
     if (!vm->is_running) return false;
     if (!exec->is_running) return false;
-    
+
     void* return_val;
     if (pthread_join(exec->thread, &return_val)) return false;
     vm->is_running = false;
@@ -423,8 +423,8 @@ bool variable_stack_push_var(Exec* exec, const char* name, Data arg) {
 
 void variable_stack_pop_layer(Exec* exec) {
     size_t count = 0;
-    for (int i = exec->variable_stack_len - 1; i >= 0 && 
-                                               exec->variable_stack[i].layer == exec->chain_stack[exec->chain_stack_len - 1].layer && 
+    for (int i = exec->variable_stack_len - 1; i >= 0 &&
+                                               exec->variable_stack[i].layer == exec->chain_stack[exec->chain_stack_len - 1].layer &&
                                                exec->variable_stack[i].chain_layer == exec->chain_stack_len - 1; i--) {
         Data arg = exec->variable_stack[i].value;
         if (arg.storage.type == DATA_STORAGE_UNMANAGED || arg.storage.type == DATA_STORAGE_MANAGED) {

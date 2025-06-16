@@ -185,8 +185,8 @@ static bool start_vm(void) {
         if (find_panel(code_tabs[i].root_panel, PANEL_TERM)) {
             if (current_tab != (int)i) {
                 shader_time = 0.0;
-                // Delay vm startup until next frame. Because this handler only runs after the layout is computed and 
-                // before the actual rendering begins, we need to add delay to vm startup to make sure the terminal buffer 
+                // Delay vm startup until next frame. Because this handler only runs after the layout is computed and
+                // before the actual rendering begins, we need to add delay to vm startup to make sure the terminal buffer
                 // is initialized and vm does not try to write to uninitialized buffer
                 start_vm_timeout = 2;
             } else {
@@ -258,12 +258,12 @@ bool handle_file_menu_click(void) {
         vector_clear(editor_code);
         break;
     case FILE_MENU_SAVE_PROJECT:
-        path = tinyfd_saveFileDialog(NULL, project_name, ARRLEN(filters), filters, "Scrap project files (.scrp)"); 
+        path = tinyfd_saveFileDialog(NULL, project_name, ARRLEN(filters), filters, "Scrap project files (.scrp)");
         if (!path) break;
         save_code(path, editor_code);
 
         base_path = get_basename(path);
-        for (i = 0; base_path[i]; i++) project_name[i] = base_path[i]; 
+        for (i = 0; base_path[i]; i++) project_name[i] = base_path[i];
         project_name[i] = 0;
         break;
     case FILE_MENU_LOAD_PROJECT:
@@ -285,7 +285,7 @@ bool handle_file_menu_click(void) {
         camera_pos.y = editor_code[blockchain_select_counter].y - 50;
 
         base_path = get_basename(path);
-        for (i = 0; base_path[i]; i++) project_name[i] = base_path[i]; 
+        for (i = 0; base_path[i]; i++) project_name[i] = base_path[i];
         project_name[i] = 0;
 
         actionbar_show(gettext("File load succeeded!"));
@@ -423,7 +423,7 @@ bool handle_settings_dropdown_click(void) {
     hover_info.select_settings_dropdown_value = hover_info.settings_dropdown_data.value;
     show_dropdown(LOCATION_SETTINGS, hover_info.settings_dropdown_data.list, hover_info.settings_dropdown_data.list_len, handle_settings_dropdown_button_click);
     return true;
-} 
+}
 
 bool handle_about_license_button_click(void) {
     OpenURL(LICENSE_URL);
@@ -622,8 +622,8 @@ static bool handle_code_editor_click(bool mouse_empty) {
                 hover_info.select_blockchain = hover_info.blockchain;
             }
         } else if (
-            hover_info.block && 
-            hover_info.blockchain && 
+            hover_info.block &&
+            hover_info.blockchain &&
             hover_info.block->parent == NULL
         ) {
             // Attach block
@@ -846,7 +846,7 @@ static bool handle_mouse_click(void) {
             if (block_input.type == INPUT_DROPDOWN) {
                 size_t list_len = 0;
                 char** list = block_input.data.drop.list(hover_info.block, &list_len);
-                
+
                 show_dropdown(LOCATION_BLOCK_DROPDOWN, list, list_len, handle_block_dropdown_click);
             }
         }
@@ -1066,14 +1066,14 @@ static void handle_key_press(void) {
         stop_vm();
         return;
     }
-    if (IsKeyPressed(KEY_S) && 
-        hover_info.select_input != &search_list_search && 
-        vector_size(mouse_blockchain.blocks) == 0 && 
-        !hover_info.is_panel_edit_mode && 
+    if (IsKeyPressed(KEY_S) &&
+        hover_info.select_input != &search_list_search &&
+        vector_size(mouse_blockchain.blocks) == 0 &&
+        !hover_info.is_panel_edit_mode &&
         hover_info.panel &&
         hover_info.panel->type == PANEL_CODE &&
         !gui_window_is_shown() &&
-        !hover_info.select_input) 
+        !hover_info.select_input)
     {
         vector_clear(search_list_search);
         vector_add(&search_list_search, 0);
@@ -1168,8 +1168,8 @@ static void handle_mouse_drag(void) {
 
     if (hover_info.dragged_slider.value) {
         *hover_info.dragged_slider.value = CLAMP(
-            hover_info.slider_last_val + (gui->mouse_x - hover_info.mouse_click_pos.x) / 2, 
-            hover_info.dragged_slider.min, 
+            hover_info.slider_last_val + (gui->mouse_x - hover_info.mouse_click_pos.x) / 2,
+            hover_info.dragged_slider.min,
             hover_info.dragged_slider.max
         );
         return;

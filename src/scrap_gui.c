@@ -45,12 +45,12 @@ static void gui_render(Gui* gui, GuiElement* el, float pos_x, float pos_y);
 static void flush_aux_buffers(Gui* gui);
 
 static bool inside_window(Gui* gui, GuiDrawCommand* command) {
-    return (command->pos_x + command->width  > 0) && (command->pos_x < gui->win_w) && 
+    return (command->pos_x + command->width  > 0) && (command->pos_x < gui->win_w) &&
            (command->pos_y + command->height > 0) && (command->pos_y < gui->win_h);
 }
 
 static bool mouse_inside(Gui* gui, GuiBounds rect) {
-    return ((gui->mouse_x > rect.x) && (gui->mouse_x < rect.x + rect.w) && 
+    return ((gui->mouse_x > rect.x) && (gui->mouse_x < rect.x + rect.w) &&
             (gui->mouse_y > rect.y) && (gui->mouse_y < rect.y + rect.h));
 }
 
@@ -205,21 +205,21 @@ static void gui_render(Gui* gui, GuiElement* el, float pos_x, float pos_y) {
     el->abs_x = el->x * el->scaling + pos_x;
     el->abs_y = el->y * el->scaling + pos_y;
 
-    if (mouse_inside(gui, scissor_rect((GuiBounds) { 
-        el->x * el->scaling + pos_x, 
-        el->y * el->scaling + pos_y, 
-        el->w * el->scaling, 
-        el->h * el->scaling }, scissor))) 
+    if (mouse_inside(gui, scissor_rect((GuiBounds) {
+        el->x * el->scaling + pos_x,
+        el->y * el->scaling + pos_y,
+        el->w * el->scaling,
+        el->h * el->scaling }, scissor)))
     {
         if (el->handle_hover) el->handle_hover(el);
         hover = true;
     }
     if (el->handle_pre_render) el->handle_pre_render(el);
 
-    GuiDrawBounds el_bounds = (GuiDrawBounds) { 
-        pos_x + (float)el->x * el->scaling, 
-        pos_y + (float)el->y * el->scaling, 
-        (float)el->w * el->scaling, 
+    GuiDrawBounds el_bounds = (GuiDrawBounds) {
+        pos_x + (float)el->x * el->scaling,
+        pos_y + (float)el->y * el->scaling,
+        (float)el->w * el->scaling,
         (float)el->h * el->scaling,
     };
 
@@ -266,7 +266,7 @@ static void gui_render(Gui* gui, GuiElement* el, float pos_x, float pos_y) {
         flush_aux_buffers(gui);
         new_draw_command(gui, el_bounds, DRAWTYPE_SHADER_END, (GuiDrawData) { .shader = el->shader }, (GuiColor) {0});
     }
-    
+
     GuiElement* iter = el + 1;
     for (int i = 0; i < el->element_count; i++) {
         gui_render(gui, iter, pos_x + (float)el->x * el->scaling, pos_y + (float)el->y * el->scaling);
@@ -488,7 +488,7 @@ void gui_element_end(Gui* gui) {
     gui_element_advance(prev, (GuiMeasurement) { el->w, el->h });
     GuiElementSizing sizing_x = SIZING_X(el);
     GuiElementSizing sizing_y = SIZING_Y(el);
-    bool has_defined_size = sizing_x != SIZING_GROW && sizing_x != SIZING_PERCENT && 
+    bool has_defined_size = sizing_x != SIZING_GROW && sizing_x != SIZING_PERCENT &&
                             sizing_y != SIZING_GROW && sizing_y != SIZING_PERCENT;
 
     if (!has_defined_size) SET_NEED_RESIZE(prev, 1);

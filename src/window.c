@@ -143,7 +143,7 @@ static void begin_window(const char* title, int w, int h, float scaling) {
             gui_set_fixed(gui, conf.font_size * 1.2, conf.font_size * 1.2);
             gui_set_align(gui, ALIGN_CENTER);
             gui_on_hover(gui, close_button_on_hover);
-            
+
             gui_element_begin(gui);
                 gui_set_grow(gui, DIRECTION_VERTICAL);
                 gui_set_direction(gui, DIRECTION_HORIZONTAL);
@@ -368,7 +368,7 @@ static void draw_button(const char* label, ButtonClickHandler handler) {
             gui_set_direction(gui, DIRECTION_HORIZONTAL);
             gui_set_align(gui, ALIGN_CENTER);
             gui_set_shader(gui, &line_shader);
-            
+
             gui_text(gui, &font_cond, label, conf.font_size * 0.6, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
         gui_element_end(gui);
     gui_element_end(gui);
@@ -394,7 +394,7 @@ void handle_window(void) {
         if (window.animation_time > 1.0) {
             window.animation_time = 1.0;
         } else {
-            render_surface_needs_redraw = true;  
+            render_surface_needs_redraw = true;
         }
     }
 }

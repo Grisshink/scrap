@@ -281,7 +281,7 @@ void panel_split(PanelTree* panel, SplitSide side, PanelType new_panel_type, flo
     case SPLIT_SIDE_NONE:
         assert(false && "Got SPLIT_SIDE_NONE");
         break;
-    default: 
+    default:
         assert(false && "Got unknown split side");
         break;
     }
@@ -571,15 +571,15 @@ int main(void) {
 
         BeginDrawing();
             DrawTexturePro(
-                render_surface.texture, 
+                render_surface.texture,
 #ifdef ARABIC_MODE
-                (Rectangle) { render_surface.texture.width, render_surface.texture.height, render_surface.texture.width, render_surface.texture.height }, 
+                (Rectangle) { render_surface.texture.width, render_surface.texture.height, render_surface.texture.width, render_surface.texture.height },
 #else
-                (Rectangle) { 0, render_surface.texture.height, render_surface.texture.width, render_surface.texture.height }, 
+                (Rectangle) { 0, render_surface.texture.height, render_surface.texture.width, render_surface.texture.height },
 #endif
-                (Rectangle) { 0, 0, render_surface.texture.width, render_surface.texture.height }, 
-                (Vector2) {0}, 
-                0.0, 
+                (Rectangle) { 0, 0, render_surface.texture.width, render_surface.texture.height },
+                (Vector2) {0},
+                0.0,
                 WHITE
             );
         EndDrawing();
