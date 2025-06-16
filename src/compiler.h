@@ -2,6 +2,7 @@
 #define COMPILER_H
 
 #include "ast.h"
+#include "gc.h"
 
 #include <llvm-c/Core.h>
 #include <llvm-c/ExecutionEngine.h>
@@ -90,6 +91,8 @@ typedef struct {
     VariableStackFrame variable_stack_frames[VM_VARIABLE_STACK_SIZE];
     size_t variable_stack_frames_len;
 
+    Gc gc;
+
     pthread_t thread;
     atomic_bool is_running;
 } Exec;
@@ -99,6 +102,7 @@ typedef struct {
 #define CONST_BOOLEAN(val) LLVMConstInt(LLVMInt1Type(), val, false)
 #define CONST_DOUBLE(val) LLVMConstReal(LLVMDoubleType(), val)
 #define CONST_STRING(val) LLVMBuildGlobalStringPtr(exec->builder, val, "")
+#define CONST_GC LLVMConstInt(LLVMInt64Type(), (unsigned long long)&exec->gc, false)
 
 #define _DATA(t, val) (FuncArg) { \
     .type = t, \
@@ -125,7 +129,11 @@ bool exec_stop(Vm* vm, Exec* exec);
 bool exec_join(Vm* vm, Exec* exec, size_t* return_code);
 bool exec_try_join(Vm* vm, Exec* exec, size_t* return_code);
 void exec_thread_exit(void* thread_exec);
+
 bool variable_stack_push(Exec* exec, Variable variable);
 Variable* variable_stack_get(Exec* exec, const char* var_name);
+
+LLVMValueRef build_gc_root_begin(Exec* exec);
+LLVMValueRef build_gc_root_end(Exec* exec);
 
 #endif // COMPILER_H

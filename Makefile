@@ -35,7 +35,7 @@ else
 	CFLAGS += -g -O0 -DDEBUG
 endif
 
-OBJFILES := $(addprefix src/,filedialogs.o render.o save.o term.o blocks.o scrap.o vec.o util.o input.o scrap_gui.o window.o cfgpath.o platform.o ast.o)
+OBJFILES := $(addprefix src/,filedialogs.o render.o save.o term.o blocks.o scrap.o vec.o util.o input.o scrap_gui.o window.o cfgpath.o platform.o ast.o gc.o)
 BUNDLE_FILES := data examples extras locale LICENSE README.md CHANGELOG.md
 SCRAP_HEADERS := src/scrap.h src/ast.h src/config.h src/scrap_gui.h
 EXE_NAME := scrap
@@ -149,7 +149,9 @@ src/ast.o: src/ast.c src/ast.h
 	$(CC) $(CFLAGS) -c -o $@ $<
 src/interpreter.o: src/interpreter.c $(SCRAP_HEADERS)
 	$(CC) $(CFLAGS) -c -o $@ $<
-src/compiler.o: src/compiler.c src/compiler.h
+src/compiler.o: src/compiler.c src/compiler.h src/gc.h src/ast.h
+	$(CC) $(CFLAGS) -c -o $@ $<
+src/gc.o: src/gc.c src/gc.h
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 src/filedialogs.o: external/tinyfiledialogs.c

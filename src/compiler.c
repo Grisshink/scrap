@@ -27,6 +27,9 @@
 
 #define ARRLEN(arr) (sizeof(arr) / sizeof(arr[0]))
 
+// Should be enough memory for now
+#define MEMORY_LIMIT 65535
+
 static bool compile_program(Exec* exec);
 static bool run_program(Exec* exec);
 
@@ -308,9 +311,8 @@ typedef struct {
     char str[];
 } StringHeader;
 
-// FIXME: This function leaks memory at runtime
-static char* string_from_literal(const char* literal, unsigned int size) {
-    StringHeader* out_str = malloc(sizeof(StringHeader) + size + 1);
+static char* string_from_literal(Gc* gc, const char* literal, unsigned int size) {
+    StringHeader* out_str = gc_malloc(gc, sizeof(StringHeader) + size + 1);
     memcpy(out_str->str, literal, size);
     out_str->size = size;
     out_str->capacity = size;
@@ -318,20 +320,20 @@ static char* string_from_literal(const char* literal, unsigned int size) {
     return out_str->str;
 }
 
-static char* string_from_int(int value) {
+static char* string_from_int(Gc* gc, int value) {
     char str[20];
     unsigned int len = snprintf(str, 20, "%d", value);
-    return string_from_literal(str, len);
+    return string_from_literal(gc, str, len);
 }
 
-static char* string_from_bool(bool value) {
-    return value ? string_from_literal("true", 4) : string_from_literal("false", 5);
+static char* string_from_bool(Gc* gc, bool value) {
+    return value ? string_from_literal(gc, "true", 4) : string_from_literal(gc, "false", 5);
 }
 
-static char* string_from_double(double value) {
+static char* string_from_double(Gc* gc, double value) {
     char str[20];
     unsigned int len = snprintf(str, 20, "%f", value);
-    return string_from_literal(str, len);
+    return string_from_literal(gc, str, len);
 }
 
 static bool string_is_eq(char* left, char* right) {
@@ -343,6 +345,20 @@ static bool string_is_eq(char* left, char* right) {
         if (left_header->str[i] != right_header->str[i]) return false;
     }
     return true;
+}
+
+LLVMValueRef build_gc_root_begin(Exec* exec) {
+    LLVMValueRef gc_root_begin_func = LLVMGetNamedFunction(exec->module, "gc_root_begin");
+    LLVMTypeRef gc_root_begin_func_type = LLVMGlobalGetValueType(gc_root_begin_func);
+    LLVMValueRef gc_root_begin_func_params[] = { CONST_GC };
+    return LLVMBuildCall2(exec->builder, gc_root_begin_func_type, gc_root_begin_func, gc_root_begin_func_params, 1, "");
+}
+
+LLVMValueRef build_gc_root_end(Exec* exec) {
+    LLVMValueRef gc_root_end_func = LLVMGetNamedFunction(exec->module, "gc_root_end");
+    LLVMTypeRef gc_root_end_func_type = LLVMGlobalGetValueType(gc_root_end_func);
+    LLVMValueRef gc_root_end_func_params[] = { CONST_GC };
+    return LLVMBuildCall2(exec->builder, gc_root_end_func_type, gc_root_end_func, gc_root_end_func_params, 1, "");
 }
 
 static unsigned int string_length(char* str) {
@@ -367,19 +383,19 @@ static LLVMBasicBlockRef register_globals(Exec* exec) {
     LLVMTypeRef print_bool_func_type = LLVMFunctionType(LLVMInt32Type(), print_bool_func_params, ARRLEN(print_bool_func_params), false);
     LLVMAddFunction(exec->module, "term_print_bool", print_bool_func_type);
 
-    LLVMTypeRef string_literal_func_params[] = { LLVMPointerType(LLVMInt8Type(), 0), LLVMInt32Type() };
+    LLVMTypeRef string_literal_func_params[] = { LLVMInt64Type(), LLVMPointerType(LLVMInt8Type(), 0), LLVMInt32Type() };
     LLVMTypeRef string_literal_func_type = LLVMFunctionType(LLVMPointerType(LLVMInt8Type(), 0), string_literal_func_params, ARRLEN(string_literal_func_params), false);
     LLVMAddFunction(exec->module, "string_from_literal", string_literal_func_type);
 
-    LLVMTypeRef string_int_func_params[] = { LLVMInt32Type() };
+    LLVMTypeRef string_int_func_params[] = { LLVMInt64Type(), LLVMInt32Type() };
     LLVMTypeRef string_int_func_type = LLVMFunctionType(LLVMPointerType(LLVMInt8Type(), 0), string_int_func_params, ARRLEN(string_int_func_params), false);
     LLVMAddFunction(exec->module, "string_from_int", string_int_func_type);
 
-    LLVMTypeRef string_bool_func_params[] = { LLVMInt1Type() };
+    LLVMTypeRef string_bool_func_params[] = { LLVMInt64Type(), LLVMInt1Type() };
     LLVMTypeRef string_bool_func_type = LLVMFunctionType(LLVMPointerType(LLVMInt8Type(), 0), string_bool_func_params, ARRLEN(string_bool_func_params), false);
     LLVMAddFunction(exec->module, "string_from_bool", string_bool_func_type);
 
-    LLVMTypeRef string_double_func_params[] = { LLVMDoubleType() };
+    LLVMTypeRef string_double_func_params[] = { LLVMInt64Type(), LLVMDoubleType() };
     LLVMTypeRef string_double_func_type = LLVMFunctionType(LLVMPointerType(LLVMInt8Type(), 0), string_double_func_params, ARRLEN(string_double_func_params), false);
     LLVMAddFunction(exec->module, "string_from_double", string_double_func_type);
 
@@ -417,6 +433,14 @@ static LLVMBasicBlockRef register_globals(Exec* exec) {
     LLVMTypeRef stack_restore_func_type = LLVMFunctionType(LLVMVoidType(), stack_restore_func_params, ARRLEN(stack_restore_func_params), false);
     LLVMAddFunction(exec->module, "llvm.stackrestore.p0", stack_restore_func_type);
 
+    LLVMTypeRef gc_root_begin_func_params[] = { LLVMInt64Type() }; // { LLVMPointerType(LLVMVoidType(), 0) };
+    LLVMTypeRef gc_root_begin_func_type = LLVMFunctionType(LLVMVoidType(), gc_root_begin_func_params, ARRLEN(gc_root_begin_func_params), false);
+    LLVMAddFunction(exec->module, "gc_root_begin", gc_root_begin_func_type);
+
+    LLVMTypeRef gc_root_end_func_params[] = { LLVMInt64Type() }; // { LLVMPointerType(LLVMVoidType(), 0) };
+    LLVMTypeRef gc_root_end_func_type = LLVMFunctionType(LLVMVoidType(), gc_root_end_func_params, ARRLEN(gc_root_end_func_params), false);
+    LLVMAddFunction(exec->module, "gc_root_end", gc_root_end_func_type);
+
     LLVMTypeRef main_func_type = LLVMFunctionType(LLVMVoidType(), NULL, 0, false);
     LLVMValueRef main_func = LLVMAddFunction(exec->module, "llvm_main", main_func_type);
 
@@ -428,6 +452,7 @@ static bool compile_program(Exec* exec) {
     exec->control_data_stack_len = 0;
     exec->variable_stack_len = 0;
     exec->variable_stack_frames_len = 0;
+    exec->gc = gc_new(MEMORY_LIMIT);
 
     exec->module = LLVMModuleCreateWithName("scrap_module");
 
@@ -436,13 +461,18 @@ static bool compile_program(Exec* exec) {
     exec->builder = LLVMCreateBuilder();
     LLVMPositionBuilderAtEnd(exec->builder, entry);
 
+    build_gc_root_begin(exec);
+
     for (size_t i = 0; i < vector_size(exec->code); i++) {
         if (!evaluate_chain(exec, &exec->code[i])) {
             LLVMDisposeModule(exec->module);
             LLVMDisposeBuilder(exec->builder);
+            gc_free(&exec->gc);
             return false;
         }
     }
+
+    build_gc_root_end(exec);
 
     LLVMBuildRetVoid(exec->builder);
     LLVMDisposeBuilder(exec->builder);
@@ -452,6 +482,7 @@ static bool compile_program(Exec* exec) {
         TraceLog(LOG_ERROR, "[LLVM] Failed to build module!");
         LLVMDisposeMessage(error);
         LLVMDisposeModule(exec->module);
+        gc_free(&exec->gc);
         return false;
     }
     LLVMDisposeMessage(error);
@@ -465,16 +496,19 @@ static bool run_program(Exec* exec) {
     if (LLVMInitializeNativeTarget()) {
         TraceLog(LOG_ERROR, "[LLVM] Native target initialization failed!");
         LLVMDisposeModule(exec->module);
+        gc_free(&exec->gc);
         return false;
     }
     if (LLVMInitializeNativeAsmParser()) {
         TraceLog(LOG_ERROR, "[LLVM] Native asm parser initialization failed!");
         LLVMDisposeModule(exec->module);
+        gc_free(&exec->gc);
         return false;
     }
     if (LLVMInitializeNativeAsmPrinter()) {
         TraceLog(LOG_ERROR, "[LLVM] Native asm printer initialization failed!");
         LLVMDisposeModule(exec->module);
+        gc_free(&exec->gc);
         return false;
     }
     LLVMLinkInMCJIT();
@@ -485,9 +519,11 @@ static bool run_program(Exec* exec) {
         TraceLog(LOG_ERROR, "[LLVM] Error: %s", error);
         LLVMDisposeMessage(error);
         LLVMDisposeModule(exec->module);
+        gc_free(&exec->gc);
         return false;
     }
-    
+
+
     LLVMAddGlobalMapping(exec->engine, LLVMGetNamedFunction(exec->module, "term_print_str"), term_print_str);
     LLVMAddGlobalMapping(exec->engine, LLVMGetNamedFunction(exec->module, "term_print_int"), term_print_int);
     LLVMAddGlobalMapping(exec->engine, LLVMGetNamedFunction(exec->module, "term_print_double"), term_print_double);
@@ -503,9 +539,13 @@ static bool run_program(Exec* exec) {
     LLVMAddGlobalMapping(exec->engine, LLVMGetNamedFunction(exec->module, "int_pow"), int_pow);
     LLVMAddGlobalMapping(exec->engine, LLVMGetNamedFunction(exec->module, "time"), time);
     LLVMAddGlobalMapping(exec->engine, LLVMGetNamedFunction(exec->module, "test_cancel"), pthread_testcancel);
+    LLVMAddGlobalMapping(exec->engine, LLVMGetNamedFunction(exec->module, "gc_root_begin"), gc_root_begin);
+    LLVMAddGlobalMapping(exec->engine, LLVMGetNamedFunction(exec->module, "gc_root_end"), gc_root_end);
 
     LLVMGenericValueRef val = LLVMRunFunction(exec->engine, LLVMGetNamedFunction(exec->module, "llvm_main"), 0, NULL);
     LLVMDisposeGenericValue(val);
+
+    gc_free(&exec->gc);
 
     LLVMDisposeExecutionEngine(exec->engine);
     return true;

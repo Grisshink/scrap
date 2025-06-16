@@ -107,6 +107,13 @@ Data string_make_managed(String* string) {
     return out;
 }
 
+Data block_do_nothing(Exec* exec, int argc, Data* argv) {
+    (void) exec;
+    (void) argc;
+    (void) argv;
+    RETURN_NOTHING;
+}
+
 Data block_noop(Exec* exec, int argc, Data* argv) {
     (void) exec;
     (void) argc;
@@ -1123,7 +1130,7 @@ LLVMValueRef arg_to_string(Exec* exec, FuncArg arg) {
     case FUNC_ARG_STRING_LITERAL: {
         string_func = LLVMGetNamedFunction(exec->module, "string_from_literal");
         string_func_type = LLVMGlobalGetValueType(string_func);
-        LLVMValueRef string_func_params[] = { CONST_STRING(arg.data.str), CONST_INTEGER(strlen(arg.data.str)) };
+        LLVMValueRef string_func_params[] = { CONST_GC, CONST_STRING(arg.data.str), CONST_INTEGER(strlen(arg.data.str)) };
         return LLVMBuildCall2(exec->builder, string_func_type, string_func, string_func_params, ARRLEN(string_func_params), "string_cast");
     }
     case FUNC_ARG_STRING_REF: {
@@ -1132,24 +1139,24 @@ LLVMValueRef arg_to_string(Exec* exec, FuncArg arg) {
     case FUNC_ARG_INT: {
         string_func = LLVMGetNamedFunction(exec->module, "string_from_int");
         string_func_type = LLVMGlobalGetValueType(string_func);
-        LLVMValueRef string_func_params[] = { arg.data.value };
+        LLVMValueRef string_func_params[] = { CONST_GC, arg.data.value };
         return LLVMBuildCall2(exec->builder, string_func_type, string_func, string_func_params, ARRLEN(string_func_params), "string_cast");
     }
     case FUNC_ARG_BOOL: {
         string_func = LLVMGetNamedFunction(exec->module, "string_from_bool");
         string_func_type = LLVMGlobalGetValueType(string_func);
-        LLVMValueRef string_func_params[] = { arg.data.value };
+        LLVMValueRef string_func_params[] = { CONST_GC, arg.data.value };
         return LLVMBuildCall2(exec->builder, string_func_type, string_func, string_func_params, ARRLEN(string_func_params), "string_cast");
     }
     case FUNC_ARG_DOUBLE: {
         string_func = LLVMGetNamedFunction(exec->module, "string_from_double");
         string_func_type = LLVMGlobalGetValueType(string_func);
-        LLVMValueRef string_func_params[] = { arg.data.value };
+        LLVMValueRef string_func_params[] = { CONST_GC, arg.data.value };
         return LLVMBuildCall2(exec->builder, string_func_type, string_func, string_func_params, ARRLEN(string_func_params), "string_cast");
     }
     case FUNC_ARG_NOTHING:
     default:
-        assert(false && "Unhandled cast to double");
+        assert(false && "Unhandled cast to string ref");
     }
 }
 
@@ -2019,6 +2026,9 @@ bool block_while(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
         LLVMMoveBasicBlockAfter(while_body_branch, control_block);
 
         LLVMBuildCondBr(exec->builder, condition, while_body_branch, while_end_branch);
+        
+        LLVMPositionBuilderBefore(exec->builder, LLVMGetFirstInstruction(control_block));
+        build_gc_root_begin(exec);
 
         LLVMPositionBuilderAtEnd(exec->builder, while_body_branch);
 
@@ -2029,9 +2039,11 @@ bool block_while(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
         control_data_stack_pop_data(while_end_branch, LLVMBasicBlockRef);
         control_data_stack_pop_data(control_block, LLVMBasicBlockRef);
 
+        build_gc_root_end(exec);
         LLVMBuildBr(exec->builder, control_block);
 
         LLVMPositionBuilderAtEnd(exec->builder, while_end_branch);
+        build_gc_root_end(exec);
 
         *return_val = DATA_BOOLEAN(CONST_BOOLEAN(1));
     }
@@ -2074,6 +2086,7 @@ bool block_repeat(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
         LLVMAddIncoming(phi_node, vals, blocks, ARRLEN(blocks));
 
         LLVMPositionBuilderAtEnd(exec->builder, repeat_body_branch);
+        build_gc_root_begin(exec);
 
         control_data_stack_push_data(phi_node, LLVMValueRef);
         control_data_stack_push_data(vals[0], LLVMValueRef);
@@ -2090,6 +2103,7 @@ bool block_repeat(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
         control_data_stack_pop_data(start_index, LLVMValueRef);
         control_data_stack_pop_data(phi_node, LLVMValueRef);
 
+        build_gc_root_end(exec);
         LLVMBuildBr(exec->builder, loop);
 
         LLVMValueRef vals[] = { index };
@@ -2127,11 +2141,14 @@ bool block_else(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
         LLVMBuildCondBr(exec->builder, value, end_branch, else_branch);
 
         LLVMPositionBuilderAtEnd(exec->builder, else_branch);
+        build_gc_root_begin(exec);
+
         control_data_stack_push_data(end_branch, LLVMBasicBlockRef);
     } else {
         LLVMBasicBlockRef end_branch;
         control_data_stack_pop_data(end_branch, LLVMBasicBlockRef);
 
+        build_gc_root_end(exec);
         LLVMBuildBr(exec->builder, end_branch);
         LLVMPositionBuilderAtEnd(exec->builder, end_branch);
         *return_val = DATA_BOOLEAN(CONST_BOOLEAN(1));
@@ -2176,6 +2193,7 @@ bool block_else_if(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
         LLVMBuildBr(exec->builder, end_branch);
 
         LLVMPositionBuilderAtEnd(exec->builder, else_if_branch);
+        build_gc_root_begin(exec);
 
         control_data_stack_push_data(else_if_fail_branch, LLVMBasicBlockRef);
         control_data_stack_push_data(end_branch, LLVMBasicBlockRef);
@@ -2186,6 +2204,7 @@ bool block_else_if(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
         control_data_stack_pop_data(fail_branch, LLVMBasicBlockRef);
         control_data_stack_pop_data(top_branch, LLVMBasicBlockRef);
 
+        build_gc_root_end(exec);
         LLVMBuildBr(exec->builder, end_branch);
 
         LLVMPositionBuilderAtEnd(exec->builder, end_branch);
@@ -2228,6 +2247,7 @@ bool block_if(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
         LLVMBuildBr(exec->builder, end_branch);
 
         LLVMPositionBuilderAtEnd(exec->builder, then_branch);
+        build_gc_root_begin(exec);
 
         control_data_stack_push_data(fail_branch, LLVMBasicBlockRef);
         control_data_stack_push_data(end_branch, LLVMBasicBlockRef);
@@ -2237,6 +2257,7 @@ bool block_if(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
         control_data_stack_pop_data(end_branch, LLVMBasicBlockRef);
         control_data_stack_pop_data(fail_branch, LLVMBasicBlockRef);
 
+        build_gc_root_end(exec);
         LLVMBuildBr(exec->builder, end_branch);
 
         LLVMPositionBuilderAtEnd(exec->builder, end_branch);
@@ -2267,6 +2288,7 @@ bool block_loop(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
 
         LLVMBuildBr(exec->builder, loop);
         LLVMPositionBuilderAtEnd(exec->builder, loop);
+        build_gc_root_begin(exec);
 
         control_data_stack_push_data(loop, LLVMBasicBlockRef);
         control_data_stack_push_data(loop_end, LLVMBasicBlockRef);
@@ -2276,11 +2298,29 @@ bool block_loop(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
         control_data_stack_pop_data(loop_end, LLVMBasicBlockRef);
         control_data_stack_pop_data(loop, LLVMBasicBlockRef);
 
+        build_gc_root_end(exec);
         LLVMBuildBr(exec->builder, loop);
         LLVMPositionBuilderAtEnd(exec->builder, loop_end);
         *return_val = DATA_BOOLEAN(CONST_BOOLEAN(0));
     }
 
+    return true;
+}
+
+bool block_do_nothing(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
+    MIN_ARG_COUNT(1);
+    if (argv[0].type != FUNC_ARG_CONTROL) {
+        TraceLog(LOG_ERROR, "[LLVM] First argument is not control argument!");
+        return false;
+    }
+
+    if (argv[0].data.control.type == CONTROL_BEGIN) {
+        build_gc_root_begin(exec);
+    } else {
+        build_gc_root_end(exec);
+    }
+
+    *return_val = DATA_NOTHING;
     return true;
 }
 
@@ -2476,7 +2516,7 @@ void register_blocks(Vm* vm) {
     blockdef_register(vm, sc_else);
     add_to_category(sc_else, cat_control);
 
-    Blockdef* sc_do_nothing = blockdef_new("do_nothing", BLOCKTYPE_CONTROL, (BlockdefColor) { 0x77, 0x77, 0x77, 0xff }, block_noop);
+    Blockdef* sc_do_nothing = blockdef_new("do_nothing", BLOCKTYPE_CONTROL, (BlockdefColor) { 0x77, 0x77, 0x77, 0xff }, block_do_nothing);
     blockdef_add_text(sc_do_nothing, gettext("Do nothing"));
     blockdef_register(vm, sc_do_nothing);
     add_to_category(sc_do_nothing, cat_control);
