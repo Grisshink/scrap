@@ -28,7 +28,7 @@
 #define ARRLEN(arr) (sizeof(arr) / sizeof(arr[0]))
 
 // Should be enough memory for now
-#define MEMORY_LIMIT 65535
+#define MEMORY_LIMIT 4194304 // 4 MB
 
 static bool compile_program(Exec* exec);
 static bool run_program(Exec* exec);

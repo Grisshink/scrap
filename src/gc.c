@@ -19,7 +19,7 @@
 #include <stdio.h>
 
 #include "gc.h"
-#include "raylib.h"
+#include "scrap.h"
 
 #define STB_DS_IMPLEMENTATION
 #include "../external/stb_ds.h"
@@ -43,10 +43,9 @@ void gc_root_begin(Gc* gc) {
 }
 
 void gc_collect(Gc* gc) {
-    // Unmark everything
-    for (size_t i = 0; i < hmlenu(gc->chunks); i++) {
-        gc->chunks[i].value.marked = false;
-    }
+#ifdef DEBUG
+    Timer t = start_timer("gc_collect");
+#endif
 
     // Mark roots
     for (size_t i = 0; i < vector_size(gc->roots_stack); i++) {
@@ -74,8 +73,18 @@ void gc_collect(Gc* gc) {
         (void) del_result;
     }
 
+    // Unmark rest
+    for (size_t i = 0; i < hmlenu(gc->chunks); i++) {
+        gc->chunks[i].value.marked = false;
+    }
+
     gc->memory_used -= memory_freed;
-    //TraceLog(LOG_INFO, "[GC] Garbage sweep. %zu bytes freed, %zu chunks deleted", memory_freed, vector_size(sweep_addrs));
+
+#ifdef DEBUG
+    double gc_time = end_timer(t);
+    TraceLog(LOG_INFO, "[GC] gc_collect: freed %zu bytes, deleted %zu chunks, time: %.2fus", memory_freed, vector_size(sweep_addrs), gc_time);
+#endif
+
     vector_free(sweep_addrs);
 }
 
@@ -100,6 +109,7 @@ void* gc_malloc(Gc* gc, size_t size) {
     hmput(gc->chunks, chunk.ptr, chunk);
     vector_add(&gc->roots_stack[vector_size(gc->roots_stack) - 1].chunks, chunk.ptr);
     gc->memory_used += size;
+
     return mem;
 }
 
