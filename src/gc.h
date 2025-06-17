@@ -19,19 +19,19 @@
 #define SCRAP_GC_H
 
 #include <stddef.h>
-#include <stdbool.h>
 #include "vec.h"
 
-#define typeof __typeof__
-#include "../external/stb_ds.h"
+typedef struct {
+    unsigned char marked;
+    unsigned char data[];
+} GcChunkData;
 
-typedef void* ChunkAddr;
-typedef void** ChunkAddrList;
+typedef GcChunkData* ChunkAddr;
+typedef GcChunkData** ChunkAddrList;
 
 typedef struct {
-    ChunkAddr ptr;
+    GcChunkData* ptr;
     size_t len;
-    bool marked;
 } GcChunk;
 
 typedef struct {
@@ -39,7 +39,7 @@ typedef struct {
 } GcRoot;
 
 typedef struct {
-    struct { ChunkAddr key; GcChunk value; }* chunks;
+    GcChunk* chunks;
     GcRoot* roots_stack;
     size_t memory_used;
     size_t memory_max;

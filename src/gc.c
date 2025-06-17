@@ -21,20 +21,29 @@
 #include "gc.h"
 #include "scrap.h"
 
-#define STB_DS_IMPLEMENTATION
-#include "../external/stb_ds.h"
-
 void gc_init(void) {
-    stbds_rand_seed(GetRandomValue(-0x7fffffff, 0x80000000));
 }
 
 Gc gc_new(size_t memory_max) {
     return (Gc) {
-        .chunks = NULL,
+        .chunks = vector_create(),
         .roots_stack = vector_create(),
         .memory_used = 0,
         .memory_max = memory_max,
     };
+}
+
+void gc_free(Gc* gc) {
+    for (size_t i = 0; i < vector_size(gc->chunks); i++) {
+        free(gc->chunks[i].ptr);
+    }
+    for (size_t i = 0; i < vector_size(gc->roots_stack); i++) {
+        vector_free(gc->roots_stack[i].chunks);
+    }
+    vector_free(gc->roots_stack);
+    vector_free(gc->chunks);
+    gc->memory_max = 0;
+    gc->memory_used = 0;
 }
 
 void gc_root_begin(Gc* gc) {
@@ -50,42 +59,30 @@ void gc_collect(Gc* gc) {
     // Mark roots
     for (size_t i = 0; i < vector_size(gc->roots_stack); i++) {
         for (size_t j = 0; j < vector_size(gc->roots_stack[i].chunks); j++) {
-            ptrdiff_t chunk_ind = hmgeti(gc->chunks, gc->roots_stack[i].chunks[j]);
-            if (chunk_ind == -1) continue;
-            gc->chunks[chunk_ind].value.marked = true;
+            gc->roots_stack[i].chunks[j]->marked = 1;
         }
     }
 
     // Find unmarked chunks
-    void** sweep_addrs = vector_create();
-    for (size_t i = 0; i < hmlenu(gc->chunks); i++) {
-        if (gc->chunks[i].value.marked) continue;
-        vector_add(&sweep_addrs, gc->chunks[i].key);
-    }
-
-    // Free unmarked chunks
     size_t memory_freed = 0;
-    for (size_t i = 0; i < vector_size(sweep_addrs); i++) {
-        ptrdiff_t chunk_ind = hmgeti(gc->chunks, sweep_addrs[i]);
-        free(gc->chunks[chunk_ind].value.ptr);
-        memory_freed += gc->chunks[chunk_ind].value.len;
-        int del_result = hmdel(gc->chunks, gc->chunks[chunk_ind].key);
-        (void) del_result;
-    }
-
-    // Unmark rest
-    for (size_t i = 0; i < hmlenu(gc->chunks); i++) {
-        gc->chunks[i].value.marked = false;
+    size_t chunks_deleted = 0;
+    for (int i = vector_size(gc->chunks) - 1; i >= 0; i--) {
+        if (gc->chunks[i].ptr->marked) {
+            gc->chunks[i].ptr->marked = false;
+            continue;
+        }
+        free(gc->chunks[i].ptr);
+        memory_freed += gc->chunks[i].len;
+        chunks_deleted++;
+        vector_remove(gc->chunks, i);
     }
 
     gc->memory_used -= memory_freed;
 
 #ifdef DEBUG
     double gc_time = end_timer(t);
-    TraceLog(LOG_INFO, "[GC] gc_collect: freed %zu bytes, deleted %zu chunks, time: %.2fus", memory_freed, vector_size(sweep_addrs), gc_time);
+    TraceLog(LOG_INFO, "[GC] gc_collect: freed %zu bytes, deleted %zu chunks, time: %.2fus", memory_freed, chunks_deleted, gc_time);
 #endif
-
-    vector_free(sweep_addrs);
 }
 
 void* gc_malloc(Gc* gc, size_t size) {
@@ -97,37 +94,24 @@ void* gc_malloc(Gc* gc, size_t size) {
         return NULL;
     }
 
-    void* mem = malloc(size);
-    if (mem == NULL) return NULL;
+    GcChunkData* chunk_data = malloc(size + sizeof(GcChunkData));
+    if (chunk_data == NULL) return NULL;
 
+    chunk_data->marked = 0;
     GcChunk chunk = (GcChunk) {
-        .ptr = mem,
+        .ptr = chunk_data,
         .len = size,
-        .marked = false,
     };
 
-    hmput(gc->chunks, chunk.ptr, chunk);
+    vector_add(&gc->chunks, chunk);
     vector_add(&gc->roots_stack[vector_size(gc->roots_stack) - 1].chunks, chunk.ptr);
     gc->memory_used += size;
 
-    return mem;
+    return chunk_data->data;
 }
 
 void gc_root_end(Gc* gc) {
     assert(vector_size(gc->roots_stack) > 0);
     vector_free(gc->roots_stack[vector_size(gc->roots_stack) - 1].chunks);
     vector_pop(gc->roots_stack);
-}
-
-void gc_free(Gc* gc) {
-    for (size_t i = 0; i < hmlenu(gc->chunks); i++) {
-        free(gc->chunks[i].value.ptr);
-    }
-    for (size_t i = 0; i < vector_size(gc->roots_stack); i++) {
-        vector_free(gc->roots_stack[i].chunks);
-    }
-    vector_free(gc->roots_stack);
-    hmfree(gc->chunks);
-    gc->memory_max = 0;
-    gc->memory_used = 0;
 }
