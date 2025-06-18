@@ -34,6 +34,9 @@ Gc gc_new(size_t memory_max) {
 }
 
 void gc_free(Gc* gc) {
+#ifdef DEBUG
+    TraceLog(LOG_INFO, "[GC] gc_free: used %zu bytes, allocated %zu chunks", gc->memory_used, vector_size(gc->chunks));
+#endif
     for (size_t i = 0; i < vector_size(gc->chunks); i++) {
         free(gc->chunks[i].ptr);
     }
