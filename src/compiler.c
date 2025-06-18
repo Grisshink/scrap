@@ -409,77 +409,68 @@ static unsigned int string_length(char* str) {
     return header->size;
 }
 
+static LLVMValueRef add_function(Exec* exec, const char* name, LLVMTypeRef return_type, LLVMTypeRef* params, size_t params_len, void* func) {
+    CompileFunction* comp_func = vector_add_dst(&exec->compile_func_list);
+    comp_func->func = func;
+    comp_func->name = name;
+
+    LLVMTypeRef func_type = LLVMFunctionType(return_type, params, params_len, false);
+    return LLVMAddFunction(exec->module, name, func_type);
+}
+
 static LLVMBasicBlockRef register_globals(Exec* exec) {
     LLVMTypeRef print_func_params[] = { LLVMPointerType(LLVMInt8Type(), 0) };
-    LLVMTypeRef print_func_type = LLVMFunctionType(LLVMInt32Type(), print_func_params, ARRLEN(print_func_params), false);
-    LLVMAddFunction(exec->module, "term_print_str", print_func_type);
+    add_function(exec, "term_print_str", LLVMInt32Type(), print_func_params, ARRLEN(print_func_params), term_print_str);
 
     LLVMTypeRef print_int_func_params[] = { LLVMInt32Type() };
-    LLVMTypeRef print_int_func_type = LLVMFunctionType(LLVMInt32Type(), print_int_func_params, ARRLEN(print_int_func_params), false);
-    LLVMAddFunction(exec->module, "term_print_int", print_int_func_type);
+    add_function(exec, "term_print_int", LLVMInt32Type(), print_int_func_params, ARRLEN(print_int_func_params), term_print_int);
 
     LLVMTypeRef print_double_func_params[] = { LLVMDoubleType() };
-    LLVMTypeRef print_double_func_type = LLVMFunctionType(LLVMInt32Type(), print_double_func_params, ARRLEN(print_double_func_params), false);
-    LLVMAddFunction(exec->module, "term_print_double", print_double_func_type);
+    add_function(exec, "term_print_double", LLVMInt32Type(), print_double_func_params, ARRLEN(print_double_func_params), term_print_double);
 
     LLVMTypeRef print_bool_func_params[] = { LLVMInt1Type() };
-    LLVMTypeRef print_bool_func_type = LLVMFunctionType(LLVMInt32Type(), print_bool_func_params, ARRLEN(print_bool_func_params), false);
-    LLVMAddFunction(exec->module, "term_print_bool", print_bool_func_type);
+    add_function(exec, "term_print_bool", LLVMInt32Type(), print_bool_func_params, ARRLEN(print_bool_func_params), term_print_bool);
 
     LLVMTypeRef string_literal_func_params[] = { LLVMInt64Type(), LLVMPointerType(LLVMInt8Type(), 0), LLVMInt32Type() };
-    LLVMTypeRef string_literal_func_type = LLVMFunctionType(LLVMPointerType(LLVMInt8Type(), 0), string_literal_func_params, ARRLEN(string_literal_func_params), false);
-    LLVMAddFunction(exec->module, "string_from_literal", string_literal_func_type);
+    add_function(exec, "string_from_literal", LLVMPointerType(LLVMInt8Type(), 0), string_literal_func_params, ARRLEN(string_literal_func_params), string_from_literal);
 
     LLVMTypeRef string_int_func_params[] = { LLVMInt64Type(), LLVMInt32Type() };
-    LLVMTypeRef string_int_func_type = LLVMFunctionType(LLVMPointerType(LLVMInt8Type(), 0), string_int_func_params, ARRLEN(string_int_func_params), false);
-    LLVMAddFunction(exec->module, "string_from_int", string_int_func_type);
+    add_function(exec, "string_from_int", LLVMPointerType(LLVMInt8Type(), 0), string_int_func_params, ARRLEN(string_int_func_params), string_from_int);
 
     LLVMTypeRef string_bool_func_params[] = { LLVMInt64Type(), LLVMInt1Type() };
-    LLVMTypeRef string_bool_func_type = LLVMFunctionType(LLVMPointerType(LLVMInt8Type(), 0), string_bool_func_params, ARRLEN(string_bool_func_params), false);
-    LLVMAddFunction(exec->module, "string_from_bool", string_bool_func_type);
+    add_function(exec, "string_from_bool", LLVMPointerType(LLVMInt8Type(), 0), string_bool_func_params, ARRLEN(string_bool_func_params), string_from_bool);
 
     LLVMTypeRef string_double_func_params[] = { LLVMInt64Type(), LLVMDoubleType() };
-    LLVMTypeRef string_double_func_type = LLVMFunctionType(LLVMPointerType(LLVMInt8Type(), 0), string_double_func_params, ARRLEN(string_double_func_params), false);
-    LLVMAddFunction(exec->module, "string_from_double", string_double_func_type);
+    add_function(exec, "string_from_double", LLVMPointerType(LLVMInt8Type(), 0), string_double_func_params, ARRLEN(string_double_func_params), string_from_double);
 
     LLVMTypeRef string_length_func_params[] = { LLVMPointerType(LLVMInt8Type(), 0) };
-    LLVMTypeRef string_length_func_type = LLVMFunctionType(LLVMInt32Type(), string_length_func_params, ARRLEN(string_length_func_params), false);
-    LLVMAddFunction(exec->module, "string_length", string_length_func_type);
+    add_function(exec, "string_length", LLVMInt32Type(), string_length_func_params, ARRLEN(string_length_func_params), string_length);
 
     LLVMTypeRef string_join_func_params[] = { LLVMInt64Type(), LLVMPointerType(LLVMInt8Type(), 0), LLVMPointerType(LLVMInt8Type(), 0) };
-    LLVMTypeRef string_join_func_type = LLVMFunctionType(LLVMPointerType(LLVMInt8Type(), 0), string_join_func_params, ARRLEN(string_join_func_params), false);
-    LLVMAddFunction(exec->module, "string_join", string_join_func_type);
+    add_function(exec, "string_join", LLVMPointerType(LLVMInt8Type(), 0), string_join_func_params, ARRLEN(string_join_func_params), string_join);
 
     LLVMTypeRef string_ord_func_params[] = { LLVMPointerType(LLVMInt8Type(), 0) };
-    LLVMTypeRef string_ord_func_type = LLVMFunctionType(LLVMInt32Type(), string_ord_func_params, ARRLEN(string_ord_func_params), false);
-    LLVMAddFunction(exec->module, "string_ord", string_ord_func_type);
+    add_function(exec, "string_ord", LLVMInt32Type(), string_ord_func_params, ARRLEN(string_ord_func_params), string_ord);
 
     LLVMTypeRef string_chr_func_params[] = { LLVMInt64Type(), LLVMInt32Type() };
-    LLVMTypeRef string_chr_func_type = LLVMFunctionType(LLVMPointerType(LLVMInt8Type(), 0), string_chr_func_params, ARRLEN(string_chr_func_params), false);
-    LLVMAddFunction(exec->module, "string_chr", string_chr_func_type);
+    add_function(exec, "string_chr", LLVMPointerType(LLVMInt8Type(), 0), string_chr_func_params, ARRLEN(string_chr_func_params), string_chr);
 
     LLVMTypeRef string_eq_func_params[] = { LLVMPointerType(LLVMInt8Type(), 0), LLVMPointerType(LLVMInt8Type(), 0) };
-    LLVMTypeRef string_eq_func_type = LLVMFunctionType(LLVMInt1Type(), string_eq_func_params, ARRLEN(string_eq_func_params), false);
-    LLVMAddFunction(exec->module, "string_is_eq", string_eq_func_type);
+    add_function(exec, "string_is_eq", LLVMInt1Type(), string_eq_func_params, ARRLEN(string_eq_func_params), string_is_eq);
 
     LLVMTypeRef atoi_func_params[] = { LLVMPointerType(LLVMInt8Type(), 0) };
-    LLVMTypeRef atoi_func_type = LLVMFunctionType(LLVMInt32Type(), atoi_func_params, ARRLEN(atoi_func_params), false);
-    LLVMAddFunction(exec->module, "atoi", atoi_func_type);
+    add_function(exec, "atoi", LLVMInt32Type(), atoi_func_params, ARRLEN(atoi_func_params), atoi);
 
     LLVMTypeRef atof_func_params[] = { LLVMPointerType(LLVMInt8Type(), 0) };
-    LLVMTypeRef atof_func_type = LLVMFunctionType(LLVMDoubleType(), atof_func_params, ARRLEN(atof_func_params), false);
-    LLVMAddFunction(exec->module, "atof", atof_func_type);
+    add_function(exec, "atof", LLVMDoubleType(), atof_func_params, ARRLEN(atof_func_params), atof);
 
     LLVMTypeRef int_pow_func_params[] = { LLVMInt32Type(), LLVMInt32Type() };
-    LLVMTypeRef int_pow_func_type = LLVMFunctionType(LLVMInt32Type(), int_pow_func_params, ARRLEN(int_pow_func_params), false);
-    LLVMAddFunction(exec->module, "int_pow", int_pow_func_type);
+    add_function(exec, "int_pow", LLVMInt32Type(), int_pow_func_params, ARRLEN(int_pow_func_params), int_pow);
 
     LLVMTypeRef time_func_params[] = { LLVMPointerType(LLVMVoidType(), 0) };
-    LLVMTypeRef time_func_type = LLVMFunctionType(LLVMInt32Type(), time_func_params, ARRLEN(time_func_params), false);
-    LLVMAddFunction(exec->module, "time", time_func_type);
+    add_function(exec, "time", LLVMInt32Type(), time_func_params, ARRLEN(time_func_params), time);
 
-    LLVMTypeRef testcancel_func_type = LLVMFunctionType(LLVMVoidType(), NULL, 0, false);
-    LLVMAddFunction(exec->module, "test_cancel", testcancel_func_type);
+    add_function(exec, "test_cancel", LLVMVoidType(), NULL, 0, pthread_testcancel);
 
     LLVMTypeRef stack_save_func_type = LLVMFunctionType(LLVMPointerType(LLVMVoidType(), 0), NULL, 0, false);
     LLVMAddFunction(exec->module, "llvm.stacksave.p0", stack_save_func_type);
@@ -488,13 +479,11 @@ static LLVMBasicBlockRef register_globals(Exec* exec) {
     LLVMTypeRef stack_restore_func_type = LLVMFunctionType(LLVMVoidType(), stack_restore_func_params, ARRLEN(stack_restore_func_params), false);
     LLVMAddFunction(exec->module, "llvm.stackrestore.p0", stack_restore_func_type);
 
-    LLVMTypeRef gc_root_begin_func_params[] = { LLVMInt64Type() }; // { LLVMPointerType(LLVMVoidType(), 0) };
-    LLVMTypeRef gc_root_begin_func_type = LLVMFunctionType(LLVMVoidType(), gc_root_begin_func_params, ARRLEN(gc_root_begin_func_params), false);
-    LLVMAddFunction(exec->module, "gc_root_begin", gc_root_begin_func_type);
+    LLVMTypeRef gc_root_begin_func_params[] = { LLVMInt64Type() };
+    add_function(exec, "gc_root_begin", LLVMVoidType(), gc_root_begin_func_params, ARRLEN(gc_root_begin_func_params), gc_root_begin);
 
-    LLVMTypeRef gc_root_end_func_params[] = { LLVMInt64Type() }; // { LLVMPointerType(LLVMVoidType(), 0) };
-    LLVMTypeRef gc_root_end_func_type = LLVMFunctionType(LLVMVoidType(), gc_root_end_func_params, ARRLEN(gc_root_end_func_params), false);
-    LLVMAddFunction(exec->module, "gc_root_end", gc_root_end_func_type);
+    LLVMTypeRef gc_root_end_func_params[] = { LLVMInt64Type() };
+    add_function(exec, "gc_root_end", LLVMVoidType(), gc_root_end_func_params, ARRLEN(gc_root_end_func_params), gc_root_end);
 
     LLVMTypeRef main_func_type = LLVMFunctionType(LLVMVoidType(), NULL, 0, false);
     LLVMValueRef main_func = LLVMAddFunction(exec->module, "llvm_main", main_func_type);
@@ -503,6 +492,7 @@ static LLVMBasicBlockRef register_globals(Exec* exec) {
 }
 
 static bool compile_program(Exec* exec) {
+    exec->compile_func_list = vector_create();
     exec->control_stack_len = 0;
     exec->control_data_stack_len = 0;
     exec->variable_stack_len = 0;
@@ -523,6 +513,7 @@ static bool compile_program(Exec* exec) {
             LLVMDisposeModule(exec->module);
             LLVMDisposeBuilder(exec->builder);
             gc_free(&exec->gc);
+            vector_free(exec->compile_func_list);
             return false;
         }
     }
@@ -538,6 +529,7 @@ static bool compile_program(Exec* exec) {
         LLVMDisposeMessage(error);
         LLVMDisposeModule(exec->module);
         gc_free(&exec->gc);
+        vector_free(exec->compile_func_list);
         return false;
     }
     LLVMDisposeMessage(error);
@@ -552,18 +544,21 @@ static bool run_program(Exec* exec) {
         TraceLog(LOG_ERROR, "[LLVM] Native target initialization failed!");
         LLVMDisposeModule(exec->module);
         gc_free(&exec->gc);
+        vector_free(exec->compile_func_list);
         return false;
     }
     if (LLVMInitializeNativeAsmParser()) {
         TraceLog(LOG_ERROR, "[LLVM] Native asm parser initialization failed!");
         LLVMDisposeModule(exec->module);
         gc_free(&exec->gc);
+        vector_free(exec->compile_func_list);
         return false;
     }
     if (LLVMInitializeNativeAsmPrinter()) {
         TraceLog(LOG_ERROR, "[LLVM] Native asm printer initialization failed!");
         LLVMDisposeModule(exec->module);
         gc_free(&exec->gc);
+        vector_free(exec->compile_func_list);
         return false;
     }
     LLVMLinkInMCJIT();
@@ -575,30 +570,15 @@ static bool run_program(Exec* exec) {
         LLVMDisposeMessage(error);
         LLVMDisposeModule(exec->module);
         gc_free(&exec->gc);
+        vector_free(exec->compile_func_list);
         return false;
     }
 
+    for (size_t i = 0; i < vector_size(exec->compile_func_list); i++) {
+        LLVMAddGlobalMapping(exec->engine, LLVMGetNamedFunction(exec->module, exec->compile_func_list[i].name), exec->compile_func_list[i].func);
+    }
 
-    LLVMAddGlobalMapping(exec->engine, LLVMGetNamedFunction(exec->module, "term_print_str"), term_print_str);
-    LLVMAddGlobalMapping(exec->engine, LLVMGetNamedFunction(exec->module, "term_print_int"), term_print_int);
-    LLVMAddGlobalMapping(exec->engine, LLVMGetNamedFunction(exec->module, "term_print_double"), term_print_double);
-    LLVMAddGlobalMapping(exec->engine, LLVMGetNamedFunction(exec->module, "term_print_bool"), term_print_bool);
-    LLVMAddGlobalMapping(exec->engine, LLVMGetNamedFunction(exec->module, "string_from_literal"), string_from_literal);
-    LLVMAddGlobalMapping(exec->engine, LLVMGetNamedFunction(exec->module, "string_from_int"), string_from_int);
-    LLVMAddGlobalMapping(exec->engine, LLVMGetNamedFunction(exec->module, "string_from_bool"), string_from_bool);
-    LLVMAddGlobalMapping(exec->engine, LLVMGetNamedFunction(exec->module, "string_from_double"), string_from_double);
-    LLVMAddGlobalMapping(exec->engine, LLVMGetNamedFunction(exec->module, "string_length"), string_length);
-    LLVMAddGlobalMapping(exec->engine, LLVMGetNamedFunction(exec->module, "string_join"), string_join);
-    LLVMAddGlobalMapping(exec->engine, LLVMGetNamedFunction(exec->module, "string_ord"), string_ord);
-    LLVMAddGlobalMapping(exec->engine, LLVMGetNamedFunction(exec->module, "string_chr"), string_chr);
-    LLVMAddGlobalMapping(exec->engine, LLVMGetNamedFunction(exec->module, "string_is_eq"), string_is_eq);
-    LLVMAddGlobalMapping(exec->engine, LLVMGetNamedFunction(exec->module, "atoi"), atoi);
-    LLVMAddGlobalMapping(exec->engine, LLVMGetNamedFunction(exec->module, "atof"), atof);
-    LLVMAddGlobalMapping(exec->engine, LLVMGetNamedFunction(exec->module, "int_pow"), int_pow);
-    LLVMAddGlobalMapping(exec->engine, LLVMGetNamedFunction(exec->module, "time"), time);
-    LLVMAddGlobalMapping(exec->engine, LLVMGetNamedFunction(exec->module, "test_cancel"), pthread_testcancel);
-    LLVMAddGlobalMapping(exec->engine, LLVMGetNamedFunction(exec->module, "gc_root_begin"), gc_root_begin);
-    LLVMAddGlobalMapping(exec->engine, LLVMGetNamedFunction(exec->module, "gc_root_end"), gc_root_end);
+    vector_free(exec->compile_func_list);
 
     LLVMGenericValueRef val = LLVMRunFunction(exec->engine, LLVMGetNamedFunction(exec->module, "llvm_main"), 0, NULL);
     LLVMDisposeGenericValue(val);

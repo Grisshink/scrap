@@ -74,6 +74,11 @@ typedef struct {
 } VariableStackFrame;
 
 typedef struct {
+    const char* name;
+    void* func;
+} CompileFunction;
+
+typedef struct {
     BlockChain* code;
     LLVMModuleRef module;
     LLVMBuilderRef builder;
@@ -90,6 +95,8 @@ typedef struct {
 
     VariableStackFrame variable_stack_frames[VM_VARIABLE_STACK_SIZE];
     size_t variable_stack_frames_len;
+
+    CompileFunction* compile_func_list;
 
     Gc gc;
 
