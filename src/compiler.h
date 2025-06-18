@@ -101,7 +101,7 @@ typedef struct {
 #define CONST_INTEGER(val) LLVMConstInt(LLVMInt32Type(), val, true)
 #define CONST_BOOLEAN(val) LLVMConstInt(LLVMInt1Type(), val, false)
 #define CONST_DOUBLE(val) LLVMConstReal(LLVMDoubleType(), val)
-#define CONST_STRING(val) LLVMBuildGlobalStringPtr(exec->builder, val, "")
+#define CONST_STRING_LITERAL(val) LLVMBuildGlobalStringPtr(exec->builder, val, "")
 #define CONST_GC LLVMConstInt(LLVMInt64Type(), (unsigned long long)&exec->gc, false)
 
 #define _DATA(t, val) (FuncArg) { \
@@ -112,7 +112,7 @@ typedef struct {
 }
 
 #define DATA_BOOLEAN(val) _DATA(FUNC_ARG_BOOL, val)
-#define DATA_STRING(val) _DATA(FUNC_ARG_STRING_REF, val)
+#define DATA_STRING_REF(val) _DATA(FUNC_ARG_STRING_REF, val)
 #define DATA_INTEGER(val) _DATA(FUNC_ARG_INT, val)
 #define DATA_DOUBLE(val) _DATA(FUNC_ARG_DOUBLE, val)
 #define DATA_UNKNOWN _DATA(FUNC_ARG_UNKNOWN, NULL)

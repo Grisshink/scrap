@@ -312,11 +312,24 @@ typedef struct {
 } StringHeader;
 
 static char* string_from_literal(Gc* gc, const char* literal, unsigned int size) {
-    StringHeader* out_str = gc_malloc(gc, sizeof(StringHeader) + size + 1);
+    StringHeader* out_str = gc_malloc(gc, sizeof(StringHeader) + size + 1); // Don't forget null terminator. It is not included in size
     memcpy(out_str->str, literal, size);
     out_str->size = size;
     out_str->capacity = size;
     out_str->str[size] = 0;
+    return out_str->str;
+}
+
+static char* string_join(Gc* gc, char* left, char* right) {
+    StringHeader* left_header = ((StringHeader*)left) - 1;
+    StringHeader* right_header = ((StringHeader*)right) - 1;
+    
+    StringHeader* out_str = gc_malloc(gc, sizeof(StringHeader) + left_header->size + right_header->size + 1);
+    memcpy(out_str->str, left_header->str, left_header->size);
+    memcpy(out_str->str + left_header->size, right_header->str, right_header->size);
+    out_str->size = left_header->size + right_header->size;
+    out_str->capacity = out_str->size;
+    out_str->str[out_str->size] = 0;
     return out_str->str;
 }
 
@@ -402,6 +415,10 @@ static LLVMBasicBlockRef register_globals(Exec* exec) {
     LLVMTypeRef string_length_func_params[] = { LLVMPointerType(LLVMInt8Type(), 0) };
     LLVMTypeRef string_length_func_type = LLVMFunctionType(LLVMInt32Type(), string_length_func_params, ARRLEN(string_length_func_params), false);
     LLVMAddFunction(exec->module, "string_length", string_length_func_type);
+
+    LLVMTypeRef string_join_func_params[] = { LLVMInt64Type(), LLVMPointerType(LLVMInt8Type(), 0), LLVMPointerType(LLVMInt8Type(), 0) };
+    LLVMTypeRef string_join_func_type = LLVMFunctionType(LLVMPointerType(LLVMInt8Type(), 0), string_join_func_params, ARRLEN(string_join_func_params), false);
+    LLVMAddFunction(exec->module, "string_join", string_join_func_type);
 
     LLVMTypeRef string_eq_func_params[] = { LLVMPointerType(LLVMInt8Type(), 0), LLVMPointerType(LLVMInt8Type(), 0) };
     LLVMTypeRef string_eq_func_type = LLVMFunctionType(LLVMInt1Type(), string_eq_func_params, ARRLEN(string_eq_func_params), false);
@@ -533,6 +550,7 @@ static bool run_program(Exec* exec) {
     LLVMAddGlobalMapping(exec->engine, LLVMGetNamedFunction(exec->module, "string_from_bool"), string_from_bool);
     LLVMAddGlobalMapping(exec->engine, LLVMGetNamedFunction(exec->module, "string_from_double"), string_from_double);
     LLVMAddGlobalMapping(exec->engine, LLVMGetNamedFunction(exec->module, "string_length"), string_length);
+    LLVMAddGlobalMapping(exec->engine, LLVMGetNamedFunction(exec->module, "string_join"), string_join);
     LLVMAddGlobalMapping(exec->engine, LLVMGetNamedFunction(exec->module, "string_is_eq"), string_is_eq);
     LLVMAddGlobalMapping(exec->engine, LLVMGetNamedFunction(exec->module, "atoi"), atoi);
     LLVMAddGlobalMapping(exec->engine, LLVMGetNamedFunction(exec->module, "atof"), atof);

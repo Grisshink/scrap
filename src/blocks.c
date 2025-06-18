@@ -1046,7 +1046,7 @@ Data block_return(Exec* exec, int argc, Data* argv) {
 LLVMValueRef arg_to_value(Exec* exec, FuncArg arg) {
     switch (arg.type) {
     case FUNC_ARG_STRING_LITERAL:
-        return CONST_STRING(arg.data.str);
+        return CONST_STRING_LITERAL(arg.data.str);
     case FUNC_ARG_STRING_REF:
     case FUNC_ARG_NOTHING:
     case FUNC_ARG_INT:
@@ -1122,7 +1122,7 @@ LLVMValueRef arg_to_double(Exec* exec, FuncArg arg) {
     }
 }
 
-LLVMValueRef arg_to_string(Exec* exec, FuncArg arg) {
+LLVMValueRef arg_to_string_ref(Exec* exec, FuncArg arg) {
     LLVMValueRef string_func;
     LLVMTypeRef string_func_type;
 
@@ -1130,7 +1130,7 @@ LLVMValueRef arg_to_string(Exec* exec, FuncArg arg) {
     case FUNC_ARG_STRING_LITERAL: {
         string_func = LLVMGetNamedFunction(exec->module, "string_from_literal");
         string_func_type = LLVMGlobalGetValueType(string_func);
-        LLVMValueRef string_func_params[] = { CONST_GC, CONST_STRING(arg.data.str), CONST_INTEGER(strlen(arg.data.str)) };
+        LLVMValueRef string_func_params[] = { CONST_GC, CONST_STRING_LITERAL(arg.data.str), CONST_INTEGER(strlen(arg.data.str)) };
         return LLVMBuildCall2(exec->builder, string_func_type, string_func, string_func_params, ARRLEN(string_func_params), "string_cast");
     }
     case FUNC_ARG_STRING_REF: {
@@ -1166,7 +1166,7 @@ FuncArg arg_cast(Exec* exec, FuncArg arg, FuncArgType cast_to_type) {
         if (arg.type == FUNC_ARG_STRING_LITERAL) return arg;
         assert(false && "Attempted to cast LLVM value to string literal");
     case FUNC_ARG_STRING_REF:
-        return DATA_STRING(arg_to_string(exec, arg));
+        return DATA_STRING_REF(arg_to_string_ref(exec, arg));
     case FUNC_ARG_NOTHING:
         TraceLog(LOG_ERROR, "Attempt to cast value to nothing");
         return DATA_UNKNOWN;
@@ -1616,9 +1616,9 @@ bool block_convert_bool(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val
 
 bool block_convert_str(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
     MIN_ARG_COUNT(1);
-    LLVMValueRef value = arg_to_string(exec, argv[0]);
+    LLVMValueRef value = arg_to_string_ref(exec, argv[0]);
     if (!value) return false;
-    *return_val = DATA_STRING(value);
+    *return_val = DATA_STRING_REF(value);
     return true;
 }
 
@@ -1656,7 +1656,7 @@ bool block_unix_time(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
 
 bool block_length(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
     MIN_ARG_COUNT(1);
-    LLVMValueRef str = arg_to_string(exec, argv[0]);
+    LLVMValueRef str = arg_to_string_ref(exec, argv[0]);
     if (!str) return false;
 
     LLVMValueRef length_func = LLVMGetNamedFunction(exec->module, "string_length");
@@ -1703,12 +1703,17 @@ bool block_ord(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
 }
 
 bool block_join(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
-    (void) exec;
-    (void) argc;
-    (void) argv;
-    (void) return_val;
-    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_join");
-    return false;
+    MIN_ARG_COUNT(2);
+    LLVMValueRef left = arg_to_string_ref(exec, argv[0]);
+    if (!left) return false;
+    LLVMValueRef right = arg_to_string_ref(exec, argv[1]);
+    if (!right) return false;
+
+    LLVMValueRef join_func = LLVMGetNamedFunction(exec->module, "string_join");
+    LLVMTypeRef join_func_type = LLVMGlobalGetValueType(join_func);
+    LLVMValueRef join_func_params[] = { CONST_GC, left, right };
+    *return_val = DATA_STRING_REF(LLVMBuildCall2(exec->builder, join_func_type, join_func, join_func_params, ARRLEN(join_func_params), "join"));
+    return true;
 }
 
 bool block_random(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
@@ -1834,7 +1839,7 @@ bool block_print(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
     switch (argv[0].type) {
     case FUNC_ARG_STRING_LITERAL:
         *return_val = DATA_INTEGER(*argv[0].data.str
-                                   ? call_print(exec, CONST_STRING(argv[0].data.str))
+                                   ? call_print(exec, CONST_STRING_LITERAL(argv[0].data.str))
                                    : CONST_INTEGER(0));
         return true;
     case FUNC_ARG_STRING_REF:
@@ -1861,7 +1866,7 @@ bool block_print(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
 bool block_println(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
     MIN_ARG_COUNT(1);
     block_print(exec, argc, argv, return_val);
-    call_print(exec, CONST_STRING("\r\n"));
+    call_print(exec, CONST_STRING_LITERAL("\r\n"));
     return true;
 }
 
