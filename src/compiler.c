@@ -160,10 +160,7 @@ static bool variable_stack_frame_push(Exec* exec) {
     VariableStackFrame frame;
     frame.base_size = exec->variable_stack_len;
 
-    LLVMValueRef stack_save_func = LLVMGetNamedFunction(exec->module, "llvm.stacksave.p0");
-    assert(stack_save_func != NULL);
-    LLVMTypeRef stack_save_func_type = LLVMGlobalGetValueType(stack_save_func);
-    frame.base_stack = LLVMBuildCall2(exec->builder, stack_save_func_type, stack_save_func, NULL, 0, "stack_save");
+    frame.base_stack = build_call(exec, "llvm.stacksave.p0");
 
     exec->variable_stack_frames[exec->variable_stack_frames_len++] = frame;
     return true;
@@ -176,11 +173,7 @@ static bool variable_stack_frame_pop(Exec* exec) {
     }
     VariableStackFrame frame = exec->variable_stack_frames[--exec->variable_stack_frames_len];
 
-    LLVMValueRef stack_restore_func = LLVMGetNamedFunction(exec->module, "llvm.stackrestore.p0");
-    assert(stack_restore_func != NULL);
-    LLVMTypeRef stack_restore_func_type = LLVMGlobalGetValueType(stack_restore_func);
-    LLVMValueRef stack_restore_func_params[] = { frame.base_stack };
-    LLVMBuildCall2(exec->builder, stack_restore_func_type, stack_restore_func, stack_restore_func_params, ARRLEN(stack_restore_func_params), "");
+    build_call(exec, "llvm.stackrestore.p0", frame.base_stack);
 
     exec->variable_stack_len = frame.base_size;
     return true;
@@ -213,10 +206,7 @@ static bool evaluate_block(Exec* exec, Block* block, FuncArg* return_val, bool e
 
             variable_stack_frame_push(exec);
         } else {
-            LLVMValueRef testcancel_func = LLVMGetNamedFunction(exec->module, "test_cancel");
-            LLVMTypeRef testcancel_func_type = LLVMGlobalGetValueType(testcancel_func);
-            LLVMBuildCall2(exec->builder, testcancel_func_type, testcancel_func, NULL, 0, "");
-
+            build_call(exec, "test_cancel");
             variable_stack_frame_pop(exec);
         }
 
@@ -374,17 +364,11 @@ static int string_ord(char* str) {
 }
 
 LLVMValueRef build_gc_root_begin(Exec* exec) {
-    LLVMValueRef gc_root_begin_func = LLVMGetNamedFunction(exec->module, "gc_root_begin");
-    LLVMTypeRef gc_root_begin_func_type = LLVMGlobalGetValueType(gc_root_begin_func);
-    LLVMValueRef gc_root_begin_func_params[] = { CONST_GC };
-    return LLVMBuildCall2(exec->builder, gc_root_begin_func_type, gc_root_begin_func, gc_root_begin_func_params, 1, "");
+    return build_call(exec, "gc_root_begin", CONST_GC);
 }
 
 LLVMValueRef build_gc_root_end(Exec* exec) {
-    LLVMValueRef gc_root_end_func = LLVMGetNamedFunction(exec->module, "gc_root_end");
-    LLVMTypeRef gc_root_end_func_type = LLVMGlobalGetValueType(gc_root_end_func);
-    LLVMValueRef gc_root_end_func_params[] = { CONST_GC };
-    return LLVMBuildCall2(exec->builder, gc_root_end_func_type, gc_root_end_func, gc_root_end_func_params, 1, "");
+    return build_call(exec, "gc_root_end", CONST_GC);
 }
 
 LLVMValueRef build_call(Exec* exec, const char* func_name, ...) {
@@ -392,6 +376,8 @@ LLVMValueRef build_call(Exec* exec, const char* func_name, ...) {
     LLVMTypeRef func_type = LLVMGlobalGetValueType(func);
     unsigned int func_param_count = LLVMCountParamTypes(func_type);
 
+    // Should be enough for all functions
+    assert(func_param_count <= 32);
     LLVMValueRef func_param_list[32];
 
     va_list va;
@@ -401,7 +387,11 @@ LLVMValueRef build_call(Exec* exec, const char* func_name, ...) {
     }
     va_end(va);
 
-    return LLVMBuildCall2(exec->builder, func_type, func, func_param_list, func_param_count, func_name);
+    if (LLVMGetTypeKind(LLVMGetReturnType(func_type)) == LLVMVoidTypeKind) {
+        return LLVMBuildCall2(exec->builder, func_type, func, func_param_list, func_param_count, "");
+    } else {
+        return LLVMBuildCall2(exec->builder, func_type, func, func_param_list, func_param_count, func_name);
+    }
 }
 
 static unsigned int string_length(char* str) {

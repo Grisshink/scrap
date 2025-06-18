@@ -1083,10 +1083,7 @@ LLVMValueRef arg_to_int(Exec* exec, FuncArg arg) {
     case FUNC_ARG_STRING_LITERAL:
         return CONST_INTEGER(atoi(arg.data.str));
     case FUNC_ARG_STRING_REF: ;
-        LLVMValueRef atoi_func = LLVMGetNamedFunction(exec->module, "atoi");
-        LLVMTypeRef atoi_func_type = LLVMGlobalGetValueType(atoi_func);
-        LLVMValueRef atoi_func_params[] = { arg.data.value };
-        return LLVMBuildCall2(exec->builder, atoi_func_type, atoi_func, atoi_func_params, ARRLEN(atoi_func_params), "int_cast");
+        return build_call(exec, "atoi", arg.data.value);
     case FUNC_ARG_NOTHING:
         return CONST_INTEGER(0);
     case FUNC_ARG_INT:
@@ -1104,11 +1101,8 @@ LLVMValueRef arg_to_double(Exec* exec, FuncArg arg) {
     switch (arg.type) {
     case FUNC_ARG_STRING_LITERAL:
         return CONST_DOUBLE(atof(arg.data.str));
-    case FUNC_ARG_STRING_REF: ;
-        LLVMValueRef atof_func = LLVMGetNamedFunction(exec->module, "atof");
-        LLVMTypeRef atof_func_type = LLVMGlobalGetValueType(atof_func);
-        LLVMValueRef atof_func_params[] = { arg.data.value };
-        return LLVMBuildCall2(exec->builder, atof_func_type, atof_func, atof_func_params, ARRLEN(atof_func_params), "double_cast");
+    case FUNC_ARG_STRING_REF:
+        return build_call(exec, "atof", arg.data.value);
     case FUNC_ARG_NOTHING:
         return CONST_DOUBLE(0.0);
     case FUNC_ARG_INT:
@@ -1123,34 +1117,17 @@ LLVMValueRef arg_to_double(Exec* exec, FuncArg arg) {
 }
 
 LLVMValueRef arg_to_any_string(Exec* exec, FuncArg arg) {
-    LLVMValueRef string_func;
-    LLVMTypeRef string_func_type;
-
     switch (arg.type) {
-    case FUNC_ARG_STRING_LITERAL: {
+    case FUNC_ARG_STRING_LITERAL:
         return CONST_STRING_LITERAL(arg.data.str);
-    }
-    case FUNC_ARG_STRING_REF: {
+    case FUNC_ARG_STRING_REF:
         return arg.data.value;
-    }
-    case FUNC_ARG_INT: {
-        string_func = LLVMGetNamedFunction(exec->module, "string_from_int");
-        string_func_type = LLVMGlobalGetValueType(string_func);
-        LLVMValueRef string_func_params[] = { CONST_GC, arg.data.value };
-        return LLVMBuildCall2(exec->builder, string_func_type, string_func, string_func_params, ARRLEN(string_func_params), "string_cast");
-    }
-    case FUNC_ARG_BOOL: {
-        string_func = LLVMGetNamedFunction(exec->module, "string_from_bool");
-        string_func_type = LLVMGlobalGetValueType(string_func);
-        LLVMValueRef string_func_params[] = { CONST_GC, arg.data.value };
-        return LLVMBuildCall2(exec->builder, string_func_type, string_func, string_func_params, ARRLEN(string_func_params), "string_cast");
-    }
-    case FUNC_ARG_DOUBLE: {
-        string_func = LLVMGetNamedFunction(exec->module, "string_from_double");
-        string_func_type = LLVMGlobalGetValueType(string_func);
-        LLVMValueRef string_func_params[] = { CONST_GC, arg.data.value };
-        return LLVMBuildCall2(exec->builder, string_func_type, string_func, string_func_params, ARRLEN(string_func_params), "string_cast");
-    }
+    case FUNC_ARG_INT:
+        return build_call(exec, "string_from_int", CONST_GC, arg.data.value);
+    case FUNC_ARG_BOOL:
+        return build_call(exec, "string_from_bool", CONST_GC, arg.data.value);
+    case FUNC_ARG_DOUBLE:
+        return build_call(exec, "string_from_double", CONST_GC, arg.data.value);
     case FUNC_ARG_NOTHING:
     default:
         assert(false && "Unhandled cast to any string");
@@ -1158,37 +1135,17 @@ LLVMValueRef arg_to_any_string(Exec* exec, FuncArg arg) {
 }
 
 LLVMValueRef arg_to_string_ref(Exec* exec, FuncArg arg) {
-    LLVMValueRef string_func;
-    LLVMTypeRef string_func_type;
-
     switch (arg.type) {
-    case FUNC_ARG_STRING_LITERAL: {
-        string_func = LLVMGetNamedFunction(exec->module, "string_from_literal");
-        string_func_type = LLVMGlobalGetValueType(string_func);
-        LLVMValueRef string_func_params[] = { CONST_GC, CONST_STRING_LITERAL(arg.data.str), CONST_INTEGER(strlen(arg.data.str)) };
-        return LLVMBuildCall2(exec->builder, string_func_type, string_func, string_func_params, ARRLEN(string_func_params), "string_cast");
-    }
-    case FUNC_ARG_STRING_REF: {
+    case FUNC_ARG_STRING_LITERAL:
+        return build_call(exec, "string_from_literal", CONST_GC, CONST_STRING_LITERAL(arg.data.str), CONST_INTEGER(strlen(arg.data.str)));
+    case FUNC_ARG_STRING_REF:
         return arg.data.value;
-    }
-    case FUNC_ARG_INT: {
-        string_func = LLVMGetNamedFunction(exec->module, "string_from_int");
-        string_func_type = LLVMGlobalGetValueType(string_func);
-        LLVMValueRef string_func_params[] = { CONST_GC, arg.data.value };
-        return LLVMBuildCall2(exec->builder, string_func_type, string_func, string_func_params, ARRLEN(string_func_params), "string_cast");
-    }
-    case FUNC_ARG_BOOL: {
-        string_func = LLVMGetNamedFunction(exec->module, "string_from_bool");
-        string_func_type = LLVMGlobalGetValueType(string_func);
-        LLVMValueRef string_func_params[] = { CONST_GC, arg.data.value };
-        return LLVMBuildCall2(exec->builder, string_func_type, string_func, string_func_params, ARRLEN(string_func_params), "string_cast");
-    }
-    case FUNC_ARG_DOUBLE: {
-        string_func = LLVMGetNamedFunction(exec->module, "string_from_double");
-        string_func_type = LLVMGlobalGetValueType(string_func);
-        LLVMValueRef string_func_params[] = { CONST_GC, arg.data.value };
-        return LLVMBuildCall2(exec->builder, string_func_type, string_func, string_func_params, ARRLEN(string_func_params), "string_cast");
-    }
+    case FUNC_ARG_INT:
+        return build_call(exec, "string_from_int", CONST_GC, arg.data.value);
+    case FUNC_ARG_BOOL:
+        return build_call(exec, "string_from_bool", CONST_GC, arg.data.value);
+    case FUNC_ARG_DOUBLE:
+        return build_call(exec, "string_from_double", CONST_GC, arg.data.value);
     case FUNC_ARG_NOTHING:
     default:
         assert(false && "Unhandled cast to string ref");
@@ -1214,30 +1171,6 @@ FuncArg arg_cast(Exec* exec, FuncArg arg, FuncArgType cast_to_type) {
     default:
         assert(false && "Unhandled cast to value typed");
     }
-}
-
-static LLVMValueRef call_print(Exec* exec, LLVMValueRef str) {
-    LLVMValueRef print_func = LLVMGetNamedFunction(exec->module, "term_print_str");
-    LLVMTypeRef print_func_type = LLVMGlobalGetValueType(print_func);
-    return LLVMBuildCall2(exec->builder, print_func_type, print_func, &str, 1, "print");
-}
-
-static LLVMValueRef call_print_int(Exec* exec, LLVMValueRef int_val) {
-    LLVMValueRef print_func = LLVMGetNamedFunction(exec->module, "term_print_int");
-    LLVMTypeRef print_func_type = LLVMGlobalGetValueType(print_func);
-    return LLVMBuildCall2(exec->builder, print_func_type, print_func, &int_val, 1, "print");
-}
-
-static LLVMValueRef call_print_bool(Exec* exec, LLVMValueRef bool_val) {
-    LLVMValueRef print_func = LLVMGetNamedFunction(exec->module, "term_print_bool");
-    LLVMTypeRef print_func_type = LLVMGlobalGetValueType(print_func);
-    return LLVMBuildCall2(exec->builder, print_func_type, print_func, &bool_val, 1, "print");
-}
-
-static LLVMValueRef call_print_double(Exec* exec, LLVMValueRef int_val) {
-    LLVMValueRef print_func = LLVMGetNamedFunction(exec->module, "term_print_double");
-    LLVMTypeRef print_func_type = LLVMGlobalGetValueType(print_func);
-    return LLVMBuildCall2(exec->builder, print_func_type, print_func, &int_val, 1, "print");
 }
 
 bool block_return(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
@@ -1298,10 +1231,7 @@ bool block_not_eq(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
         *return_val = DATA_BOOLEAN(CONST_BOOLEAN(0));
         break;
     case FUNC_ARG_STRING_REF: ;
-        LLVMValueRef eq_func = LLVMGetNamedFunction(exec->module, "string_is_eq");
-        LLVMTypeRef eq_func_type = LLVMGlobalGetValueType(eq_func);
-        LLVMValueRef eq_func_params[] = { left.data.value, right.data.value };
-        LLVMValueRef eq_return = LLVMBuildCall2(exec->builder, eq_func_type, eq_func, eq_func_params, ARRLEN(eq_func_params), "string_neq");
+        LLVMValueRef eq_return = build_call(exec, "string_is_eq", left.data.value, right.data.value);
         *return_val = DATA_BOOLEAN(LLVMBuildXor(exec->builder, eq_return, CONST_BOOLEAN(1), "string_neq"));
         break;
     case FUNC_ARG_INT:
@@ -1351,10 +1281,7 @@ bool block_eq(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
         *return_val = DATA_BOOLEAN(CONST_BOOLEAN(1));
         break;
     case FUNC_ARG_STRING_REF: ;
-        LLVMValueRef eq_func = LLVMGetNamedFunction(exec->module, "string_is_eq");
-        LLVMTypeRef eq_func_type = LLVMGlobalGetValueType(eq_func);
-        LLVMValueRef eq_func_params[] = { left.data.value, right.data.value };
-        *return_val = DATA_BOOLEAN(LLVMBuildCall2(exec->builder, eq_func_type, eq_func, eq_func_params, ARRLEN(eq_func_params), "string_eq"));
+        *return_val = DATA_BOOLEAN(build_call(exec, "string_is_eq", left.data.value, right.data.value));
         break;
     case FUNC_ARG_BOOL:
     case FUNC_ARG_INT:
@@ -1542,10 +1469,7 @@ bool block_pow(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
     LLVMValueRef right = arg_to_int(exec, argv[1]);
     if (!right) return false;
 
-    LLVMValueRef pow_func = LLVMGetNamedFunction(exec->module, "int_pow");
-    LLVMTypeRef pow_func_type = LLVMGlobalGetValueType(pow_func);
-    LLVMValueRef pow_func_params[] = { left, right };
-    *return_val = DATA_INTEGER(LLVMBuildCall2(exec->builder, pow_func_type, pow_func, pow_func_params, ARRLEN(pow_func_params), "pow"));
+    *return_val = DATA_INTEGER(build_call(exec, "int_pow", left, right));
     return true;
 }
 
@@ -1676,16 +1600,7 @@ bool block_convert_int(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val)
 bool block_unix_time(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
     (void) argc;
     (void) argv;
-
-    LLVMValueRef time_func = LLVMGetNamedFunction(exec->module, "time");
-    LLVMTypeRef time_func_type = LLVMGlobalGetValueType(time_func);
-
-    LLVMTypeRef* types = malloc(LLVMCountParamTypes(time_func_type) * sizeof(LLVMTypeRef));
-    LLVMGetParamTypes(time_func_type, types);
-    LLVMValueRef time_func_params[] = { LLVMConstPointerNull(types[0]) };
-    free(types);
-
-    *return_val = DATA_INTEGER(LLVMBuildCall2(exec->builder, time_func_type, time_func, time_func_params, ARRLEN(time_func_params), "time"));
+    *return_val = DATA_INTEGER(build_call(exec, "time", LLVMConstPointerNull(LLVMPointerType(LLVMVoidType(), 0))));
     return true;
 }
 
@@ -1694,10 +1609,7 @@ bool block_length(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
     LLVMValueRef str = arg_to_string_ref(exec, argv[0]);
     if (!str) return false;
 
-    LLVMValueRef length_func = LLVMGetNamedFunction(exec->module, "string_length");
-    LLVMTypeRef length_func_type = LLVMGlobalGetValueType(length_func);
-    LLVMValueRef length_func_params[] = { str };
-    *return_val = DATA_INTEGER(LLVMBuildCall2(exec->builder, length_func_type, length_func, length_func_params, ARRLEN(length_func_params), "length"));
+    *return_val = DATA_INTEGER(build_call(exec, "string_length", str));
     return true;
 }
 
@@ -1871,23 +1783,23 @@ bool block_print(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
     switch (argv[0].type) {
     case FUNC_ARG_STRING_LITERAL:
         *return_val = DATA_INTEGER(*argv[0].data.str
-                                   ? call_print(exec, CONST_STRING_LITERAL(argv[0].data.str))
+                                   ? build_call(exec, "term_print_str", CONST_STRING_LITERAL(argv[0].data.str))
                                    : CONST_INTEGER(0));
         return true;
     case FUNC_ARG_STRING_REF:
-        *return_val = DATA_INTEGER(call_print(exec, argv[0].data.value));
+        *return_val = DATA_INTEGER(build_call(exec, "term_print_str", argv[0].data.value));
         return true;
     case FUNC_ARG_NOTHING:
         *return_val = DATA_INTEGER(CONST_INTEGER(0));
         return true;
     case FUNC_ARG_INT:
-        *return_val = DATA_INTEGER(call_print_int(exec, argv[0].data.value));
+        *return_val = DATA_INTEGER(build_call(exec, "term_print_int", argv[0].data.value));
         return true;
     case FUNC_ARG_BOOL:
-        *return_val = DATA_INTEGER(call_print_bool(exec, argv[0].data.value));
+        *return_val = DATA_INTEGER(build_call(exec, "term_print_bool", argv[0].data.value));
         return true;
     case FUNC_ARG_DOUBLE:
-        *return_val = DATA_INTEGER(call_print_double(exec, argv[0].data.value));
+        *return_val = DATA_INTEGER(build_call(exec, "term_print_double", argv[0].data.value));
         return true;
     default:
         TraceLog(LOG_INFO, "[LLVM] Got unknown type, idk i will just crash >:(");
@@ -1898,7 +1810,7 @@ bool block_print(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
 bool block_println(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
     MIN_ARG_COUNT(1);
     block_print(exec, argc, argv, return_val);
-    call_print(exec, CONST_STRING_LITERAL("\r\n"));
+    build_call(exec, "term_print_str", CONST_STRING_LITERAL("\r\n"));
     return true;
 }
 
