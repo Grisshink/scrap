@@ -135,5 +135,6 @@ Variable* variable_stack_get(Exec* exec, const char* var_name);
 
 LLVMValueRef build_gc_root_begin(Exec* exec);
 LLVMValueRef build_gc_root_end(Exec* exec);
+LLVMValueRef build_call(Exec* exec, const char* func_name, ...);
 
 #endif // COMPILER_H

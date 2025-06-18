@@ -1122,6 +1122,41 @@ LLVMValueRef arg_to_double(Exec* exec, FuncArg arg) {
     }
 }
 
+LLVMValueRef arg_to_any_string(Exec* exec, FuncArg arg) {
+    LLVMValueRef string_func;
+    LLVMTypeRef string_func_type;
+
+    switch (arg.type) {
+    case FUNC_ARG_STRING_LITERAL: {
+        return CONST_STRING_LITERAL(arg.data.str);
+    }
+    case FUNC_ARG_STRING_REF: {
+        return arg.data.value;
+    }
+    case FUNC_ARG_INT: {
+        string_func = LLVMGetNamedFunction(exec->module, "string_from_int");
+        string_func_type = LLVMGlobalGetValueType(string_func);
+        LLVMValueRef string_func_params[] = { CONST_GC, arg.data.value };
+        return LLVMBuildCall2(exec->builder, string_func_type, string_func, string_func_params, ARRLEN(string_func_params), "string_cast");
+    }
+    case FUNC_ARG_BOOL: {
+        string_func = LLVMGetNamedFunction(exec->module, "string_from_bool");
+        string_func_type = LLVMGlobalGetValueType(string_func);
+        LLVMValueRef string_func_params[] = { CONST_GC, arg.data.value };
+        return LLVMBuildCall2(exec->builder, string_func_type, string_func, string_func_params, ARRLEN(string_func_params), "string_cast");
+    }
+    case FUNC_ARG_DOUBLE: {
+        string_func = LLVMGetNamedFunction(exec->module, "string_from_double");
+        string_func_type = LLVMGlobalGetValueType(string_func);
+        LLVMValueRef string_func_params[] = { CONST_GC, arg.data.value };
+        return LLVMBuildCall2(exec->builder, string_func_type, string_func, string_func_params, ARRLEN(string_func_params), "string_cast");
+    }
+    case FUNC_ARG_NOTHING:
+    default:
+        assert(false && "Unhandled cast to any string");
+    }
+}
+
 LLVMValueRef arg_to_string_ref(Exec* exec, FuncArg arg) {
     LLVMValueRef string_func;
     LLVMTypeRef string_func_type;
@@ -1685,21 +1720,21 @@ bool block_letter_in(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
 }
 
 bool block_chr(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
-    (void) exec;
-    (void) argc;
-    (void) argv;
-    (void) return_val;
-    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_chr");
-    return false;
+    MIN_ARG_COUNT(1);
+    LLVMValueRef value = arg_to_int(exec, argv[0]);
+    if (!value) return false;
+
+    *return_val = DATA_STRING_REF(build_call(exec, "string_chr", CONST_GC, value));
+    return true;
 }
 
 bool block_ord(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
-    (void) exec;
-    (void) argc;
-    (void) argv;
-    (void) return_val;
-    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_ord");
-    return false;
+    MIN_ARG_COUNT(1);
+    LLVMValueRef str = arg_to_any_string(exec, argv[0]);
+    if (!str) return false;
+
+    *return_val = DATA_INTEGER(build_call(exec, "string_ord", str));
+    return true;
 }
 
 bool block_join(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
@@ -1709,10 +1744,7 @@ bool block_join(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
     LLVMValueRef right = arg_to_string_ref(exec, argv[1]);
     if (!right) return false;
 
-    LLVMValueRef join_func = LLVMGetNamedFunction(exec->module, "string_join");
-    LLVMTypeRef join_func_type = LLVMGlobalGetValueType(join_func);
-    LLVMValueRef join_func_params[] = { CONST_GC, left, right };
-    *return_val = DATA_STRING_REF(LLVMBuildCall2(exec->builder, join_func_type, join_func, join_func_params, ARRLEN(join_func_params), "join"));
+    *return_val = DATA_STRING_REF(build_call(exec, "string_join", CONST_GC, left, right));
     return true;
 }
 

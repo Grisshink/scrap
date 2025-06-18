@@ -360,6 +360,19 @@ static bool string_is_eq(char* left, char* right) {
     return true;
 }
 
+static char* string_chr(Gc* gc, int value) {
+    int text_size;
+    const char* text = CodepointToUTF8(value, &text_size);
+    return string_from_literal(gc, text, text_size);
+}
+
+static int string_ord(char* str) {
+    int codepoint_size;
+    int codepoint = GetCodepoint(str, &codepoint_size);
+    (void) codepoint_size;
+    return codepoint;
+}
+
 LLVMValueRef build_gc_root_begin(Exec* exec) {
     LLVMValueRef gc_root_begin_func = LLVMGetNamedFunction(exec->module, "gc_root_begin");
     LLVMTypeRef gc_root_begin_func_type = LLVMGlobalGetValueType(gc_root_begin_func);
@@ -372,6 +385,23 @@ LLVMValueRef build_gc_root_end(Exec* exec) {
     LLVMTypeRef gc_root_end_func_type = LLVMGlobalGetValueType(gc_root_end_func);
     LLVMValueRef gc_root_end_func_params[] = { CONST_GC };
     return LLVMBuildCall2(exec->builder, gc_root_end_func_type, gc_root_end_func, gc_root_end_func_params, 1, "");
+}
+
+LLVMValueRef build_call(Exec* exec, const char* func_name, ...) {
+    LLVMValueRef func = LLVMGetNamedFunction(exec->module, func_name);
+    LLVMTypeRef func_type = LLVMGlobalGetValueType(func);
+    unsigned int func_param_count = LLVMCountParamTypes(func_type);
+
+    LLVMValueRef func_param_list[32];
+
+    va_list va;
+    va_start(va, func_name);
+    for (unsigned int i = 0; i < func_param_count; i++) {
+        func_param_list[i] = va_arg(va, LLVMValueRef);
+    }
+    va_end(va);
+
+    return LLVMBuildCall2(exec->builder, func_type, func, func_param_list, func_param_count, func_name);
 }
 
 static unsigned int string_length(char* str) {
@@ -419,6 +449,14 @@ static LLVMBasicBlockRef register_globals(Exec* exec) {
     LLVMTypeRef string_join_func_params[] = { LLVMInt64Type(), LLVMPointerType(LLVMInt8Type(), 0), LLVMPointerType(LLVMInt8Type(), 0) };
     LLVMTypeRef string_join_func_type = LLVMFunctionType(LLVMPointerType(LLVMInt8Type(), 0), string_join_func_params, ARRLEN(string_join_func_params), false);
     LLVMAddFunction(exec->module, "string_join", string_join_func_type);
+
+    LLVMTypeRef string_ord_func_params[] = { LLVMPointerType(LLVMInt8Type(), 0) };
+    LLVMTypeRef string_ord_func_type = LLVMFunctionType(LLVMInt32Type(), string_ord_func_params, ARRLEN(string_ord_func_params), false);
+    LLVMAddFunction(exec->module, "string_ord", string_ord_func_type);
+
+    LLVMTypeRef string_chr_func_params[] = { LLVMInt64Type(), LLVMInt32Type() };
+    LLVMTypeRef string_chr_func_type = LLVMFunctionType(LLVMPointerType(LLVMInt8Type(), 0), string_chr_func_params, ARRLEN(string_chr_func_params), false);
+    LLVMAddFunction(exec->module, "string_chr", string_chr_func_type);
 
     LLVMTypeRef string_eq_func_params[] = { LLVMPointerType(LLVMInt8Type(), 0), LLVMPointerType(LLVMInt8Type(), 0) };
     LLVMTypeRef string_eq_func_type = LLVMFunctionType(LLVMInt1Type(), string_eq_func_params, ARRLEN(string_eq_func_params), false);
@@ -551,6 +589,8 @@ static bool run_program(Exec* exec) {
     LLVMAddGlobalMapping(exec->engine, LLVMGetNamedFunction(exec->module, "string_from_double"), string_from_double);
     LLVMAddGlobalMapping(exec->engine, LLVMGetNamedFunction(exec->module, "string_length"), string_length);
     LLVMAddGlobalMapping(exec->engine, LLVMGetNamedFunction(exec->module, "string_join"), string_join);
+    LLVMAddGlobalMapping(exec->engine, LLVMGetNamedFunction(exec->module, "string_ord"), string_ord);
+    LLVMAddGlobalMapping(exec->engine, LLVMGetNamedFunction(exec->module, "string_chr"), string_chr);
     LLVMAddGlobalMapping(exec->engine, LLVMGetNamedFunction(exec->module, "string_is_eq"), string_is_eq);
     LLVMAddGlobalMapping(exec->engine, LLVMGetNamedFunction(exec->module, "atoi"), atoi);
     LLVMAddGlobalMapping(exec->engine, LLVMGetNamedFunction(exec->module, "atof"), atof);
