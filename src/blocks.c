@@ -1614,21 +1614,30 @@ bool block_length(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
 }
 
 bool block_substring(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
-    (void) exec;
-    (void) argc;
-    (void) argv;
-    (void) return_val;
-    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_substring");
-    return false;
+    MIN_ARG_COUNT(3);
+    LLVMValueRef begin = arg_to_int(exec, argv[0]);
+    if (!begin) return false;
+
+    LLVMValueRef end = arg_to_int(exec, argv[1]);
+    if (!end) return false;
+
+    LLVMValueRef str = arg_to_string_ref(exec, argv[2]);
+    if (!str) return false;
+
+    *return_val = DATA_STRING_REF(build_call(exec, "string_substring", CONST_GC, begin, end, str));
+    return true;
 }
 
 bool block_letter_in(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
-    (void) exec;
-    (void) argc;
-    (void) argv;
-    (void) return_val;
-    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_letter_in");
-    return false;
+    MIN_ARG_COUNT(2);
+    LLVMValueRef target = arg_to_int(exec, argv[0]);
+    if (!target) return false;
+
+    LLVMValueRef str = arg_to_string_ref(exec, argv[1]);
+    if (!str) return false;
+
+    *return_val = DATA_STRING_REF(build_call(exec, "string_letter_in", CONST_GC, target, str));
+    return true;
 }
 
 bool block_chr(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {

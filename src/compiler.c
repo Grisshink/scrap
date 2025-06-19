@@ -310,6 +310,55 @@ static char* string_from_literal(Gc* gc, const char* literal, unsigned int size)
     return out_str->str;
 }
 
+static char* string_letter_in(Gc* gc, int target, char* input_str) {
+    int pos = 0;
+    if (target <= 0) return string_from_literal(gc, "", 0);
+    for (char* str = input_str; *str; str++) {
+        // Increment pos only on the beginning of multibyte char
+        if ((*str & 0x80) == 0 || (*str & 0x40) != 0) pos++;
+
+        if (pos == target) {
+            int codepoint_size;
+            GetCodepoint(str, &codepoint_size);
+            return string_from_literal(gc, str, codepoint_size);
+        }
+    }
+
+    return string_from_literal(gc, "", 0);
+}
+
+static char* string_substring(Gc* gc, int begin, int end, char* input_str) {
+    if (begin <= 0) begin = 1;
+    if (end <= 0) return string_from_literal(gc, "", 0);
+    if (begin > end) return string_from_literal(gc, "", 0);
+
+    char* substr_start = NULL;
+    int substr_len = 0;
+
+    int pos = 0;
+    for (char* str = input_str; *str; str++) {
+        // Increment pos only on the beginning of multibyte char
+        if ((*str & 0x80) == 0 || (*str & 0x40) != 0) pos++;
+        if (substr_start) substr_len++;
+
+        if (pos == begin && !substr_start) {
+            substr_start = str;
+            substr_len = 1;
+        }
+        if (pos == end) {
+            if (!substr_start) return string_from_literal(gc, "", 0);
+            int codepoint_size;
+            GetCodepoint(str, &codepoint_size);
+            substr_len += codepoint_size - 1;
+
+            return string_from_literal(gc, substr_start, substr_len);
+        }
+    }
+
+    if (substr_start) return string_from_literal(gc, substr_start, substr_len);
+    return string_from_literal(gc, "", 0);
+}
+
 static char* string_join(Gc* gc, char* left, char* right) {
     StringHeader* left_header = ((StringHeader*)left) - 1;
     StringHeader* right_header = ((StringHeader*)right) - 1;
@@ -444,6 +493,12 @@ static LLVMBasicBlockRef register_globals(Exec* exec) {
 
     LLVMTypeRef string_chr_func_params[] = { LLVMInt64Type(), LLVMInt32Type() };
     add_function(exec, "string_chr", LLVMPointerType(LLVMInt8Type(), 0), string_chr_func_params, ARRLEN(string_chr_func_params), string_chr);
+
+    LLVMTypeRef string_letter_in_func_params[] = { LLVMInt64Type(), LLVMInt32Type(), LLVMPointerType(LLVMInt8Type(), 0) };
+    add_function(exec, "string_letter_in", LLVMPointerType(LLVMInt8Type(), 0), string_letter_in_func_params, ARRLEN(string_letter_in_func_params), string_letter_in);
+
+    LLVMTypeRef string_substring_func_params[] = { LLVMInt64Type(), LLVMInt32Type(), LLVMInt32Type(), LLVMPointerType(LLVMInt8Type(), 0) };
+    add_function(exec, "string_substring", LLVMPointerType(LLVMInt8Type(), 0), string_substring_func_params, ARRLEN(string_substring_func_params), string_substring);
 
     LLVMTypeRef string_eq_func_params[] = { LLVMPointerType(LLVMInt8Type(), 0), LLVMPointerType(LLVMInt8Type(), 0) };
     add_function(exec, "string_is_eq", LLVMInt1Type(), string_eq_func_params, ARRLEN(string_eq_func_params), string_is_eq);
