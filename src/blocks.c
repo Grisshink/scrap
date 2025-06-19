@@ -1454,11 +1454,44 @@ bool block_pi(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
 }
 
 bool block_math(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
-    (void) exec;
-    (void) argc;
-    (void) argv;
-    (void) return_val;
-    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_math");
+    MIN_ARG_COUNT(2);
+    if (argv[0].type != FUNC_ARG_STRING_LITERAL) return false;
+
+    LLVMValueRef value = arg_to_double(exec, argv[1]);
+    if (!value) return false;
+
+    if (!strcmp(argv[0].data.str, "sin")) {
+        *return_val = DATA_DOUBLE(build_call(exec, "sin", value));
+        return true;
+    } else if (!strcmp(argv[0].data.str, "cos")) {
+        *return_val = DATA_DOUBLE(build_call(exec, "cos", value));
+        return true;
+    } else if (!strcmp(argv[0].data.str, "tan")) {
+        *return_val = DATA_DOUBLE(build_call(exec, "tan", value));
+        return true;
+    } else if (!strcmp(argv[0].data.str, "asin")) {
+        *return_val = DATA_DOUBLE(build_call(exec, "asin", value));
+        return true;
+    } else if (!strcmp(argv[0].data.str, "acos")) {
+        *return_val = DATA_DOUBLE(build_call(exec, "acos", value));
+        return true;
+    } else if (!strcmp(argv[0].data.str, "atan")) {
+        *return_val = DATA_DOUBLE(build_call(exec, "atan", value));
+        return true;
+    } else if (!strcmp(argv[0].data.str, "sqrt")) {
+        *return_val = DATA_DOUBLE(build_call(exec, "sqrt", value));
+        return true;
+    } else if (!strcmp(argv[0].data.str, "round")) {
+        *return_val = DATA_DOUBLE(build_call(exec, "round", value));
+        return true;
+    } else if (!strcmp(argv[0].data.str, "floor")) {
+        *return_val = DATA_DOUBLE(build_call(exec, "floor", value));
+        return true;
+    } else if (!strcmp(argv[0].data.str, "ceil")) {
+        *return_val = DATA_DOUBLE(build_call(exec, "ceil", value));
+        return true;
+    }
+
     return false;
 }
 

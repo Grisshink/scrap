@@ -24,6 +24,7 @@
 #include <string.h>
 #include <time.h>
 #include <stdio.h>
+#include <math.h>
 
 #define ARRLEN(arr) (sizeof(arr) / sizeof(arr[0]))
 
@@ -528,6 +529,36 @@ static LLVMBasicBlockRef register_globals(Exec* exec) {
 
     LLVMTypeRef time_func_params[] = { LLVMPointerType(LLVMVoidType(), 0) };
     add_function(exec, "time", LLVMInt32Type(), time_func_params, ARRLEN(time_func_params), time);
+
+    LLVMTypeRef sin_func_params[] = { LLVMDoubleType() };
+    add_function(exec, "sin", LLVMDoubleType(), sin_func_params, ARRLEN(sin_func_params), sin);
+
+    LLVMTypeRef cos_func_params[] = { LLVMDoubleType() };
+    add_function(exec, "cos", LLVMDoubleType(), cos_func_params, ARRLEN(cos_func_params), cos);
+
+    LLVMTypeRef tan_func_params[] = { LLVMDoubleType() };
+    add_function(exec, "tan", LLVMDoubleType(), tan_func_params, ARRLEN(tan_func_params), tan);
+
+    LLVMTypeRef asin_func_params[] = { LLVMDoubleType() };
+    add_function(exec, "asin", LLVMDoubleType(), asin_func_params, ARRLEN(asin_func_params), asin);
+
+    LLVMTypeRef acos_func_params[] = { LLVMDoubleType() };
+    add_function(exec, "acos", LLVMDoubleType(), acos_func_params, ARRLEN(acos_func_params), acos);
+
+    LLVMTypeRef atan_func_params[] = { LLVMDoubleType() };
+    add_function(exec, "atan", LLVMDoubleType(), atan_func_params, ARRLEN(atan_func_params), atan);
+
+    LLVMTypeRef sqrt_func_params[] = { LLVMDoubleType() };
+    add_function(exec, "sqrt", LLVMDoubleType(), sqrt_func_params, ARRLEN(sqrt_func_params), sqrt);
+
+    LLVMTypeRef round_func_params[] = { LLVMDoubleType() };
+    add_function(exec, "round", LLVMDoubleType(), round_func_params, ARRLEN(round_func_params), round);
+
+    LLVMTypeRef floor_func_params[] = { LLVMDoubleType() };
+    add_function(exec, "floor", LLVMDoubleType(), floor_func_params, ARRLEN(floor_func_params), floor);
+
+    LLVMTypeRef ceil_func_params[] = { LLVMDoubleType() };
+    add_function(exec, "ceil", LLVMDoubleType(), ceil_func_params, ARRLEN(ceil_func_params), ceil);
 
     add_function(exec, "test_cancel", LLVMVoidType(), NULL, 0, pthread_testcancel);
 
