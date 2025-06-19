@@ -27,6 +27,9 @@
 #include <math.h>
 
 #define ARRLEN(arr) (sizeof(arr) / sizeof(arr[0]))
+#define MAX(x, y) ((x) > (y) ? (x) : (y))
+#define MIN(x, y) ((x) < (y) ? (x) : (y))
+#define CLAMP(x, min, max) (MIN(MAX(min, x), max))
 
 // Should be enough memory for now
 #define MEMORY_LIMIT 4194304 // 4 MB
@@ -432,6 +435,77 @@ static int get_random(int min, int max) {
     }
 }
 
+static char* term_get_char(Gc* gc) {
+    char input[10];
+    input[0] = term_input_get_char();
+    int mb_size = leading_ones(input[0]);
+
+    if (mb_size == 0) mb_size = 1;
+    for (int i = 1; i < mb_size && i < 10; i++) input[i] = term_input_get_char();
+    input[mb_size] = 0;
+
+    return string_from_literal(gc, input, mb_size);
+}
+
+static void term_set_cursor(int x, int y) {
+    pthread_mutex_lock(&term.lock);
+    x = CLAMP(x, 0, term.char_w - 1);
+    y = CLAMP(y, 0, term.char_h - 1);
+    term.cursor_pos = x + y * term.char_w;
+    pthread_mutex_unlock(&term.lock);
+}
+
+static int term_cursor_x(void) {
+    pthread_mutex_lock(&term.lock);
+    int cur_x = 0;
+    if (term.char_w != 0) cur_x = term.cursor_pos % term.char_w;
+    pthread_mutex_unlock(&term.lock);
+    return cur_x;
+}
+
+static int term_cursor_y(void) {
+    pthread_mutex_lock(&term.lock);
+    int cur_y = 0;
+    if (term.char_w != 0) cur_y = term.cursor_pos / term.char_w;
+    pthread_mutex_unlock(&term.lock);
+    return cur_y;
+}
+
+static int term_cursor_max_x(void) {
+    pthread_mutex_lock(&term.lock);
+    int cur_max_x = term.char_w;
+    pthread_mutex_unlock(&term.lock);
+    return cur_max_x;
+}
+
+static int term_cursor_max_y(void) {
+    pthread_mutex_lock(&term.lock);
+    int cur_max_y = term.char_h;
+    pthread_mutex_unlock(&term.lock);
+    return cur_max_y;
+}
+
+static char* term_get_input(Gc* gc) {
+    char input_char = 0;
+    char* out_string = NULL;
+
+    while (input_char != '\n') {
+        char input[256];
+        int i = 0;
+        for (; i < 255 && input_char != '\n'; i++) input[i] = (input_char = term_input_get_char());
+        if (input[i - 1] == '\n') input[i - 1] = 0;
+        input[i] = 0;
+
+        if (!out_string) {
+            out_string = string_from_literal(gc, input, i);
+        } else {
+            out_string = string_join(gc, out_string, string_from_literal(gc, input, i));
+        }
+    }
+
+    return out_string;
+}
+
 LLVMValueRef build_gc_root_begin(Exec* exec) {
     return build_call(exec, "gc_root_begin", CONST_GC);
 }
@@ -567,6 +641,31 @@ static LLVMBasicBlockRef register_globals(Exec* exec) {
 
     LLVMTypeRef floor_func_params[] = { LLVMDoubleType() };
     add_function(exec, "floor", LLVMDoubleType(), floor_func_params, ARRLEN(floor_func_params), floor);
+    
+    LLVMTypeRef get_char_func_params[] = { LLVMInt64Type() };
+    add_function(exec, "get_char", LLVMPointerType(LLVMInt8Type(), 0), get_char_func_params, ARRLEN(get_char_func_params), term_get_char);
+
+    LLVMTypeRef get_input_func_params[] = { LLVMInt64Type() };
+    add_function(exec, "get_input", LLVMPointerType(LLVMInt8Type(), 0), get_input_func_params, ARRLEN(get_input_func_params), term_get_input);
+
+    LLVMTypeRef set_clear_color_func_params[] = { LLVMInt32Type() };
+    add_function(exec, "set_clear_color", LLVMVoidType(), set_clear_color_func_params, ARRLEN(set_clear_color_func_params), term_set_clear_color);
+
+    LLVMTypeRef set_fg_color_func_params[] = { LLVMInt32Type() };
+    add_function(exec, "set_fg_color", LLVMVoidType(), set_fg_color_func_params, ARRLEN(set_fg_color_func_params), term_set_fg_color);
+
+    LLVMTypeRef set_bg_color_func_params[] = { LLVMInt32Type() };
+    add_function(exec, "set_bg_color", LLVMVoidType(), set_bg_color_func_params, ARRLEN(set_bg_color_func_params), term_set_bg_color);
+
+    LLVMTypeRef set_cursor_func_params[] = { LLVMInt32Type(), LLVMInt32Type() };
+    add_function(exec, "set_cursor", LLVMVoidType(), set_cursor_func_params, ARRLEN(set_cursor_func_params), term_set_cursor);
+
+    add_function(exec, "cursor_x", LLVMInt32Type(), NULL, 0, term_cursor_x);
+    add_function(exec, "cursor_y", LLVMInt32Type(), NULL, 0, term_cursor_y);
+    add_function(exec, "cursor_max_x", LLVMInt32Type(), NULL, 0, term_cursor_max_x);
+    add_function(exec, "cursor_max_y", LLVMInt32Type(), NULL, 0, term_cursor_max_y);
+
+    add_function(exec, "term_clear", LLVMVoidType(), NULL, 0, term_clear);
 
     LLVMTypeRef ceil_func_params[] = { LLVMDoubleType() };
     add_function(exec, "ceil", LLVMDoubleType(), ceil_func_params, ARRLEN(ceil_func_params), ceil);

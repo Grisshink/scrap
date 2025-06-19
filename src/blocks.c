@@ -1688,111 +1688,194 @@ bool block_random(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
 }
 
 bool block_get_char(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
-    (void) exec;
     (void) argc;
     (void) argv;
-    (void) return_val;
-    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_get_char");
-    return false;
+    *return_val = DATA_STRING_REF(build_call(exec, "get_char", CONST_GC));
+    return true;
 }
 
 bool block_input(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
-    (void) exec;
     (void) argc;
     (void) argv;
-    (void) return_val;
-    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_input");
-    return false;
+    *return_val = DATA_STRING_REF(build_call(exec, "get_input", CONST_GC));
+    return true;
 }
 
 bool block_term_set_clear(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
-    (void) exec;
-    (void) argc;
-    (void) argv;
-    (void) return_val;
-    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_term_set_clear");
-    return false;
+    MIN_ARG_COUNT(1);
+    if (argv[0].type != FUNC_ARG_STRING_LITERAL) return false;
+
+    Color col;
+    bool is_set = false;
+
+    if (!strcmp(argv[0].data.str, "black")) {
+        col = BLACK;
+        is_set = true;
+    } else if (!strcmp(argv[0].data.str, "red")) {
+        col = RED;
+        is_set = true;
+    } else if (!strcmp(argv[0].data.str, "yellow")) {
+        col = YELLOW;
+        is_set = true;
+    } else if (!strcmp(argv[0].data.str, "green")) {
+        col = GREEN;
+        is_set = true;
+    } else if (!strcmp(argv[0].data.str, "blue")) {
+        col = BLUE;
+        is_set = true;
+    } else if (!strcmp(argv[0].data.str, "purple")) {
+        col = PURPLE;
+        is_set = true;
+    } else if (!strcmp(argv[0].data.str, "cyan")) {
+        col = (Color) { 0x00, 0xff, 0xff, 0xff};
+        is_set = true;
+    } else if (!strcmp(argv[0].data.str, "white")) {
+        col = WHITE;
+        is_set = true;
+    }
+
+    if (is_set) {
+        build_call(exec, "set_clear_color", CONST_INTEGER(*(int*)&col));
+        *return_val = DATA_NOTHING;
+    }
+    return is_set;
 }
 
 bool block_term_clear(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
-    (void) exec;
     (void) argc;
     (void) argv;
-    (void) return_val;
-    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_term_clear");
-    return false;
+    build_call(exec, "term_clear");
+    *return_val = DATA_NOTHING;
+    return true;
 }
 
 bool block_reset_color(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
-    (void) exec;
     (void) argc;
     (void) argv;
-    (void) return_val;
-    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_reset_color");
-    return false;
+    build_call(exec, "set_fg_color", CONST_INTEGER(*(int*)&WHITE));
+    build_call(exec, "set_bg_color", CONST_INTEGER(*(int*)&BLACK));
+    *return_val = DATA_NOTHING;
+    return true;
 }
 
 bool block_set_bg_color(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
-    (void) exec;
-    (void) argc;
-    (void) argv;
-    (void) return_val;
-    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_set_bg_color");
-    return false;
+    MIN_ARG_COUNT(1);
+    if (argv[0].type != FUNC_ARG_STRING_LITERAL) return false;
+
+    Color col;
+    bool is_set = false;
+
+    if (!strcmp(argv[0].data.str, "black")) {
+        col = BLACK;
+        is_set = true;
+    } else if (!strcmp(argv[0].data.str, "red")) {
+        col = RED;
+        is_set = true;
+    } else if (!strcmp(argv[0].data.str, "yellow")) {
+        col = YELLOW;
+        is_set = true;
+    } else if (!strcmp(argv[0].data.str, "green")) {
+        col = GREEN;
+        is_set = true;
+    } else if (!strcmp(argv[0].data.str, "blue")) {
+        col = BLUE;
+        is_set = true;
+    } else if (!strcmp(argv[0].data.str, "purple")) {
+        col = PURPLE;
+        is_set = true;
+    } else if (!strcmp(argv[0].data.str, "cyan")) {
+        col = (Color) { 0x00, 0xff, 0xff, 0xff};
+        is_set = true;
+    } else if (!strcmp(argv[0].data.str, "white")) {
+        col = WHITE;
+        is_set = true;
+    }
+
+    if (is_set) {
+        build_call(exec, "set_bg_color", CONST_INTEGER(*(int*)&col));
+        *return_val = DATA_NOTHING;
+    }
+    return is_set;
 }
 
 bool block_set_fg_color(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
-    (void) exec;
-    (void) argc;
-    (void) argv;
-    (void) return_val;
-    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_set_fg_color");
-    return false;
+    MIN_ARG_COUNT(1);
+    if (argv[0].type != FUNC_ARG_STRING_LITERAL) return false;
+
+    Color col;
+    bool is_set = false;
+
+    if (!strcmp(argv[0].data.str, "black")) {
+        col = BLACK;
+        is_set = true;
+    } else if (!strcmp(argv[0].data.str, "red")) {
+        col = RED;
+        is_set = true;
+    } else if (!strcmp(argv[0].data.str, "yellow")) {
+        col = YELLOW;
+        is_set = true;
+    } else if (!strcmp(argv[0].data.str, "green")) {
+        col = GREEN;
+        is_set = true;
+    } else if (!strcmp(argv[0].data.str, "blue")) {
+        col = BLUE;
+        is_set = true;
+    } else if (!strcmp(argv[0].data.str, "purple")) {
+        col = PURPLE;
+        is_set = true;
+    } else if (!strcmp(argv[0].data.str, "cyan")) {
+        col = (Color) { 0x00, 0xff, 0xff, 0xff};
+        is_set = true;
+    } else if (!strcmp(argv[0].data.str, "white")) {
+        col = WHITE;
+        is_set = true;
+    }
+
+    if (is_set) {
+        build_call(exec, "set_fg_color", CONST_INTEGER(*(int*)&col));
+        *return_val = DATA_NOTHING;
+    }
+    return is_set;
 }
 
 bool block_set_cursor(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
-    (void) exec;
-    (void) argc;
-    (void) argv;
-    (void) return_val;
-    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_set_cursor");
-    return false;
+    MIN_ARG_COUNT(2);
+    LLVMValueRef x = arg_to_int(exec, argv[0]);
+    if (!x) return false;
+    LLVMValueRef y = arg_to_int(exec, argv[1]);
+    if (!y) return false;
+
+    build_call(exec, "set_cursor", x, y);
+    *return_val = DATA_NOTHING;
+    return true;
 }
 
 bool block_cursor_max_y(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
-    (void) exec;
     (void) argc;
     (void) argv;
-    (void) return_val;
-    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_cursor_max_y");
-    return false;
+    *return_val = DATA_INTEGER(build_call(exec, "cursor_max_y"));
+    return true;
 }
 
 bool block_cursor_max_x(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
-    (void) exec;
     (void) argc;
     (void) argv;
-    (void) return_val;
-    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_cursor_max_x");
-    return false;
+    *return_val = DATA_INTEGER(build_call(exec, "cursor_max_x"));
+    return true;
 }
 
 bool block_cursor_y(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
-    (void) exec;
     (void) argc;
     (void) argv;
-    (void) return_val;
-    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_cursor_y");
-    return false;
+    *return_val = DATA_INTEGER(build_call(exec, "cursor_y"));
+    return true;
 }
 
 bool block_cursor_x(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
-    (void) exec;
     (void) argc;
     (void) argv;
-    (void) return_val;
-    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_cursor_x");
-    return false;
+    *return_val = DATA_INTEGER(build_call(exec, "cursor_x"));
+    return true;
 }
 
 bool block_print(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
