@@ -1955,12 +1955,12 @@ bool block_declare_var(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val)
 }
 
 bool block_sleep(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
-    (void) exec;
-    (void) argc;
-    (void) argv;
-    (void) return_val;
-    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_sleep");
-    return false;
+    MIN_ARG_COUNT(1);
+    LLVMValueRef usecs = arg_to_int(exec, argv[0]);
+    if (!usecs) return false;
+
+    *return_val = DATA_INTEGER(build_call(exec, "sleep", usecs));
+    return true;
 }
 
 bool block_while(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {

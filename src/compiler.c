@@ -412,6 +412,17 @@ static int string_ord(char* str) {
     return codepoint;
 }
 
+static int sleep_us(int usecs) {
+    if (usecs < 0) return 0;
+
+    struct timespec sleep_time = {0};
+    sleep_time.tv_sec = usecs / 1000000;
+    sleep_time.tv_nsec = (usecs % 1000000) * 1000;
+
+    if (nanosleep(&sleep_time, &sleep_time) == -1) return 0;
+    return usecs;
+}
+
 LLVMValueRef build_gc_root_begin(Exec* exec) {
     return build_call(exec, "gc_root_begin", CONST_GC);
 }
@@ -502,6 +513,9 @@ static LLVMBasicBlockRef register_globals(Exec* exec) {
 
     LLVMTypeRef string_eq_func_params[] = { LLVMPointerType(LLVMInt8Type(), 0), LLVMPointerType(LLVMInt8Type(), 0) };
     add_function(exec, "string_is_eq", LLVMInt1Type(), string_eq_func_params, ARRLEN(string_eq_func_params), string_is_eq);
+
+    LLVMTypeRef sleep_func_params[] = { LLVMInt32Type() };
+    add_function(exec, "sleep", LLVMInt32Type(), sleep_func_params, ARRLEN(sleep_func_params), sleep_us);
 
     LLVMTypeRef atoi_func_params[] = { LLVMPointerType(LLVMInt8Type(), 0) };
     add_function(exec, "atoi", LLVMInt32Type(), atoi_func_params, ARRLEN(atoi_func_params), atoi);
