@@ -1677,12 +1677,14 @@ bool block_join(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
 }
 
 bool block_random(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
-    (void) exec;
-    (void) argc;
-    (void) argv;
-    (void) return_val;
-    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_random");
-    return false;
+    MIN_ARG_COUNT(2);
+    LLVMValueRef min = arg_to_int(exec, argv[0]);
+    if (!min) return false;
+    LLVMValueRef max = arg_to_int(exec, argv[1]);
+    if (!max) return false;
+
+    *return_val = DATA_INTEGER(build_call(exec, "random", min, max));
+    return true;
 }
 
 bool block_get_char(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {

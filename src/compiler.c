@@ -424,6 +424,14 @@ static int sleep_us(int usecs) {
     return usecs;
 }
 
+static int get_random(int min, int max) {
+    if (min > max) {
+        return GetRandomValue(max, min);
+    } else {
+        return GetRandomValue(min, max);
+    }
+}
+
 LLVMValueRef build_gc_root_begin(Exec* exec) {
     return build_call(exec, "gc_root_begin", CONST_GC);
 }
@@ -517,6 +525,9 @@ static LLVMBasicBlockRef register_globals(Exec* exec) {
 
     LLVMTypeRef sleep_func_params[] = { LLVMInt32Type() };
     add_function(exec, "sleep", LLVMInt32Type(), sleep_func_params, ARRLEN(sleep_func_params), sleep_us);
+
+    LLVMTypeRef random_func_params[] = { LLVMInt32Type(), LLVMInt32Type() };
+    add_function(exec, "random", LLVMInt32Type(), random_func_params, ARRLEN(random_func_params), get_random);
 
     LLVMTypeRef atoi_func_params[] = { LLVMPointerType(LLVMInt8Type(), 0) };
     add_function(exec, "atoi", LLVMInt32Type(), atoi_func_params, ARRLEN(atoi_func_params), atoi);
