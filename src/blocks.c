@@ -1937,12 +1937,15 @@ bool block_list_get(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
 }
 
 bool block_list_add(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
-    (void) exec;
-    (void) argc;
-    (void) argv;
-    (void) return_val;
-    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_list_add");
-    return false;
+    MIN_ARG_COUNT(2);
+    if (argv[0].type != FUNC_ARG_LIST) {
+        TraceLog(LOG_ERROR, "[LLVM] Received non list argument");
+        return false;
+    }
+
+    build_call_count(exec, "list_add", 4, CONST_GC, argv[0].data.value, CONST_INTEGER(argv[1].type), arg_to_value(exec, argv[1]));
+    *return_val = argv[0];
+    return true;
 }
 
 bool block_create_list(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {

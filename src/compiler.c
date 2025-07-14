@@ -312,6 +312,51 @@ static List* list_new(Gc* gc) {
     return list;
 }
 
+static void list_add(Gc* gc, List* list, FuncArgType data_type, ...) {
+    AnyValueData data;
+
+    va_list va;
+    va_start(va, data_type);
+    switch (data_type) {
+    case FUNC_ARG_BOOL:
+    case FUNC_ARG_INT:
+        data.int_val = va_arg(va, int);
+        break;
+    case FUNC_ARG_DOUBLE:
+        data.double_val = va_arg(va, double);
+        break;
+    case FUNC_ARG_STRING_REF:
+    case FUNC_ARG_STRING_LITERAL:
+        data.str_val = va_arg(va, char*);
+        break;
+    case FUNC_ARG_LIST:
+        data.list_val = va_arg(va, List*);
+        break;
+    default:
+        break;
+    }
+    va_end(va);
+
+    AnyValue value = (AnyValue) {
+        .type = data_type,
+        .data = data,
+    };
+    
+    if (!list->values) {
+        list->values = gc_malloc(gc, sizeof(AnyValue), 0);
+        list->capacity = 1;
+    }
+
+    if (list->size >= list->capacity) {
+        AnyValue* new_list = gc_malloc(gc, sizeof(AnyValue) * list->size * 2, 0);
+        memcpy(new_list, list->values, sizeof(AnyValue) * list->size);
+        list->values = new_list;
+        list->capacity = list->size * 2;
+    }
+
+    list->values[list->size++] = value;
+}
+
 static char* string_from_literal(Gc* gc, const char* literal, unsigned int size) {
     StringHeader* out_str = gc_malloc(gc, sizeof(StringHeader) + size + 1, FUNC_ARG_STRING_REF); // Don't forget null terminator. It is not included in size
     memcpy(out_str->str, literal, size);
@@ -527,11 +572,7 @@ LLVMValueRef build_gc_root_end(Exec* exec) {
     return build_call(exec, "gc_root_end", CONST_GC);
 }
 
-LLVMValueRef build_call(Exec* exec, const char* func_name, ...) {
-    LLVMValueRef func = LLVMGetNamedFunction(exec->module, func_name);
-    LLVMTypeRef func_type = LLVMGlobalGetValueType(func);
-    unsigned int func_param_count = LLVMCountParamTypes(func_type);
-
+static LLVMValueRef build_call_va(Exec* exec, const char* func_name, LLVMValueRef func, LLVMTypeRef func_type, size_t func_param_count, va_list va) {
     for (size_t i = 0; i < vector_size(exec->gc_dirty_funcs); i++) {
         if (func != exec->gc_dirty_funcs[i]) continue;
         exec->gc_dirty = true;
@@ -541,12 +582,9 @@ LLVMValueRef build_call(Exec* exec, const char* func_name, ...) {
     assert(func_param_count <= 32);
     LLVMValueRef func_param_list[32];
 
-    va_list va;
-    va_start(va, func_name);
     for (unsigned int i = 0; i < func_param_count; i++) {
         func_param_list[i] = va_arg(va, LLVMValueRef);
     }
-    va_end(va);
 
     if (LLVMGetTypeKind(LLVMGetReturnType(func_type)) == LLVMVoidTypeKind) {
         return LLVMBuildCall2(exec->builder, func_type, func, func_param_list, func_param_count, "");
@@ -555,18 +593,45 @@ LLVMValueRef build_call(Exec* exec, const char* func_name, ...) {
     }
 }
 
+LLVMValueRef build_call_count(Exec* exec, const char* func_name, size_t func_param_count, ...) {
+    LLVMValueRef func = LLVMGetNamedFunction(exec->module, func_name);
+    LLVMTypeRef func_type = LLVMGlobalGetValueType(func);
+    LLVMValueRef out;
+
+    va_list va;
+    va_start(va, func_param_count);
+    out = build_call_va(exec, func_name, func, func_type, func_param_count, va);
+    va_end(va);
+
+    return out;
+}
+
+LLVMValueRef build_call(Exec* exec, const char* func_name, ...) {
+    LLVMValueRef func = LLVMGetNamedFunction(exec->module, func_name);
+    LLVMTypeRef func_type = LLVMGlobalGetValueType(func);
+    unsigned int func_param_count = LLVMCountParamTypes(func_type);
+    LLVMValueRef out;
+
+    va_list va;
+    va_start(va, func_name);
+    out = build_call_va(exec, func_name, func, func_type, func_param_count, va);
+    va_end(va);
+
+    return out;
+}
+
 static unsigned int string_length(char* str) {
     StringHeader* header = ((StringHeader*)str) - 1;
     return header->size;
 }
 
 // Dynamic means the func calls gc_malloc at some point. This is needed for gc.temp_roots cleanup
-static LLVMValueRef add_function(Exec* exec, const char* name, LLVMTypeRef return_type, LLVMTypeRef* params, size_t params_len, void* func, bool dynamic) {
+static LLVMValueRef add_function(Exec* exec, const char* name, LLVMTypeRef return_type, LLVMTypeRef* params, size_t params_len, void* func, bool dynamic, bool variadic) {
     CompileFunction* comp_func = vector_add_dst(&exec->compile_func_list);
     comp_func->func = func;
     comp_func->name = name;
 
-    LLVMTypeRef func_type = LLVMFunctionType(return_type, params, params_len, false);
+    LLVMTypeRef func_type = LLVMFunctionType(return_type, params, params_len, variadic);
     LLVMValueRef func_value = LLVMAddFunction(exec->module, name, func_type);
 
     if (dynamic) vector_add(&exec->gc_dirty_funcs, func_value);
@@ -575,130 +640,133 @@ static LLVMValueRef add_function(Exec* exec, const char* name, LLVMTypeRef retur
 
 static LLVMBasicBlockRef register_globals(Exec* exec) {
     LLVMTypeRef print_func_params[] = { LLVMPointerType(LLVMInt8Type(), 0) };
-    add_function(exec, "term_print_str", LLVMInt32Type(), print_func_params, ARRLEN(print_func_params), term_print_str, false);
+    add_function(exec, "term_print_str", LLVMInt32Type(), print_func_params, ARRLEN(print_func_params), term_print_str, false, false);
 
     LLVMTypeRef print_int_func_params[] = { LLVMInt32Type() };
-    add_function(exec, "term_print_int", LLVMInt32Type(), print_int_func_params, ARRLEN(print_int_func_params), term_print_int, false);
+    add_function(exec, "term_print_int", LLVMInt32Type(), print_int_func_params, ARRLEN(print_int_func_params), term_print_int, false, false);
 
     LLVMTypeRef print_double_func_params[] = { LLVMDoubleType() };
-    add_function(exec, "term_print_double", LLVMInt32Type(), print_double_func_params, ARRLEN(print_double_func_params), term_print_double, false);
+    add_function(exec, "term_print_double", LLVMInt32Type(), print_double_func_params, ARRLEN(print_double_func_params), term_print_double, false, false);
 
     LLVMTypeRef print_bool_func_params[] = { LLVMInt1Type() };
-    add_function(exec, "term_print_bool", LLVMInt32Type(), print_bool_func_params, ARRLEN(print_bool_func_params), term_print_bool, false);
+    add_function(exec, "term_print_bool", LLVMInt32Type(), print_bool_func_params, ARRLEN(print_bool_func_params), term_print_bool, false, false);
 
     LLVMTypeRef print_list_func_params[] = { LLVMPointerType(LLVMVoidType(), 0) };
-    add_function(exec, "term_print_list", LLVMInt32Type(), print_list_func_params, ARRLEN(print_list_func_params), term_print_list, false);
+    add_function(exec, "term_print_list", LLVMInt32Type(), print_list_func_params, ARRLEN(print_list_func_params), term_print_list, false, false);
 
     LLVMTypeRef string_literal_func_params[] = { LLVMInt64Type(), LLVMPointerType(LLVMInt8Type(), 0), LLVMInt32Type() };
-    add_function(exec, "string_from_literal", LLVMPointerType(LLVMInt8Type(), 0), string_literal_func_params, ARRLEN(string_literal_func_params), string_from_literal, true);
+    add_function(exec, "string_from_literal", LLVMPointerType(LLVMInt8Type(), 0), string_literal_func_params, ARRLEN(string_literal_func_params), string_from_literal, true, false);
 
     LLVMTypeRef string_int_func_params[] = { LLVMInt64Type(), LLVMInt32Type() };
-    add_function(exec, "string_from_int", LLVMPointerType(LLVMInt8Type(), 0), string_int_func_params, ARRLEN(string_int_func_params), string_from_int, true);
+    add_function(exec, "string_from_int", LLVMPointerType(LLVMInt8Type(), 0), string_int_func_params, ARRLEN(string_int_func_params), string_from_int, true, false);
 
     LLVMTypeRef string_bool_func_params[] = { LLVMInt64Type(), LLVMInt1Type() };
-    add_function(exec, "string_from_bool", LLVMPointerType(LLVMInt8Type(), 0), string_bool_func_params, ARRLEN(string_bool_func_params), string_from_bool, true);
+    add_function(exec, "string_from_bool", LLVMPointerType(LLVMInt8Type(), 0), string_bool_func_params, ARRLEN(string_bool_func_params), string_from_bool, true, false);
 
     LLVMTypeRef string_double_func_params[] = { LLVMInt64Type(), LLVMDoubleType() };
-    add_function(exec, "string_from_double", LLVMPointerType(LLVMInt8Type(), 0), string_double_func_params, ARRLEN(string_double_func_params), string_from_double, true);
+    add_function(exec, "string_from_double", LLVMPointerType(LLVMInt8Type(), 0), string_double_func_params, ARRLEN(string_double_func_params), string_from_double, true, false);
 
     LLVMTypeRef string_length_func_params[] = { LLVMPointerType(LLVMInt8Type(), 0) };
-    add_function(exec, "string_length", LLVMInt32Type(), string_length_func_params, ARRLEN(string_length_func_params), string_length, false);
+    add_function(exec, "string_length", LLVMInt32Type(), string_length_func_params, ARRLEN(string_length_func_params), string_length, false, false);
 
     LLVMTypeRef string_join_func_params[] = { LLVMInt64Type(), LLVMPointerType(LLVMInt8Type(), 0), LLVMPointerType(LLVMInt8Type(), 0) };
-    add_function(exec, "string_join", LLVMPointerType(LLVMInt8Type(), 0), string_join_func_params, ARRLEN(string_join_func_params), string_join, true);
+    add_function(exec, "string_join", LLVMPointerType(LLVMInt8Type(), 0), string_join_func_params, ARRLEN(string_join_func_params), string_join, true, false);
 
     LLVMTypeRef string_ord_func_params[] = { LLVMPointerType(LLVMInt8Type(), 0) };
-    add_function(exec, "string_ord", LLVMInt32Type(), string_ord_func_params, ARRLEN(string_ord_func_params), string_ord, false);
+    add_function(exec, "string_ord", LLVMInt32Type(), string_ord_func_params, ARRLEN(string_ord_func_params), string_ord, false, false);
 
     LLVMTypeRef string_chr_func_params[] = { LLVMInt64Type(), LLVMInt32Type() };
-    add_function(exec, "string_chr", LLVMPointerType(LLVMInt8Type(), 0), string_chr_func_params, ARRLEN(string_chr_func_params), string_chr, false);
+    add_function(exec, "string_chr", LLVMPointerType(LLVMInt8Type(), 0), string_chr_func_params, ARRLEN(string_chr_func_params), string_chr, false, false);
 
     LLVMTypeRef string_letter_in_func_params[] = { LLVMInt64Type(), LLVMInt32Type(), LLVMPointerType(LLVMInt8Type(), 0) };
-    add_function(exec, "string_letter_in", LLVMPointerType(LLVMInt8Type(), 0), string_letter_in_func_params, ARRLEN(string_letter_in_func_params), string_letter_in, true);
+    add_function(exec, "string_letter_in", LLVMPointerType(LLVMInt8Type(), 0), string_letter_in_func_params, ARRLEN(string_letter_in_func_params), string_letter_in, true, false);
 
     LLVMTypeRef string_substring_func_params[] = { LLVMInt64Type(), LLVMInt32Type(), LLVMInt32Type(), LLVMPointerType(LLVMInt8Type(), 0) };
-    add_function(exec, "string_substring", LLVMPointerType(LLVMInt8Type(), 0), string_substring_func_params, ARRLEN(string_substring_func_params), string_substring, true);
+    add_function(exec, "string_substring", LLVMPointerType(LLVMInt8Type(), 0), string_substring_func_params, ARRLEN(string_substring_func_params), string_substring, true, false);
 
     LLVMTypeRef string_eq_func_params[] = { LLVMPointerType(LLVMInt8Type(), 0), LLVMPointerType(LLVMInt8Type(), 0) };
-    add_function(exec, "string_is_eq", LLVMInt1Type(), string_eq_func_params, ARRLEN(string_eq_func_params), string_is_eq, false);
+    add_function(exec, "string_is_eq", LLVMInt1Type(), string_eq_func_params, ARRLEN(string_eq_func_params), string_is_eq, false, false);
 
     LLVMTypeRef sleep_func_params[] = { LLVMInt32Type() };
-    add_function(exec, "sleep", LLVMInt32Type(), sleep_func_params, ARRLEN(sleep_func_params), sleep_us, false);
+    add_function(exec, "sleep", LLVMInt32Type(), sleep_func_params, ARRLEN(sleep_func_params), sleep_us, false, false);
 
     LLVMTypeRef random_func_params[] = { LLVMInt32Type(), LLVMInt32Type() };
-    add_function(exec, "random", LLVMInt32Type(), random_func_params, ARRLEN(random_func_params), get_random, false);
+    add_function(exec, "random", LLVMInt32Type(), random_func_params, ARRLEN(random_func_params), get_random, false, false);
 
     LLVMTypeRef atoi_func_params[] = { LLVMPointerType(LLVMInt8Type(), 0) };
-    add_function(exec, "atoi", LLVMInt32Type(), atoi_func_params, ARRLEN(atoi_func_params), atoi, false);
+    add_function(exec, "atoi", LLVMInt32Type(), atoi_func_params, ARRLEN(atoi_func_params), atoi, false, false);
 
     LLVMTypeRef atof_func_params[] = { LLVMPointerType(LLVMInt8Type(), 0) };
-    add_function(exec, "atof", LLVMDoubleType(), atof_func_params, ARRLEN(atof_func_params), atof, false);
+    add_function(exec, "atof", LLVMDoubleType(), atof_func_params, ARRLEN(atof_func_params), atof, false, false);
 
     LLVMTypeRef int_pow_func_params[] = { LLVMInt32Type(), LLVMInt32Type() };
-    add_function(exec, "int_pow", LLVMInt32Type(), int_pow_func_params, ARRLEN(int_pow_func_params), int_pow, false);
+    add_function(exec, "int_pow", LLVMInt32Type(), int_pow_func_params, ARRLEN(int_pow_func_params), int_pow, false, false);
 
     LLVMTypeRef time_func_params[] = { LLVMPointerType(LLVMVoidType(), 0) };
-    add_function(exec, "time", LLVMInt32Type(), time_func_params, ARRLEN(time_func_params), time, false);
+    add_function(exec, "time", LLVMInt32Type(), time_func_params, ARRLEN(time_func_params), time, false, false);
 
     LLVMTypeRef sin_func_params[] = { LLVMDoubleType() };
-    add_function(exec, "sin", LLVMDoubleType(), sin_func_params, ARRLEN(sin_func_params), sin, false);
+    add_function(exec, "sin", LLVMDoubleType(), sin_func_params, ARRLEN(sin_func_params), sin, false, false);
 
     LLVMTypeRef cos_func_params[] = { LLVMDoubleType() };
-    add_function(exec, "cos", LLVMDoubleType(), cos_func_params, ARRLEN(cos_func_params), cos, false);
+    add_function(exec, "cos", LLVMDoubleType(), cos_func_params, ARRLEN(cos_func_params), cos, false, false);
 
     LLVMTypeRef tan_func_params[] = { LLVMDoubleType() };
-    add_function(exec, "tan", LLVMDoubleType(), tan_func_params, ARRLEN(tan_func_params), tan, false);
+    add_function(exec, "tan", LLVMDoubleType(), tan_func_params, ARRLEN(tan_func_params), tan, false, false);
 
     LLVMTypeRef asin_func_params[] = { LLVMDoubleType() };
-    add_function(exec, "asin", LLVMDoubleType(), asin_func_params, ARRLEN(asin_func_params), asin, false);
+    add_function(exec, "asin", LLVMDoubleType(), asin_func_params, ARRLEN(asin_func_params), asin, false, false);
 
     LLVMTypeRef acos_func_params[] = { LLVMDoubleType() };
-    add_function(exec, "acos", LLVMDoubleType(), acos_func_params, ARRLEN(acos_func_params), acos, false);
+    add_function(exec, "acos", LLVMDoubleType(), acos_func_params, ARRLEN(acos_func_params), acos, false, false);
 
     LLVMTypeRef atan_func_params[] = { LLVMDoubleType() };
-    add_function(exec, "atan", LLVMDoubleType(), atan_func_params, ARRLEN(atan_func_params), atan, false);
+    add_function(exec, "atan", LLVMDoubleType(), atan_func_params, ARRLEN(atan_func_params), atan, false, false);
 
     LLVMTypeRef sqrt_func_params[] = { LLVMDoubleType() };
-    add_function(exec, "sqrt", LLVMDoubleType(), sqrt_func_params, ARRLEN(sqrt_func_params), sqrt, false);
+    add_function(exec, "sqrt", LLVMDoubleType(), sqrt_func_params, ARRLEN(sqrt_func_params), sqrt, false, false);
 
     LLVMTypeRef round_func_params[] = { LLVMDoubleType() };
-    add_function(exec, "round", LLVMDoubleType(), round_func_params, ARRLEN(round_func_params), round, false);
+    add_function(exec, "round", LLVMDoubleType(), round_func_params, ARRLEN(round_func_params), round, false, false);
 
     LLVMTypeRef floor_func_params[] = { LLVMDoubleType() };
-    add_function(exec, "floor", LLVMDoubleType(), floor_func_params, ARRLEN(floor_func_params), floor, false);
+    add_function(exec, "floor", LLVMDoubleType(), floor_func_params, ARRLEN(floor_func_params), floor, false, false);
     
     LLVMTypeRef get_char_func_params[] = { LLVMInt64Type() };
-    add_function(exec, "get_char", LLVMPointerType(LLVMInt8Type(), 0), get_char_func_params, ARRLEN(get_char_func_params), term_get_char, true);
+    add_function(exec, "get_char", LLVMPointerType(LLVMInt8Type(), 0), get_char_func_params, ARRLEN(get_char_func_params), term_get_char, true, false);
 
     LLVMTypeRef get_input_func_params[] = { LLVMInt64Type() };
-    add_function(exec, "get_input", LLVMPointerType(LLVMInt8Type(), 0), get_input_func_params, ARRLEN(get_input_func_params), term_get_input, true);
+    add_function(exec, "get_input", LLVMPointerType(LLVMInt8Type(), 0), get_input_func_params, ARRLEN(get_input_func_params), term_get_input, true, false);
 
     LLVMTypeRef set_clear_color_func_params[] = { LLVMInt32Type() };
-    add_function(exec, "set_clear_color", LLVMVoidType(), set_clear_color_func_params, ARRLEN(set_clear_color_func_params), term_set_clear_color, false);
+    add_function(exec, "set_clear_color", LLVMVoidType(), set_clear_color_func_params, ARRLEN(set_clear_color_func_params), term_set_clear_color, false, false);
 
     LLVMTypeRef set_fg_color_func_params[] = { LLVMInt32Type() };
-    add_function(exec, "set_fg_color", LLVMVoidType(), set_fg_color_func_params, ARRLEN(set_fg_color_func_params), term_set_fg_color, false);
+    add_function(exec, "set_fg_color", LLVMVoidType(), set_fg_color_func_params, ARRLEN(set_fg_color_func_params), term_set_fg_color, false, false);
 
     LLVMTypeRef set_bg_color_func_params[] = { LLVMInt32Type() };
-    add_function(exec, "set_bg_color", LLVMVoidType(), set_bg_color_func_params, ARRLEN(set_bg_color_func_params), term_set_bg_color, false);
+    add_function(exec, "set_bg_color", LLVMVoidType(), set_bg_color_func_params, ARRLEN(set_bg_color_func_params), term_set_bg_color, false, false);
 
     LLVMTypeRef set_cursor_func_params[] = { LLVMInt32Type(), LLVMInt32Type() };
-    add_function(exec, "set_cursor", LLVMVoidType(), set_cursor_func_params, ARRLEN(set_cursor_func_params), term_set_cursor, false);
+    add_function(exec, "set_cursor", LLVMVoidType(), set_cursor_func_params, ARRLEN(set_cursor_func_params), term_set_cursor, false, false);
 
-    add_function(exec, "cursor_x", LLVMInt32Type(), NULL, 0, term_cursor_x, false);
-    add_function(exec, "cursor_y", LLVMInt32Type(), NULL, 0, term_cursor_y, false);
-    add_function(exec, "cursor_max_x", LLVMInt32Type(), NULL, 0, term_cursor_max_x, false);
-    add_function(exec, "cursor_max_y", LLVMInt32Type(), NULL, 0, term_cursor_max_y, false);
+    add_function(exec, "cursor_x", LLVMInt32Type(), NULL, 0, term_cursor_x, false, false);
+    add_function(exec, "cursor_y", LLVMInt32Type(), NULL, 0, term_cursor_y, false, false);
+    add_function(exec, "cursor_max_x", LLVMInt32Type(), NULL, 0, term_cursor_max_x, false, false);
+    add_function(exec, "cursor_max_y", LLVMInt32Type(), NULL, 0, term_cursor_max_y, false, false);
 
-    add_function(exec, "term_clear", LLVMVoidType(), NULL, 0, term_clear, false);
+    add_function(exec, "term_clear", LLVMVoidType(), NULL, 0, term_clear, false, false);
 
     LLVMTypeRef list_new_func_params[] = { LLVMInt64Type() };
-    add_function(exec, "list_new", LLVMPointerType(LLVMInt8Type(), 0), list_new_func_params, ARRLEN(list_new_func_params), list_new, true);
+    add_function(exec, "list_new", LLVMPointerType(LLVMInt8Type(), 0), list_new_func_params, ARRLEN(list_new_func_params), list_new, true, false);
+
+    LLVMTypeRef list_add_func_params[] = { LLVMInt64Type(), LLVMPointerType(LLVMInt8Type(), 0), LLVMInt32Type() };
+    add_function(exec, "list_add", LLVMVoidType(), list_add_func_params, ARRLEN(list_add_func_params), list_add, true, true);
 
     LLVMTypeRef ceil_func_params[] = { LLVMDoubleType() };
-    add_function(exec, "ceil", LLVMDoubleType(), ceil_func_params, ARRLEN(ceil_func_params), ceil, false);
+    add_function(exec, "ceil", LLVMDoubleType(), ceil_func_params, ARRLEN(ceil_func_params), ceil, false, false);
 
-    add_function(exec, "test_cancel", LLVMVoidType(), NULL, 0, pthread_testcancel, false);
+    add_function(exec, "test_cancel", LLVMVoidType(), NULL, 0, pthread_testcancel, false, false);
 
     LLVMTypeRef stack_save_func_type = LLVMFunctionType(LLVMPointerType(LLVMVoidType(), 0), NULL, 0, false);
     LLVMAddFunction(exec->module, "llvm.stacksave.p0", stack_save_func_type);
@@ -708,19 +776,19 @@ static LLVMBasicBlockRef register_globals(Exec* exec) {
     LLVMAddFunction(exec->module, "llvm.stackrestore.p0", stack_restore_func_type);
 
     LLVMTypeRef gc_root_begin_func_params[] = { LLVMInt64Type() };
-    add_function(exec, "gc_root_begin", LLVMVoidType(), gc_root_begin_func_params, ARRLEN(gc_root_begin_func_params), gc_root_begin, false);
+    add_function(exec, "gc_root_begin", LLVMVoidType(), gc_root_begin_func_params, ARRLEN(gc_root_begin_func_params), gc_root_begin, false, false);
 
     LLVMTypeRef gc_root_end_func_params[] = { LLVMInt64Type() };
-    add_function(exec, "gc_root_end", LLVMVoidType(), gc_root_end_func_params, ARRLEN(gc_root_end_func_params), gc_root_end, false);
+    add_function(exec, "gc_root_end", LLVMVoidType(), gc_root_end_func_params, ARRLEN(gc_root_end_func_params), gc_root_end, false, false);
     
     LLVMTypeRef gc_flush_func_params[] = { LLVMInt64Type() };
-    add_function(exec, "gc_flush", LLVMVoidType(), gc_flush_func_params, ARRLEN(gc_flush_func_params), gc_flush, false);
+    add_function(exec, "gc_flush", LLVMVoidType(), gc_flush_func_params, ARRLEN(gc_flush_func_params), gc_flush, false, false);
 
     LLVMTypeRef gc_add_root_func_params[] = { LLVMInt64Type(), LLVMPointerType(LLVMInt8Type(), 0) };
-    add_function(exec, "gc_add_root", LLVMVoidType(), gc_add_root_func_params, ARRLEN(gc_add_root_func_params), gc_add_root, false);
+    add_function(exec, "gc_add_root", LLVMVoidType(), gc_add_root_func_params, ARRLEN(gc_add_root_func_params), gc_add_root, false, false);
 
     LLVMTypeRef gc_add_str_root_func_params[] = { LLVMInt64Type(), LLVMPointerType(LLVMInt8Type(), 0) };
-    add_function(exec, "gc_add_str_root", LLVMVoidType(), gc_add_str_root_func_params, ARRLEN(gc_add_str_root_func_params), gc_add_str_root, false);
+    add_function(exec, "gc_add_str_root", LLVMVoidType(), gc_add_str_root_func_params, ARRLEN(gc_add_str_root_func_params), gc_add_str_root, false, false);
 
     LLVMTypeRef main_func_type = LLVMFunctionType(LLVMVoidType(), NULL, 0, false);
     LLVMValueRef main_func = LLVMAddFunction(exec->module, "llvm_main", main_func_type);
