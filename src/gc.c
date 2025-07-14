@@ -55,7 +55,7 @@ void gc_root_begin(Gc* gc) {
 
 static void gc_mark_refs(Gc* gc, GcChunkData* chunk) {
     switch (chunk->data_type) {
-    case FUNC_ARG_LIST:
+    case FUNC_ARG_LIST: ;
         List* list = (List*)chunk->data;
         if (!list->values) break;
 

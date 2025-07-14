@@ -1047,6 +1047,7 @@ LLVMValueRef arg_to_value(Exec* exec, FuncArg arg) {
     switch (arg.type) {
     case FUNC_ARG_STRING_LITERAL:
         return CONST_STRING_LITERAL(arg.data.str);
+    case FUNC_ARG_LIST:
     case FUNC_ARG_STRING_REF:
     case FUNC_ARG_NOTHING:
     case FUNC_ARG_INT:
