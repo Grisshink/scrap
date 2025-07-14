@@ -53,6 +53,33 @@ void gc_root_begin(Gc* gc) {
     root->chunks = vector_create();
 }
 
+static void gc_mark_refs(Gc* gc, GcChunkData* chunk) {
+    switch (chunk->data_type) {
+    case FUNC_ARG_LIST:
+        List* list = (List*)chunk->data;
+        if (!list->values) break;
+
+        GcChunkData* list_values_chunk = ((GcChunkData*)list->values) - 1;
+        list_values_chunk->marked = 1;
+        
+        for (long i = 0; i < list->size; i++) {
+            GcChunkData* chunk_inner;
+            if (list->values[i].type == FUNC_ARG_LIST) {
+                chunk_inner = ((GcChunkData*)list->values[i].data.list_val) - 1;
+                chunk_inner->marked = 1;
+                gc_mark_refs(gc, chunk_inner);
+            } else if (list->values[i].type == FUNC_ARG_STRING_REF) {
+                StringHeader* str = ((StringHeader*)list->values[i].data.str_val) - 1;
+                chunk_inner = ((GcChunkData*)str) - 1;
+                chunk_inner->marked = 1;
+            }
+        }
+        break;
+    default:
+        break;
+    }
+}
+
 void gc_collect(Gc* gc) {
 #ifdef DEBUG
     Timer t = start_timer("gc_collect");
@@ -62,11 +89,13 @@ void gc_collect(Gc* gc) {
     for (size_t i = 0; i < vector_size(gc->roots_stack); i++) {
         for (size_t j = 0; j < vector_size(gc->roots_stack[i].chunks); j++) {
             gc->roots_stack[i].chunks[j]->marked = 1;
+            gc_mark_refs(gc, gc->roots_stack[i].chunks[j]);
         }
     }
 
     for (size_t i = 0; i < vector_size(gc->temp_roots); i++) {
         gc->temp_roots[i]->marked = 1;
+        gc_mark_refs(gc, gc->temp_roots[i]);
     }
 
     // Find unmarked chunks
@@ -91,7 +120,7 @@ void gc_collect(Gc* gc) {
 #endif
 }
 
-void* gc_malloc(Gc* gc, size_t size) {
+void* gc_malloc(Gc* gc, size_t size, FuncArgType data_type) {
     assert(vector_size(gc->roots_stack) > 0);
 
     if (size > gc->memory_max) {
@@ -109,6 +138,7 @@ void* gc_malloc(Gc* gc, size_t size) {
     if (chunk_data == NULL) return NULL;
 
     chunk_data->marked = 0;
+    chunk_data->data_type = data_type;
     GcChunk chunk = (GcChunk) {
         .ptr = chunk_data,
         .len = size,
@@ -131,12 +161,6 @@ void gc_add_root(Gc* gc, void* ptr) {
     GcChunkData* chunk_ptr = ((GcChunkData*)ptr) - 1;
     vector_add(&gc->roots_stack[vector_size(gc->roots_stack) - 1].chunks, chunk_ptr);
 }
-
-typedef struct {
-    unsigned int size;
-    unsigned int capacity;
-    char str[];
-} StringHeader;
 
 void gc_add_str_root(Gc* gc, char* str) {
     StringHeader* header = ((StringHeader*)str) - 1;

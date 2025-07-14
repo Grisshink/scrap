@@ -304,14 +304,8 @@ static int int_pow(int base, int exp) {
     return result;
 }
 
-typedef struct {
-    unsigned int size;
-    unsigned int capacity;
-    char str[];
-} StringHeader;
-
 static List* list_new(Gc* gc) {
-    List* list = gc_malloc(gc, sizeof(List));
+    List* list = gc_malloc(gc, sizeof(List), FUNC_ARG_LIST);
     list->size = 0;
     list->capacity = 0;
     list->values = NULL;
@@ -319,7 +313,7 @@ static List* list_new(Gc* gc) {
 }
 
 static char* string_from_literal(Gc* gc, const char* literal, unsigned int size) {
-    StringHeader* out_str = gc_malloc(gc, sizeof(StringHeader) + size + 1); // Don't forget null terminator. It is not included in size
+    StringHeader* out_str = gc_malloc(gc, sizeof(StringHeader) + size + 1, FUNC_ARG_STRING_REF); // Don't forget null terminator. It is not included in size
     memcpy(out_str->str, literal, size);
     out_str->size = size;
     out_str->capacity = size;
@@ -380,7 +374,7 @@ static char* string_join(Gc* gc, char* left, char* right) {
     StringHeader* left_header = ((StringHeader*)left) - 1;
     StringHeader* right_header = ((StringHeader*)right) - 1;
     
-    StringHeader* out_str = gc_malloc(gc, sizeof(StringHeader) + left_header->size + right_header->size + 1);
+    StringHeader* out_str = gc_malloc(gc, sizeof(StringHeader) + left_header->size + right_header->size + 1, FUNC_ARG_STRING_REF);
     memcpy(out_str->str, left_header->str, left_header->size);
     memcpy(out_str->str + left_header->size, right_header->str, right_header->size);
     out_str->size = left_header->size + right_header->size;

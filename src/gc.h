@@ -19,10 +19,13 @@
 #define SCRAP_GC_H
 
 #include <stddef.h>
+
 #include "vec.h"
+#include "compiler-common.h"
 
 typedef struct {
     unsigned char marked;
+    FuncArgType data_type;
     unsigned char data[];
 } GcChunkData;
 
@@ -51,7 +54,7 @@ void gc_free(Gc* gc);
 
 void gc_root_begin(Gc* gc);
 void gc_root_end(Gc* gc);
-void* gc_malloc(Gc* gc, size_t size);
+void* gc_malloc(Gc* gc, size_t size, FuncArgType data_type);
 void gc_flush(Gc* gc);
 void gc_add_root(Gc* gc, void* ptr);
 void gc_add_str_root(Gc* gc, char* str);
