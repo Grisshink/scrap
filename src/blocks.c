@@ -1976,6 +1976,10 @@ bool block_set_var(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
         return true;
     }
 
+    if (LLVMTypeOf(argv[1].data.value) == LLVMPointerType(LLVMInt8Type(), 0)) {
+        build_call(exec, argv[1].type == FUNC_ARG_STRING_REF ? "gc_add_str_root" : "gc_add_root", CONST_GC, argv[1].data.value);
+    }
+
     LLVMBuildStore(exec->builder, argv[1].data.value, var->value.data.value);
     *return_val = argv[1];
     return true;
@@ -2043,6 +2047,9 @@ bool block_declare_var(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val)
     };
     variable_stack_push(exec, var);
     LLVMBuildStore(exec->builder, argv[1].data.value, var.value.data.value);
+    if (data_type == LLVMPointerType(LLVMInt8Type(), 0)) {
+        build_call(exec, argv[1].type == FUNC_ARG_STRING_REF ? "gc_add_str_root" : "gc_add_root", CONST_GC, argv[1].data.value);
+    }
     *return_val = argv[1];
     return true;
 }

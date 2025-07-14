@@ -25,6 +25,7 @@ Gc gc_new(size_t memory_max) {
     return (Gc) {
         .chunks = vector_create(),
         .roots_stack = vector_create(),
+        .temp_roots = vector_create(),
         .memory_used = 0,
         .memory_max = memory_max,
     };
@@ -41,6 +42,7 @@ void gc_free(Gc* gc) {
         vector_free(gc->roots_stack[i].chunks);
     }
     vector_free(gc->roots_stack);
+    vector_free(gc->temp_roots);
     vector_free(gc->chunks);
     gc->memory_max = 0;
     gc->memory_used = 0;
@@ -61,6 +63,10 @@ void gc_collect(Gc* gc) {
         for (size_t j = 0; j < vector_size(gc->roots_stack[i].chunks); j++) {
             gc->roots_stack[i].chunks[j]->marked = 1;
         }
+    }
+
+    for (size_t i = 0; i < vector_size(gc->temp_roots); i++) {
+        gc->temp_roots[i]->marked = 1;
     }
 
     // Find unmarked chunks
@@ -88,6 +94,11 @@ void gc_collect(Gc* gc) {
 void* gc_malloc(Gc* gc, size_t size) {
     assert(vector_size(gc->roots_stack) > 0);
 
+    if (size > gc->memory_max) {
+        TraceLog(LOG_ERROR, "[GC] Memory limit exeeded! Tried to allocate %zu bytes past maximum memory limit in gc (%zu bytes)", size, gc->memory_max);
+        return NULL;
+    }
+
     if (gc->memory_used + size > gc->memory_max) gc_collect(gc);
     if (gc->memory_used + size > gc->memory_max) {
         TraceLog(LOG_ERROR, "[GC] Memory limit exeeded! Tried to allocate %zu bytes in gc with %zu bytes free", size, gc->memory_max - gc->memory_used);
@@ -104,7 +115,7 @@ void* gc_malloc(Gc* gc, size_t size) {
     };
 
     vector_add(&gc->chunks, chunk);
-    vector_add(&gc->roots_stack[vector_size(gc->roots_stack) - 1].chunks, chunk.ptr);
+    vector_add(&gc->temp_roots, chunk.ptr);
     gc->memory_used += size;
 
     return chunk_data->data;
@@ -114,4 +125,25 @@ void gc_root_end(Gc* gc) {
     assert(vector_size(gc->roots_stack) > 0);
     vector_free(gc->roots_stack[vector_size(gc->roots_stack) - 1].chunks);
     vector_pop(gc->roots_stack);
+}
+
+void gc_add_root(Gc* gc, void* ptr) {
+    GcChunkData* chunk_ptr = ((GcChunkData*)ptr) - 1;
+    vector_add(&gc->roots_stack[vector_size(gc->roots_stack) - 1].chunks, chunk_ptr);
+}
+
+typedef struct {
+    unsigned int size;
+    unsigned int capacity;
+    char str[];
+} StringHeader;
+
+void gc_add_str_root(Gc* gc, char* str) {
+    StringHeader* header = ((StringHeader*)str) - 1;
+    GcChunkData* chunk_ptr = ((GcChunkData*)header) - 1;
+    vector_add(&gc->roots_stack[vector_size(gc->roots_stack) - 1].chunks, chunk_ptr);
+}
+
+void gc_flush(Gc* gc) {
+    vector_clear(gc->temp_roots);
 }

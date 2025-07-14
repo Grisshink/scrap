@@ -121,6 +121,10 @@ typedef struct {
 
     Gc gc;
 
+    // Needed for compiler to determine if some block uses gc_malloc so we could call gc_flush afterwards
+    bool gc_dirty;
+    LLVMValueRef* gc_dirty_funcs;
+
     pthread_t thread;
     atomic_bool is_running;
 } Exec;
