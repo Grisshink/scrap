@@ -35,7 +35,7 @@ else
 	CFLAGS += -g -O0 -DDEBUG
 endif
 
-OBJFILES := $(addprefix src/,filedialogs.o render.o save.o term.o blocks.o scrap.o vec.o util.o input.o scrap_gui.o window.o cfgpath.o platform.o ast.o gc.o)
+OBJFILES := $(addprefix src/,filedialogs.o render.o save.o term.o blocks.o scrap.o vec.o util.o input.o scrap_gui.o window.o cfgpath.o platform.o ast.o)
 BUNDLE_FILES := data examples extras locale LICENSE README.md CHANGELOG.md
 SCRAP_HEADERS := src/scrap.h src/ast.h src/config.h src/scrap_gui.h
 EXE_NAME := scrap
@@ -46,7 +46,7 @@ ifeq ($(USE_COMPILER), FALSE)
 	CFLAGS += -DUSE_INTERPRETER
 else
 	LLVM_CONFIG ?= llvm-config
-	OBJFILES += src/compiler.o
+	OBJFILES += $(addprefix src/,compiler.o gc.o)
 	SCRAP_HEADERS += src/compiler.h
 	LLVM_LDFLAGS := --ldflags --system-libs --libs core executionengine mcjit analysis native
 	ifeq ($(LLVM_LINK_STATIC), TRUE)
