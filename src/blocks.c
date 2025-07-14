@@ -1902,6 +1902,9 @@ bool block_print(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
     case FUNC_ARG_DOUBLE:
         *return_val = DATA_INTEGER(build_call(exec, "term_print_double", argv[0].data.value));
         return true;
+    case FUNC_ARG_LIST:
+        *return_val = DATA_INTEGER(build_call(exec, "term_print_list", argv[0].data.value));
+        return true;
     default:
         TraceLog(LOG_INFO, "[LLVM] Got unknown type, idk i will just crash >:(");
         return false;
@@ -1943,12 +1946,10 @@ bool block_list_add(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
 }
 
 bool block_create_list(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
-    (void) exec;
     (void) argc;
     (void) argv;
-    (void) return_val;
-    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_create_list");
-    return false;
+    *return_val = DATA_LIST(build_call(exec, "list_new", CONST_GC));
+    return true;
 }
 
 bool block_set_var(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {

@@ -45,7 +45,6 @@ typedef struct {
     size_t memory_max;
 } Gc;
 
-void gc_init(void);
 Gc gc_new(size_t memory_max);
 void gc_free(Gc* gc);
 

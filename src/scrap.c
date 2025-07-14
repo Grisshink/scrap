@@ -473,8 +473,6 @@ void setup(void) {
     gui_update_window_size(gui, GetScreenWidth(), GetScreenHeight());
     TraceLog(LOG_INFO, "Allocated %.2f KiB for gui", (float)sizeof(Gui) / 1024.0f);
     init_gui_window();
-
-    gc_init();
 }
 
 // Main function: Initializes configurations, sets up window, processes input, renders GUI, and cleans up resources on exit

@@ -305,6 +305,14 @@ typedef struct {
     char str[];
 } StringHeader;
 
+static List* list_new(Gc* gc) {
+    List* list = gc_malloc(gc, sizeof(List));
+    list->size = 0;
+    list->capacity = 0;
+    list->values = NULL;
+    return list;
+}
+
 static char* string_from_literal(Gc* gc, const char* literal, unsigned int size) {
     StringHeader* out_str = gc_malloc(gc, sizeof(StringHeader) + size + 1); // Don't forget null terminator. It is not included in size
     memcpy(out_str->str, literal, size);
@@ -506,6 +514,12 @@ static char* term_get_input(Gc* gc) {
     return out_string;
 }
 
+int term_print_list(List* list) {
+    char converted[32];
+    snprintf(converted, 32, "*LIST (%zu)*", list->size);
+    return term_print_str(converted);
+}
+
 LLVMValueRef build_gc_root_begin(Exec* exec) {
     return build_call(exec, "gc_root_begin", CONST_GC);
 }
@@ -548,7 +562,8 @@ static LLVMValueRef add_function(Exec* exec, const char* name, LLVMTypeRef retur
     comp_func->name = name;
 
     LLVMTypeRef func_type = LLVMFunctionType(return_type, params, params_len, false);
-    return LLVMAddFunction(exec->module, name, func_type);
+    LLVMValueRef func_value = LLVMAddFunction(exec->module, name, func_type);
+    return func_value;
 }
 
 static LLVMBasicBlockRef register_globals(Exec* exec) {
@@ -563,6 +578,9 @@ static LLVMBasicBlockRef register_globals(Exec* exec) {
 
     LLVMTypeRef print_bool_func_params[] = { LLVMInt1Type() };
     add_function(exec, "term_print_bool", LLVMInt32Type(), print_bool_func_params, ARRLEN(print_bool_func_params), term_print_bool);
+
+    LLVMTypeRef print_list_func_params[] = { LLVMPointerType(LLVMVoidType(), 0) };
+    add_function(exec, "term_print_list", LLVMInt32Type(), print_list_func_params, ARRLEN(print_list_func_params), term_print_list);
 
     LLVMTypeRef string_literal_func_params[] = { LLVMInt64Type(), LLVMPointerType(LLVMInt8Type(), 0), LLVMInt32Type() };
     add_function(exec, "string_from_literal", LLVMPointerType(LLVMInt8Type(), 0), string_literal_func_params, ARRLEN(string_literal_func_params), string_from_literal);
@@ -666,6 +684,9 @@ static LLVMBasicBlockRef register_globals(Exec* exec) {
     add_function(exec, "cursor_max_y", LLVMInt32Type(), NULL, 0, term_cursor_max_y);
 
     add_function(exec, "term_clear", LLVMVoidType(), NULL, 0, term_clear);
+
+    LLVMTypeRef list_new_func_params[] = { LLVMInt64Type() };
+    add_function(exec, "list_new", LLVMPointerType(LLVMVoidType(), 0), list_new_func_params, ARRLEN(list_new_func_params), list_new);
 
     LLVMTypeRef ceil_func_params[] = { LLVMDoubleType() };
     add_function(exec, "ceil", LLVMDoubleType(), ceil_func_params, ARRLEN(ceil_func_params), ceil);

@@ -21,9 +21,6 @@
 #include "gc.h"
 #include "scrap.h"
 
-void gc_init(void) {
-}
-
 Gc gc_new(size_t memory_max) {
     return (Gc) {
         .chunks = vector_create(),
