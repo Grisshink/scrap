@@ -357,6 +357,16 @@ static void list_add(Gc* gc, List* list, FuncArgType data_type, ...) {
     list->values[list->size++] = value;
 }
 
+static AnyValue* list_get(Gc* gc, List* list, int index) {
+    AnyValue* out = gc_malloc(gc, sizeof(AnyValue), FUNC_ARG_ANY);
+    *out = (AnyValue) { .type = FUNC_ARG_NOTHING };
+
+    if (index >= list->size || index < 0) return out;
+
+    *out = list->values[index];
+    return out;
+}
+
 static char* string_from_literal(Gc* gc, const char* literal, unsigned int size) {
     StringHeader* out_str = gc_malloc(gc, sizeof(StringHeader) + size + 1, FUNC_ARG_STRING_REF); // Don't forget null terminator. It is not included in size
     memcpy(out_str->str, literal, size);
@@ -442,6 +452,91 @@ static char* string_from_double(Gc* gc, double value) {
     char str[20];
     unsigned int len = snprintf(str, 20, "%f", value);
     return string_from_literal(gc, str, len);
+}
+
+static char* string_from_any(Gc* gc, AnyValue* value) {
+    if (!value) return string_from_literal(gc, "", 0);
+
+    switch (value->type) {
+    case FUNC_ARG_INT:
+        return string_from_int(gc, value->data.int_val);
+    case FUNC_ARG_DOUBLE:
+        return string_from_double(gc, value->data.double_val);
+    case FUNC_ARG_STRING_LITERAL:
+        return string_from_literal(gc, value->data.str_val, strlen(value->data.str_val));
+    case FUNC_ARG_STRING_REF:
+        return value->data.str_val;
+    case FUNC_ARG_BOOL:
+        return string_from_bool(gc, value->data.int_val);
+    case FUNC_ARG_LIST: ;
+        char str[32];
+        int size = snprintf(str, 32, "*LIST (%zu)*", value->data.list_val->size);
+        return string_from_literal(gc, str, size);
+    default:
+        return string_from_literal(gc, "", 0);
+    }
+}
+
+static int int_from_any(AnyValue* value) {
+    if (!value) return 0;
+
+    switch (value->type) {
+    case FUNC_ARG_BOOL:
+    case FUNC_ARG_INT:
+        return value->data.int_val;
+    case FUNC_ARG_DOUBLE:
+        return (int)value->data.double_val;
+    case FUNC_ARG_STRING_REF:
+    case FUNC_ARG_STRING_LITERAL:
+        return atoi(value->data.str_val);
+    default:
+        return 0;
+    }
+}
+
+static int double_from_any(AnyValue* value) {
+    if (!value) return 0;
+
+    switch (value->type) {
+    case FUNC_ARG_BOOL:
+    case FUNC_ARG_INT:
+        return (double)value->data.int_val;
+    case FUNC_ARG_DOUBLE:
+        return value->data.double_val;
+    case FUNC_ARG_STRING_REF:
+    case FUNC_ARG_STRING_LITERAL:
+        return atof(value->data.str_val);
+    default:
+        return 0;
+    }
+}
+
+static int bool_from_any(AnyValue* value) {
+    if (!value) return 0;
+
+    switch (value->type) {
+    case FUNC_ARG_BOOL:
+    case FUNC_ARG_INT:
+        return value->data.int_val != 0;
+    case FUNC_ARG_DOUBLE:
+        return value->data.double_val != 0.0;
+    case FUNC_ARG_STRING_REF:
+    case FUNC_ARG_STRING_LITERAL:
+        return *value->data.str_val != 0;
+    default:
+        return 0;
+    }
+}
+
+static List* list_from_any(Gc* gc, AnyValue* value) {
+    if (!value) return 0;
+
+    switch (value->type) {
+    case FUNC_ARG_LIST:
+        return value->data.list_val;
+    default:
+        return list_new(gc);
+    }
 }
 
 static bool string_is_eq(char* left, char* right) {
@@ -564,6 +659,29 @@ int term_print_list(List* list) {
     return term_print_str(converted);
 }
 
+int term_print_any(AnyValue* any) {
+    if (!any) return 0;
+
+    switch (any->type) {
+    case FUNC_ARG_STRING_REF:
+    case FUNC_ARG_STRING_LITERAL:
+        return term_print_str(any->data.str_val);
+    case FUNC_ARG_NOTHING:
+        return 0;
+    case FUNC_ARG_INT:
+        return term_print_int(any->data.int_val);
+    case FUNC_ARG_BOOL:
+        return term_print_bool(any->data.int_val);
+    case FUNC_ARG_DOUBLE:
+        return term_print_double(any->data.double_val);
+    case FUNC_ARG_LIST:
+        return term_print_list(any->data.list_val);
+    default:
+        TraceLog(LOG_WARNING, "[EXEC] Got unknown type in term_print_any");
+        return 0;
+    }
+}
+
 LLVMValueRef build_gc_root_begin(Exec* exec) {
     return build_call(exec, "gc_root_begin", CONST_GC);
 }
@@ -651,8 +769,11 @@ static LLVMBasicBlockRef register_globals(Exec* exec) {
     LLVMTypeRef print_bool_func_params[] = { LLVMInt1Type() };
     add_function(exec, "term_print_bool", LLVMInt32Type(), print_bool_func_params, ARRLEN(print_bool_func_params), term_print_bool, false, false);
 
-    LLVMTypeRef print_list_func_params[] = { LLVMPointerType(LLVMVoidType(), 0) };
+    LLVMTypeRef print_list_func_params[] = { LLVMPointerType(LLVMInt8Type(), 0) };
     add_function(exec, "term_print_list", LLVMInt32Type(), print_list_func_params, ARRLEN(print_list_func_params), term_print_list, false, false);
+
+    LLVMTypeRef print_any_func_params[] = { LLVMPointerType(LLVMInt8Type(), 0) };
+    add_function(exec, "term_print_any", LLVMInt32Type(), print_any_func_params, ARRLEN(print_any_func_params), term_print_any, false, false);
 
     LLVMTypeRef string_literal_func_params[] = { LLVMInt64Type(), LLVMPointerType(LLVMInt8Type(), 0), LLVMInt32Type() };
     add_function(exec, "string_from_literal", LLVMPointerType(LLVMInt8Type(), 0), string_literal_func_params, ARRLEN(string_literal_func_params), string_from_literal, true, false);
@@ -665,6 +786,21 @@ static LLVMBasicBlockRef register_globals(Exec* exec) {
 
     LLVMTypeRef string_double_func_params[] = { LLVMInt64Type(), LLVMDoubleType() };
     add_function(exec, "string_from_double", LLVMPointerType(LLVMInt8Type(), 0), string_double_func_params, ARRLEN(string_double_func_params), string_from_double, true, false);
+
+    LLVMTypeRef string_any_func_params[] = { LLVMInt64Type(), LLVMPointerType(LLVMInt8Type(), 0) };
+    add_function(exec, "string_from_any", LLVMPointerType(LLVMInt8Type(), 0), string_any_func_params, ARRLEN(string_any_func_params), string_from_any, true, false);
+
+    LLVMTypeRef int_any_func_params[] = { LLVMPointerType(LLVMInt8Type(), 0) };
+    add_function(exec, "int_from_any", LLVMInt32Type(), int_any_func_params, ARRLEN(int_any_func_params), int_from_any, false, false);
+
+    LLVMTypeRef double_any_func_params[] = { LLVMPointerType(LLVMInt8Type(), 0) };
+    add_function(exec, "double_from_any", LLVMDoubleType(), double_any_func_params, ARRLEN(double_any_func_params), double_from_any, false, false);
+
+    LLVMTypeRef bool_any_func_params[] = { LLVMPointerType(LLVMInt8Type(), 0) };
+    add_function(exec, "bool_from_any", LLVMInt1Type(), bool_any_func_params, ARRLEN(bool_any_func_params), bool_from_any, false, false);
+
+    LLVMTypeRef list_any_func_params[] = { LLVMInt64Type(), LLVMPointerType(LLVMInt8Type(), 0) };
+    add_function(exec, "list_from_any", LLVMPointerType(LLVMInt8Type(), 0), list_any_func_params, ARRLEN(list_any_func_params), list_from_any, true, false);
 
     LLVMTypeRef string_length_func_params[] = { LLVMPointerType(LLVMInt8Type(), 0) };
     add_function(exec, "string_length", LLVMInt32Type(), string_length_func_params, ARRLEN(string_length_func_params), string_length, false, false);
@@ -762,6 +898,9 @@ static LLVMBasicBlockRef register_globals(Exec* exec) {
 
     LLVMTypeRef list_add_func_params[] = { LLVMInt64Type(), LLVMPointerType(LLVMInt8Type(), 0), LLVMInt32Type() };
     add_function(exec, "list_add", LLVMVoidType(), list_add_func_params, ARRLEN(list_add_func_params), list_add, true, true);
+
+    LLVMTypeRef list_get_func_params[] = { LLVMInt64Type(), LLVMPointerType(LLVMInt8Type(), 0), LLVMInt32Type() };
+    add_function(exec, "list_get", LLVMPointerType(LLVMInt8Type(), 0), list_get_func_params, ARRLEN(list_get_func_params), list_get, true, false);
 
     LLVMTypeRef ceil_func_params[] = { LLVMDoubleType() };
     add_function(exec, "ceil", LLVMDoubleType(), ceil_func_params, ARRLEN(ceil_func_params), ceil, false, false);

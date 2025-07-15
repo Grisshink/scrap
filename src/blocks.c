@@ -1053,6 +1053,7 @@ LLVMValueRef arg_to_value(Exec* exec, FuncArg arg) {
     case FUNC_ARG_INT:
     case FUNC_ARG_DOUBLE:
     case FUNC_ARG_BOOL:
+    case FUNC_ARG_ANY:
         return arg.data.value;
     default:
         assert(false && "Unhandled arg_to_value");
@@ -1074,6 +1075,8 @@ LLVMValueRef arg_to_bool(Exec* exec, FuncArg arg) {
         return arg.data.value;
     case FUNC_ARG_DOUBLE:
         return LLVMBuildFCmp(exec->builder, LLVMRealONE, arg.data.value, CONST_DOUBLE(0.0), "bool_cast");
+    case FUNC_ARG_ANY:
+        return build_call(exec, "bool_from_any", arg.data.value);
     default:
         assert(false && "Unhandled cast to bool");
     }
@@ -1093,8 +1096,10 @@ LLVMValueRef arg_to_int(Exec* exec, FuncArg arg) {
         return LLVMBuildZExt(exec->builder, arg.data.value, LLVMInt32Type(), "int_cast");
     case FUNC_ARG_DOUBLE:
         return LLVMBuildFPToSI(exec->builder, arg.data.value, LLVMInt32Type(), "int_cast");
+    case FUNC_ARG_ANY:
+        return build_call(exec, "int_from_any", arg.data.value);
     default:
-        assert(false && "Unhandled cast to bool");
+        assert(false && "Unhandled cast to int");
     }
 }
 
@@ -1112,6 +1117,8 @@ LLVMValueRef arg_to_double(Exec* exec, FuncArg arg) {
         return LLVMBuildUIToFP(exec->builder, arg.data.value, LLVMDoubleType(), "double_cast");
     case FUNC_ARG_DOUBLE:
         return arg.data.value;
+    case FUNC_ARG_ANY:
+        return build_call(exec, "double_from_any", arg.data.value);
     default:
         assert(false && "Unhandled cast to double");
     }
@@ -1129,6 +1136,8 @@ LLVMValueRef arg_to_any_string(Exec* exec, FuncArg arg) {
         return build_call(exec, "string_from_bool", CONST_GC, arg.data.value);
     case FUNC_ARG_DOUBLE:
         return build_call(exec, "string_from_double", CONST_GC, arg.data.value);
+    case FUNC_ARG_ANY:
+        return build_call(exec, "string_from_any", CONST_GC, arg.data.value);
     case FUNC_ARG_NOTHING:
     default:
         assert(false && "Unhandled cast to any string");
@@ -1147,6 +1156,8 @@ LLVMValueRef arg_to_string_ref(Exec* exec, FuncArg arg) {
         return build_call(exec, "string_from_bool", CONST_GC, arg.data.value);
     case FUNC_ARG_DOUBLE:
         return build_call(exec, "string_from_double", CONST_GC, arg.data.value);
+    case FUNC_ARG_ANY:
+        return build_call(exec, "string_from_any", CONST_GC, arg.data.value);
     case FUNC_ARG_NOTHING:
     default:
         assert(false && "Unhandled cast to string ref");
@@ -1906,6 +1917,9 @@ bool block_print(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
     case FUNC_ARG_LIST:
         *return_val = DATA_INTEGER(build_call(exec, "term_print_list", argv[0].data.value));
         return true;
+    case FUNC_ARG_ANY:
+        *return_val = DATA_INTEGER(build_call(exec, "term_print_any", argv[0].data.value));
+        return true;
     default:
         TraceLog(LOG_INFO, "[LLVM] Got unknown type, idk i will just crash >:(");
         return false;
@@ -1929,12 +1943,14 @@ bool block_list_set(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
 }
 
 bool block_list_get(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
-    (void) exec;
-    (void) argc;
-    (void) argv;
-    (void) return_val;
-    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_list_get");
-    return false;
+    MIN_ARG_COUNT(2);
+    if (argv[0].type != FUNC_ARG_LIST) {
+        TraceLog(LOG_ERROR, "[LLVM] Received non list argument");
+        return false;
+    }
+
+    *return_val = DATA_ANY(build_call(exec, "list_get", CONST_GC, argv[0].data.value, arg_to_int(exec, argv[1])));
+    return true;
 }
 
 bool block_list_add(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {

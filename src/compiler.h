@@ -118,6 +118,7 @@ typedef struct {
 #define DATA_INTEGER(val) _DATA(FUNC_ARG_INT, val)
 #define DATA_DOUBLE(val) _DATA(FUNC_ARG_DOUBLE, val)
 #define DATA_LIST(val) _DATA(FUNC_ARG_LIST, val)
+#define DATA_ANY(val) _DATA(FUNC_ARG_ANY, val)
 #define DATA_UNKNOWN _DATA(FUNC_ARG_UNKNOWN, NULL)
 #define DATA_NOTHING _DATA(FUNC_ARG_NOTHING, CONST_NOTHING)
 
