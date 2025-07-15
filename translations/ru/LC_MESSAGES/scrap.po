@@ -260,6 +260,14 @@ msgid "my variable"
 msgstr "моя переменная"
 
 #: blocks.c
+msgid "list"
+msgstr "список"
+
+#: blocks.c
+msgid "Collect garbage"
+msgstr "Собрать мусор"
+
+#: blocks.c
 msgid "Get"
 msgstr "Получить"
 
