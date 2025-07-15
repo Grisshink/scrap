@@ -16,11 +16,15 @@ else ifeq ($(TARGET), OSX)
 	LDFLAGS := -framework CoreVideo -framework IOKit -framework Cocoa -framework GLUT -framework OpenGL -lm -lpthread -lintl
 else
 	CC := x86_64-w64-mingw32-gcc
-	LDFLAGS := -static -lole32 -lcomdlg32 -lwinmm -lgdi32 -lintl -liconv -Wl,--subsystem,windows
+	LDFLAGS := -static -lole32 -lcomdlg32 -lwinmm -lgdi32 -lintl -liconv -lshlwapi -Wl,--subsystem,windows
 endif
 
 ifeq ($(ARABIC_MODE), TRUE)
 	CFLAGS += -DARABIC_MODE
+endif
+
+ifeq ($(RAM_OVERLOAD), TRUE)
+	CFLAGS += -DRAM_OVERLOAD
 endif
 
 ifeq ($(CC), clang)

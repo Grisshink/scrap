@@ -19,7 +19,6 @@
 #include "term.h"
 #include "scrap.h"
 #include "vec.h"
-#include "gc.h"
 
 #include <math.h>
 #include <libintl.h>
@@ -81,6 +80,11 @@ char* search_list_search = NULL;
 int categories_scroll = 0;
 int search_list_scroll = 0;
 Vector2 search_list_pos = {0};
+
+#ifdef RAM_OVERLOAD
+int* overload;
+pthread_t overload_thread;
+#endif
 
 SplitPreview split_preview = {0};
 Tab* code_tabs = NULL;
@@ -163,6 +167,17 @@ void sanitize_links(void) {
         sanitize_block(&mouse_blockchain.blocks[i]);
     }
 }
+
+#ifdef RAM_OVERLOAD
+void* overload_thread_entry(void* thread_val) {
+    (void) thread_val;
+    overload = vector_create();
+
+    volatile int val = 0;
+    while (1) vector_add(&overload, val++);
+    return NULL;
+}
+#endif
 
 Texture2D load_svg(const char* path) {
     Image svg_img = LoadImageSvg(path, conf.font_size, conf.font_size);
@@ -465,6 +480,12 @@ void setup(void) {
     update_search();
 
     term_init();
+
+#if defined(RAM_OVERLOAD) && defined(_WIN32)
+    if (should_do_ram_overload()) {
+        pthread_create(&overload_thread, NULL, overload_thread_entry, NULL);
+    }
+#endif
 
     gui = malloc(sizeof(Gui));
     gui_init(gui);

@@ -880,7 +880,13 @@ static void draw_code_area(void) {
             gui_set_floating(gui);
             gui_set_position(gui, 0, 0);
             gui_set_padding(gui, conf.font_size * 0.2, conf.font_size * 0.2);
-
+#if defined(RAM_OVERLOAD) && defined(_WIN32)
+            if (should_do_ram_overload()) {
+                gui_text(gui, &font_cond, "Notice: you have installed Scratch on your computer.", conf.font_size * 0.5, (GuiColor) { 0xff, 0xff, 0xff, 0x60 });
+                gui_text(gui, &font_cond, "Please consider deleting it and embrace more superior programming", conf.font_size * 0.5, (GuiColor) { 0xff, 0xff, 0xff, 0x60 });
+                gui_text(gui, &font_cond, "language, such as Scrap. Adios", conf.font_size * 0.5, (GuiColor) { 0xff, 0xff, 0xff, 0x60 });
+            }
+#endif
             for (int i = 0; i < DEBUG_BUFFER_LINES; i++) {
                 if (*debug_buffer[i]) gui_text(gui, &font_cond, debug_buffer[i], conf.font_size * 0.5, (GuiColor) { 0xff, 0xff, 0xff, 0x60 });
             }

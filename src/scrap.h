@@ -296,6 +296,11 @@ extern int categories_scroll;
 extern int search_list_scroll;
 extern Vector2 search_list_pos;
 
+#ifdef RAM_OVERLOAD
+extern int* overload;
+extern pthread_t overload_thread;
+#endif
+
 extern SplitPreview split_preview;
 extern Tab* code_tabs;
 extern int current_tab;
@@ -428,5 +433,9 @@ bool block_exec_custom(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val)
 
 // platform.c
 void scrap_set_env(const char* name, const char* value);
+
+#if defined(RAM_OVERLOAD) && defined(_WIN32)
+bool should_do_ram_overload(void);
+#endif
 
 #endif // SCRAP_H
