@@ -312,11 +312,9 @@ static List* list_new(Gc* gc) {
     return list;
 }
 
-static void list_add(Gc* gc, List* list, FuncArgType data_type, ...) {
+static AnyValueData get_any_data(FuncArgType data_type, va_list va) {
     AnyValueData data;
 
-    va_list va;
-    va_start(va, data_type);
     switch (data_type) {
     case FUNC_ARG_BOOL:
     case FUNC_ARG_INT:
@@ -335,6 +333,16 @@ static void list_add(Gc* gc, List* list, FuncArgType data_type, ...) {
     default:
         break;
     }
+
+    return data;
+}
+
+static void list_add(Gc* gc, List* list, FuncArgType data_type, ...) {
+    AnyValueData data;
+
+    va_list va;
+    va_start(va, data_type);
+    data = get_any_data(data_type, va);
     va_end(va);
 
     AnyValue value = (AnyValue) {
@@ -355,6 +363,22 @@ static void list_add(Gc* gc, List* list, FuncArgType data_type, ...) {
     }
 
     list->values[list->size++] = value;
+}
+
+static AnyValue* any_from_value(Gc* gc, FuncArgType data_type, ...) {
+    AnyValueData data;
+
+    va_list va;
+    va_start(va, data_type);
+    data = get_any_data(data_type, va);
+    va_end(va);
+
+    AnyValue* value = gc_malloc(gc, sizeof(AnyValue), FUNC_ARG_ANY);
+    *value = (AnyValue) {
+        .type = data_type,
+        .data = data,
+    };
+    return value;
 }
 
 static AnyValue* list_get(Gc* gc, List* list, int index) {
@@ -436,6 +460,30 @@ static char* string_join(Gc* gc, char* left, char* right) {
     out_str->capacity = out_str->size;
     out_str->str[out_str->size] = 0;
     return out_str->str;
+}
+
+static bool string_is_eq(char* left, char* right) {
+    StringHeader* left_header = ((StringHeader*)left) - 1;
+    StringHeader* right_header = ((StringHeader*)right) - 1;
+
+    if (left_header->size != right_header->size) return false;
+    for (unsigned int i = 0; i < left_header->size; i++) {
+        if (left_header->str[i] != right_header->str[i]) return false;
+    }
+    return true;
+}
+
+static char* string_chr(Gc* gc, int value) {
+    int text_size;
+    const char* text = CodepointToUTF8(value, &text_size);
+    return string_from_literal(gc, text, text_size);
+}
+
+static int string_ord(char* str) {
+    int codepoint_size;
+    int codepoint = GetCodepoint(str, &codepoint_size);
+    (void) codepoint_size;
+    return codepoint;
 }
 
 static char* string_from_int(Gc* gc, int value) {
@@ -539,28 +587,27 @@ static List* list_from_any(Gc* gc, AnyValue* value) {
     }
 }
 
-static bool string_is_eq(char* left, char* right) {
-    StringHeader* left_header = ((StringHeader*)left) - 1;
-    StringHeader* right_header = ((StringHeader*)right) - 1;
+static bool any_is_eq(AnyValue* left, AnyValue* right) {
+    if (left->type != right->type) return false;
 
-    if (left_header->size != right_header->size) return false;
-    for (unsigned int i = 0; i < left_header->size; i++) {
-        if (left_header->str[i] != right_header->str[i]) return false;
+    switch (left->type) {
+    case FUNC_ARG_NOTHING:
+        return true;
+    case FUNC_ARG_STRING_LITERAL:
+        return !strcmp(left->data.str_val, right->data.str_val);
+    case FUNC_ARG_STRING_REF:
+        return string_is_eq(left->data.str_val, right->data.str_val);
+    case FUNC_ARG_INT:
+    case FUNC_ARG_BOOL:
+        return left->data.int_val == right->data.int_val;
+    case FUNC_ARG_DOUBLE:
+        return left->data.double_val == right->data.double_val;
+    case FUNC_ARG_LIST:
+        return left->data.list_val == right->data.list_val;
+    default:
+        TraceLog(LOG_WARNING, "[EXEC] Comparison against unknown types in any_is_eq");
+        return false;
     }
-    return true;
-}
-
-static char* string_chr(Gc* gc, int value) {
-    int text_size;
-    const char* text = CodepointToUTF8(value, &text_size);
-    return string_from_literal(gc, text, text_size);
-}
-
-static int string_ord(char* str) {
-    int codepoint_size;
-    int codepoint = GetCodepoint(str, &codepoint_size);
-    (void) codepoint_size;
-    return codepoint;
 }
 
 static int sleep_us(int usecs) {
@@ -802,6 +849,9 @@ static LLVMBasicBlockRef register_globals(Exec* exec) {
     LLVMTypeRef list_any_func_params[] = { LLVMInt64Type(), LLVMPointerType(LLVMInt8Type(), 0) };
     add_function(exec, "list_from_any", LLVMPointerType(LLVMInt8Type(), 0), list_any_func_params, ARRLEN(list_any_func_params), list_from_any, true, false);
 
+    LLVMTypeRef any_cast_func_params[] = { LLVMInt64Type(), LLVMInt32Type() };
+    add_function(exec, "any_from_value", LLVMPointerType(LLVMInt8Type(), 0), any_cast_func_params, ARRLEN(any_cast_func_params), any_from_value, true, true);
+
     LLVMTypeRef string_length_func_params[] = { LLVMPointerType(LLVMInt8Type(), 0) };
     add_function(exec, "string_length", LLVMInt32Type(), string_length_func_params, ARRLEN(string_length_func_params), string_length, false, false);
 
@@ -822,6 +872,9 @@ static LLVMBasicBlockRef register_globals(Exec* exec) {
 
     LLVMTypeRef string_eq_func_params[] = { LLVMPointerType(LLVMInt8Type(), 0), LLVMPointerType(LLVMInt8Type(), 0) };
     add_function(exec, "string_is_eq", LLVMInt1Type(), string_eq_func_params, ARRLEN(string_eq_func_params), string_is_eq, false, false);
+
+    LLVMTypeRef any_eq_func_params[] = { LLVMPointerType(LLVMInt8Type(), 0), LLVMPointerType(LLVMInt8Type(), 0) };
+    add_function(exec, "any_is_eq", LLVMInt1Type(), any_eq_func_params, ARRLEN(any_eq_func_params), any_is_eq, false, false);
 
     LLVMTypeRef sleep_func_params[] = { LLVMInt32Type() };
     add_function(exec, "sleep", LLVMInt32Type(), sleep_func_params, ARRLEN(sleep_func_params), sleep_us, false, false);

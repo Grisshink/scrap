@@ -1209,6 +1209,23 @@ LLVMValueRef arg_to_list(Exec* exec, FuncArg arg) {
     }
 }
 
+LLVMValueRef arg_to_any(Exec* exec, FuncArg arg) {
+    switch (arg.type) {
+    case FUNC_ARG_BOOL:
+    case FUNC_ARG_NOTHING:
+    case FUNC_ARG_INT:
+    case FUNC_ARG_STRING_REF:
+    case FUNC_ARG_DOUBLE:
+    case FUNC_ARG_STRING_LITERAL:
+    case FUNC_ARG_LIST:
+        return build_call_count(exec, "any_from_value", 3, CONST_GC, CONST_INTEGER(arg.type), arg_to_value(exec, arg));
+    case FUNC_ARG_ANY:
+        return arg.data.value;
+    default:
+        assert(false && "Unhandled cast to string ref");
+    }
+}
+
 FuncArg arg_cast(Exec* exec, FuncArg arg, FuncArgType cast_to_type) {
     switch (cast_to_type) {
     case FUNC_ARG_STRING_LITERAL:
@@ -1225,6 +1242,10 @@ FuncArg arg_cast(Exec* exec, FuncArg arg, FuncArgType cast_to_type) {
         return DATA_BOOLEAN(arg_to_bool(exec, arg));
     case FUNC_ARG_DOUBLE:
         return DATA_DOUBLE(arg_to_double(exec, arg));
+    case FUNC_ARG_LIST:
+        return DATA_LIST(arg_to_list(exec, arg));
+    case FUNC_ARG_ANY:
+        return DATA_ANY(arg_to_any(exec, arg));
     default:
         assert(false && "Unhandled cast to value typed");
     }
@@ -1300,6 +1321,14 @@ bool block_not_eq(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
     case FUNC_ARG_DOUBLE:
         *return_val = DATA_BOOLEAN(LLVMBuildFCmp(exec->builder, LLVMRealONE, left.data.value, right.data.value, "double_neq"));
         break;
+    case FUNC_ARG_LIST:
+        // Compare list pointers
+        *return_val = DATA_BOOLEAN(LLVMBuildICmp(exec->builder, LLVMIntNE, left.data.value, right.data.value, "list_neq"));
+        break;
+    case FUNC_ARG_ANY: ;
+        LLVMValueRef eq_any_return = build_call(exec, "any_is_eq", left.data.value, right.data.value);
+        *return_val = DATA_BOOLEAN(LLVMBuildXor(exec->builder, eq_any_return, CONST_BOOLEAN(1), "any_neq"));
+        break;
     default:
         assert(false && "Unhandled not_eq with unknown type");
     }
@@ -1346,6 +1375,13 @@ bool block_eq(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
         break;
     case FUNC_ARG_DOUBLE:
         *return_val = DATA_BOOLEAN(LLVMBuildFCmp(exec->builder, LLVMRealOEQ, left.data.value, right.data.value, "double_eq"));
+        break;
+    case FUNC_ARG_LIST:
+        // Compare list pointers
+        *return_val = DATA_BOOLEAN(LLVMBuildICmp(exec->builder, LLVMIntEQ, left.data.value, right.data.value, "list_eq"));
+        break;
+    case FUNC_ARG_ANY:
+        *return_val = DATA_BOOLEAN(build_call(exec, "any_is_eq", left.data.value, right.data.value));
         break;
     default:
         assert(false && "Unhandled eq with unknown type");
