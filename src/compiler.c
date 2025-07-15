@@ -365,6 +365,34 @@ static void list_add(Gc* gc, List* list, FuncArgType data_type, ...) {
     list->values[list->size++] = value;
 }
 
+static void list_set(List* list, int index, FuncArgType data_type, ...) {
+    if (index >= list->size || index < 0) return;
+
+    AnyValueData data;
+
+    va_list va;
+    va_start(va, data_type);
+    data = get_any_data(data_type, va);
+    va_end(va);
+
+    AnyValue value = (AnyValue) {
+        .type = data_type,
+        .data = data,
+    };
+
+    list->values[index] = value;
+}
+
+static AnyValue* list_get(Gc* gc, List* list, int index) {
+    AnyValue* out = gc_malloc(gc, sizeof(AnyValue), FUNC_ARG_ANY);
+    *out = (AnyValue) { .type = FUNC_ARG_NOTHING };
+
+    if (index >= list->size || index < 0) return out;
+
+    *out = list->values[index];
+    return out;
+}
+
 static AnyValue* any_from_value(Gc* gc, FuncArgType data_type, ...) {
     AnyValueData data;
 
@@ -379,16 +407,6 @@ static AnyValue* any_from_value(Gc* gc, FuncArgType data_type, ...) {
         .data = data,
     };
     return value;
-}
-
-static AnyValue* list_get(Gc* gc, List* list, int index) {
-    AnyValue* out = gc_malloc(gc, sizeof(AnyValue), FUNC_ARG_ANY);
-    *out = (AnyValue) { .type = FUNC_ARG_NOTHING };
-
-    if (index >= list->size || index < 0) return out;
-
-    *out = list->values[index];
-    return out;
 }
 
 static char* string_from_literal(Gc* gc, const char* literal, unsigned int size) {
@@ -955,6 +973,9 @@ static LLVMBasicBlockRef register_globals(Exec* exec) {
     LLVMTypeRef list_get_func_params[] = { LLVMInt64Type(), LLVMPointerType(LLVMInt8Type(), 0), LLVMInt32Type() };
     add_function(exec, "list_get", LLVMPointerType(LLVMInt8Type(), 0), list_get_func_params, ARRLEN(list_get_func_params), list_get, true, false);
 
+    LLVMTypeRef list_set_func_params[] = { LLVMPointerType(LLVMInt8Type(), 0), LLVMInt32Type(), LLVMInt32Type() };
+    add_function(exec, "list_set", LLVMPointerType(LLVMInt8Type(), 0), list_set_func_params, ARRLEN(list_set_func_params), list_set, false, true);
+
     LLVMTypeRef ceil_func_params[] = { LLVMDoubleType() };
     add_function(exec, "ceil", LLVMDoubleType(), ceil_func_params, ARRLEN(ceil_func_params), ceil, false, false);
 
@@ -978,6 +999,9 @@ static LLVMBasicBlockRef register_globals(Exec* exec) {
 
     LLVMTypeRef gc_add_root_func_params[] = { LLVMInt64Type(), LLVMPointerType(LLVMInt8Type(), 0) };
     add_function(exec, "gc_add_root", LLVMVoidType(), gc_add_root_func_params, ARRLEN(gc_add_root_func_params), gc_add_root, false, false);
+
+    LLVMTypeRef gc_collect_func_params[] = { LLVMInt64Type() };
+    add_function(exec, "gc_collect", LLVMVoidType(), gc_collect_func_params, ARRLEN(gc_collect_func_params), gc_collect, false, false);
 
     LLVMTypeRef gc_add_str_root_func_params[] = { LLVMInt64Type(), LLVMPointerType(LLVMInt8Type(), 0) };
     add_function(exec, "gc_add_str_root", LLVMVoidType(), gc_add_str_root_func_params, ARRLEN(gc_add_str_root_func_params), gc_add_str_root, false, false);

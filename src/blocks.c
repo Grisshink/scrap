@@ -2015,12 +2015,16 @@ bool block_println(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
 }
 
 bool block_list_set(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
-    (void) exec;
-    (void) argc;
-    (void) argv;
-    (void) return_val;
-    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_list_set");
-    return false;
+    MIN_ARG_COUNT(3);
+
+    LLVMValueRef list = arg_to_list(exec, argv[0]);
+    if (!list) return false;
+    LLVMValueRef index = arg_to_int(exec, argv[1]);
+    if (!index) return false;
+
+    build_call_count(exec, "list_set", 4, list, index, CONST_INTEGER(argv[2].type), arg_to_value(exec, argv[2]));
+    *return_val = DATA_NOTHING;
+    return true;
 }
 
 bool block_list_get(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
@@ -2042,7 +2046,7 @@ bool block_list_add(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
     if (!list) return false;
 
     build_call_count(exec, "list_add", 4, CONST_GC, list, CONST_INTEGER(argv[1].type), arg_to_value(exec, argv[1]));
-    *return_val = argv[0];
+    *return_val = DATA_NOTHING;
     return true;
 }
 
@@ -2050,6 +2054,14 @@ bool block_create_list(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val)
     (void) argc;
     (void) argv;
     *return_val = DATA_LIST(build_call(exec, "list_new", CONST_GC));
+    return true;
+}
+
+bool block_gc_collect(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
+    (void) argc;
+    (void) argv;
+    build_call(exec, "gc_collect", CONST_GC);
+    *return_val = DATA_NOTHING;
     return true;
 }
 
@@ -2933,6 +2945,16 @@ void register_blocks(Vm* vm) {
     blockdef_add_argument(sc_comment, "", gettext("any"), BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_comment);
     add_to_category(sc_comment, cat_misc);
+
+#ifdef USE_INTERPRETER
+    void* gc_collect_func = block_noop;
+#else
+    void* gc_collect_func = block_gc_collect;
+#endif
+    Blockdef* sc_gc_collect = blockdef_new("gc_collect", BLOCKTYPE_NORMAL, (BlockdefColor) { 0xa0, 0x70, 0x00, 0xff }, gc_collect_func);
+    blockdef_add_text(sc_gc_collect, gettext("Collect garbage"));
+    blockdef_register(vm, sc_gc_collect);
+    add_to_category(sc_gc_collect, cat_misc);
 
     Blockdef* sc_decl_var = blockdef_new("decl_var", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_DATA_COLOR, block_declare_var);
     blockdef_add_text(sc_decl_var, gettext("Declare"));
