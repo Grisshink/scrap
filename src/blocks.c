@@ -2987,7 +2987,11 @@ void register_blocks(Vm* vm) {
     Blockdef* sc_list_add = blockdef_new("list_add", BLOCKTYPE_NORMAL, (BlockdefColor) { 0xff, 0x44, 0x00, 0xff }, block_list_add);
     blockdef_add_image(sc_list_add, (BlockdefImage) { .image_ptr = &list_tex });
     blockdef_add_text(sc_list_add, gettext("Add"));
+#ifdef USE_INTERPRETER
     blockdef_add_argument(sc_list_add, gettext("my variable"), gettext("Abc"), BLOCKCONSTR_UNLIMITED);
+#else
+    blockdef_add_argument(sc_list_add, "", gettext("list"), BLOCKCONSTR_UNLIMITED);
+#endif
     blockdef_add_text(sc_list_add, gettext("value"));
     blockdef_add_argument(sc_list_add, "", gettext("any"), BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_list_add);
@@ -2995,7 +2999,11 @@ void register_blocks(Vm* vm) {
 
     Blockdef* sc_list_get = blockdef_new("list_get", BLOCKTYPE_NORMAL, (BlockdefColor) { 0xff, 0x44, 0x00, 0xff }, block_list_get);
     blockdef_add_image(sc_list_get, (BlockdefImage) { .image_ptr = &list_tex });
+#ifdef USE_INTERPRETER
     blockdef_add_argument(sc_list_get, gettext("my variable"), gettext("Abc"), BLOCKCONSTR_UNLIMITED);
+#else
+    blockdef_add_argument(sc_list_get, "", gettext("list"), BLOCKCONSTR_UNLIMITED);
+#endif
     blockdef_add_text(sc_list_get, gettext("get at"));
     blockdef_add_argument(sc_list_get, "0", "0", BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_list_get);
@@ -3003,7 +3011,11 @@ void register_blocks(Vm* vm) {
 
     Blockdef* sc_list_set = blockdef_new("list_set", BLOCKTYPE_NORMAL, (BlockdefColor) { 0xff, 0x44, 0x00, 0xff }, block_list_set);
     blockdef_add_image(sc_list_set, (BlockdefImage) { .image_ptr = &list_tex });
+#ifdef USE_INTERPRETER
     blockdef_add_argument(sc_list_set, gettext("my variable"), gettext("Abc"), BLOCKCONSTR_UNLIMITED);
+#else
+    blockdef_add_argument(sc_list_set, "", gettext("list"), BLOCKCONSTR_UNLIMITED);
+#endif
     blockdef_add_text(sc_list_set, gettext("set at"));
     blockdef_add_argument(sc_list_set, "0", "0", BLOCKCONSTR_UNLIMITED);
     blockdef_add_text(sc_list_set, "=");
