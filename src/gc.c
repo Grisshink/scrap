@@ -90,7 +90,7 @@ void gc_collect(Gc* gc) {
     // Mark roots
     for (size_t i = 0; i < vector_size(gc->roots_stack); i++) {
         for (size_t j = 0; j < vector_size(gc->roots_stack[i].chunks); j++) {
-            if (gc->roots_stack[i].chunks->marked) continue;
+            if (gc->roots_stack[i].chunks[j]->marked) continue;
             gc->roots_stack[i].chunks[j]->marked = 1;
             gc_mark_refs(gc, gc->roots_stack[i].chunks[j]);
         }
