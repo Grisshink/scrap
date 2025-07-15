@@ -1043,6 +1043,32 @@ Data block_return(Exec* exec, int argc, Data* argv) {
         return false; \
     }
 
+const char* type_to_str(FuncArgType type) {
+    switch (type) {
+    case FUNC_ARG_UNKNOWN:
+        return "*UNKNOWN*";
+    case FUNC_ARG_NOTHING:
+        return "nothing";
+    case FUNC_ARG_INT:
+        return "int";
+    case FUNC_ARG_DOUBLE:
+        return "float";
+    case FUNC_ARG_STRING_REF:
+    case FUNC_ARG_STRING_LITERAL:
+        return "str";
+    case FUNC_ARG_BOOL:
+        return "bool";
+    case FUNC_ARG_LIST:
+        return "list";
+    case FUNC_ARG_ANY:
+        return "*ANY*";
+    case FUNC_ARG_CONTROL:
+        return "*INTERNAL*";
+    default:
+        return "*UNSPECIFIED*";
+    }
+}
+
 LLVMValueRef arg_to_value(Exec* exec, FuncArg arg) {
     switch (arg.type) {
     case FUNC_ARG_STRING_LITERAL:
@@ -1159,6 +1185,25 @@ LLVMValueRef arg_to_string_ref(Exec* exec, FuncArg arg) {
     case FUNC_ARG_ANY:
         return build_call(exec, "string_from_any", CONST_GC, arg.data.value);
     case FUNC_ARG_NOTHING:
+    default:
+        assert(false && "Unhandled cast to string ref");
+    }
+}
+
+LLVMValueRef arg_to_list(Exec* exec, FuncArg arg) {
+    switch (arg.type) {
+    case FUNC_ARG_BOOL:
+    case FUNC_ARG_NOTHING:
+    case FUNC_ARG_INT:
+    case FUNC_ARG_STRING_REF:
+    case FUNC_ARG_DOUBLE:
+    case FUNC_ARG_STRING_LITERAL:
+        TraceLog(LOG_ERROR, "[LLVM] Cannot cast type %s into list type", type_to_str(arg.type));
+        return NULL;
+    case FUNC_ARG_LIST:
+        return arg.data.value;
+    case FUNC_ARG_ANY:
+        return build_call(exec, "list_from_any", CONST_GC, arg.data.value);
     default:
         assert(false && "Unhandled cast to string ref");
     }
@@ -1944,23 +1989,23 @@ bool block_list_set(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
 
 bool block_list_get(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
     MIN_ARG_COUNT(2);
-    if (argv[0].type != FUNC_ARG_LIST) {
-        TraceLog(LOG_ERROR, "[LLVM] Received non list argument");
-        return false;
-    }
 
-    *return_val = DATA_ANY(build_call(exec, "list_get", CONST_GC, argv[0].data.value, arg_to_int(exec, argv[1])));
+    LLVMValueRef list = arg_to_list(exec, argv[0]);
+    if (!list) return false;
+    LLVMValueRef index = arg_to_int(exec, argv[1]);
+    if (!index) return false;
+
+    *return_val = DATA_ANY(build_call(exec, "list_get", CONST_GC, list, index));
     return true;
 }
 
 bool block_list_add(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
     MIN_ARG_COUNT(2);
-    if (argv[0].type != FUNC_ARG_LIST) {
-        TraceLog(LOG_ERROR, "[LLVM] Received non list argument");
-        return false;
-    }
 
-    build_call_count(exec, "list_add", 4, CONST_GC, argv[0].data.value, CONST_INTEGER(argv[1].type), arg_to_value(exec, argv[1]));
+    LLVMValueRef list = arg_to_list(exec, argv[0]);
+    if (!list) return false;
+
+    build_call_count(exec, "list_add", 4, CONST_GC, list, CONST_INTEGER(argv[1].type), arg_to_value(exec, argv[1]));
     *return_val = argv[0];
     return true;
 }
