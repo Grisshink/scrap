@@ -66,8 +66,10 @@ static void gc_mark_refs(Gc* gc, GcChunkData* chunk) {
             GcChunkData* chunk_inner;
             if (list->values[i].type == FUNC_ARG_LIST) {
                 chunk_inner = ((GcChunkData*)list->values[i].data.list_val) - 1;
-                chunk_inner->marked = 1;
-                gc_mark_refs(gc, chunk_inner);
+                if (!chunk_inner->marked) {
+                    chunk_inner->marked = 1;
+                    gc_mark_refs(gc, chunk_inner);
+                }
             } else if (list->values[i].type == FUNC_ARG_STRING_REF) {
                 StringHeader* str = ((StringHeader*)list->values[i].data.str_val) - 1;
                 chunk_inner = ((GcChunkData*)str) - 1;
