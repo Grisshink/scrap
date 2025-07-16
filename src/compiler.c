@@ -306,6 +306,10 @@ DefineArgument* get_custom_argument(Exec* exec, Blockdef* blockdef, DefineFuncti
     return NULL;
 }
 
+static void vector_add_str(char** vec, const char* str) {
+    for (const char* str_val = str; *str_val; str_val++) vector_add(vec, *str_val == ' ' ? '_' : *str_val);
+}
+
 DefineFunction* define_function(Exec* exec, Blockdef* blockdef) {
     for (size_t i = 0; i < vector_size(exec->defined_functions); i++) {
         if (exec->defined_functions[i].blockdef == blockdef) {
@@ -317,15 +321,37 @@ DefineFunction* define_function(Exec* exec, Blockdef* blockdef) {
     Blockdef* func_params_blockdefs[32];
     unsigned int func_params_count = 0;
 
+    char* func_name = vector_create();
+    vector_add_str(&func_name, blockdef->id);
+    vector_add(&func_name, '_');
+
     for (size_t i = 0; i < vector_size(blockdef->inputs); i++) {
-        if (blockdef->inputs[i].type != INPUT_ARGUMENT) continue;
-        func_params[func_params_count] = LLVMPointerType(LLVMInt8Type(), 0);
-        func_params_blockdefs[func_params_count] = blockdef->inputs[i].data.arg.blockdef;
-        func_params_count++;
+        switch (blockdef->inputs[i].type) {
+        case INPUT_TEXT_DISPLAY:
+            vector_add_str(&func_name, blockdef->inputs[i].data.text);
+            vector_add(&func_name, '_');
+            break;
+        case INPUT_BLOCKDEF_EDITOR:
+        case INPUT_DROPDOWN:
+            vector_add_str(&func_name, "arg_");
+            break;
+        case INPUT_IMAGE_DISPLAY:
+            vector_add_str(&func_name, "img_");
+            break;
+        case INPUT_ARGUMENT:
+            func_params[func_params_count] = LLVMPointerType(LLVMInt8Type(), 0);
+            func_params_blockdefs[func_params_count] = blockdef->inputs[i].data.arg.blockdef;
+            func_params_count++;
+            vector_add_str(&func_name, "arg_");
+            break;
+        }
     }
+    vector_add(&func_name, 0);
 
     LLVMTypeRef func_type = LLVMFunctionType(LLVMVoidType(), func_params, func_params_count, false);
-    LLVMValueRef func = LLVMAddFunction(exec->module, blockdef->id, func_type);
+    LLVMValueRef func = LLVMAddFunction(exec->module, func_name, func_type);
+
+    vector_free(func_name);
 
     DefineFunction* define = vector_add_dst(&exec->defined_functions);
     define->blockdef = blockdef;
