@@ -243,13 +243,15 @@ static bool evaluate_block(Exec* exec, Block* block, FuncArg* return_val, bool e
                 vector_add(&args, block_return);
                 break;
             case ARGUMENT_BLOCKDEF:
-                assert(false && "Unimplemented compile blockdef argument");
+                arg = vector_add_dst(&args);
+                arg->type = FUNC_ARG_BLOCKDEF;
+                arg->data.blockdef = block->arguments[i].data.blockdef;
                 break;
             }
         }
     }
 
-    if (!compile_block(exec, vector_size(args), args, return_val)) {
+    if (!compile_block(exec, block, vector_size(args), args, return_val)) {
         vector_free(args);
         TraceLog(LOG_ERROR, "[LLVM] Got error while compiling block id: \"%s\" (at block %p)", block->blockdef->id, block);
         return false;
@@ -290,6 +292,32 @@ static bool evaluate_chain(Exec* exec, BlockChain* chain) {
     }
 
     return true;
+}
+
+DefineFunction* define_function(Exec* exec, Blockdef* blockdef) {
+    for (size_t i = 0; i < vector_size(exec->defined_functions); i++) {
+        if (exec->defined_functions[i].blockdef == blockdef) {
+            return &exec->defined_functions[i];
+        }
+    }
+
+    LLVMTypeRef func_params[32];
+    unsigned int func_params_count = 0;
+    
+
+    for (size_t i = 0; i < vector_size(blockdef->inputs); i++) {
+        if (blockdef->inputs[i].type != INPUT_ARGUMENT) continue;
+        func_params[func_params_count++] = LLVMPointerType(LLVMInt8Type(), 0);
+    }
+
+    LLVMTypeRef func_type = LLVMFunctionType(LLVMVoidType(), func_params, func_params_count, false);
+    LLVMValueRef func = LLVMAddFunction(exec->module, blockdef->id, func_type);
+
+    DefineFunction* define = vector_add_dst(&exec->defined_functions);
+    define->blockdef = blockdef;
+    define->func = func;
+
+    return define;
 }
 
 static int int_pow(int base, int exp) {
@@ -821,7 +849,7 @@ static LLVMValueRef add_function(Exec* exec, const char* name, LLVMTypeRef retur
     return func_value;
 }
 
-static LLVMBasicBlockRef register_globals(Exec* exec) {
+static LLVMValueRef register_globals(Exec* exec) {
     LLVMTypeRef print_func_params[] = { LLVMPointerType(LLVMInt8Type(), 0) };
     add_function(exec, "term_print_str", LLVMInt32Type(), print_func_params, ARRLEN(print_func_params), term_print_str, false, false);
 
@@ -1007,9 +1035,9 @@ static LLVMBasicBlockRef register_globals(Exec* exec) {
     add_function(exec, "gc_add_str_root", LLVMVoidType(), gc_add_str_root_func_params, ARRLEN(gc_add_str_root_func_params), gc_add_str_root, false, false);
 
     LLVMTypeRef main_func_type = LLVMFunctionType(LLVMVoidType(), NULL, 0, false);
-    LLVMValueRef main_func = LLVMAddFunction(exec->module, "llvm_main", main_func_type);
+    LLVMValueRef main_func = LLVMAddFunction(exec->module, MAIN_NAME, main_func_type);
 
-    return LLVMAppendBasicBlock(main_func, "entry");
+    return main_func;
 }
 
 static bool compile_program(Exec* exec) {
@@ -1021,10 +1049,12 @@ static bool compile_program(Exec* exec) {
     exec->gc = gc_new(MEMORY_LIMIT);
     exec->gc_dirty = false;
     exec->gc_dirty_funcs = vector_create();
+    exec->defined_functions = vector_create();
 
     exec->module = LLVMModuleCreateWithName("scrap_module");
 
-    LLVMBasicBlockRef entry = register_globals(exec);
+    LLVMValueRef main_func = register_globals(exec);
+    LLVMBasicBlockRef entry = LLVMAppendBasicBlock(main_func, "entry");
 
     exec->builder = LLVMCreateBuilder();
     LLVMPositionBuilderAtEnd(exec->builder, entry);
@@ -1038,13 +1068,29 @@ static bool compile_program(Exec* exec) {
             gc_free(&exec->gc);
             vector_free(exec->gc_dirty_funcs);
             vector_free(exec->compile_func_list);
+            vector_free(exec->defined_functions);
             return false;
         }
     }
 
-    build_gc_root_end(exec);
+    LLVMBasicBlockRef last_block = LLVMGetLastBasicBlock(main_func);
+    LLVMPositionBuilderAtEnd(exec->builder, last_block);
 
+    build_gc_root_end(exec);
     LLVMBuildRetVoid(exec->builder);
+
+    for (size_t i = 0; i < vector_size(exec->defined_functions); i++) {
+        last_block = LLVMGetLastBasicBlock(exec->defined_functions[i].func);
+        LLVMPositionBuilderAtEnd(exec->builder, last_block);
+        
+        LLVMValueRef last_instr = LLVMGetLastInstruction(last_block);
+
+        if (LLVMGetInstructionOpcode(last_instr) != LLVMRet) {
+            build_gc_root_end(exec);
+            LLVMBuildRetVoid(exec->builder);
+        }
+    }
+
     LLVMDisposeBuilder(exec->builder);
 
     char *error = NULL;
@@ -1055,6 +1101,7 @@ static bool compile_program(Exec* exec) {
         gc_free(&exec->gc);
         vector_free(exec->gc_dirty_funcs);
         vector_free(exec->compile_func_list);
+        vector_free(exec->defined_functions);
         return false;
     }
     LLVMDisposeMessage(error);
@@ -1062,6 +1109,7 @@ static bool compile_program(Exec* exec) {
     LLVMDumpModule(exec->module);
 
     vector_free(exec->gc_dirty_funcs);
+    vector_free(exec->defined_functions);
 
     return true;
 }

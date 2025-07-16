@@ -70,6 +70,11 @@ typedef struct {
 } CompileFunction;
 
 typedef struct {
+    Blockdef* blockdef;
+    LLVMValueRef func;
+} DefineFunction;
+
+typedef struct {
     BlockChain* code;
     LLVMModuleRef module;
     LLVMBuilderRef builder;
@@ -88,6 +93,7 @@ typedef struct {
     size_t variable_stack_frames_len;
 
     CompileFunction* compile_func_list;
+    DefineFunction* defined_functions;
 
     Gc gc;
 
@@ -98,6 +104,8 @@ typedef struct {
     pthread_t thread;
     atomic_bool is_running;
 } Exec;
+
+#define MAIN_NAME "llvm_main"
 
 #define CONST_NOTHING LLVMConstPointerNull(LLVMVoidType())
 #define CONST_INTEGER(val) LLVMConstInt(LLVMInt32Type(), val, true)
@@ -122,7 +130,7 @@ typedef struct {
 #define DATA_UNKNOWN _DATA(FUNC_ARG_UNKNOWN, NULL)
 #define DATA_NOTHING _DATA(FUNC_ARG_NOTHING, CONST_NOTHING)
 
-typedef bool (*BlockCompileFunc)(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val);
+typedef bool (*BlockCompileFunc)(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val);
 
 Exec exec_new(void);
 void exec_free(Exec* exec);
@@ -141,5 +149,7 @@ LLVMValueRef build_gc_root_begin(Exec* exec);
 LLVMValueRef build_gc_root_end(Exec* exec);
 LLVMValueRef build_call(Exec* exec, const char* func_name, ...);
 LLVMValueRef build_call_count(Exec* exec, const char* func_name, size_t func_param_count, ...);
+
+DefineFunction* define_function(Exec* exec, Blockdef* blockdef);
 
 #endif // COMPILER_H

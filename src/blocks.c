@@ -121,6 +121,20 @@ Data block_noop(Exec* exec, int argc, Data* argv) {
     RETURN_NOTHING;
 }
 
+Data block_on_start(Exec* exec, int argc, Data* argv) {
+    (void) exec;
+    (void) argc;
+    (void) argv;
+    RETURN_NOTHING;
+}
+
+Data block_define_block(Exec* exec, int argc, Data* argv) {
+    (void) exec;
+    (void) argc;
+    (void) argv;
+    RETURN_NOTHING;
+}
+
 Data block_loop(Exec* exec, int argc, Data* argv) {
     if (argc < 1) RETURN_OMIT_ARGS;
     if (argv[0].type != DATA_CONTROL) RETURN_OMIT_ARGS;
@@ -1251,7 +1265,8 @@ FuncArg arg_cast(Exec* exec, FuncArg arg, FuncArgType cast_to_type) {
     }
 }
 
-bool block_return(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
+bool block_return(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val) {
+    (void) block;
     (void) exec;
     (void) argc;
     (void) argv;
@@ -1260,7 +1275,8 @@ bool block_return(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
     return false;
 }
 
-bool block_custom_arg(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
+bool block_custom_arg(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val) {
+    (void) block;
     (void) exec;
     (void) argc;
     (void) argv;
@@ -1269,16 +1285,30 @@ bool block_custom_arg(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) 
     return false;
 }
 
-bool block_exec_custom(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
-    (void) exec;
-    (void) argc;
-    (void) argv;
-    (void) return_val;
-    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_exec_custom");
-    return false;
+bool block_exec_custom(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val) {
+    if (argc > 32) {
+        TraceLog(LOG_ERROR, "[LLVM] Too many parameters passed into function. Got %d/32", argc);
+        return false;
+    }
+    
+    DefineFunction* define = define_function(exec, block->blockdef);
+    
+    LLVMTypeRef func_type = LLVMGlobalGetValueType(define->func);
+    LLVMValueRef func_param_list[32];
+
+    for (int i = 0; i < argc; i++) {
+        func_param_list[i] = arg_to_any(exec, argv[i]);
+    }
+
+    LLVMBuildCall2(exec->builder, func_type, define->func, func_param_list, argc, "");
+    exec->gc_dirty = true;
+
+    *return_val = DATA_NOTHING;
+    return true;
 }
 
-bool block_not_eq(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
+bool block_not_eq(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val) {
+    (void) block;
     MIN_ARG_COUNT(2);
     if (argv[0].type == FUNC_ARG_STRING_LITERAL && argv[1].type == FUNC_ARG_STRING_LITERAL) {
         *return_val = DATA_BOOLEAN(CONST_BOOLEAN(!!strcmp(argv[0].data.str, argv[1].data.str)));
@@ -1336,7 +1366,8 @@ bool block_not_eq(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
     return true;
 }
 
-bool block_eq(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
+bool block_eq(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val) {
+    (void) block;
     MIN_ARG_COUNT(2);
     if (argv[0].type == FUNC_ARG_STRING_LITERAL && argv[1].type == FUNC_ARG_STRING_LITERAL) {
         *return_val = DATA_BOOLEAN(CONST_BOOLEAN(!strcmp(argv[0].data.str, argv[1].data.str)));
@@ -1390,7 +1421,8 @@ bool block_eq(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
     return true;
 }
 
-bool block_false(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
+bool block_false(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val) {
+    (void) block;
     (void) exec;
     (void) argc;
     (void) argv;
@@ -1398,7 +1430,8 @@ bool block_false(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
     return true;
 }
 
-bool block_true(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
+bool block_true(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val) {
+    (void) block;
     (void) exec;
     (void) argc;
     (void) argv;
@@ -1406,7 +1439,8 @@ bool block_true(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
     return true;
 }
 
-bool block_or(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
+bool block_or(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val) {
+    (void) block;
     MIN_ARG_COUNT(2);
     LLVMValueRef left = arg_to_bool(exec, argv[0]);
     if (!left) return false;
@@ -1416,7 +1450,8 @@ bool block_or(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
     return true;
 }
 
-bool block_and(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
+bool block_and(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val) {
+    (void) block;
     MIN_ARG_COUNT(2);
     LLVMValueRef left = arg_to_bool(exec, argv[0]);
     if (!left) return false;
@@ -1426,7 +1461,8 @@ bool block_and(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
     return true;
 }
 
-bool block_not(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
+bool block_not(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val) {
+    (void) block;
     MIN_ARG_COUNT(1);
     LLVMValueRef value = arg_to_bool(exec, argv[0]);
     if (!value) return false;
@@ -1434,7 +1470,8 @@ bool block_not(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
     return true;
 }
 
-bool block_more_eq(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
+bool block_more_eq(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val) {
+    (void) block;
     MIN_ARG_COUNT(2);
     if (argv[0].type != FUNC_ARG_DOUBLE) {
         LLVMValueRef left = arg_to_int(exec, argv[0]);
@@ -1450,7 +1487,8 @@ bool block_more_eq(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
     return true;
 }
 
-bool block_more(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
+bool block_more(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val) {
+    (void) block;
     MIN_ARG_COUNT(2);
     if (argv[0].type != FUNC_ARG_DOUBLE) {
         LLVMValueRef left = arg_to_int(exec, argv[0]);
@@ -1466,7 +1504,8 @@ bool block_more(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
     return true;
 }
 
-bool block_less_eq(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
+bool block_less_eq(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val) {
+    (void) block;
     MIN_ARG_COUNT(2);
     if (argv[0].type != FUNC_ARG_DOUBLE) {
         LLVMValueRef left = arg_to_int(exec, argv[0]);
@@ -1482,7 +1521,8 @@ bool block_less_eq(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
     return true;
 }
 
-bool block_less(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
+bool block_less(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val) {
+    (void) block;
     MIN_ARG_COUNT(2);
     if (argv[0].type != FUNC_ARG_DOUBLE) {
         LLVMValueRef left = arg_to_int(exec, argv[0]);
@@ -1498,7 +1538,8 @@ bool block_less(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
     return true;
 }
 
-bool block_bit_or(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
+bool block_bit_or(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val) {
+    (void) block;
     MIN_ARG_COUNT(2);
     LLVMValueRef left = arg_to_int(exec, argv[0]);
     if (!left) return false;
@@ -1508,7 +1549,8 @@ bool block_bit_or(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
     return true;
 }
 
-bool block_bit_xor(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
+bool block_bit_xor(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val) {
+    (void) block;
     MIN_ARG_COUNT(2);
     LLVMValueRef left = arg_to_int(exec, argv[0]);
     if (!left) return false;
@@ -1518,7 +1560,8 @@ bool block_bit_xor(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
     return true;
 }
 
-bool block_bit_and(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
+bool block_bit_and(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val) {
+    (void) block;
     MIN_ARG_COUNT(2);
     LLVMValueRef left = arg_to_int(exec, argv[0]);
     if (!left) return false;
@@ -1528,7 +1571,8 @@ bool block_bit_and(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
     return true;
 }
 
-bool block_bit_not(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
+bool block_bit_not(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val) {
+    (void) block;
     MIN_ARG_COUNT(1);
     LLVMValueRef int_val = arg_to_int(exec, argv[0]);
     if (!int_val) return false;
@@ -1538,7 +1582,8 @@ bool block_bit_not(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
     return true;
 }
 
-bool block_pi(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
+bool block_pi(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val) {
+    (void) block;
     (void) exec;
     (void) argc;
     (void) argv;
@@ -1546,7 +1591,8 @@ bool block_pi(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
     return true;
 }
 
-bool block_math(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
+bool block_math(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val) {
+    (void) block;
     MIN_ARG_COUNT(2);
     if (argv[0].type != FUNC_ARG_STRING_LITERAL) return false;
 
@@ -1562,7 +1608,8 @@ bool block_math(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
     return false;
 }
 
-bool block_pow(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
+bool block_pow(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val) {
+    (void) block;
     MIN_ARG_COUNT(2);
     LLVMValueRef left = arg_to_int(exec, argv[0]);
     if (!left) return false;
@@ -1573,7 +1620,8 @@ bool block_pow(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
     return true;
 }
 
-bool block_rem(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
+bool block_rem(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val) {
+    (void) block;
     MIN_ARG_COUNT(2);
     if (argv[0].type != FUNC_ARG_DOUBLE) {
         LLVMValueRef left = arg_to_int(exec, argv[0]);
@@ -1595,7 +1643,8 @@ bool block_rem(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
     return true;
 }
 
-bool block_div(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
+bool block_div(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val) {
+    (void) block;
     MIN_ARG_COUNT(2);
     if (argv[0].type != FUNC_ARG_DOUBLE) {
         LLVMValueRef left = arg_to_int(exec, argv[0]);
@@ -1617,7 +1666,8 @@ bool block_div(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
     return true;
 }
 
-bool block_mult(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
+bool block_mult(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val) {
+    (void) block;
     MIN_ARG_COUNT(2);
     if (argv[0].type != FUNC_ARG_DOUBLE) {
         LLVMValueRef left = arg_to_int(exec, argv[0]);
@@ -1633,7 +1683,8 @@ bool block_mult(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
     return true;
 }
 
-bool block_minus(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
+bool block_minus(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val) {
+    (void) block;
     MIN_ARG_COUNT(2);
     if (argv[0].type != FUNC_ARG_DOUBLE) {
         LLVMValueRef left = arg_to_int(exec, argv[0]);
@@ -1649,7 +1700,8 @@ bool block_minus(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
     return true;
 }
 
-bool block_plus(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
+bool block_plus(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val) {
+    (void) block;
     MIN_ARG_COUNT(2);
     if (argv[0].type != FUNC_ARG_DOUBLE) {
         LLVMValueRef left = arg_to_int(exec, argv[0]);
@@ -1665,7 +1717,8 @@ bool block_plus(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
     return true;
 }
 
-bool block_convert_bool(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
+bool block_convert_bool(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val) {
+    (void) block;
     MIN_ARG_COUNT(1);
     LLVMValueRef value = arg_to_bool(exec, argv[0]);
     if (!value) return false;
@@ -1673,7 +1726,8 @@ bool block_convert_bool(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val
     return true;
 }
 
-bool block_convert_str(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
+bool block_convert_str(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val) {
+    (void) block;
     MIN_ARG_COUNT(1);
     LLVMValueRef value = arg_to_string_ref(exec, argv[0]);
     if (!value) return false;
@@ -1681,7 +1735,8 @@ bool block_convert_str(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val)
     return true;
 }
 
-bool block_convert_float(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
+bool block_convert_float(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val) {
+    (void) block;
     MIN_ARG_COUNT(1);
     LLVMValueRef value = arg_to_double(exec, argv[0]);
     if (!value) return false;
@@ -1689,7 +1744,8 @@ bool block_convert_float(Exec* exec, int argc, FuncArg* argv, FuncArg* return_va
     return true;
 }
 
-bool block_convert_int(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
+bool block_convert_int(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val) {
+    (void) block;
     MIN_ARG_COUNT(1);
     LLVMValueRef value = arg_to_int(exec, argv[0]);
     if (!value) return false;
@@ -1697,14 +1753,16 @@ bool block_convert_int(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val)
     return true;
 }
 
-bool block_unix_time(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
+bool block_unix_time(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val) {
+    (void) block;
     (void) argc;
     (void) argv;
     *return_val = DATA_INTEGER(build_call(exec, "time", LLVMConstPointerNull(LLVMPointerType(LLVMVoidType(), 0))));
     return true;
 }
 
-bool block_length(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
+bool block_length(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val) {
+    (void) block;
     MIN_ARG_COUNT(1);
     LLVMValueRef str = arg_to_string_ref(exec, argv[0]);
     if (!str) return false;
@@ -1713,7 +1771,8 @@ bool block_length(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
     return true;
 }
 
-bool block_substring(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
+bool block_substring(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val) {
+    (void) block;
     MIN_ARG_COUNT(3);
     LLVMValueRef begin = arg_to_int(exec, argv[0]);
     if (!begin) return false;
@@ -1728,7 +1787,8 @@ bool block_substring(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
     return true;
 }
 
-bool block_letter_in(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
+bool block_letter_in(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val) {
+    (void) block;
     MIN_ARG_COUNT(2);
     LLVMValueRef target = arg_to_int(exec, argv[0]);
     if (!target) return false;
@@ -1740,7 +1800,8 @@ bool block_letter_in(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
     return true;
 }
 
-bool block_chr(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
+bool block_chr(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val) {
+    (void) block;
     MIN_ARG_COUNT(1);
     LLVMValueRef value = arg_to_int(exec, argv[0]);
     if (!value) return false;
@@ -1749,7 +1810,8 @@ bool block_chr(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
     return true;
 }
 
-bool block_ord(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
+bool block_ord(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val) {
+    (void) block;
     MIN_ARG_COUNT(1);
     LLVMValueRef str = arg_to_any_string(exec, argv[0]);
     if (!str) return false;
@@ -1758,7 +1820,8 @@ bool block_ord(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
     return true;
 }
 
-bool block_join(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
+bool block_join(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val) {
+    (void) block;
     MIN_ARG_COUNT(2);
     LLVMValueRef left = arg_to_string_ref(exec, argv[0]);
     if (!left) return false;
@@ -1769,7 +1832,8 @@ bool block_join(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
     return true;
 }
 
-bool block_random(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
+bool block_random(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val) {
+    (void) block;
     MIN_ARG_COUNT(2);
     LLVMValueRef min = arg_to_int(exec, argv[0]);
     if (!min) return false;
@@ -1780,21 +1844,24 @@ bool block_random(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
     return true;
 }
 
-bool block_get_char(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
+bool block_get_char(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val) {
+    (void) block;
     (void) argc;
     (void) argv;
     *return_val = DATA_STRING_REF(build_call(exec, "get_char", CONST_GC));
     return true;
 }
 
-bool block_input(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
+bool block_input(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val) {
+    (void) block;
     (void) argc;
     (void) argv;
     *return_val = DATA_STRING_REF(build_call(exec, "get_input", CONST_GC));
     return true;
 }
 
-bool block_term_set_clear(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
+bool block_term_set_clear(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val) {
+    (void) block;
     MIN_ARG_COUNT(1);
     if (argv[0].type != FUNC_ARG_STRING_LITERAL) return false;
 
@@ -1834,7 +1901,8 @@ bool block_term_set_clear(Exec* exec, int argc, FuncArg* argv, FuncArg* return_v
     return is_set;
 }
 
-bool block_term_clear(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
+bool block_term_clear(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val) {
+    (void) block;
     (void) argc;
     (void) argv;
     build_call(exec, "term_clear");
@@ -1842,7 +1910,8 @@ bool block_term_clear(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) 
     return true;
 }
 
-bool block_reset_color(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
+bool block_reset_color(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val) {
+    (void) block;
     (void) argc;
     (void) argv;
     build_call(exec, "set_fg_color", CONST_INTEGER(*(int*)&WHITE));
@@ -1851,7 +1920,8 @@ bool block_reset_color(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val)
     return true;
 }
 
-bool block_set_bg_color(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
+bool block_set_bg_color(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val) {
+    (void) block;
     MIN_ARG_COUNT(1);
     if (argv[0].type != FUNC_ARG_STRING_LITERAL) return false;
 
@@ -1891,7 +1961,8 @@ bool block_set_bg_color(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val
     return is_set;
 }
 
-bool block_set_fg_color(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
+bool block_set_fg_color(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val) {
+    (void) block;
     MIN_ARG_COUNT(1);
     if (argv[0].type != FUNC_ARG_STRING_LITERAL) return false;
 
@@ -1931,7 +2002,8 @@ bool block_set_fg_color(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val
     return is_set;
 }
 
-bool block_set_cursor(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
+bool block_set_cursor(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val) {
+    (void) block;
     MIN_ARG_COUNT(2);
     LLVMValueRef x = arg_to_int(exec, argv[0]);
     if (!x) return false;
@@ -1943,35 +2015,40 @@ bool block_set_cursor(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) 
     return true;
 }
 
-bool block_cursor_max_y(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
+bool block_cursor_max_y(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val) {
+    (void) block;
     (void) argc;
     (void) argv;
     *return_val = DATA_INTEGER(build_call(exec, "cursor_max_y"));
     return true;
 }
 
-bool block_cursor_max_x(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
+bool block_cursor_max_x(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val) {
+    (void) block;
     (void) argc;
     (void) argv;
     *return_val = DATA_INTEGER(build_call(exec, "cursor_max_x"));
     return true;
 }
 
-bool block_cursor_y(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
+bool block_cursor_y(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val) {
+    (void) block;
     (void) argc;
     (void) argv;
     *return_val = DATA_INTEGER(build_call(exec, "cursor_y"));
     return true;
 }
 
-bool block_cursor_x(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
+bool block_cursor_x(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val) {
+    (void) block;
     (void) argc;
     (void) argv;
     *return_val = DATA_INTEGER(build_call(exec, "cursor_x"));
     return true;
 }
 
-bool block_print(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
+bool block_print(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val) {
+    (void) block;
     MIN_ARG_COUNT(1);
 
     switch (argv[0].type) {
@@ -2007,14 +2084,16 @@ bool block_print(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
     }
 }
 
-bool block_println(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
+bool block_println(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val) {
+    (void) block;
     MIN_ARG_COUNT(1);
-    block_print(exec, argc, argv, return_val);
+    block_print(exec, block, argc, argv, return_val);
     build_call(exec, "term_print_str", CONST_STRING_LITERAL("\r\n"));
     return true;
 }
 
-bool block_list_set(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
+bool block_list_set(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val) {
+    (void) block;
     MIN_ARG_COUNT(3);
 
     LLVMValueRef list = arg_to_list(exec, argv[0]);
@@ -2027,7 +2106,8 @@ bool block_list_set(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
     return true;
 }
 
-bool block_list_get(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
+bool block_list_get(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val) {
+    (void) block;
     MIN_ARG_COUNT(2);
 
     LLVMValueRef list = arg_to_list(exec, argv[0]);
@@ -2039,7 +2119,8 @@ bool block_list_get(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
     return true;
 }
 
-bool block_list_add(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
+bool block_list_add(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val) {
+    (void) block;
     MIN_ARG_COUNT(2);
 
     LLVMValueRef list = arg_to_list(exec, argv[0]);
@@ -2050,14 +2131,16 @@ bool block_list_add(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
     return true;
 }
 
-bool block_create_list(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
+bool block_create_list(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val) {
+    (void) block;
     (void) argc;
     (void) argv;
     *return_val = DATA_LIST(build_call(exec, "list_new", CONST_GC));
     return true;
 }
 
-bool block_gc_collect(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
+bool block_gc_collect(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val) {
+    (void) block;
     (void) argc;
     (void) argv;
     build_call(exec, "gc_collect", CONST_GC);
@@ -2065,7 +2148,8 @@ bool block_gc_collect(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) 
     return true;
 }
 
-bool block_set_var(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
+bool block_set_var(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val) {
+    (void) block;
     MIN_ARG_COUNT(2);
     if (argv[0].type != FUNC_ARG_STRING_LITERAL) {
         TraceLog(LOG_ERROR, "[LLVM] Received non constant string argument");
@@ -2098,7 +2182,8 @@ bool block_set_var(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
     return true;
 }
 
-bool block_get_var(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
+bool block_get_var(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val) {
+    (void) block;
     MIN_ARG_COUNT(1);
     if (argv[0].type != FUNC_ARG_STRING_LITERAL) {
         TraceLog(LOG_ERROR, "[LLVM] Received non constant string argument");
@@ -2125,7 +2210,8 @@ bool block_get_var(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
     return true;
 }
 
-bool block_declare_var(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
+bool block_declare_var(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val) {
+    (void) block;
     MIN_ARG_COUNT(2);
     if (argv[0].type != FUNC_ARG_STRING_LITERAL) {
         TraceLog(LOG_ERROR, "[LLVM] Received non constant string argument");
@@ -2167,7 +2253,8 @@ bool block_declare_var(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val)
     return true;
 }
 
-bool block_sleep(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
+bool block_sleep(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val) {
+    (void) block;
     MIN_ARG_COUNT(1);
     LLVMValueRef usecs = arg_to_int(exec, argv[0]);
     if (!usecs) return false;
@@ -2176,7 +2263,8 @@ bool block_sleep(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
     return true;
 }
 
-bool block_while(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
+bool block_while(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val) {
+    (void) block;
     MIN_ARG_COUNT(1);
     if (argv[0].type != FUNC_ARG_CONTROL) {
         TraceLog(LOG_ERROR, "[LLVM] First argument is not control argument!");
@@ -2222,7 +2310,8 @@ bool block_while(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
     return true;
 }
 
-bool block_repeat(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
+bool block_repeat(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val) {
+    (void) block;
     MIN_ARG_COUNT(1);
     if (argv[0].type != FUNC_ARG_CONTROL) {
         TraceLog(LOG_ERROR, "[LLVM] First argument is not control argument!");
@@ -2289,7 +2378,8 @@ bool block_repeat(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
     return true;
 }
 
-bool block_else(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
+bool block_else(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val) {
+    (void) block;
     MIN_ARG_COUNT(1);
     if (argv[0].type != FUNC_ARG_CONTROL) {
         TraceLog(LOG_ERROR, "[LLVM] First argument is not control argument!");
@@ -2328,7 +2418,8 @@ bool block_else(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
     return true;
 }
 
-bool block_else_if(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
+bool block_else_if(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val) {
+    (void) block;
     MIN_ARG_COUNT(1);
     if (argv[0].type != FUNC_ARG_CONTROL) {
         TraceLog(LOG_ERROR, "[LLVM] First argument is not control argument!");
@@ -2389,7 +2480,8 @@ bool block_else_if(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
     return true;
 }
 
-bool block_if(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
+bool block_if(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val) {
+    (void) block;
     MIN_ARG_COUNT(1);
     if (argv[0].type != FUNC_ARG_CONTROL) {
         TraceLog(LOG_ERROR, "[LLVM] First argument is not control argument!");
@@ -2442,7 +2534,8 @@ bool block_if(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
     return true;
 }
 
-bool block_loop(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
+bool block_loop(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val) {
+    (void) block;
     MIN_ARG_COUNT(1);
     if (argv[0].type != FUNC_ARG_CONTROL) {
         TraceLog(LOG_ERROR, "[LLVM] First argument is not control argument!");
@@ -2478,7 +2571,8 @@ bool block_loop(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
     return true;
 }
 
-bool block_do_nothing(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
+bool block_do_nothing(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val) {
+    (void) block;
     MIN_ARG_COUNT(1);
     if (argv[0].type != FUNC_ARG_CONTROL) {
         TraceLog(LOG_ERROR, "[LLVM] First argument is not control argument!");
@@ -2495,10 +2589,42 @@ bool block_do_nothing(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) 
     return true;
 }
 
-bool block_noop(Exec* exec, int argc, FuncArg* argv, FuncArg* return_val) {
+bool block_noop(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val) {
+    (void) block;
     (void) exec;
     (void) argc;
     (void) argv;
+    *return_val = DATA_NOTHING;
+    return true;
+}
+
+bool block_define_block(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val) {
+    (void) block;
+    MIN_ARG_COUNT(1);
+
+    if (argv[0].type != FUNC_ARG_BLOCKDEF) {
+        TraceLog(LOG_ERROR, "Non blockdef argument passed into block_define_block!");
+        return false;
+    }
+
+    DefineFunction* define = define_function(exec, argv[0].data.blockdef);
+
+    LLVMBasicBlockRef entry = LLVMAppendBasicBlock(define->func, "entry");
+    LLVMPositionBuilderAtEnd(exec->builder, entry);
+
+    build_gc_root_begin(exec);
+
+    *return_val = DATA_NOTHING;
+    return true;
+}
+
+bool block_on_start(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val) {
+    (void) block;
+    (void) argc;
+    (void) argv;
+    LLVMValueRef main_func = LLVMGetNamedFunction(exec->module, MAIN_NAME);
+    LLVMBasicBlockRef last_block = LLVMGetLastBasicBlock(main_func);
+    LLVMPositionBuilderAtEnd(exec->builder, last_block);
     *return_val = DATA_NOTHING;
     return true;
 }
@@ -2551,7 +2677,7 @@ void register_blocks(Vm* vm) {
     BlockCategory* cat_data = find_category(gettext("Data"));
     assert(cat_data != NULL);
 
-    Blockdef* on_start = blockdef_new("on_start", BLOCKTYPE_HAT, (BlockdefColor) { 0xff, 0x77, 0x00, 0xFF }, block_noop);
+    Blockdef* on_start = blockdef_new("on_start", BLOCKTYPE_HAT, (BlockdefColor) { 0xff, 0x77, 0x00, 0xFF }, block_on_start);
     blockdef_add_text(on_start, gettext("When"));
     blockdef_add_image(on_start, (BlockdefImage) { .image_ptr = &run_tex });
     blockdef_add_text(on_start, gettext("clicked"));
@@ -3023,7 +3149,7 @@ void register_blocks(Vm* vm) {
     blockdef_register(vm, sc_list_set);
     add_to_category(sc_list_set, cat_data);
 
-    Blockdef* sc_define_block = blockdef_new("define_block", BLOCKTYPE_HAT, (BlockdefColor) { 0x99, 0x00, 0xff, 0xff }, block_noop);
+    Blockdef* sc_define_block = blockdef_new("define_block", BLOCKTYPE_HAT, (BlockdefColor) { 0x99, 0x00, 0xff, 0xff }, block_define_block);
     blockdef_add_image(sc_define_block, (BlockdefImage) { .image_ptr = &special_tex });
     blockdef_add_text(sc_define_block, gettext("Define"));
     blockdef_add_blockdef_editor(sc_define_block);

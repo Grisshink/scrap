@@ -43,12 +43,14 @@ typedef enum {
     FUNC_ARG_LIST,
     FUNC_ARG_ANY,
     FUNC_ARG_CONTROL,
+    FUNC_ARG_BLOCKDEF,
 } FuncArgType;
 
 typedef union {
     LLVMValueRef value;
     ControlData control;
     const char* str;
+    Blockdef* blockdef;
 } FuncArgData;
 
 typedef struct {
