@@ -1225,8 +1225,9 @@ LLVMValueRef arg_to_list(Exec* exec, FuncArg arg) {
 
 LLVMValueRef arg_to_any(Exec* exec, FuncArg arg) {
     switch (arg.type) {
-    case FUNC_ARG_BOOL:
     case FUNC_ARG_NOTHING:
+        return build_call_count(exec, "any_from_value", 2, CONST_GC, CONST_INTEGER(arg.type));
+    case FUNC_ARG_BOOL:
     case FUNC_ARG_INT:
     case FUNC_ARG_STRING_REF:
     case FUNC_ARG_DOUBLE:
@@ -1267,12 +1268,31 @@ FuncArg arg_cast(Exec* exec, FuncArg arg, FuncArgType cast_to_type) {
 
 bool block_return(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val) {
     (void) block;
-    (void) exec;
-    (void) argc;
-    (void) argv;
-    (void) return_val;
-    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_return");
-    return false;
+    MIN_ARG_COUNT(1);
+
+    LLVMBasicBlockRef current = LLVMGetInsertBlock(exec->builder);
+    LLVMBasicBlockRef return_block = LLVMInsertBasicBlock(current, "return");
+    LLVMBasicBlockRef return_after_block = LLVMInsertBasicBlock(current, "return_after");
+
+    LLVMMoveBasicBlockAfter(return_after_block, current);
+    LLVMMoveBasicBlockAfter(return_block, current);
+
+    LLVMBuildBr(exec->builder, return_block);
+
+    LLVMPositionBuilderAtEnd(exec->builder, return_block);
+
+    build_gc_root_end(exec);
+    
+    LLVMValueRef custom_return = arg_to_any(exec, argv[0]);
+    if (!custom_return) return false;
+
+    exec->gc_dirty = false;
+    LLVMBuildRet(exec->builder, custom_return);
+
+    LLVMPositionBuilderAtEnd(exec->builder, return_after_block);
+    
+    *return_val = DATA_NOTHING;
+    return true;
 }
 
 bool block_custom_arg(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val) {
@@ -1307,12 +1327,11 @@ bool block_exec_custom(Exec* exec, Block* block, int argc, FuncArg* argv, FuncAr
 
     for (int i = 0; i < argc; i++) {
         func_param_list[i] = arg_to_any(exec, argv[i]);
+        if (!func_param_list[i]) return false;
     }
 
-    LLVMBuildCall2(exec->builder, func_type, define->func, func_param_list, argc, "");
     exec->gc_dirty = true;
-
-    *return_val = DATA_NOTHING;
+    *return_val = DATA_ANY(LLVMBuildCall2(exec->builder, func_type, define->func, func_param_list, argc, ""));
     return true;
 }
 
@@ -2110,7 +2129,11 @@ bool block_list_set(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* 
     LLVMValueRef index = arg_to_int(exec, argv[1]);
     if (!index) return false;
 
-    build_call_count(exec, "list_set", 4, list, index, CONST_INTEGER(argv[2].type), arg_to_value(exec, argv[2]));
+    if (argv[2].type == FUNC_ARG_NOTHING) {
+        build_call_count(exec, "list_set", 3, list, index, CONST_INTEGER(argv[2].type));
+    } else {
+        build_call_count(exec, "list_set", 4, list, index, CONST_INTEGER(argv[2].type), arg_to_value(exec, argv[2]));
+    }
     *return_val = DATA_NOTHING;
     return true;
 }
@@ -2135,7 +2158,11 @@ bool block_list_add(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* 
     LLVMValueRef list = arg_to_list(exec, argv[0]);
     if (!list) return false;
 
-    build_call_count(exec, "list_add", 4, CONST_GC, list, CONST_INTEGER(argv[1].type), arg_to_value(exec, argv[1]));
+    if (argv[1].type == FUNC_ARG_NOTHING) {
+        build_call_count(exec, "list_add", 3, CONST_GC, list, CONST_INTEGER(argv[1].type));
+    } else {
+        build_call_count(exec, "list_add", 4, CONST_GC, list, CONST_INTEGER(argv[1].type), arg_to_value(exec, argv[1]));
+    }
     *return_val = DATA_NOTHING;
     return true;
 }

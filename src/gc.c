@@ -25,7 +25,6 @@ Gc gc_new(size_t memory_max) {
     return (Gc) {
         .chunks = vector_create(),
         .roots_stack = vector_create(),
-        .temp_roots = vector_create(),
         .memory_used = 0,
         .memory_max = memory_max,
     };
@@ -42,7 +41,6 @@ void gc_free(Gc* gc) {
         vector_free(gc->roots_stack[i].chunks);
     }
     vector_free(gc->roots_stack);
-    vector_free(gc->temp_roots);
     vector_free(gc->chunks);
     gc->memory_max = 0;
     gc->memory_used = 0;
@@ -51,6 +49,7 @@ void gc_free(Gc* gc) {
 void gc_root_begin(Gc* gc) {
     GcRoot* root = vector_add_dst(&gc->roots_stack);
     root->chunks = vector_create();
+    root->temp_chunks = vector_create();
 }
 
 static void gc_mark_refs(Gc* gc, GcChunkData* chunk) {
@@ -94,12 +93,12 @@ void gc_collect(Gc* gc) {
             gc->roots_stack[i].chunks[j]->marked = 1;
             gc_mark_refs(gc, gc->roots_stack[i].chunks[j]);
         }
-    }
 
-    for (size_t i = 0; i < vector_size(gc->temp_roots); i++) {
-        if (gc->temp_roots[i]->marked) continue;
-        gc->temp_roots[i]->marked = 1;
-        gc_mark_refs(gc, gc->temp_roots[i]);
+        for (size_t j = 0; j < vector_size(gc->roots_stack[i].temp_chunks); j++) {
+            if (gc->roots_stack[i].temp_chunks[j]->marked) continue;
+            gc->roots_stack[i].temp_chunks[j]->marked = 1;
+            gc_mark_refs(gc, gc->roots_stack[i].temp_chunks[j]);
+        }
     }
 
     // Find unmarked chunks
@@ -149,7 +148,7 @@ void* gc_malloc(Gc* gc, size_t size, FuncArgType data_type) {
     };
 
     vector_add(&gc->chunks, chunk);
-    vector_add(&gc->temp_roots, chunk.ptr);
+    vector_add(&gc->roots_stack[vector_size(gc->roots_stack) - 1].temp_chunks, chunk.ptr);
     gc->memory_used += size;
 
     return chunk_data->data;
@@ -158,6 +157,7 @@ void* gc_malloc(Gc* gc, size_t size, FuncArgType data_type) {
 void gc_root_end(Gc* gc) {
     assert(vector_size(gc->roots_stack) > 0);
     vector_free(gc->roots_stack[vector_size(gc->roots_stack) - 1].chunks);
+    vector_free(gc->roots_stack[vector_size(gc->roots_stack) - 1].temp_chunks);
     vector_pop(gc->roots_stack);
 }
 
@@ -173,5 +173,5 @@ void gc_add_str_root(Gc* gc, char* str) {
 }
 
 void gc_flush(Gc* gc) {
-    vector_clear(gc->temp_roots);
+    vector_clear(gc->roots_stack[vector_size(gc->roots_stack) - 1].temp_chunks);
 }

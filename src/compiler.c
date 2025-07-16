@@ -348,7 +348,7 @@ DefineFunction* define_function(Exec* exec, Blockdef* blockdef) {
     }
     vector_add(&func_name, 0);
 
-    LLVMTypeRef func_type = LLVMFunctionType(LLVMVoidType(), func_params, func_params_count, false);
+    LLVMTypeRef func_type = LLVMFunctionType(LLVMPointerType(LLVMInt8Type(), 0), func_params, func_params_count, false);
     LLVMValueRef func = LLVMAddFunction(exec->module, func_name, func_type);
 
     vector_free(func_name);
@@ -1139,13 +1139,9 @@ static bool compile_program(Exec* exec) {
     for (size_t i = 0; i < vector_size(exec->defined_functions); i++) {
         last_block = LLVMGetLastBasicBlock(exec->defined_functions[i].func);
         LLVMPositionBuilderAtEnd(exec->builder, last_block);
-        
-        LLVMValueRef last_instr = LLVMGetLastInstruction(last_block);
-
-        if (LLVMGetInstructionOpcode(last_instr) != LLVMRet) {
-            build_gc_root_end(exec);
-            LLVMBuildRetVoid(exec->builder);
-        }
+        build_gc_root_end(exec);
+        LLVMValueRef val = build_call_count(exec, "any_from_value", 2, CONST_GC, CONST_INTEGER(FUNC_ARG_NOTHING));
+        LLVMBuildRet(exec->builder, val);
     }
 
     LLVMDisposeBuilder(exec->builder);
