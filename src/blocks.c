@@ -1077,6 +1077,7 @@ const char* type_to_str(FuncArgType type) {
     case FUNC_ARG_ANY:
         return "*ANY*";
     case FUNC_ARG_CONTROL:
+    case FUNC_ARG_BLOCKDEF:
         return "*INTERNAL*";
     default:
         return "*UNSPECIFIED*";
@@ -1107,6 +1108,7 @@ LLVMValueRef arg_to_bool(Exec* exec, FuncArg arg) {
     case FUNC_ARG_STRING_REF: ;
         LLVMValueRef first_char = LLVMBuildLoad2(exec->builder, LLVMInt8Type(), arg.data.value, "bool_cast");
         return LLVMBuildICmp(exec->builder, LLVMIntNE, first_char, LLVMConstInt(LLVMInt8Type(), 0, true), "bool_cast");
+    case FUNC_ARG_LIST:
     case FUNC_ARG_NOTHING:
         return CONST_BOOLEAN(0);
     case FUNC_ARG_INT:
@@ -1128,6 +1130,7 @@ LLVMValueRef arg_to_int(Exec* exec, FuncArg arg) {
         return CONST_INTEGER(atoi(arg.data.str));
     case FUNC_ARG_STRING_REF: ;
         return build_call(exec, "atoi", arg.data.value);
+    case FUNC_ARG_LIST:
     case FUNC_ARG_NOTHING:
         return CONST_INTEGER(0);
     case FUNC_ARG_INT:
@@ -1149,6 +1152,7 @@ LLVMValueRef arg_to_double(Exec* exec, FuncArg arg) {
         return CONST_DOUBLE(atof(arg.data.str));
     case FUNC_ARG_STRING_REF:
         return build_call(exec, "atof", arg.data.value);
+    case FUNC_ARG_LIST:
     case FUNC_ARG_NOTHING:
         return CONST_DOUBLE(0.0);
     case FUNC_ARG_INT:
@@ -1178,6 +1182,8 @@ LLVMValueRef arg_to_any_string(Exec* exec, FuncArg arg) {
         return build_call(exec, "string_from_double", CONST_GC, arg.data.value);
     case FUNC_ARG_ANY:
         return build_call(exec, "string_from_any", CONST_GC, arg.data.value);
+    case FUNC_ARG_LIST:
+        return build_call(exec, "string_from_literal", CONST_GC, CONST_STRING_LITERAL(""), CONST_INTEGER(0));
     case FUNC_ARG_NOTHING:
     default:
         assert(false && "Unhandled cast to any string");
@@ -1188,6 +1194,8 @@ LLVMValueRef arg_to_string_ref(Exec* exec, FuncArg arg) {
     switch (arg.type) {
     case FUNC_ARG_STRING_LITERAL:
         return build_call(exec, "string_from_literal", CONST_GC, CONST_STRING_LITERAL(arg.data.str), CONST_INTEGER(strlen(arg.data.str)));
+    case FUNC_ARG_LIST:
+        return build_call(exec, "string_from_literal", CONST_GC, CONST_STRING_LITERAL(""), CONST_INTEGER(0));
     case FUNC_ARG_STRING_REF:
         return arg.data.value;
     case FUNC_ARG_INT:
