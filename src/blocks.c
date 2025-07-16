@@ -1276,13 +1276,22 @@ bool block_return(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* re
 }
 
 bool block_custom_arg(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val) {
-    (void) block;
-    (void) exec;
     (void) argc;
     (void) argv;
-    (void) return_val;
-    TraceLog(LOG_ERROR, "[LLVM] Not implemented block_custom_arg");
-    return false;
+    DefineFunction* func;
+    DefineArgument* arg = get_custom_argument(exec, block->blockdef, &func);
+    if (!arg) {
+        TraceLog(LOG_ERROR, "[LLVM] Could not find function definition for argument");
+        return false;
+    }
+    
+    if (LLVMGetBasicBlockParent(LLVMGetInsertBlock(exec->builder)) != func->func) {
+        TraceLog(LOG_ERROR, "[LLVM] Function argument block used outside of function");
+        return false;
+    }
+
+    *return_val = DATA_ANY(arg->arg);
+    return true;
 }
 
 bool block_exec_custom(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val) {

@@ -294,6 +294,18 @@ static bool evaluate_chain(Exec* exec, BlockChain* chain) {
     return true;
 }
 
+DefineArgument* get_custom_argument(Exec* exec, Blockdef* blockdef, DefineFunction** func) {
+    for (size_t i = 0; i < vector_size(exec->defined_functions); i++) {
+        for (size_t j = 0; j < vector_size(exec->defined_functions[i].args); j++) {
+            if (exec->defined_functions[i].args[j].blockdef == blockdef) {
+                *func = &exec->defined_functions[i];
+                return &exec->defined_functions[i].args[j];
+            }
+        }
+    }
+    return NULL;
+}
+
 DefineFunction* define_function(Exec* exec, Blockdef* blockdef) {
     for (size_t i = 0; i < vector_size(exec->defined_functions); i++) {
         if (exec->defined_functions[i].blockdef == blockdef) {
@@ -302,12 +314,14 @@ DefineFunction* define_function(Exec* exec, Blockdef* blockdef) {
     }
 
     LLVMTypeRef func_params[32];
+    Blockdef* func_params_blockdefs[32];
     unsigned int func_params_count = 0;
-    
 
     for (size_t i = 0; i < vector_size(blockdef->inputs); i++) {
         if (blockdef->inputs[i].type != INPUT_ARGUMENT) continue;
-        func_params[func_params_count++] = LLVMPointerType(LLVMInt8Type(), 0);
+        func_params[func_params_count] = LLVMPointerType(LLVMInt8Type(), 0);
+        func_params_blockdefs[func_params_count] = blockdef->inputs[i].data.arg.blockdef;
+        func_params_count++;
     }
 
     LLVMTypeRef func_type = LLVMFunctionType(LLVMVoidType(), func_params, func_params_count, false);
@@ -316,6 +330,16 @@ DefineFunction* define_function(Exec* exec, Blockdef* blockdef) {
     DefineFunction* define = vector_add_dst(&exec->defined_functions);
     define->blockdef = blockdef;
     define->func = func;
+    define->args = vector_create();
+
+    LLVMValueRef func_params_values[32];
+    LLVMGetParams(func, func_params_values);
+
+    for (unsigned int i = 0; i < func_params_count; i++) {
+        DefineArgument* arg = vector_add_dst(&define->args);
+        arg->blockdef = func_params_blockdefs[i];
+        arg->arg = func_params_values[i];
+    }
 
     return define;
 }
@@ -1040,6 +1064,13 @@ static LLVMValueRef register_globals(Exec* exec) {
     return main_func;
 }
 
+static void free_defined_functions(Exec* exec) {
+    for (size_t i = 0; i < vector_size(exec->defined_functions); i++) {
+        vector_free(exec->defined_functions[i].args);
+    }
+    vector_free(exec->defined_functions);
+}
+
 static bool compile_program(Exec* exec) {
     exec->compile_func_list = vector_create();
     exec->control_stack_len = 0;
@@ -1068,7 +1099,7 @@ static bool compile_program(Exec* exec) {
             gc_free(&exec->gc);
             vector_free(exec->gc_dirty_funcs);
             vector_free(exec->compile_func_list);
-            vector_free(exec->defined_functions);
+            free_defined_functions(exec);
             return false;
         }
     }
@@ -1101,7 +1132,7 @@ static bool compile_program(Exec* exec) {
         gc_free(&exec->gc);
         vector_free(exec->gc_dirty_funcs);
         vector_free(exec->compile_func_list);
-        vector_free(exec->defined_functions);
+        free_defined_functions(exec);
         return false;
     }
     LLVMDisposeMessage(error);
@@ -1109,7 +1140,7 @@ static bool compile_program(Exec* exec) {
     LLVMDumpModule(exec->module);
 
     vector_free(exec->gc_dirty_funcs);
-    vector_free(exec->defined_functions);
+    free_defined_functions(exec);
 
     return true;
 }

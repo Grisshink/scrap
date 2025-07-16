@@ -70,7 +70,13 @@ typedef struct {
 
 typedef struct {
     Blockdef* blockdef;
+    LLVMValueRef arg;
+} DefineArgument;
+
+typedef struct {
+    Blockdef* blockdef;
     LLVMValueRef func;
+    DefineArgument* args;
 } DefineFunction;
 
 typedef struct {
@@ -150,5 +156,6 @@ LLVMValueRef build_call(Exec* exec, const char* func_name, ...);
 LLVMValueRef build_call_count(Exec* exec, const char* func_name, size_t func_param_count, ...);
 
 DefineFunction* define_function(Exec* exec, Blockdef* blockdef);
+DefineArgument* get_custom_argument(Exec* exec, Blockdef* blockdef, DefineFunction** func);
 
 #endif // COMPILER_H
