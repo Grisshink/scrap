@@ -21,6 +21,8 @@
 #include "gc.h"
 #include "scrap.h"
 
+static void gc_mark_refs(Gc* gc, GcChunkData* chunk);
+
 Gc gc_new(size_t memory_max) {
     return (Gc) {
         .chunks = vector_create(),
@@ -52,6 +54,22 @@ void gc_root_begin(Gc* gc) {
     root->temp_chunks = vector_create();
 }
 
+static void gc_mark_any(Gc* gc, AnyValue* any) {
+    GcChunkData* chunk_inner;
+
+    if (any->type == FUNC_ARG_LIST) {
+        chunk_inner = ((GcChunkData*)any->data.list_val) - 1;
+        if (!chunk_inner->marked) {
+            chunk_inner->marked = 1;
+            gc_mark_refs(gc, chunk_inner);
+        }
+    } else if (any->type == FUNC_ARG_STRING_REF) {
+        StringHeader* str = ((StringHeader*)any->data.str_val) - 1;
+        chunk_inner = ((GcChunkData*)str) - 1;
+        chunk_inner->marked = 1;
+    }
+}
+
 static void gc_mark_refs(Gc* gc, GcChunkData* chunk) {
     switch (chunk->data_type) {
     case FUNC_ARG_LIST: ;
@@ -62,19 +80,11 @@ static void gc_mark_refs(Gc* gc, GcChunkData* chunk) {
         list_values_chunk->marked = 1;
         
         for (long i = 0; i < list->size; i++) {
-            GcChunkData* chunk_inner;
-            if (list->values[i].type == FUNC_ARG_LIST) {
-                chunk_inner = ((GcChunkData*)list->values[i].data.list_val) - 1;
-                if (!chunk_inner->marked) {
-                    chunk_inner->marked = 1;
-                    gc_mark_refs(gc, chunk_inner);
-                }
-            } else if (list->values[i].type == FUNC_ARG_STRING_REF) {
-                StringHeader* str = ((StringHeader*)list->values[i].data.str_val) - 1;
-                chunk_inner = ((GcChunkData*)str) - 1;
-                chunk_inner->marked = 1;
-            }
+            gc_mark_any(gc, &list->values[i]);
         }
+        break;
+    case FUNC_ARG_ANY: ;
+        gc_mark_any(gc, (AnyValue*)chunk->data);
         break;
     default:
         break;
