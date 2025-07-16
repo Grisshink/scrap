@@ -155,7 +155,7 @@ src/interpreter.o: src/interpreter.c $(SCRAP_HEADERS)
 	$(CC) $(CFLAGS) -c -o $@ $<
 src/compiler.o: src/compiler.c src/compiler.h src/gc.h src/ast.h
 	$(CC) $(CFLAGS) -c -o $@ $<
-src/gc.o: src/gc.c src/gc.h
+src/gc.o: src/gc.c src/gc.h src/compiler-common.h
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 src/filedialogs.o: external/tinyfiledialogs.c

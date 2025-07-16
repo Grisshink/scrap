@@ -18,7 +18,6 @@
 #ifndef COMPILER_H
 #define COMPILER_H
 
-#include "ast.h"
 #include "gc.h"
 
 #include <llvm-c/Core.h>

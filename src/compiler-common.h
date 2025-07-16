@@ -20,6 +20,7 @@
 #ifndef COMPILER_COMMON_H
 #define COMPILER_COMMON_H
 
+#include "ast.h"
 #include <llvm-c/Core.h>
 
 typedef enum {
