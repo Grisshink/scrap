@@ -932,7 +932,7 @@ static void block_prev_argument() {
 
 static bool handle_code_panel_key_press(void) {
     if (hover_info.select_argument && !hover_info.select_input) {
-        if (IsKeyPressed(KEY_ENTER)) {
+        if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_KP_ENTER)) {
             hover_info.select_input = &hover_info.select_argument->data.text;
             hover_info.select_input_ind = strlen(*hover_info.select_input);
             render_surface_needs_redraw = true;
@@ -1087,7 +1087,7 @@ static void handle_key_press(void) {
     if (hover_info.panel) {
         if (hover_info.panel->type == PANEL_TERM) {
             if (!vm.is_running) return;
-            if (IsKeyPressed(KEY_ENTER)) {
+            if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_KP_ENTER)) {
                 term_input_put_char('\n');
                 term_print_str("\r\n");
                 render_surface_needs_redraw = true;
