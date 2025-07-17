@@ -1239,8 +1239,5 @@ static bool run_program(Exec* exec) {
     LLVMGenericValueRef val = LLVMRunFunction(exec->engine, LLVMGetNamedFunction(exec->module, "llvm_main"), 0, NULL);
     LLVMDisposeGenericValue(val);
 
-    gc_free(&exec->gc);
-
-    LLVMDisposeExecutionEngine(exec->engine);
     return true;
 }
