@@ -1,3 +1,8 @@
+# v0.5-beta *(Upcoming)*
+
+## Fixes
+- Fixed numpad Enter key not working in certain scenarios
+
 # v0.4.2-beta *(12-02-2025)*
 
 ## Fixes
