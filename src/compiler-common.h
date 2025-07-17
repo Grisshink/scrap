@@ -23,6 +23,8 @@
 #include "ast.h"
 #include <llvm-c/Core.h>
 
+typedef struct Exec Exec;
+
 typedef enum {
     CONTROL_BEGIN,
     CONTROL_END,

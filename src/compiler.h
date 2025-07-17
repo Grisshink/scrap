@@ -79,7 +79,14 @@ typedef struct {
     DefineArgument* args;
 } DefineFunction;
 
-typedef struct {
+typedef enum {
+    STATE_NONE,
+    STATE_COMPILE,
+    STATE_PRE_EXEC,
+    STATE_EXEC,
+} CompilerState;
+
+struct Exec {
     BlockChain* code;
     LLVMModuleRef module;
     LLVMBuilderRef builder;
@@ -101,6 +108,8 @@ typedef struct {
     DefineFunction* defined_functions;
 
     Gc gc;
+    
+    CompilerState current_state;
 
     // Needed for compiler to determine if some block uses gc_malloc so we could call gc_flush afterwards
     bool gc_dirty;
@@ -108,7 +117,7 @@ typedef struct {
 
     pthread_t thread;
     atomic_bool is_running;
-} Exec;
+};
 
 #define MAIN_NAME "llvm_main"
 
@@ -118,6 +127,7 @@ typedef struct {
 #define CONST_DOUBLE(val) LLVMConstReal(LLVMDoubleType(), val)
 #define CONST_STRING_LITERAL(val) LLVMBuildGlobalStringPtr(exec->builder, val, "")
 #define CONST_GC LLVMConstInt(LLVMInt64Type(), (unsigned long long)&exec->gc, false)
+#define CONST_EXEC LLVMConstInt(LLVMInt64Type(), (unsigned long long)exec, false)
 
 #define _DATA(t, val) (FuncArg) { \
     .type = t, \
@@ -134,6 +144,15 @@ typedef struct {
 #define DATA_ANY(val) _DATA(FUNC_ARG_ANY, val)
 #define DATA_UNKNOWN _DATA(FUNC_ARG_UNKNOWN, NULL)
 #define DATA_NOTHING _DATA(FUNC_ARG_NOTHING, CONST_NOTHING)
+
+#ifdef _WIN32
+// Winpthreads for some reason does not trigger cleanup functions, so we are explicitly doing cleanup here
+#define PTHREAD_FAIL(exec) \
+    exec_thread_exit(exec); \
+    pthread_exit((void*)0);
+#else
+#define PTHREAD_FAIL(exec) pthread_exit((void*)0);
+#endif
 
 typedef bool (*BlockCompileFunc)(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val);
 

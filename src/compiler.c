@@ -36,6 +36,7 @@
 
 static bool compile_program(Exec* exec);
 static bool run_program(Exec* exec);
+static void free_defined_functions(Exec* exec);
 
 Exec exec_new(void) {
     Exec exec = (Exec) {
@@ -53,11 +54,33 @@ void exec_free(Exec* exec) {
 void exec_thread_exit(void* thread_exec) {
     Exec* exec = thread_exec;
     exec->is_running = false;
+    
+    switch (exec->current_state) {
+    case STATE_NONE:
+        break;
+    case STATE_COMPILE:
+        LLVMDisposeModule(exec->module);
+        LLVMDisposeBuilder(exec->builder);
+        gc_free(&exec->gc);
+        vector_free(exec->gc_dirty_funcs);
+        vector_free(exec->compile_func_list);
+        free_defined_functions(exec);
+        break;
+    case STATE_PRE_EXEC:
+        vector_free(exec->compile_func_list);
+        break;
+    case STATE_EXEC:
+        gc_free(&exec->gc);
+        LLVMDisposeExecutionEngine(exec->engine);
+        break;
+    }
+
 }
 
 void* exec_thread_entry(void* thread_exec) {
     Exec* exec = thread_exec;
     exec->is_running = true;
+    exec->current_state = STATE_NONE;
     pthread_cleanup_push(exec_thread_exit, thread_exec);
 
     if (!compile_program(exec)) {
@@ -826,7 +849,7 @@ int term_print_any(AnyValue* any) {
 }
 
 LLVMValueRef build_gc_root_begin(Exec* exec) {
-    return build_call(exec, "gc_root_begin", CONST_GC);
+    return build_call(exec, "gc_root_begin", CONST_EXEC, CONST_GC);
 }
 
 LLVMValueRef build_gc_root_end(Exec* exec) {
@@ -1066,7 +1089,7 @@ static LLVMValueRef register_globals(Exec* exec) {
     LLVMTypeRef stack_restore_func_type = LLVMFunctionType(LLVMVoidType(), stack_restore_func_params, ARRLEN(stack_restore_func_params), false);
     LLVMAddFunction(exec->module, "llvm.stackrestore.p0", stack_restore_func_type);
 
-    LLVMTypeRef gc_root_begin_func_params[] = { LLVMInt64Type() };
+    LLVMTypeRef gc_root_begin_func_params[] = { LLVMInt64Type(), LLVMInt64Type() };
     add_function(exec, "gc_root_begin", LLVMVoidType(), gc_root_begin_func_params, ARRLEN(gc_root_begin_func_params), gc_root_begin, false, false);
 
     LLVMTypeRef gc_root_end_func_params[] = { LLVMInt64Type() };
@@ -1107,6 +1130,7 @@ static bool compile_program(Exec* exec) {
     exec->gc_dirty = false;
     exec->gc_dirty_funcs = vector_create();
     exec->defined_functions = vector_create();
+    exec->current_state = STATE_COMPILE;
 
     exec->module = LLVMModuleCreateWithName("scrap_module");
 
@@ -1168,6 +1192,8 @@ static bool compile_program(Exec* exec) {
 }
 
 static bool run_program(Exec* exec) {
+    exec->current_state = STATE_PRE_EXEC;
+
     if (LLVMInitializeNativeTarget()) {
         TraceLog(LOG_ERROR, "[LLVM] Native target initialization failed!");
         LLVMDisposeModule(exec->module);
@@ -1207,6 +1233,8 @@ static bool run_program(Exec* exec) {
     }
 
     vector_free(exec->compile_func_list);
+
+    exec->current_state = STATE_EXEC;
 
     LLVMGenericValueRef val = LLVMRunFunction(exec->engine, LLVMGetNamedFunction(exec->module, "llvm_main"), 0, NULL);
     LLVMDisposeGenericValue(val);

@@ -42,6 +42,7 @@ void gc_free(Gc* gc) {
     }
     for (size_t i = 0; i < vector_size(gc->roots_stack); i++) {
         vector_free(gc->roots_stack[i].chunks);
+        vector_free(gc->roots_stack[i].temp_chunks);
     }
     vector_free(gc->roots_stack);
     vector_free(gc->chunks);
@@ -49,10 +50,12 @@ void gc_free(Gc* gc) {
     gc->memory_used = 0;
 }
 
-void gc_root_begin(Gc* gc) {
+void gc_root_begin(Exec* exec, Gc* gc) {
     if (vector_size(gc->roots_stack) > 1024) {
+        // This parameter is unused in non Windows targets
+        (void) exec;
         TraceLog(LOG_ERROR, "[GC] Root stack overflow!");
-        pthread_exit((void*)0);
+        PTHREAD_FAIL(exec);
     }
 
     GcRoot* root = vector_add_dst(&gc->roots_stack);
