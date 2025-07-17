@@ -17,6 +17,7 @@
 
 #include <assert.h>
 #include <stdio.h>
+#include <pthread.h>
 
 #include "gc.h"
 #include "scrap.h"
@@ -49,6 +50,11 @@ void gc_free(Gc* gc) {
 }
 
 void gc_root_begin(Gc* gc) {
+    if (vector_size(gc->roots_stack) > 1024) {
+        TraceLog(LOG_ERROR, "[GC] Root stack overflow!");
+        pthread_exit((void*)0);
+    }
+
     GcRoot* root = vector_add_dst(&gc->roots_stack);
     root->chunks = vector_create();
     root->temp_chunks = vector_create();
