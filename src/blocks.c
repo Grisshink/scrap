@@ -1687,7 +1687,37 @@ bool block_div(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* retur
         if (!left) return false;
         LLVMValueRef right = arg_to_int(exec, argv[1]);
         if (!right) return false;
-        *return_val = DATA_INTEGER(LLVMBuildSDiv(exec->builder, left, right, "div"));
+
+        if (!LLVMIsConstant(right)) {
+            LLVMBasicBlockRef current_branch = LLVMGetInsertBlock(exec->builder);
+            LLVMBasicBlockRef non_zero_branch = LLVMInsertBasicBlock(current_branch, "non_zero_cond");
+            LLVMBasicBlockRef zero_branch = LLVMInsertBasicBlock(current_branch, "zero_cond");
+            LLVMBasicBlockRef phi_branch = LLVMInsertBasicBlock(current_branch, "cond_after");
+
+            LLVMMoveBasicBlockAfter(phi_branch, current_branch);
+            LLVMMoveBasicBlockAfter(zero_branch, current_branch);
+            LLVMMoveBasicBlockAfter(non_zero_branch, current_branch);
+
+            LLVMValueRef condition = LLVMBuildICmp(exec->builder, LLVMIntEQ, right, CONST_INTEGER(0), "");
+            LLVMBuildCondBr(exec->builder, condition, zero_branch, non_zero_branch);
+
+            LLVMPositionBuilderAtEnd(exec->builder, non_zero_branch);
+            LLVMValueRef out = LLVMBuildSDiv(exec->builder, left, right, "");
+            LLVMBuildBr(exec->builder, phi_branch);
+
+            LLVMPositionBuilderAtEnd(exec->builder, zero_branch);
+            LLVMBuildBr(exec->builder, phi_branch);
+
+            LLVMPositionBuilderAtEnd(exec->builder, phi_branch);
+
+            *return_val = DATA_INTEGER(LLVMBuildPhi(exec->builder, LLVMInt32Type(), "div"));
+
+            LLVMValueRef vals[] = { CONST_INTEGER(0), out };
+            LLVMBasicBlockRef blocks[] = { zero_branch, non_zero_branch };
+            LLVMAddIncoming(return_val->data.value, vals, blocks, ARRLEN(blocks));
+        } else {
+            *return_val = DATA_INTEGER(LLVMBuildSDiv(exec->builder, left, right, "div"));
+        }
     } else {
         LLVMValueRef right = arg_to_double(exec, argv[1]);
         if (!right) return false;
