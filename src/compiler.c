@@ -303,6 +303,9 @@ static bool evaluate_block(Exec* exec, Block* block, FuncArg* return_val, bool e
 static bool evaluate_chain(Exec* exec, BlockChain* chain) {
     if (vector_size(chain->blocks) == 0 || chain->blocks[0].blockdef->type != BLOCKTYPE_HAT) return true;
 
+    exec->variable_stack_len = 0;
+    exec->variable_stack_frames_len = 0;
+
     for (size_t i = 0; i < vector_size(chain->blocks); i++) {
         FuncArg block_return;
         Block* exec_block = &chain->blocks[i];
