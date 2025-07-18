@@ -1146,12 +1146,6 @@ static bool compile_program(Exec* exec) {
 
     for (size_t i = 0; i < vector_size(exec->code); i++) {
         if (!evaluate_chain(exec, &exec->code[i])) {
-            LLVMDisposeModule(exec->module);
-            LLVMDisposeBuilder(exec->builder);
-            gc_free(&exec->gc);
-            vector_free(exec->gc_dirty_funcs);
-            vector_free(exec->compile_func_list);
-            free_defined_functions(exec);
             return false;
         }
     }
@@ -1175,12 +1169,6 @@ static bool compile_program(Exec* exec) {
     char *error = NULL;
     if (LLVMVerifyModule(exec->module, LLVMPrintMessageAction, &error)) {
         TraceLog(LOG_ERROR, "[LLVM] Failed to build module!");
-        LLVMDisposeMessage(error);
-        LLVMDisposeModule(exec->module);
-        gc_free(&exec->gc);
-        vector_free(exec->gc_dirty_funcs);
-        vector_free(exec->compile_func_list);
-        free_defined_functions(exec);
         return false;
     }
     LLVMDisposeMessage(error);
