@@ -24,6 +24,7 @@
 #include <llvm-c/ExecutionEngine.h>
 #include <stdatomic.h>
 #include "compiler-common.h"
+#include <pthread.h>
 
 #define VM_ARG_STACK_SIZE 1024
 #define VM_CONTROL_STACK_SIZE 1024
