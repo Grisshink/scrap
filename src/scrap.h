@@ -287,6 +287,7 @@ extern Texture2D pi_symbol_tex;
 
 extern Exec exec;
 extern char exec_compile_error[MAX_ERROR_LEN];
+extern Block* exec_compile_error_block;
 
 extern Vm vm;
 extern int start_vm_timeout;

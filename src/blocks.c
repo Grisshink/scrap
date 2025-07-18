@@ -1212,7 +1212,7 @@ LLVMValueRef arg_to_string_ref(Exec* exec, FuncArg arg) {
     }
 }
 
-LLVMValueRef arg_to_list(Exec* exec, FuncArg arg) {
+LLVMValueRef arg_to_list(Exec* exec, Block* block, FuncArg arg) {
     switch (arg.type) {
     case FUNC_ARG_BOOL:
     case FUNC_ARG_NOTHING:
@@ -1220,7 +1220,7 @@ LLVMValueRef arg_to_list(Exec* exec, FuncArg arg) {
     case FUNC_ARG_STRING_REF:
     case FUNC_ARG_DOUBLE:
     case FUNC_ARG_STRING_LITERAL:
-        exec_set_error(exec, "Cannot cast type %s into list type", type_to_str(arg.type));
+        exec_set_error(exec, block, "Cannot cast type %s into list type", type_to_str(arg.type));
         return NULL;
     case FUNC_ARG_LIST:
         return arg.data.value;
@@ -1249,7 +1249,7 @@ LLVMValueRef arg_to_any(Exec* exec, FuncArg arg) {
     }
 }
 
-FuncArg arg_cast(Exec* exec, FuncArg arg, FuncArgType cast_to_type) {
+FuncArg arg_cast(Exec* exec, Block* block, FuncArg arg, FuncArgType cast_to_type) {
     switch (cast_to_type) {
     case FUNC_ARG_STRING_LITERAL:
         if (arg.type == FUNC_ARG_STRING_LITERAL) return arg;
@@ -1257,7 +1257,7 @@ FuncArg arg_cast(Exec* exec, FuncArg arg, FuncArgType cast_to_type) {
     case FUNC_ARG_STRING_REF:
         return DATA_STRING_REF(arg_to_string_ref(exec, arg));
     case FUNC_ARG_NOTHING:
-        exec_set_error(exec, "Attempt to cast value to nothing");
+        exec_set_error(exec, block, "Attempt to cast value to nothing");
         return DATA_UNKNOWN;
     case FUNC_ARG_INT:
         return DATA_INTEGER(arg_to_int(exec, arg));
@@ -1266,7 +1266,7 @@ FuncArg arg_cast(Exec* exec, FuncArg arg, FuncArgType cast_to_type) {
     case FUNC_ARG_DOUBLE:
         return DATA_DOUBLE(arg_to_double(exec, arg));
     case FUNC_ARG_LIST:
-        return DATA_LIST(arg_to_list(exec, arg));
+        return DATA_LIST(arg_to_list(exec, block, arg));
     case FUNC_ARG_ANY:
         return DATA_ANY(arg_to_any(exec, arg));
     default:
@@ -1309,12 +1309,12 @@ bool block_custom_arg(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg
     DefineFunction* func;
     DefineArgument* arg = get_custom_argument(exec, block->blockdef, &func);
     if (!arg) {
-        exec_set_error(exec, "[LLVM] Could not find function definition for argument");
+        exec_set_error(exec, block, "[LLVM] Could not find function definition for argument");
         return false;
     }
     
     if (LLVMGetBasicBlockParent(LLVMGetInsertBlock(exec->builder)) != func->func) {
-        exec_set_error(exec, "Function argument block used outside of function");
+        exec_set_error(exec, block, "Function argument block used outside of function");
         return false;
     }
 
@@ -1324,7 +1324,7 @@ bool block_custom_arg(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg
 
 bool block_exec_custom(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val) {
     if (argc > 32) {
-        exec_set_error(exec, "Too many parameters passed into function. Got %d/32", argc);
+        exec_set_error(exec, block, "Too many parameters passed into function. Got %d/32", argc);
         return false;
     }
     
@@ -1355,12 +1355,12 @@ bool block_not_eq(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* re
     FuncArg right;
 
     if (argv[0].type == FUNC_ARG_STRING_LITERAL) {
-        left = arg_cast(exec, argv[0], argv[1].type);
+        left = arg_cast(exec, block, argv[0], argv[1].type);
         if (!left.data.value) return false;
         right = argv[1];
     } else if (argv[1].type == FUNC_ARG_STRING_LITERAL) {
         left = argv[0];
-        right = arg_cast(exec, argv[1], argv[0].type);
+        right = arg_cast(exec, block, argv[1], argv[0].type);
         if (!right.data.value) return false;
     } else if (argv[0].type != argv[1].type) {
         *return_val = DATA_BOOLEAN(CONST_BOOLEAN(1));
@@ -1414,12 +1414,12 @@ bool block_eq(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return
     FuncArg right;
 
     if (argv[0].type == FUNC_ARG_STRING_LITERAL) {
-        left = arg_cast(exec, argv[0], argv[1].type);
+        left = arg_cast(exec, block, argv[0], argv[1].type);
         if (!left.data.value) return false;
         right = argv[1];
     } else if (argv[1].type == FUNC_ARG_STRING_LITERAL) {
         left = argv[0];
-        right = arg_cast(exec, argv[1], argv[0].type);
+        right = arg_cast(exec, block, argv[1], argv[0].type);
         if (!right.data.value) return false;
     } else if (argv[0].type != argv[1].type) {
         *return_val = DATA_BOOLEAN(CONST_BOOLEAN(0));
@@ -1673,7 +1673,7 @@ bool block_rem(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* retur
 
     if (LLVMIsPoison(return_val->data.value)) {
         // TODO: Uncorporate runtime checks for division by zero
-        exec_set_error(exec, "Division by zero!");
+        exec_set_error(exec, block, "Division by zero!");
         return false;
     }
     return true;
@@ -1726,7 +1726,7 @@ bool block_div(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* retur
 
     if (LLVMIsPoison(return_val->data.value)) {
         // TODO: Uncorporate runtime checks for division by zero
-        exec_set_error(exec, "Division by zero!");
+        exec_set_error(exec, block, "Division by zero!");
         return false;
     }
     return true;
@@ -2145,7 +2145,7 @@ bool block_print(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* ret
         *return_val = DATA_INTEGER(build_call(exec, "term_print_any", argv[0].data.value));
         return true;
     default:
-        exec_set_error(exec, "Unhandled type %s in print function", type_to_str(argv[0].type));
+        exec_set_error(exec, block, "Unhandled type %s in print function", type_to_str(argv[0].type));
         return false;
     }
 }
@@ -2162,7 +2162,7 @@ bool block_list_set(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* 
     (void) block;
     MIN_ARG_COUNT(3);
 
-    LLVMValueRef list = arg_to_list(exec, argv[0]);
+    LLVMValueRef list = arg_to_list(exec, block, argv[0]);
     if (!list) return false;
     LLVMValueRef index = arg_to_int(exec, argv[1]);
     if (!index) return false;
@@ -2180,7 +2180,7 @@ bool block_list_get(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* 
     (void) block;
     MIN_ARG_COUNT(2);
 
-    LLVMValueRef list = arg_to_list(exec, argv[0]);
+    LLVMValueRef list = arg_to_list(exec, block, argv[0]);
     if (!list) return false;
     LLVMValueRef index = arg_to_int(exec, argv[1]);
     if (!index) return false;
@@ -2193,7 +2193,7 @@ bool block_list_add(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* 
     (void) block;
     MIN_ARG_COUNT(2);
 
-    LLVMValueRef list = arg_to_list(exec, argv[0]);
+    LLVMValueRef list = arg_to_list(exec, block, argv[0]);
     if (!list) return false;
 
     if (argv[1].type == FUNC_ARG_NOTHING) {
@@ -2226,18 +2226,18 @@ bool block_set_var(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* r
     (void) block;
     MIN_ARG_COUNT(2);
     if (argv[0].type != FUNC_ARG_STRING_LITERAL) {
-        exec_set_error(exec, "Received non constant string argument");
+        exec_set_error(exec, block, "Received non constant string argument");
         return false;
     }
 
     Variable* var = variable_stack_get(exec, argv[0].data.str);
     if (!var) {
-        exec_set_error(exec, "Variable with name \"%s\" does not exist in the current scope", argv[0].data.str);
+        exec_set_error(exec, block, "Variable with name \"%s\" does not exist in the current scope", argv[0].data.str);
         return false;
     }
 
     if (argv[1].type != var->value.type) {
-        exec_set_error(exec, "Assign to variable \"%s\" with different type", argv[0].data.str);
+        exec_set_error(exec, block, "Assign to variable \"%s\" of type %s with type %s", argv[0].data.str, type_to_str(var->value.type), type_to_str(argv[1].type));
         return false;
     }
 
@@ -2260,13 +2260,13 @@ bool block_get_var(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* r
     (void) block;
     MIN_ARG_COUNT(1);
     if (argv[0].type != FUNC_ARG_STRING_LITERAL) {
-        exec_set_error(exec, "Received non constant string argument");
+        exec_set_error(exec, block, "Received non constant string argument");
         return false;
     }
 
     Variable* var = variable_stack_get(exec, argv[0].data.str);
     if (!var) {
-        exec_set_error(exec, "Variable with name \"%s\" does not exist in the current scope", argv[0].data.str);
+        exec_set_error(exec, block, "Variable with name \"%s\" does not exist in the current scope", argv[0].data.str);
         return false;
     }
 
@@ -2288,12 +2288,12 @@ bool block_declare_var(Exec* exec, Block* block, int argc, FuncArg* argv, FuncAr
     (void) block;
     MIN_ARG_COUNT(2);
     if (argv[0].type != FUNC_ARG_STRING_LITERAL) {
-        exec_set_error(exec, "Received non constant string argument");
+        exec_set_error(exec, block, "Received non constant string argument");
         return false;
     }
 
     if (argv[1].type == FUNC_ARG_NOTHING) {
-        exec_set_error(exec, "Cannot declare a variable with zero sized type (i.e. Nothing)");
+        exec_set_error(exec, block, "Cannot declare a variable with zero sized type (i.e. Nothing)");
         return false;
     }
     if (argv[1].type == FUNC_ARG_STRING_LITERAL) {
@@ -2302,7 +2302,7 @@ bool block_declare_var(Exec* exec, Block* block, int argc, FuncArg* argv, FuncAr
             .value = argv[1],
             .name = argv[0].data.str,
         };
-        if (!variable_stack_push(exec, var)) return false;
+        if (!variable_stack_push(exec, block, var)) return false;
         *return_val = argv[1];
         return true;
     }
@@ -2318,7 +2318,7 @@ bool block_declare_var(Exec* exec, Block* block, int argc, FuncArg* argv, FuncAr
         },
         .name = argv[0].data.str,
     };
-    variable_stack_push(exec, var);
+    variable_stack_push(exec, block, var);
     LLVMBuildStore(exec->builder, argv[1].data.value, var.value.data.value);
     if (data_type == LLVMPointerType(LLVMInt8Type(), 0)) {
         build_call(exec, argv[1].type == FUNC_ARG_STRING_REF ? "gc_add_str_root" : "gc_add_root", CONST_GC, argv[1].data.value);
@@ -2341,7 +2341,7 @@ bool block_while(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* ret
     (void) block;
     MIN_ARG_COUNT(1);
     if (argv[0].type != FUNC_ARG_CONTROL) {
-        exec_set_error(exec, "First argument is not control argument");
+        exec_set_error(exec, block, "First argument is not control argument");
         return false;
     }
 
@@ -2388,7 +2388,7 @@ bool block_repeat(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* re
     (void) block;
     MIN_ARG_COUNT(1);
     if (argv[0].type != FUNC_ARG_CONTROL) {
-        exec_set_error(exec, "First argument is not control argument");
+        exec_set_error(exec, block, "First argument is not control argument");
         return false;
     }
 
@@ -2456,7 +2456,7 @@ bool block_else(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* retu
     (void) block;
     MIN_ARG_COUNT(1);
     if (argv[0].type != FUNC_ARG_CONTROL) {
-        exec_set_error(exec, "First argument is not control argument");
+        exec_set_error(exec, block, "First argument is not control argument");
         return false;
     }
 
@@ -2496,7 +2496,7 @@ bool block_else_if(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* r
     (void) block;
     MIN_ARG_COUNT(1);
     if (argv[0].type != FUNC_ARG_CONTROL) {
-        exec_set_error(exec, "First argument is not control argument");
+        exec_set_error(exec, block, "First argument is not control argument");
         return false;
     }
 
@@ -2558,7 +2558,7 @@ bool block_if(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return
     (void) block;
     MIN_ARG_COUNT(1);
     if (argv[0].type != FUNC_ARG_CONTROL) {
-        exec_set_error(exec, "First argument is not control argument");
+        exec_set_error(exec, block, "First argument is not control argument");
         return false;
     }
 
@@ -2612,7 +2612,7 @@ bool block_loop(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* retu
     (void) block;
     MIN_ARG_COUNT(1);
     if (argv[0].type != FUNC_ARG_CONTROL) {
-        exec_set_error(exec, "First argument is not control argument");
+        exec_set_error(exec, block, "First argument is not control argument");
         return false;
     }
 
@@ -2649,7 +2649,7 @@ bool block_do_nothing(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg
     (void) block;
     MIN_ARG_COUNT(1);
     if (argv[0].type != FUNC_ARG_CONTROL) {
-        exec_set_error(exec, "First argument is not control argument");
+        exec_set_error(exec, block, "First argument is not control argument");
         return false;
     }
 
@@ -2677,7 +2677,7 @@ bool block_define_block(Exec* exec, Block* block, int argc, FuncArg* argv, FuncA
     MIN_ARG_COUNT(1);
 
     if (argv[0].type != FUNC_ARG_BLOCKDEF) {
-        exec_set_error(exec, "Non blockdef argument passed into block_define_block");
+        exec_set_error(exec, block, "Non blockdef argument passed into block_define_block");
         return false;
     }
 

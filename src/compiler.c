@@ -43,6 +43,7 @@ Exec exec_new(void) {
         .code = NULL,
         .thread = (pthread_t) {0},
         .running_state = EXEC_STATE_NOT_RUNNING,
+        .current_error_block = NULL,
     };
     exec.current_error[0] = 0;
     return exec;
@@ -149,7 +150,8 @@ bool exec_try_join(Vm* vm, Exec* exec, size_t* return_code) {
     return true;
 }
 
-void exec_set_error(Exec* exec, const char* fmt, ...) {
+void exec_set_error(Exec* exec, Block* block, const char* fmt, ...) {
+    exec->current_error_block = block;
     va_list va;
     va_start(va, fmt);
     vsnprintf(exec->current_error, MAX_ERROR_LEN, fmt, va);
@@ -158,7 +160,7 @@ void exec_set_error(Exec* exec, const char* fmt, ...) {
 
 static bool control_stack_push(Exec* exec, Block* block) {
     if (exec->control_stack_len >= VM_CONTROL_STACK_SIZE) {
-        exec_set_error(exec, "Chain stack overflow");
+        exec_set_error(exec, block, "Chain stack overflow");
         return false;
     }
     exec->control_stack[exec->control_stack_len++] = block;
@@ -167,15 +169,15 @@ static bool control_stack_push(Exec* exec, Block* block) {
 
 static Block* control_stack_pop(Exec* exec) {
     if (exec->control_stack_len == 0) {
-        exec_set_error(exec, "Chain stack underflow");
+        exec_set_error(exec, NULL, "Chain stack underflow");
         return NULL;
     }
     return exec->control_stack[--exec->control_stack_len];
 }
 
-bool variable_stack_push(Exec* exec, Variable variable) {
+bool variable_stack_push(Exec* exec, Block* block, Variable variable) {
     if (exec->variable_stack_len >= VM_CONTROL_STACK_SIZE) {
-        exec_set_error(exec, "Variable stack overflow");
+        exec_set_error(exec, block, "Variable stack overflow");
         return false;
     }
     exec->variable_stack[exec->variable_stack_len++] = variable;
@@ -191,7 +193,7 @@ Variable* variable_stack_get(Exec* exec, const char* var_name) {
 
 static bool variable_stack_frame_push(Exec* exec) {
     if (exec->variable_stack_frames_len >= VM_CONTROL_STACK_SIZE) {
-        exec_set_error(exec, "Variable stack overflow");
+        exec_set_error(exec, NULL, "Variable stack overflow");
         return false;
     }
     VariableStackFrame frame;
@@ -205,7 +207,7 @@ static bool variable_stack_frame_push(Exec* exec) {
 
 static bool variable_stack_frame_pop(Exec* exec) {
     if (exec->variable_stack_frames_len == 0) {
-        exec_set_error(exec, "Variable stack underflow");
+        exec_set_error(exec, NULL, "Variable stack underflow");
         return false;
     }
     VariableStackFrame frame = exec->variable_stack_frames[--exec->variable_stack_frames_len];
@@ -218,11 +220,11 @@ static bool variable_stack_frame_pop(Exec* exec) {
 
 static bool evaluate_block(Exec* exec, Block* block, FuncArg* return_val, bool end_block, FuncArg input_val) {
     if (!block->blockdef) {
-        exec_set_error(exec, "Tried to compile block without definition");
+        exec_set_error(exec, block, "Tried to compile block without definition");
         return false;
     }
     if (!block->blockdef->func) {
-        exec_set_error(exec, "Tried to compile block \"%s\" without implementation", block->blockdef->id);
+        exec_set_error(exec, block, "Tried to compile block \"%s\" without implementation", block->blockdef->id);
         return false;
     }
 
@@ -1171,17 +1173,16 @@ static bool compile_program(Exec* exec) {
         LLVMBuildRet(exec->builder, val);
     }
 
-    LLVMDisposeBuilder(exec->builder);
-
     char *error = NULL;
     if (LLVMVerifyModule(exec->module, LLVMReturnStatusAction , &error)) {
-        exec_set_error(exec, "Failed to build module: %s", error);
+        exec_set_error(exec, NULL, "Failed to build module: %s", error);
         return false;
     }
     LLVMDisposeMessage(error);
 
     LLVMDumpModule(exec->module);
 
+    LLVMDisposeBuilder(exec->builder);
     vector_free(exec->gc_dirty_funcs);
     free_defined_functions(exec);
 
@@ -1192,21 +1193,21 @@ static bool run_program(Exec* exec) {
     exec->current_state = STATE_PRE_EXEC;
 
     if (LLVMInitializeNativeTarget()) {
-        exec_set_error(exec, "[LLVM] Native target initialization failed");
+        exec_set_error(exec, NULL, "[LLVM] Native target initialization failed");
         LLVMDisposeModule(exec->module);
         gc_free(&exec->gc);
         vector_free(exec->compile_func_list);
         return false;
     }
     if (LLVMInitializeNativeAsmParser()) {
-        exec_set_error(exec, "[LLVM] Native asm parser initialization failed");
+        exec_set_error(exec, NULL, "[LLVM] Native asm parser initialization failed");
         LLVMDisposeModule(exec->module);
         gc_free(&exec->gc);
         vector_free(exec->compile_func_list);
         return false;
     }
     if (LLVMInitializeNativeAsmPrinter()) {
-        exec_set_error(exec, "[LLVM] Native asm printer initialization failed");
+        exec_set_error(exec, NULL, "[LLVM] Native asm printer initialization failed");
         LLVMDisposeModule(exec->module);
         gc_free(&exec->gc);
         vector_free(exec->compile_func_list);
@@ -1216,7 +1217,7 @@ static bool run_program(Exec* exec) {
 
     char *error = NULL;
     if (LLVMCreateExecutionEngineForModule(&exec->engine, exec->module, &error)) {
-        exec_set_error(exec, "[LLVM] Failed to create execution engine: %s", error);
+        exec_set_error(exec, NULL, "[LLVM] Failed to create execution engine: %s", error);
         LLVMDisposeMessage(error);
         LLVMDisposeModule(exec->module);
         gc_free(&exec->gc);

@@ -360,6 +360,11 @@ static void argument_on_hover(GuiElement* el) {
 static void draw_block(Block* block, bool highlight, bool can_hover) {
     bool collision = hover_info.prev_block == block || highlight;
     Color color = CONVERT_COLOR(block->blockdef->color, Color);
+    if (!vm.is_running && block == exec_compile_error_block) {
+        double animation = fmod(-GetTime(), 1.0) * 0.5 + 1.0;
+        color = (Color) { 0xff * animation, 0x20 * animation, 0x20 * animation, 0xff };
+    }
+
     Color block_color = collision ? ColorBrightness(color, 0.3) : color;
     Color dropdown_color = collision ? color : ColorBrightness(color, -0.3);
     Color outline_color;
@@ -1604,6 +1609,7 @@ void scrap_gui_process_render(void) {
     if (start_vm_timeout == 0) {
         term_restart();
         exec_compile_error[0] = 0;
+        exec_compile_error_block = NULL;
         exec = exec_new();
         exec_copy_code(&vm, &exec, editor_code);
         if (!exec_start(&vm, &exec)) {

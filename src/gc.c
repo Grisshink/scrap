@@ -21,6 +21,7 @@
 
 #include "gc.h"
 #include "scrap.h"
+#include "term.h"
 
 static void gc_mark_refs(Gc* gc, GcChunkData* chunk);
 
@@ -52,7 +53,7 @@ void gc_free(Gc* gc) {
 
 void gc_root_begin(Gc* gc) {
     if (vector_size(gc->roots_stack) > 1024) {
-        TraceLog(LOG_ERROR, "[GC] Root stack overflow!");
+        term_print_str("*[GC] Root stack overflow!*");
         pthread_exit((void*)0);
     }
 
@@ -144,14 +145,14 @@ void* gc_malloc(Gc* gc, size_t size, FuncArgType data_type) {
     assert(vector_size(gc->roots_stack) > 0);
 
     if (size > gc->memory_max) {
-        TraceLog(LOG_ERROR, "[GC] Memory limit exeeded! Tried to allocate %zu bytes past maximum memory limit in gc (%zu bytes)", size, gc->memory_max);
-        return NULL;
+        term_print_str(TextFormat("*[GC] Memory limit exeeded! Tried to allocate %zu bytes past maximum memory limit in gc (%zu bytes)*", size, gc->memory_max));
+        pthread_exit((void*)0);
     }
 
     if (gc->memory_used + size > gc->memory_max) gc_collect(gc);
     if (gc->memory_used + size > gc->memory_max) {
-        TraceLog(LOG_ERROR, "[GC] Memory limit exeeded! Tried to allocate %zu bytes in gc with %zu bytes free", size, gc->memory_max - gc->memory_used);
-        return NULL;
+        term_print_str(TextFormat("*[GC] Memory limit exeeded! Tried to allocate %zu bytes in gc with %zu bytes free*", size, gc->memory_max - gc->memory_used));
+        pthread_exit((void*)0);
     }
 
     GcChunkData* chunk_data = malloc(size + sizeof(GcChunkData));

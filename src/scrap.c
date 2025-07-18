@@ -36,6 +36,7 @@ int shader_time_loc;
 
 Exec exec = {0};
 char exec_compile_error[MAX_ERROR_LEN] = {0};
+Block* exec_compile_error_block = NULL;
 
 Vector2 camera_pos = {0};
 Vector2 camera_click_pos = {0};
@@ -543,6 +544,7 @@ int main(void) {
                 actionbar_show(gettext("Vm shitted and died :("));
             }
             strncpy(exec_compile_error, exec.current_error, MAX_ERROR_LEN);
+            exec_compile_error_block = exec.current_error_block;
             exec_free(&exec);
             render_surface_needs_redraw = true;
         } else if (vm.is_running) {
