@@ -25,8 +25,17 @@ jobs:
                 sudo apt-get update -y
                 sudo apt-get install -y --no-install-recommends llvm-19-dev
 
-            - name: Build project
+            - name: Update submodules
               run: |
                 git submodule init
                 git submodule update
+
+            - name: Build project (With compiler)
+              run: |
+                make clean
                 make CC=gcc-9 USE_COMPILER=TRUE LLVM_CONFIG=llvm-config-19
+
+            - name: Build project (With interpreter)
+              run: |
+                make clean
+                make CC=gcc-9
