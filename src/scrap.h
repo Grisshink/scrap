@@ -27,6 +27,13 @@
 
 typedef struct Vm Vm;
 
+typedef enum {
+    EXEC_STATE_NOT_RUNNING = 0,
+    EXEC_STATE_STARTING,
+    EXEC_STATE_RUNNING,
+    EXEC_STATE_DONE,
+} ExecState;
+
 #ifdef USE_INTERPRETER
 #include "interpreter.h"
 #else

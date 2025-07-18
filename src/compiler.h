@@ -117,7 +117,7 @@ struct Exec {
     LLVMValueRef* gc_dirty_funcs;
 
     pthread_t thread;
-    atomic_bool is_running;
+    atomic_int running_state;
 };
 
 #define MAIN_NAME "llvm_main"
@@ -145,15 +145,6 @@ struct Exec {
 #define DATA_ANY(val) _DATA(FUNC_ARG_ANY, val)
 #define DATA_UNKNOWN _DATA(FUNC_ARG_UNKNOWN, NULL)
 #define DATA_NOTHING _DATA(FUNC_ARG_NOTHING, CONST_NOTHING)
-
-#ifdef _WIN32
-// Winpthreads for some reason does not trigger cleanup functions, so we are explicitly doing cleanup here
-#define PTHREAD_FAIL(exec) \
-    exec_thread_exit(exec); \
-    pthread_exit((void*)0);
-#else
-#define PTHREAD_FAIL(exec) pthread_exit((void*)0);
-#endif
 
 typedef bool (*BlockCompileFunc)(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val);
 

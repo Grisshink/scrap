@@ -140,7 +140,7 @@ Exec exec_new(void) {
         .arg_stack_len = 0,
         .control_stack_len = 0,
         .thread = (pthread_t) {0},
-        .is_running = false,
+        .running_state = EXEC_STATE_NOT_RUNNING,
     };
     return exec;
 }
@@ -321,14 +321,14 @@ void exec_thread_exit(void* thread_exec) {
     Exec* exec = thread_exec;
     variable_stack_cleanup(exec);
     arg_stack_undo_args(exec, exec->arg_stack_len);
-    exec->is_running = false;
+    exec->running_state = EXEC_STATE_DONE;
 }
 
 void* exec_thread_entry(void* thread_exec) {
     Exec* exec = thread_exec;
     pthread_cleanup_push(exec_thread_exit, thread_exec);
 
-    exec->is_running = true;
+    exec->running_state = EXEC_STATE_RUNNING;
     exec->arg_stack_len = 0;
     exec->control_stack_len = 0;
     exec->chain_stack_len = 0;
@@ -357,7 +357,7 @@ void* exec_thread_entry(void* thread_exec) {
         Data bin;
         if (!exec_run_chain(exec, &exec->code[i], -1, NULL, &bin)) {
             exec->running_chain = NULL;
-            PTHREAD_FAIL(exec);
+            pthread_exit((void*)0);
         }
         exec->running_chain = NULL;
     }
@@ -368,28 +368,33 @@ void* exec_thread_entry(void* thread_exec) {
 
 bool exec_start(Vm* vm, Exec* exec) {
     if (vm->is_running) return false;
-    if (exec->is_running) return false;
+    if (exec->running_state != EXEC_STATE_NOT_RUNNING) return false;
     vm->is_running = true;
 
-    if (pthread_create(&exec->thread, NULL, exec_thread_entry, exec)) return false;
-    exec->is_running = true;
+    exec->running_state = EXEC_STATE_STARTING;
+    if (pthread_create(&exec->thread, NULL, exec_thread_entry, exec)) {
+        exec->running_state = EXEC_STATE_NOT_RUNNING;
+        return false;
+    }
+
     return true;
 }
 
 bool exec_stop(Vm* vm, Exec* exec) {
     if (!vm->is_running) return false;
-    if (!exec->is_running) return false;
+    if (exec->running_state != EXEC_STATE_RUNNING) return false;
     if (pthread_cancel(exec->thread)) return false;
     return true;
 }
 
 bool exec_join(Vm* vm, Exec* exec, size_t* return_code) {
     if (!vm->is_running) return false;
-    if (!exec->is_running) return false;
+    if (exec->running_state == EXEC_STATE_NOT_RUNNING) return false;
 
     void* return_val;
     if (pthread_join(exec->thread, &return_val)) return false;
     vm->is_running = false;
+    exec->running_state = EXEC_STATE_NOT_RUNNING;
     *return_code = (size_t)return_val;
     return true;
 }
@@ -400,11 +405,12 @@ void exec_set_skip_block(Exec* exec) {
 
 bool exec_try_join(Vm* vm, Exec* exec, size_t* return_code) {
     if (!vm->is_running) return false;
-    if (exec->is_running) return false;
+    if (exec->running_state != EXEC_STATE_DONE) return false;
 
     void* return_val;
     if (pthread_join(exec->thread, &return_val)) return false;
     vm->is_running = false;
+    exec->running_state = EXEC_STATE_NOT_RUNNING;
     *return_code = (size_t)return_val;
     return true;
 }

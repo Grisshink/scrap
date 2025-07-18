@@ -42,7 +42,7 @@ Exec exec_new(void) {
     Exec exec = (Exec) {
         .code = NULL,
         .thread = (pthread_t) {0},
-        .is_running = false,
+        .running_state = EXEC_STATE_NOT_RUNNING,
     };
     return exec;
 }
@@ -53,7 +53,6 @@ void exec_free(Exec* exec) {
 
 void exec_thread_exit(void* thread_exec) {
     Exec* exec = thread_exec;
-    exec->is_running = false;
     
     switch (exec->current_state) {
     case STATE_NONE:
@@ -75,24 +74,21 @@ void exec_thread_exit(void* thread_exec) {
         break;
     }
 
+    exec->running_state = EXEC_STATE_DONE;
 }
 
 void* exec_thread_entry(void* thread_exec) {
     Exec* exec = thread_exec;
-    exec->is_running = true;
+    exec->running_state = EXEC_STATE_RUNNING;
     exec->current_state = STATE_NONE;
     pthread_cleanup_push(exec_thread_exit, thread_exec);
 
     if (!compile_program(exec)) {
-        exec->is_running = false;
-        exec_thread_exit(thread_exec);
-        return (void*)0;
+        pthread_exit((void*)0);
     }
 
     if (!run_program(exec)) {
-        exec->is_running = false;
-        exec_thread_exit(thread_exec);
-        return (void*)0;
+        pthread_exit((void*)0);
     }
 
     pthread_cleanup_pop(1);
@@ -101,35 +97,40 @@ void* exec_thread_entry(void* thread_exec) {
 
 bool exec_start(Vm* vm, Exec* exec) {
     if (vm->is_running) return false;
-    if (exec->is_running) return false;
+    if (exec->running_state != EXEC_STATE_NOT_RUNNING) return false;
 
-    if (pthread_create(&exec->thread, NULL, exec_thread_entry, exec)) return false;
-    exec->is_running = true;
-
+    exec->running_state = EXEC_STATE_STARTING;
+    if (pthread_create(&exec->thread, NULL, exec_thread_entry, exec)) {
+        exec->running_state = EXEC_STATE_NOT_RUNNING;
+        return false;
+    }
     vm->is_running = true;
+
     return true;
 }
 
 bool exec_stop(Vm* vm, Exec* exec) {
     if (!vm->is_running) return false;
-    if (!exec->is_running) return false;
+    if (exec->running_state != EXEC_STATE_RUNNING) return false;
     if (pthread_cancel(exec->thread)) return false;
     return true;
 }
 
 void exec_copy_code(Vm* vm, Exec* exec, BlockChain* code) {
     if (vm->is_running) return;
+    if (exec->running_state != EXEC_STATE_NOT_RUNNING) return;
     exec->code = code;
 }
 
 bool exec_join(Vm* vm, Exec* exec, size_t* return_code) {
     (void) exec;
     if (!vm->is_running) return false;
-    if (!exec->is_running) return false;
+    if (exec->running_state == EXEC_STATE_NOT_RUNNING) return false;
 
     void* return_val;
     if (pthread_join(exec->thread, &return_val)) return false;
     vm->is_running = false;
+    exec->running_state = EXEC_STATE_NOT_RUNNING;
     *return_code = (size_t)return_val;
     return true;
 }
@@ -137,11 +138,12 @@ bool exec_join(Vm* vm, Exec* exec, size_t* return_code) {
 bool exec_try_join(Vm* vm, Exec* exec, size_t* return_code) {
     (void) exec;
     if (!vm->is_running) return false;
-    if (exec->is_running) return false;
+    if (exec->running_state != EXEC_STATE_DONE) return false;
 
     void* return_val;
     if (pthread_join(exec->thread, &return_val)) return false;
     vm->is_running = false;
+    exec->running_state = EXEC_STATE_NOT_RUNNING;
     *return_code = (size_t)return_val;
     return true;
 }
@@ -849,7 +851,7 @@ int term_print_any(AnyValue* any) {
 }
 
 LLVMValueRef build_gc_root_begin(Exec* exec) {
-    return build_call(exec, "gc_root_begin", CONST_EXEC, CONST_GC);
+    return build_call(exec, "gc_root_begin", CONST_GC);
 }
 
 LLVMValueRef build_gc_root_end(Exec* exec) {
@@ -1089,7 +1091,7 @@ static LLVMValueRef register_globals(Exec* exec) {
     LLVMTypeRef stack_restore_func_type = LLVMFunctionType(LLVMVoidType(), stack_restore_func_params, ARRLEN(stack_restore_func_params), false);
     LLVMAddFunction(exec->module, "llvm.stackrestore.p0", stack_restore_func_type);
 
-    LLVMTypeRef gc_root_begin_func_params[] = { LLVMInt64Type(), LLVMInt64Type() };
+    LLVMTypeRef gc_root_begin_func_params[] = { LLVMInt64Type() };
     add_function(exec, "gc_root_begin", LLVMVoidType(), gc_root_begin_func_params, ARRLEN(gc_root_begin_func_params), gc_root_begin, false, false);
 
     LLVMTypeRef gc_root_end_func_params[] = { LLVMInt64Type() };

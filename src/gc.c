@@ -50,12 +50,10 @@ void gc_free(Gc* gc) {
     gc->memory_used = 0;
 }
 
-void gc_root_begin(Exec* exec, Gc* gc) {
+void gc_root_begin(Gc* gc) {
     if (vector_size(gc->roots_stack) > 1024) {
-        // This parameter is unused in non Windows targets
-        (void) exec;
         TraceLog(LOG_ERROR, "[GC] Root stack overflow!");
-        PTHREAD_FAIL(exec);
+        pthread_exit((void*)0);
     }
 
     GcRoot* root = vector_add_dst(&gc->roots_stack);

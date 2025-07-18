@@ -52,7 +52,7 @@ typedef struct {
 Gc gc_new(size_t memory_max);
 void gc_free(Gc* gc);
 
-void gc_root_begin(Exec* exec, Gc* gc);
+void gc_root_begin(Gc* gc);
 void gc_root_end(Gc* gc);
 void* gc_malloc(Gc* gc, size_t size, FuncArgType data_type);
 void gc_collect(Gc* gc);

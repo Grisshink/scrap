@@ -130,7 +130,7 @@ struct Exec {
     size_t chain_stack_len;
 
     pthread_t thread;
-    atomic_bool is_running;
+    atomic_int running_state;
     BlockChain* running_chain;
 };
 
