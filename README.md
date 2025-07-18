@@ -59,8 +59,14 @@ Scrap requires these dependencies to run:
 Download commands for MSYS2 UCRT64 (Windows):
 
 ```bash
-pacman -S mingw-w64-ucrt-x86_64-gcc make
+pacman -S mingw-w64-ucrt-x86_64-gcc make gettext
 ln -sf "${MSYSTEM_PREFIX}/bin/windres.exe" "${MSYSTEM_PREFIX}/bin/x86_64-w64-mingw32-windres"
+```
+
+#### Experimental
+If you are going to compile with `USE_COMPILER=TRUE` flag, then you need to install additional dependencies:
+```bash
+pacman -S mingw-w64-ucrt-x86_64-llvm
 ```
 
 Download command for debian-based distributions:
