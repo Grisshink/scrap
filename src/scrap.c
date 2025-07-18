@@ -24,6 +24,7 @@
 #include <libintl.h>
 #include <locale.h>
 #include <assert.h>
+#include <string.h>
 
 // Global Variables
 Image logo_img;
@@ -34,6 +35,7 @@ bool render_surface_needs_redraw = true;
 int shader_time_loc;
 
 Exec exec = {0};
+char exec_compile_error[MAX_ERROR_LEN] = {0};
 
 Vector2 camera_pos = {0};
 Vector2 camera_click_pos = {0};
@@ -540,6 +542,7 @@ int main(void) {
             } else {
                 actionbar_show(gettext("Vm shitted and died :("));
             }
+            strncpy(exec_compile_error, exec.current_error, MAX_ERROR_LEN);
             exec_free(&exec);
             render_surface_needs_redraw = true;
         } else if (vm.is_running) {
@@ -562,7 +565,9 @@ int main(void) {
                 term.is_buffer_dirty = false;
             }
             pthread_mutex_unlock(&term.lock);
-        }
+       } else {
+            if (exec_compile_error[0]) render_surface_needs_redraw = true;
+       }
 
         actionbar.show_time -= GetFrameTime();
         if (actionbar.show_time < 0) {

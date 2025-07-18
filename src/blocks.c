@@ -1220,7 +1220,7 @@ LLVMValueRef arg_to_list(Exec* exec, FuncArg arg) {
     case FUNC_ARG_STRING_REF:
     case FUNC_ARG_DOUBLE:
     case FUNC_ARG_STRING_LITERAL:
-        TraceLog(LOG_ERROR, "[LLVM] Cannot cast type %s into list type", type_to_str(arg.type));
+        exec_set_error(exec, "Cannot cast type %s into list type", type_to_str(arg.type));
         return NULL;
     case FUNC_ARG_LIST:
         return arg.data.value;
@@ -1257,7 +1257,7 @@ FuncArg arg_cast(Exec* exec, FuncArg arg, FuncArgType cast_to_type) {
     case FUNC_ARG_STRING_REF:
         return DATA_STRING_REF(arg_to_string_ref(exec, arg));
     case FUNC_ARG_NOTHING:
-        TraceLog(LOG_ERROR, "Attempt to cast value to nothing");
+        exec_set_error(exec, "Attempt to cast value to nothing");
         return DATA_UNKNOWN;
     case FUNC_ARG_INT:
         return DATA_INTEGER(arg_to_int(exec, arg));
@@ -1309,12 +1309,12 @@ bool block_custom_arg(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg
     DefineFunction* func;
     DefineArgument* arg = get_custom_argument(exec, block->blockdef, &func);
     if (!arg) {
-        TraceLog(LOG_ERROR, "[LLVM] Could not find function definition for argument");
+        exec_set_error(exec, "[LLVM] Could not find function definition for argument");
         return false;
     }
     
     if (LLVMGetBasicBlockParent(LLVMGetInsertBlock(exec->builder)) != func->func) {
-        TraceLog(LOG_ERROR, "[LLVM] Function argument block used outside of function");
+        exec_set_error(exec, "Function argument block used outside of function");
         return false;
     }
 
@@ -1324,7 +1324,7 @@ bool block_custom_arg(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg
 
 bool block_exec_custom(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val) {
     if (argc > 32) {
-        TraceLog(LOG_ERROR, "[LLVM] Too many parameters passed into function. Got %d/32", argc);
+        exec_set_error(exec, "Too many parameters passed into function. Got %d/32", argc);
         return false;
     }
     
@@ -1673,7 +1673,7 @@ bool block_rem(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* retur
 
     if (LLVMIsPoison(return_val->data.value)) {
         // TODO: Uncorporate runtime checks for division by zero
-        TraceLog(LOG_ERROR, "[LLVM] Division by zero!");
+        exec_set_error(exec, "Division by zero!");
         return false;
     }
     return true;
@@ -1726,7 +1726,7 @@ bool block_div(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* retur
 
     if (LLVMIsPoison(return_val->data.value)) {
         // TODO: Uncorporate runtime checks for division by zero
-        TraceLog(LOG_ERROR, "[LLVM] Division by zero!");
+        exec_set_error(exec, "Division by zero!");
         return false;
     }
     return true;
@@ -2145,7 +2145,7 @@ bool block_print(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* ret
         *return_val = DATA_INTEGER(build_call(exec, "term_print_any", argv[0].data.value));
         return true;
     default:
-        TraceLog(LOG_INFO, "[LLVM] Got unknown type, idk i will just crash >:(");
+        exec_set_error(exec, "Unhandled type %s in print function", type_to_str(argv[0].type));
         return false;
     }
 }
@@ -2226,18 +2226,18 @@ bool block_set_var(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* r
     (void) block;
     MIN_ARG_COUNT(2);
     if (argv[0].type != FUNC_ARG_STRING_LITERAL) {
-        TraceLog(LOG_ERROR, "[LLVM] Received non constant string argument");
+        exec_set_error(exec, "Received non constant string argument");
         return false;
     }
 
     Variable* var = variable_stack_get(exec, argv[0].data.str);
     if (!var) {
-        TraceLog(LOG_ERROR, "[LLVM] Variable with name \"%s\" does not exist in the current scope", argv[0].data.str);
+        exec_set_error(exec, "Variable with name \"%s\" does not exist in the current scope", argv[0].data.str);
         return false;
     }
 
     if (argv[1].type != var->value.type) {
-        TraceLog(LOG_ERROR, "[LLVM] Assign to variable \"%s\" with different type", argv[0].data.str);
+        exec_set_error(exec, "Assign to variable \"%s\" with different type", argv[0].data.str);
         return false;
     }
 
@@ -2260,13 +2260,13 @@ bool block_get_var(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* r
     (void) block;
     MIN_ARG_COUNT(1);
     if (argv[0].type != FUNC_ARG_STRING_LITERAL) {
-        TraceLog(LOG_ERROR, "[LLVM] Received non constant string argument");
+        exec_set_error(exec, "Received non constant string argument");
         return false;
     }
 
     Variable* var = variable_stack_get(exec, argv[0].data.str);
     if (!var) {
-        TraceLog(LOG_ERROR, "[LLVM] Variable with name \"%s\" does not exist in the current scope", argv[0].data.str);
+        exec_set_error(exec, "Variable with name \"%s\" does not exist in the current scope", argv[0].data.str);
         return false;
     }
 
@@ -2288,12 +2288,12 @@ bool block_declare_var(Exec* exec, Block* block, int argc, FuncArg* argv, FuncAr
     (void) block;
     MIN_ARG_COUNT(2);
     if (argv[0].type != FUNC_ARG_STRING_LITERAL) {
-        TraceLog(LOG_ERROR, "[LLVM] Received non constant string argument");
+        exec_set_error(exec, "Received non constant string argument");
         return false;
     }
 
     if (argv[1].type == FUNC_ARG_NOTHING) {
-        TraceLog(LOG_ERROR, "[LLVM] Cannot declare a variable with zero sized type (i.e. Nothing)");
+        exec_set_error(exec, "Cannot declare a variable with zero sized type (i.e. Nothing)");
         return false;
     }
     if (argv[1].type == FUNC_ARG_STRING_LITERAL) {
@@ -2341,7 +2341,7 @@ bool block_while(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* ret
     (void) block;
     MIN_ARG_COUNT(1);
     if (argv[0].type != FUNC_ARG_CONTROL) {
-        TraceLog(LOG_ERROR, "[LLVM] First argument is not control argument!");
+        exec_set_error(exec, "First argument is not control argument");
         return false;
     }
 
@@ -2388,7 +2388,7 @@ bool block_repeat(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* re
     (void) block;
     MIN_ARG_COUNT(1);
     if (argv[0].type != FUNC_ARG_CONTROL) {
-        TraceLog(LOG_ERROR, "[LLVM] First argument is not control argument!");
+        exec_set_error(exec, "First argument is not control argument");
         return false;
     }
 
@@ -2456,7 +2456,7 @@ bool block_else(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* retu
     (void) block;
     MIN_ARG_COUNT(1);
     if (argv[0].type != FUNC_ARG_CONTROL) {
-        TraceLog(LOG_ERROR, "[LLVM] First argument is not control argument!");
+        exec_set_error(exec, "First argument is not control argument");
         return false;
     }
 
@@ -2496,7 +2496,7 @@ bool block_else_if(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* r
     (void) block;
     MIN_ARG_COUNT(1);
     if (argv[0].type != FUNC_ARG_CONTROL) {
-        TraceLog(LOG_ERROR, "[LLVM] First argument is not control argument!");
+        exec_set_error(exec, "First argument is not control argument");
         return false;
     }
 
@@ -2558,7 +2558,7 @@ bool block_if(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return
     (void) block;
     MIN_ARG_COUNT(1);
     if (argv[0].type != FUNC_ARG_CONTROL) {
-        TraceLog(LOG_ERROR, "[LLVM] First argument is not control argument!");
+        exec_set_error(exec, "First argument is not control argument");
         return false;
     }
 
@@ -2612,7 +2612,7 @@ bool block_loop(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* retu
     (void) block;
     MIN_ARG_COUNT(1);
     if (argv[0].type != FUNC_ARG_CONTROL) {
-        TraceLog(LOG_ERROR, "[LLVM] First argument is not control argument!");
+        exec_set_error(exec, "First argument is not control argument");
         return false;
     }
 
@@ -2649,7 +2649,7 @@ bool block_do_nothing(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg
     (void) block;
     MIN_ARG_COUNT(1);
     if (argv[0].type != FUNC_ARG_CONTROL) {
-        TraceLog(LOG_ERROR, "[LLVM] First argument is not control argument!");
+        exec_set_error(exec, "First argument is not control argument");
         return false;
     }
 
@@ -2677,7 +2677,7 @@ bool block_define_block(Exec* exec, Block* block, int argc, FuncArg* argv, FuncA
     MIN_ARG_COUNT(1);
 
     if (argv[0].type != FUNC_ARG_BLOCKDEF) {
-        TraceLog(LOG_ERROR, "Non blockdef argument passed into block_define_block!");
+        exec_set_error(exec, "Non blockdef argument passed into block_define_block");
         return false;
     }
 

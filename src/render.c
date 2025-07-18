@@ -869,8 +869,8 @@ static void draw_code_area(void) {
         gui_set_grow(gui, DIRECTION_HORIZONTAL);
         gui_set_grow(gui, DIRECTION_VERTICAL);
         gui_set_direction(gui, DIRECTION_VERTICAL);
-        gui_set_padding(gui, 0, conf.font_size * 2);
-        gui_set_align(gui, ALIGN_CENTER);
+        gui_set_padding(gui, 0, 0);
+        gui_set_align(gui, ALIGN_RIGHT);
         gui_set_scissor(gui);
         gui_on_render(gui, code_area_on_render);
 
@@ -892,10 +892,45 @@ static void draw_code_area(void) {
             }
         gui_element_end(gui);
 
+        if (!vm.is_running && exec_compile_error[0]) {
+            gui_element_begin(gui);
+                gui_set_direction(gui, DIRECTION_HORIZONTAL);
+                gui_set_align(gui, ALIGN_CENTER);
+                gui_set_gap(gui, conf.font_size * 0.5);
+                gui_set_padding(gui, conf.font_size * 0.25, conf.font_size * 0.25);
+
+                gui_element_begin(gui);
+                    gui_set_direction(gui, DIRECTION_VERTICAL);
+                    gui_set_align(gui, ALIGN_RIGHT);
+
+                    gui_text(gui, &font_cond, "Got compiler error!", conf.font_size * 0.6, (GuiColor) { 0xff, 0x66, 0x66, 0xff });
+                    gui_text(gui, &font_cond, exec.current_error, conf.font_size * 0.6, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+                gui_element_end(gui);
+
+                double animation = (fmod(-GetTime(), 1.0) * 0.5 + 1.0) * 255.0;
+                gui_element_begin(gui);
+                    gui_set_rect(gui, (GuiColor) { 0xff, 0x20, 0x20, animation });
+                    gui_set_fixed(gui, conf.font_size, conf.font_size);
+                    gui_set_direction(gui, DIRECTION_VERTICAL);
+                    gui_set_align(gui, ALIGN_CENTER);
+
+                    gui_text(gui, &font_eb, "!", conf.font_size, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+                gui_element_end(gui);
+            gui_element_end(gui);
+        } else {
+            gui_spacer(gui, 0, conf.font_size * 1.5);
+        }
+
         if (actionbar.show_time > 0) {
-            Color color = YELLOW;
-            color.a = actionbar.show_time / 3.0 * 255.0;
-            gui_text(gui, &font_eb, actionbar.text, conf.font_size * 0.8, CONVERT_COLOR(color, GuiColor));
+            gui_element_begin(gui);
+                gui_set_grow(gui, DIRECTION_HORIZONTAL);
+                gui_set_direction(gui, DIRECTION_VERTICAL);
+                gui_set_align(gui, ALIGN_CENTER);
+                
+                Color color = YELLOW;
+                color.a = actionbar.show_time / 3.0 * 255.0;
+                gui_text(gui, &font_eb, actionbar.text, conf.font_size * 0.8, CONVERT_COLOR(color, GuiColor));
+            gui_element_end(gui);
         }
     gui_element_end(gui);
 }
@@ -1568,6 +1603,7 @@ void scrap_gui_process_render(void) {
 
     if (start_vm_timeout == 0) {
         term_restart();
+        exec_compile_error[0] = 0;
         exec = exec_new();
         exec_copy_code(&vm, &exec, editor_code);
         if (!exec_start(&vm, &exec)) {

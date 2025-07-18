@@ -112,6 +112,8 @@ struct Exec {
     
     CompilerState current_state;
 
+    char current_error[MAX_ERROR_LEN];
+
     // Needed for compiler to determine if some block uses gc_malloc so we could call gc_flush afterwards
     bool gc_dirty;
     LLVMValueRef* gc_dirty_funcs;
@@ -157,6 +159,7 @@ bool exec_stop(Vm* vm, Exec* exec);
 bool exec_join(Vm* vm, Exec* exec, size_t* return_code);
 bool exec_try_join(Vm* vm, Exec* exec, size_t* return_code);
 void exec_thread_exit(void* thread_exec);
+void exec_set_error(Exec* exec, const char* fmt, ...);
 
 bool variable_stack_push(Exec* exec, Variable variable);
 Variable* variable_stack_get(Exec* exec, const char* var_name);
