@@ -2337,21 +2337,26 @@ bool block_declare_var(Exec* exec, Block* block, int argc, FuncArg* argv, FuncAr
         exec_set_error(exec, block, "Cannot declare a variable with zero sized type (i.e. Nothing)");
         return false;
     }
+
+    LLVMValueRef func_current = LLVMGetBasicBlockParent(LLVMGetInsertBlock(exec->builder));
+    LLVMValueRef func_main = LLVMGetNamedFunction(exec->module, MAIN_NAME);
+
     if (argv[1].type == FUNC_ARG_STRING_LITERAL) {
         Variable var = (Variable) {
             .type = LLVMVoidType(),
             .value = argv[1],
             .name = argv[0].data.str,
         };
-        if (!variable_stack_push(exec, block, var)) return false;
+        if (exec->control_stack_len == 0 && func_current == func_main) {
+            global_variable_add(exec, var);
+        } else {
+            if (!variable_stack_push(exec, block, var)) return false;
+        }
         *return_val = argv[1];
         return true;
     }
 
     LLVMTypeRef data_type = LLVMTypeOf(argv[1].data.value);
-
-    LLVMValueRef func_current = LLVMGetBasicBlockParent(LLVMGetInsertBlock(exec->builder));
-    LLVMValueRef func_main = LLVMGetNamedFunction(exec->module, MAIN_NAME);
 
     Variable var = (Variable) {
         .type = data_type,
