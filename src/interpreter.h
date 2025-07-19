@@ -129,6 +129,9 @@ struct Exec {
     ChainStackData chain_stack[VM_CHAIN_STACK_SIZE];
     size_t chain_stack_len;
 
+    char current_error[MAX_ERROR_LEN];
+    Block* current_error_block;
+
     pthread_t thread;
     atomic_int running_state;
     BlockChain* running_chain;

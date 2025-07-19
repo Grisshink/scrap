@@ -141,7 +141,9 @@ Exec exec_new(void) {
         .control_stack_len = 0,
         .thread = (pthread_t) {0},
         .running_state = EXEC_STATE_NOT_RUNNING,
+        .current_error_block = NULL,
     };
+    exec.current_error[0] = 0;
     return exec;
 }
 
