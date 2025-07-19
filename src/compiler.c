@@ -435,7 +435,7 @@ static List* list_new(Gc* gc) {
     return list;
 }
 
-static AnyValueData get_any_data(FuncArgType data_type, va_list va) {
+static AnyValue get_any(FuncArgType data_type, va_list va) {
     AnyValueData data;
 
     switch (data_type) {
@@ -453,25 +453,25 @@ static AnyValueData get_any_data(FuncArgType data_type, va_list va) {
     case FUNC_ARG_LIST:
         data.list_val = va_arg(va, List*);
         break;
+    case FUNC_ARG_ANY:
+        return *va_arg(va, AnyValue*);
     default:
         break;
     }
 
-    return data;
-}
-
-static void list_add(Gc* gc, List* list, FuncArgType data_type, ...) {
-    AnyValueData data;
-
-    va_list va;
-    va_start(va, data_type);
-    data = get_any_data(data_type, va);
-    va_end(va);
-
-    AnyValue value = (AnyValue) {
+    return (AnyValue) {
         .type = data_type,
         .data = data,
     };
+}
+
+static void list_add(Gc* gc, List* list, FuncArgType data_type, ...) {
+    AnyValue any;
+
+    va_list va;
+    va_start(va, data_type);
+    any = get_any(data_type, va);
+    va_end(va);
     
     if (!list->values) {
         list->values = gc_malloc(gc, sizeof(AnyValue), 0);
@@ -485,25 +485,20 @@ static void list_add(Gc* gc, List* list, FuncArgType data_type, ...) {
         list->capacity = list->size * 2;
     }
 
-    list->values[list->size++] = value;
+    list->values[list->size++] = any;
 }
 
 static void list_set(List* list, int index, FuncArgType data_type, ...) {
     if (index >= list->size || index < 0) return;
 
-    AnyValueData data;
+    AnyValue any;
 
     va_list va;
     va_start(va, data_type);
-    data = get_any_data(data_type, va);
+    any = get_any(data_type, va);
     va_end(va);
 
-    AnyValue value = (AnyValue) {
-        .type = data_type,
-        .data = data,
-    };
-
-    list->values[index] = value;
+    list->values[index] = any;
 }
 
 static AnyValue* list_get(Gc* gc, List* list, int index) {
@@ -521,18 +516,19 @@ static int list_length(List* list) {
 }
 
 static AnyValue* any_from_value(Gc* gc, FuncArgType data_type, ...) {
-    AnyValueData data;
+    AnyValue any;
 
     va_list va;
     va_start(va, data_type);
-    data = get_any_data(data_type, va);
+    if (data_type == FUNC_ARG_ANY) {
+        return va_arg(va, AnyValue*);
+    } else {
+        any = get_any(data_type, va);
+    }
     va_end(va);
 
     AnyValue* value = gc_malloc(gc, sizeof(AnyValue), FUNC_ARG_ANY);
-    *value = (AnyValue) {
-        .type = data_type,
-        .data = data,
-    };
+    *value = any;
     return value;
 }
 

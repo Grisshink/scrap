@@ -61,6 +61,7 @@ typedef struct {
     FuncArgData data;
 } FuncArg;
 
+typedef struct AnyValue AnyValue;
 typedef struct List List;
 
 typedef union {
@@ -68,12 +69,13 @@ typedef union {
     int int_val;
     double double_val;
     List* list_val;
+    AnyValue* any_val;
 } AnyValueData;
 
-typedef struct {
+struct AnyValue {
     FuncArgType type;
     AnyValueData data;
-} AnyValue;
+};
 
 struct List {
     long size;
