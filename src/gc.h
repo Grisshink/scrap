@@ -38,13 +38,15 @@ typedef struct {
 } GcChunk;
 
 typedef struct {
-    ChunkAddrList chunks;
-    ChunkAddrList temp_chunks;
+    size_t chunks_base;
+    size_t temp_chunks_base;
 } GcRoot;
 
 typedef struct {
     GcChunk* chunks;
     GcRoot* roots_stack;
+    ChunkAddrList root_chunks;
+    ChunkAddrList root_temp_chunks;
     size_t memory_used;
     size_t memory_max;
 } Gc;

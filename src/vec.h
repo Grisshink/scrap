@@ -51,6 +51,13 @@ typedef size_t vec_size_t;
 // number of bytes for a type
 typedef size_t vec_type_t;
 
+typedef struct
+{
+	vec_size_t size;
+	vec_size_t capacity;
+	unsigned char data[]; 
+} vector_header;
+
 // TODO: more rigorous check for typeof support with different compilers
 #if _MSC_VER == 0 || __STDC_VERSION__ >= 202311L || defined __cpp_decltype
 
@@ -119,6 +126,8 @@ vector _vector_copy(vector vec, vec_type_t type_size);
 vec_size_t vector_size(vector vec);
 
 vec_size_t vector_capacity(vector vec);
+
+vector_header* vector_get_header(vector vec);
 
 // closing bracket for extern "C"
 #ifdef __cplusplus

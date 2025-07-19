@@ -34,13 +34,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <string.h>
 #include <stdbool.h>
 
-typedef struct
-{
-	vec_size_t size;
-	vec_size_t capacity;
-	unsigned char data[]; 
-} vector_header;
-
 vector_header* vector_get_header(vector vec) { return &((vector_header*)vec)[-1]; }
 
 vector vector_create(void)

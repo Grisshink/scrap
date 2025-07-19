@@ -29,6 +29,8 @@ Gc gc_new(size_t memory_max) {
     return (Gc) {
         .chunks = vector_create(),
         .roots_stack = vector_create(),
+        .root_chunks = vector_create(),
+        .root_temp_chunks = vector_create(),
         .memory_used = 0,
         .memory_max = memory_max,
     };
@@ -41,10 +43,8 @@ void gc_free(Gc* gc) {
     for (size_t i = 0; i < vector_size(gc->chunks); i++) {
         free(gc->chunks[i].ptr);
     }
-    for (size_t i = 0; i < vector_size(gc->roots_stack); i++) {
-        vector_free(gc->roots_stack[i].chunks);
-        vector_free(gc->roots_stack[i].temp_chunks);
-    }
+    vector_free(gc->root_chunks);
+    vector_free(gc->root_temp_chunks);
     vector_free(gc->roots_stack);
     vector_free(gc->chunks);
     gc->memory_max = 0;
@@ -58,8 +58,8 @@ void gc_root_begin(Gc* gc) {
     }
 
     GcRoot* root = vector_add_dst(&gc->roots_stack);
-    root->chunks = vector_create();
-    root->temp_chunks = vector_create();
+    root->chunks_base = vector_size(gc->root_chunks);
+    root->temp_chunks_base = vector_size(gc->root_temp_chunks);
 }
 
 static void gc_mark_any(Gc* gc, AnyValue* any) {
@@ -105,18 +105,16 @@ void gc_collect(Gc* gc) {
 #endif
 
     // Mark roots
-    for (size_t i = 0; i < vector_size(gc->roots_stack); i++) {
-        for (size_t j = 0; j < vector_size(gc->roots_stack[i].chunks); j++) {
-            if (gc->roots_stack[i].chunks[j]->marked) continue;
-            gc->roots_stack[i].chunks[j]->marked = 1;
-            gc_mark_refs(gc, gc->roots_stack[i].chunks[j]);
-        }
+    for (size_t i = 0; i < vector_size(gc->root_chunks); i++) {
+        if (gc->root_chunks[i]->marked) continue;
+        gc->root_chunks[i]->marked = 1;
+        gc_mark_refs(gc, gc->root_chunks[i]);
+    }
 
-        for (size_t j = 0; j < vector_size(gc->roots_stack[i].temp_chunks); j++) {
-            if (gc->roots_stack[i].temp_chunks[j]->marked) continue;
-            gc->roots_stack[i].temp_chunks[j]->marked = 1;
-            gc_mark_refs(gc, gc->roots_stack[i].temp_chunks[j]);
-        }
+    for (size_t i = 0; i < vector_size(gc->root_temp_chunks); i++) {
+        if (gc->root_temp_chunks[i]->marked) continue;
+        gc->root_temp_chunks[i]->marked = 1;
+        gc_mark_refs(gc, gc->root_temp_chunks[i]);
     }
 
     // Find unmarked chunks
@@ -166,7 +164,7 @@ void* gc_malloc(Gc* gc, size_t size, FuncArgType data_type) {
     };
 
     vector_add(&gc->chunks, chunk);
-    vector_add(&gc->roots_stack[vector_size(gc->roots_stack) - 1].temp_chunks, chunk.ptr);
+    vector_add(&gc->root_temp_chunks, chunk.ptr);
     gc->memory_used += size;
 
     return chunk_data->data;
@@ -174,22 +172,22 @@ void* gc_malloc(Gc* gc, size_t size, FuncArgType data_type) {
 
 void gc_root_end(Gc* gc) {
     assert(vector_size(gc->roots_stack) > 0);
-    vector_free(gc->roots_stack[vector_size(gc->roots_stack) - 1].chunks);
-    vector_free(gc->roots_stack[vector_size(gc->roots_stack) - 1].temp_chunks);
+    vector_get_header(gc->root_chunks)->size = gc->roots_stack[vector_size(gc->roots_stack) - 1].chunks_base;
+    vector_get_header(gc->root_temp_chunks)->size = gc->roots_stack[vector_size(gc->roots_stack) - 1].temp_chunks_base;
     vector_pop(gc->roots_stack);
 }
 
 void gc_add_root(Gc* gc, void* ptr) {
     GcChunkData* chunk_ptr = ((GcChunkData*)ptr) - 1;
-    vector_add(&gc->roots_stack[vector_size(gc->roots_stack) - 1].chunks, chunk_ptr);
+    vector_add(&gc->root_chunks, chunk_ptr);
 }
 
 void gc_add_str_root(Gc* gc, char* str) {
     StringHeader* header = ((StringHeader*)str) - 1;
     GcChunkData* chunk_ptr = ((GcChunkData*)header) - 1;
-    vector_add(&gc->roots_stack[vector_size(gc->roots_stack) - 1].chunks, chunk_ptr);
+    vector_add(&gc->root_chunks, chunk_ptr);
 }
 
 void gc_flush(Gc* gc) {
-    vector_clear(gc->roots_stack[vector_size(gc->roots_stack) - 1].temp_chunks);
+    vector_get_header(gc->root_temp_chunks)->size = gc->roots_stack[vector_size(gc->roots_stack) - 1].temp_chunks_base;
 }
