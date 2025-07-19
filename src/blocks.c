@@ -1094,6 +1094,28 @@ const char* type_to_str(FuncArgType type) {
     }
 }
 
+LLVMValueRef arg_get_default(Exec* exec, Block* block, FuncArg arg) {
+    switch (arg.type) {
+    case FUNC_ARG_ANY:
+    case FUNC_ARG_STRING_LITERAL:
+    case FUNC_ARG_LIST:
+    case FUNC_ARG_STRING_REF:
+        return LLVMConstNull(LLVMPointerType(LLVMInt8Type(), 0));
+    case FUNC_ARG_NOTHING:
+        exec_set_error(exec, block, "Type %s does not have default value", type_to_str(arg.type));
+        return NULL;
+    case FUNC_ARG_INT:
+        return CONST_INTEGER(0);
+    case FUNC_ARG_DOUBLE:
+        return CONST_DOUBLE(0.0);
+    case FUNC_ARG_BOOL:
+        return CONST_BOOLEAN(false);
+    default:
+        assert(false && "Unhandled arg_get_default");
+    }
+    
+}
+
 LLVMValueRef arg_to_value(Exec* exec, FuncArg arg) {
     switch (arg.type) {
     case FUNC_ARG_STRING_LITERAL:
@@ -2249,7 +2271,7 @@ bool block_set_var(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* r
         return false;
     }
 
-    Variable* var = variable_stack_get(exec, argv[0].data.str);
+    Variable* var = variable_get(exec, argv[0].data.str);
     if (!var) {
         exec_set_error(exec, block, "Variable with name \"%s\" does not exist in the current scope", argv[0].data.str);
         return false;
@@ -2283,7 +2305,7 @@ bool block_get_var(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* r
         return false;
     }
 
-    Variable* var = variable_stack_get(exec, argv[0].data.str);
+    Variable* var = variable_get(exec, argv[0].data.str);
     if (!var) {
         exec_set_error(exec, block, "Variable with name \"%s\" does not exist in the current scope", argv[0].data.str);
         return false;
@@ -2327,17 +2349,33 @@ bool block_declare_var(Exec* exec, Block* block, int argc, FuncArg* argv, FuncAr
     }
 
     LLVMTypeRef data_type = LLVMTypeOf(argv[1].data.value);
+
+    LLVMValueRef func_current = LLVMGetBasicBlockParent(LLVMGetInsertBlock(exec->builder));
+    LLVMValueRef func_main = LLVMGetNamedFunction(exec->module, MAIN_NAME);
+
     Variable var = (Variable) {
         .type = data_type,
         .value = (FuncArg) {
             .type = argv[1].type,
             .data = (FuncArgData) {
-                .value = LLVMBuildAlloca(exec->builder, data_type, argv[0].data.str),
+                .value = NULL,
             },
         },
         .name = argv[0].data.str,
     };
-    variable_stack_push(exec, block, var);
+
+    if (exec->control_stack_len == 0 && func_current == func_main) {
+        LLVMValueRef default_val = arg_get_default(exec, block, argv[1]);
+        if (!default_val) return false;
+
+        var.value.data.value = LLVMAddGlobal(exec->module, data_type, argv[0].data.str);
+        LLVMSetInitializer(var.value.data.value, default_val);
+        global_variable_add(exec, var);
+    } else {
+        var.value.data.value = LLVMBuildAlloca(exec->builder, data_type, argv[0].data.str);
+        variable_stack_push(exec, block, var);
+    }
+
     LLVMBuildStore(exec->builder, argv[1].data.value, var.value.data.value);
     if (data_type == LLVMPointerType(LLVMInt8Type(), 0)) {
         build_call(exec, argv[1].type == FUNC_ARG_STRING_REF ? "gc_add_str_root" : "gc_add_root", CONST_GC, argv[1].data.value);
@@ -3250,6 +3288,7 @@ void register_blocks(Vm* vm) {
 #else
     blockdef_add_argument(sc_list_len, "", gettext("list"), BLOCKCONSTR_UNLIMITED);
 #endif
+    blockdef_register(vm, sc_list_len);
     add_to_category(sc_list_len, cat_data);
 
     Blockdef* sc_define_block = blockdef_new("define_block", BLOCKTYPE_HAT, (BlockdefColor) { 0x99, 0x00, 0xff, 0xff }, block_define_block);

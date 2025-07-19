@@ -102,6 +102,8 @@ struct Exec {
     Variable variable_stack[VM_VARIABLE_STACK_SIZE];
     size_t variable_stack_len;
 
+    Variable* global_variables;
+
     VariableStackFrame variable_stack_frames[VM_VARIABLE_STACK_SIZE];
     size_t variable_stack_frames_len;
 
@@ -163,7 +165,8 @@ void exec_thread_exit(void* thread_exec);
 void exec_set_error(Exec* exec, Block* block, const char* fmt, ...);
 
 bool variable_stack_push(Exec* exec, Block* block, Variable variable);
-Variable* variable_stack_get(Exec* exec, const char* var_name);
+Variable* variable_get(Exec* exec, const char* var_name);
+void global_variable_add(Exec* exec, Variable variable);
 
 LLVMValueRef build_gc_root_begin(Exec* exec);
 LLVMValueRef build_gc_root_end(Exec* exec);

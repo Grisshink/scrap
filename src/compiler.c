@@ -65,6 +65,7 @@ void exec_thread_exit(void* thread_exec) {
         gc_free(&exec->gc);
         vector_free(exec->gc_dirty_funcs);
         vector_free(exec->compile_func_list);
+        vector_free(exec->global_variables);
         free_defined_functions(exec);
         break;
     case STATE_PRE_EXEC:
@@ -175,6 +176,10 @@ static Block* control_stack_pop(Exec* exec) {
     return exec->control_stack[--exec->control_stack_len];
 }
 
+void global_variable_add(Exec* exec, Variable variable) {
+    vector_add(&exec->global_variables, variable);
+}
+
 bool variable_stack_push(Exec* exec, Block* block, Variable variable) {
     if (exec->variable_stack_len >= VM_CONTROL_STACK_SIZE) {
         exec_set_error(exec, block, "Variable stack overflow");
@@ -184,9 +189,12 @@ bool variable_stack_push(Exec* exec, Block* block, Variable variable) {
     return true;
 }
 
-Variable* variable_stack_get(Exec* exec, const char* var_name) {
+Variable* variable_get(Exec* exec, const char* var_name) {
     for (ssize_t i = exec->variable_stack_len - 1; i >= 0; i--) {
         if (!strcmp(var_name, exec->variable_stack[i].name)) return &exec->variable_stack[i];
+    }
+    for (ssize_t i = vector_size(exec->global_variables) - 1; i >= 0; i--) {
+        if (!strcmp(var_name, exec->global_variables[i].name)) return &exec->global_variables[i];
     }
     return NULL;
 }
@@ -1143,6 +1151,7 @@ static void free_defined_functions(Exec* exec) {
 
 static bool compile_program(Exec* exec) {
     exec->compile_func_list = vector_create();
+    exec->global_variables = vector_create();
     exec->control_stack_len = 0;
     exec->control_data_stack_len = 0;
     exec->variable_stack_len = 0;
@@ -1164,6 +1173,14 @@ static bool compile_program(Exec* exec) {
     build_gc_root_begin(exec);
 
     for (size_t i = 0; i < vector_size(exec->code); i++) {
+        if (strcmp(exec->code[i].blocks[0].blockdef->id, "on_start")) continue;
+        if (!evaluate_chain(exec, &exec->code[i])) {
+            return false;
+        }
+    }
+
+    for (size_t i = 0; i < vector_size(exec->code); i++) {
+        if (!strcmp(exec->code[i].blocks[0].blockdef->id, "on_start")) continue;
         if (!evaluate_chain(exec, &exec->code[i])) {
             return false;
         }
