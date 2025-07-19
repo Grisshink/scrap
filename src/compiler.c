@@ -508,6 +508,10 @@ static AnyValue* list_get(Gc* gc, List* list, int index) {
     return out;
 }
 
+static int list_length(List* list) {
+    return list->size;
+}
+
 static AnyValue* any_from_value(Gc* gc, FuncArgType data_type, ...) {
     AnyValueData data;
 
@@ -1090,6 +1094,9 @@ static LLVMValueRef register_globals(Exec* exec) {
 
     LLVMTypeRef list_set_func_params[] = { LLVMPointerType(LLVMInt8Type(), 0), LLVMInt32Type(), LLVMInt32Type() };
     add_function(exec, "list_set", LLVMPointerType(LLVMInt8Type(), 0), list_set_func_params, ARRLEN(list_set_func_params), list_set, false, true);
+
+    LLVMTypeRef list_length_func_params[] = { LLVMPointerType(LLVMInt8Type(), 0) };
+    add_function(exec, "list_length", LLVMInt32Type(), list_length_func_params, ARRLEN(list_length_func_params), list_length, false, false);
 
     LLVMTypeRef ceil_func_params[] = { LLVMDoubleType() };
     add_function(exec, "ceil", LLVMDoubleType(), ceil_func_params, ARRLEN(ceil_func_params), ceil, false, false);

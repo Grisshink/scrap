@@ -376,6 +376,17 @@ Data block_list_get(Exec* exec, int argc, Data* argv) {
     return var->value.data.list_arg.items[index];
 }
 
+Data block_list_length(Exec* exec, int argc, Data* argv) {
+    (void) exec;
+    if (argc < 1) RETURN_INT(0);
+
+    Variable* var = variable_stack_get_variable(exec, data_to_str(argv[0]));
+    if (!var) RETURN_INT(0);
+    if (var->value.type != DATA_LIST) RETURN_INT(0);
+
+    RETURN_INT(var->value.data.list_arg.len);
+}
+
 Data block_list_set(Exec* exec, int argc, Data* argv) {
     (void) exec;
     if (argc < 3) RETURN_NOTHING;
@@ -741,7 +752,6 @@ Data block_substring(Exec* exec, int argc, Data* argv) {
 Data block_length(Exec* exec, int argc, Data* argv) {
     (void) exec;
     if (argc < 1) RETURN_INT(0);
-    if (argv[0].type == DATA_LIST) RETURN_INT(argv[0].data.list_arg.len);
     int len = 0;
     const char* str = data_to_str(argv[0]);
     while (*str) {
@@ -2158,8 +2168,17 @@ bool block_println(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* r
     return true;
 }
 
+bool block_list_length(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val) {
+    MIN_ARG_COUNT(1);
+
+    LLVMValueRef list = arg_to_list(exec, block, argv[0]);
+    if (!list) return false;
+
+    *return_val = DATA_INTEGER(build_call(exec, "list_length", list));
+    return true;
+}
+
 bool block_list_set(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val) {
-    (void) block;
     MIN_ARG_COUNT(3);
 
     LLVMValueRef list = arg_to_list(exec, block, argv[0]);
@@ -3222,6 +3241,16 @@ void register_blocks(Vm* vm) {
     blockdef_add_argument(sc_list_set, "", gettext("any"), BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_list_set);
     add_to_category(sc_list_set, cat_data);
+
+    Blockdef* sc_list_len = blockdef_new("list_length", BLOCKTYPE_NORMAL, (BlockdefColor) { 0xff, 0x44, 0x00, 0xff }, block_list_length);
+    blockdef_add_image(sc_list_len, (BlockdefImage) { .image_ptr = &list_tex });
+    blockdef_add_text(sc_list_len, gettext("length"));
+#ifdef USE_INTERPRETER
+    blockdef_add_argument(sc_list_len, gettext("my variable"), gettext("Abc"), BLOCKCONSTR_UNLIMITED);
+#else
+    blockdef_add_argument(sc_list_len, "", gettext("list"), BLOCKCONSTR_UNLIMITED);
+#endif
+    add_to_category(sc_list_len, cat_data);
 
     Blockdef* sc_define_block = blockdef_new("define_block", BLOCKTYPE_HAT, (BlockdefColor) { 0x99, 0x00, 0xff, 0xff }, block_define_block);
     blockdef_add_image(sc_define_block, (BlockdefImage) { .image_ptr = &special_tex });
