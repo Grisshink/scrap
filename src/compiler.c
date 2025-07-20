@@ -879,6 +879,20 @@ LLVMValueRef build_gc_root_end(Exec* exec) {
     return build_call(exec, "gc_root_end", CONST_GC);
 }
 
+static LLVMValueRef get_function(Exec* exec, const char* func_name) {
+    LLVMValueRef func = LLVMGetNamedFunction(exec->module, func_name);
+    if (func) return func;
+    for (size_t i = 0; i < vector_size(exec->compile_func_list); i++) {
+        if (!strcmp(exec->compile_func_list[i].name, func_name)) {
+            func = LLVMAddFunction(exec->module, func_name, exec->compile_func_list[i].type);
+            if (exec->compile_func_list[i].dynamic) vector_add(&exec->gc_dirty_funcs, func);
+            return func;
+        }
+    }
+    exec_set_error(exec, NULL, "[LLVM] Function with name \"%s\" does not exist", func_name);
+    return NULL;
+}
+
 static LLVMValueRef build_call_va(Exec* exec, const char* func_name, LLVMValueRef func, LLVMTypeRef func_type, size_t func_param_count, va_list va) {
     for (size_t i = 0; i < vector_size(exec->gc_dirty_funcs); i++) {
         if (func != exec->gc_dirty_funcs[i]) continue;
@@ -901,7 +915,7 @@ static LLVMValueRef build_call_va(Exec* exec, const char* func_name, LLVMValueRe
 }
 
 LLVMValueRef build_call_count(Exec* exec, const char* func_name, size_t func_param_count, ...) {
-    LLVMValueRef func = LLVMGetNamedFunction(exec->module, func_name);
+    LLVMValueRef func = get_function(exec, func_name);
     LLVMTypeRef func_type = LLVMGlobalGetValueType(func);
     LLVMValueRef out;
 
@@ -914,7 +928,7 @@ LLVMValueRef build_call_count(Exec* exec, const char* func_name, size_t func_par
 }
 
 LLVMValueRef build_call(Exec* exec, const char* func_name, ...) {
-    LLVMValueRef func = LLVMGetNamedFunction(exec->module, func_name);
+    LLVMValueRef func = get_function(exec, func_name);
     LLVMTypeRef func_type = LLVMGlobalGetValueType(func);
     unsigned int func_param_count = LLVMCountParamTypes(func_type);
     LLVMValueRef out;
@@ -932,17 +946,13 @@ static unsigned int string_length(char* str) {
     return header->size;
 }
 
-// Dynamic means the func calls gc_malloc at some point. This is needed for gc.temp_roots cleanup
-static LLVMValueRef add_function(Exec* exec, const char* name, LLVMTypeRef return_type, LLVMTypeRef* params, size_t params_len, void* func, bool dynamic, bool variadic) {
+// Dynamic means the func calls gc_malloc at some point. This is needed for gc.root_temp_chunks cleanup
+static void add_function(Exec* exec, const char* name, LLVMTypeRef return_type, LLVMTypeRef* params, size_t params_len, void* func, bool dynamic, bool variadic) {
     CompileFunction* comp_func = vector_add_dst(&exec->compile_func_list);
     comp_func->func = func;
     comp_func->name = name;
-
-    LLVMTypeRef func_type = LLVMFunctionType(return_type, params, params_len, variadic);
-    LLVMValueRef func_value = LLVMAddFunction(exec->module, name, func_type);
-
-    if (dynamic) vector_add(&exec->gc_dirty_funcs, func_value);
-    return func_value;
+    comp_func->type = LLVMFunctionType(return_type, params, params_len, variadic);
+    comp_func->dynamic = dynamic;
 }
 
 static LLVMValueRef register_globals(Exec* exec) {
@@ -1243,7 +1253,9 @@ static bool run_program(Exec* exec) {
     }
 
     for (size_t i = 0; i < vector_size(exec->compile_func_list); i++) {
-        LLVMAddGlobalMapping(exec->engine, LLVMGetNamedFunction(exec->module, exec->compile_func_list[i].name), exec->compile_func_list[i].func);
+        LLVMValueRef func = LLVMGetNamedFunction(exec->module, exec->compile_func_list[i].name);
+        if (!func) continue;
+        LLVMAddGlobalMapping(exec->engine, func, exec->compile_func_list[i].func);
     }
 
     vector_free(exec->compile_func_list);

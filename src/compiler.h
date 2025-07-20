@@ -67,6 +67,8 @@ typedef struct {
 typedef struct {
     const char* name;
     void* func;
+    LLVMTypeRef type;
+    bool dynamic;
 } CompileFunction;
 
 typedef struct {
