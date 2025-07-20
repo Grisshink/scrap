@@ -13,7 +13,7 @@ its forks such as [Turbowarp](https://turbowarp.org).
 
 ## Notable advantages from scratch
 
-- Faster runtime (Still not faster than Turbowarp because Scrap is interpreted *for now*)
+- Faster runtime. The speed is achieved using compilation through LLVM *(WIP)*
 - The addition of separate else if, else blocks (C-end blocks as i call them), which eliminates a lot of nested checks with if-else blocks (i.e. more flexible variant of if-else block in Snap!)
 - Variables can have a lifetime, which avoids variable name conflicts and allows to make temporary variables
 - Custom blocks can return values and can be used as an argument for other block
@@ -23,6 +23,7 @@ its forks such as [Turbowarp](https://turbowarp.org).
 - Lists are now a data type instead of a different type of variable, this allows nesting lists inside a list (although it's not very convenient as of right now)
 - The code runs in a separate thread. This solves some performance issues compared to Scratch
 - Modularized interface. Most of the interface can be rearranged or moved to another tab
+- *(WIP)* Standalone builds. Scrap projects can be built and run as native executables without significant runtime overhead
 
 ## ⚠️ WARNING ⚠️
 
@@ -55,6 +56,7 @@ Scrap requires these dependencies to run:
 - [tinyfiledialogs](https://sourceforge.net/projects/tinyfiledialogs/) *(Built in)*
 - [cfgpath](https://github.com/Malvineous/cfgpath) *(Built in)* (Heavily modified to workaround `windows.h` conflicts)
 - [gettext](https://www.gnu.org/software/gettext/)
+- [LLVM](https://llvm.org/) *(WIP, only required if building with `USE_COMPILER=TRUE` flag)*
 
 Download commands for MSYS2 UCRT64 (Windows):
 
