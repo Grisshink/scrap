@@ -48,12 +48,6 @@
     data = *(type*)(exec->control_data_stack + exec->control_data_stack_len);
 
 typedef struct {
-    unsigned int size;
-    unsigned int capacity;
-    char str[];
-} StringHeader;
-
-typedef struct {
     FuncArg value;
     LLVMTypeRef type;
     const char* name;

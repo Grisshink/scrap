@@ -50,7 +50,7 @@ ifeq ($(USE_COMPILER), FALSE)
 	CFLAGS += -DUSE_INTERPRETER
 else
 	LLVM_CONFIG ?= llvm-config
-	OBJFILES += $(addprefix src/,compiler.o gc.o)
+	OBJFILES += $(addprefix src/,compiler.o gc.o std.o)
 	SCRAP_HEADERS += src/compiler.h
 
 	ifeq ($(TARGET), WINDOWS)
@@ -163,6 +163,8 @@ src/interpreter.o: src/interpreter.c $(SCRAP_HEADERS)
 src/compiler.o: src/compiler.c src/compiler.h src/gc.h src/ast.h
 	$(CC) $(CFLAGS) -c -o $@ $<
 src/gc.o: src/gc.c src/gc.h src/compiler-common.h
+	$(CC) $(CFLAGS) -c -o $@ $<
+src/std.o: src/std.c src/std.h src/gc.h src/compiler-common.h
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 src/filedialogs.o: external/tinyfiledialogs.c
