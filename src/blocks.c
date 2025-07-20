@@ -2748,6 +2748,7 @@ bool block_define_block(Exec* exec, Block* block, int argc, FuncArg* argv, FuncA
     LLVMBasicBlockRef entry = LLVMAppendBasicBlock(define->func, "entry");
     LLVMPositionBuilderAtEnd(exec->builder, entry);
 
+    exec->gc_value = LLVMBuildLoad2(exec->builder, LLVMInt64Type(), LLVMGetNamedGlobal(exec->module, "gc"), "get_gc");
     build_gc_root_begin(exec);
 
     *return_val = DATA_NOTHING;

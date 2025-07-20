@@ -111,7 +111,8 @@ struct Exec {
     DefineFunction* defined_functions;
 
     Gc gc;
-    
+    LLVMValueRef gc_value;
+
     CompilerState current_state;
 
     char current_error[MAX_ERROR_LEN];
@@ -132,7 +133,7 @@ struct Exec {
 #define CONST_BOOLEAN(val) LLVMConstInt(LLVMInt1Type(), val, false)
 #define CONST_DOUBLE(val) LLVMConstReal(LLVMDoubleType(), val)
 #define CONST_STRING_LITERAL(val) LLVMBuildGlobalStringPtr(exec->builder, val, "")
-#define CONST_GC LLVMConstInt(LLVMInt64Type(), (unsigned long long)&exec->gc, false)
+#define CONST_GC exec->gc_value
 #define CONST_EXEC LLVMConstInt(LLVMInt64Type(), (unsigned long long)exec, false)
 
 #define _DATA(t, val) (FuncArg) { \

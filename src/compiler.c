@@ -62,13 +62,13 @@ void exec_thread_exit(void* thread_exec) {
     case STATE_COMPILE:
         LLVMDisposeModule(exec->module);
         LLVMDisposeBuilder(exec->builder);
-        gc_free(&exec->gc);
         vector_free(exec->gc_dirty_funcs);
         vector_free(exec->compile_func_list);
         vector_free(exec->global_variables);
         free_defined_functions(exec);
         break;
     case STATE_PRE_EXEC:
+        LLVMDisposeModule(exec->module);
         vector_free(exec->compile_func_list);
         break;
     case STATE_EXEC:
@@ -157,6 +157,7 @@ void exec_set_error(Exec* exec, Block* block, const char* fmt, ...) {
     va_start(va, fmt);
     vsnprintf(exec->current_error, MAX_ERROR_LEN, fmt, va);
     va_end(va);
+    TraceLog(LOG_ERROR, "[EXEC] %s\n", exec->current_error);
 }
 
 static bool control_stack_push(Exec* exec, Block* block) {
@@ -1132,6 +1133,8 @@ static LLVMValueRef register_globals(Exec* exec) {
     LLVMTypeRef gc_add_str_root_func_params[] = { LLVMInt64Type(), LLVMPointerType(LLVMInt8Type(), 0) };
     add_function(exec, "gc_add_str_root", LLVMVoidType(), gc_add_str_root_func_params, ARRLEN(gc_add_str_root_func_params), gc_add_str_root, false, false);
 
+    LLVMAddGlobal(exec->module, LLVMInt64Type(), "gc");
+
     LLVMTypeRef main_func_type = LLVMFunctionType(LLVMVoidType(), NULL, 0, false);
     LLVMValueRef main_func = LLVMAddFunction(exec->module, MAIN_NAME, main_func_type);
 
@@ -1152,7 +1155,6 @@ static bool compile_program(Exec* exec) {
     exec->control_data_stack_len = 0;
     exec->variable_stack_len = 0;
     exec->variable_stack_frames_len = 0;
-    exec->gc = gc_new(MEMORY_LIMIT);
     exec->gc_dirty = false;
     exec->gc_dirty_funcs = vector_create();
     exec->defined_functions = vector_create();
@@ -1165,6 +1167,8 @@ static bool compile_program(Exec* exec) {
 
     exec->builder = LLVMCreateBuilder();
     LLVMPositionBuilderAtEnd(exec->builder, entry);
+
+    exec->gc_value = LLVMBuildLoad2(exec->builder, LLVMInt64Type(), LLVMGetNamedGlobal(exec->module, "gc"), "get_gc");
 
     build_gc_root_begin(exec);
 
@@ -1185,12 +1189,14 @@ static bool compile_program(Exec* exec) {
     LLVMBasicBlockRef last_block = LLVMGetLastBasicBlock(main_func);
     LLVMPositionBuilderAtEnd(exec->builder, last_block);
 
+    exec->gc_value = LLVMBuildLoad2(exec->builder, LLVMInt64Type(), LLVMGetNamedGlobal(exec->module, "gc"), "get_gc");
     build_gc_root_end(exec);
     LLVMBuildRetVoid(exec->builder);
 
     for (size_t i = 0; i < vector_size(exec->defined_functions); i++) {
         last_block = LLVMGetLastBasicBlock(exec->defined_functions[i].func);
         LLVMPositionBuilderAtEnd(exec->builder, last_block);
+        exec->gc_value = LLVMBuildLoad2(exec->builder, LLVMInt64Type(), LLVMGetNamedGlobal(exec->module, "gc"), "get_gc");
         build_gc_root_end(exec);
         LLVMValueRef val = build_call_count(exec, "any_from_value", 2, CONST_GC, CONST_INTEGER(FUNC_ARG_NOTHING));
         LLVMBuildRet(exec->builder, val);
@@ -1217,23 +1223,14 @@ static bool run_program(Exec* exec) {
 
     if (LLVMInitializeNativeTarget()) {
         exec_set_error(exec, NULL, "[LLVM] Native target initialization failed");
-        LLVMDisposeModule(exec->module);
-        gc_free(&exec->gc);
-        vector_free(exec->compile_func_list);
         return false;
     }
     if (LLVMInitializeNativeAsmParser()) {
         exec_set_error(exec, NULL, "[LLVM] Native asm parser initialization failed");
-        LLVMDisposeModule(exec->module);
-        gc_free(&exec->gc);
-        vector_free(exec->compile_func_list);
         return false;
     }
     if (LLVMInitializeNativeAsmPrinter()) {
         exec_set_error(exec, NULL, "[LLVM] Native asm printer initialization failed");
-        LLVMDisposeModule(exec->module);
-        gc_free(&exec->gc);
-        vector_free(exec->compile_func_list);
         return false;
     }
     LLVMLinkInMCJIT();
@@ -1242,9 +1239,6 @@ static bool run_program(Exec* exec) {
     if (LLVMCreateExecutionEngineForModule(&exec->engine, exec->module, &error)) {
         exec_set_error(exec, NULL, "[LLVM] Failed to create execution engine: %s", error);
         LLVMDisposeMessage(error);
-        LLVMDisposeModule(exec->module);
-        gc_free(&exec->gc);
-        vector_free(exec->compile_func_list);
         return false;
     }
 
@@ -1254,8 +1248,11 @@ static bool run_program(Exec* exec) {
 
     vector_free(exec->compile_func_list);
 
-    exec->current_state = STATE_EXEC;
+    exec->gc = gc_new(MEMORY_LIMIT);
+    Gc* gc_ref = &exec->gc;
+    LLVMAddGlobalMapping(exec->engine, LLVMGetNamedGlobal(exec->module, "gc"), &gc_ref);
 
+    exec->current_state = STATE_EXEC;
     LLVMGenericValueRef val = LLVMRunFunction(exec->engine, LLVMGetNamedFunction(exec->module, "llvm_main"), 0, NULL);
     LLVMDisposeGenericValue(val);
 
