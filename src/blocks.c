@@ -1094,28 +1094,6 @@ const char* type_to_str(FuncArgType type) {
     }
 }
 
-LLVMValueRef arg_get_default(Exec* exec, Block* block, FuncArg arg) {
-    switch (arg.type) {
-    case FUNC_ARG_ANY:
-    case FUNC_ARG_STRING_LITERAL:
-    case FUNC_ARG_LIST:
-    case FUNC_ARG_STRING_REF:
-        return LLVMConstNull(LLVMPointerType(LLVMInt8Type(), 0));
-    case FUNC_ARG_NOTHING:
-        exec_set_error(exec, block, "Type %s does not have default value", type_to_str(arg.type));
-        return NULL;
-    case FUNC_ARG_INT:
-        return CONST_INTEGER(0);
-    case FUNC_ARG_DOUBLE:
-        return CONST_DOUBLE(0.0);
-    case FUNC_ARG_BOOL:
-        return CONST_BOOLEAN(false);
-    default:
-        assert(false && "Unhandled arg_get_default");
-    }
-    
-}
-
 LLVMValueRef arg_to_value(Exec* exec, FuncArg arg) {
     switch (arg.type) {
     case FUNC_ARG_STRING_LITERAL:
@@ -2370,11 +2348,8 @@ bool block_declare_var(Exec* exec, Block* block, int argc, FuncArg* argv, FuncAr
     };
 
     if (exec->control_stack_len == 0 && func_current == func_main) {
-        LLVMValueRef default_val = arg_get_default(exec, block, argv[1]);
-        if (!default_val) return false;
-
         var.value.data.value = LLVMAddGlobal(exec->module, data_type, argv[0].data.str);
-        LLVMSetInitializer(var.value.data.value, default_val);
+        LLVMSetInitializer(var.value.data.value, LLVMConstNull(LLVMTypeOf(argv[1].data.value)));
         global_variable_add(exec, var);
     } else {
         var.value.data.value = LLVMBuildAlloca(exec->builder, data_type, argv[0].data.str);
