@@ -36,12 +36,6 @@
 #define MIN(x, y) ((x) < (y) ? (x) : (y))
 #define CLAMP(x, min, max) (MIN(MAX(min, x), max))
 
-typedef struct {
-    unsigned int size;
-    unsigned int capacity;
-    char str[];
-} StringHeader;
-
 // NOTE: Shamelessly stolen from raylib codebase ;)
 // Get next codepoint in a UTF-8 encoded text, scanning until '\0' is found
 // When an invalid UTF-8 byte is encountered we exit as soon as possible and a '?'(0x3f) codepoint is returned

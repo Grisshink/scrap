@@ -25,6 +25,12 @@
 
 typedef struct Exec Exec;
 
+typedef struct {
+    unsigned int size;
+    unsigned int capacity;
+    char str[];
+} StringHeader;
+
 typedef enum {
     CONTROL_BEGIN,
     CONTROL_END,
