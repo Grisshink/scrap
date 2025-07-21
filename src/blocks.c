@@ -1299,7 +1299,7 @@ bool block_return(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* re
 
     LLVMPositionBuilderAtEnd(exec->builder, return_block);
 
-    build_gc_root_end(exec);
+    if (!build_gc_root_end(exec, block)) return false;
     
     LLVMValueRef custom_return = arg_to_any(exec, argv[0]);
     if (!custom_return) return false;
@@ -2306,6 +2306,12 @@ bool block_get_var(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* r
 bool block_declare_var(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val) {
     (void) block;
     MIN_ARG_COUNT(2);
+
+    if (block->parent) {
+        exec_set_error(exec, block, "Variable declarations are not allowed inside an expression");
+        return false;
+    }
+    
     if (argv[0].type != FUNC_ARG_STRING_LITERAL) {
         exec_set_error(exec, block, "Received non constant string argument");
         return false;
@@ -2397,10 +2403,8 @@ bool block_while(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* ret
 
         LLVMBuildCondBr(exec->builder, condition, while_body_branch, while_end_branch);
 
-        LLVMPositionBuilderBefore(exec->builder, LLVMGetFirstInstruction(control_block));
-        build_gc_root_begin(exec);
-
         LLVMPositionBuilderAtEnd(exec->builder, while_body_branch);
+        if (!build_gc_root_begin(exec, block)) return false;
 
         control_data_stack_push_data(control_block, LLVMBasicBlockRef);
         control_data_stack_push_data(while_end_branch, LLVMBasicBlockRef);
@@ -2409,11 +2413,10 @@ bool block_while(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* ret
         control_data_stack_pop_data(while_end_branch, LLVMBasicBlockRef);
         control_data_stack_pop_data(control_block, LLVMBasicBlockRef);
 
-        build_gc_root_end(exec);
+        if (!build_gc_root_end(exec, block)) return false;
         LLVMBuildBr(exec->builder, control_block);
 
         LLVMPositionBuilderAtEnd(exec->builder, while_end_branch);
-        build_gc_root_end(exec);
 
         *return_val = DATA_BOOLEAN(CONST_BOOLEAN(1));
     }
@@ -2457,7 +2460,7 @@ bool block_repeat(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* re
         LLVMAddIncoming(phi_node, vals, blocks, ARRLEN(blocks));
 
         LLVMPositionBuilderAtEnd(exec->builder, repeat_body_branch);
-        build_gc_root_begin(exec);
+        if (!build_gc_root_begin(exec, block)) return false;
 
         control_data_stack_push_data(phi_node, LLVMValueRef);
         control_data_stack_push_data(vals[0], LLVMValueRef);
@@ -2474,7 +2477,7 @@ bool block_repeat(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* re
         control_data_stack_pop_data(start_index, LLVMValueRef);
         control_data_stack_pop_data(phi_node, LLVMValueRef);
 
-        build_gc_root_end(exec);
+        if (!build_gc_root_end(exec, block)) return false;
         LLVMBuildBr(exec->builder, loop);
 
         LLVMValueRef vals[] = { index };
@@ -2513,14 +2516,14 @@ bool block_else(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* retu
         LLVMBuildCondBr(exec->builder, value, end_branch, else_branch);
 
         LLVMPositionBuilderAtEnd(exec->builder, else_branch);
-        build_gc_root_begin(exec);
+        if (!build_gc_root_begin(exec, block)) return false;
 
         control_data_stack_push_data(end_branch, LLVMBasicBlockRef);
     } else {
         LLVMBasicBlockRef end_branch;
         control_data_stack_pop_data(end_branch, LLVMBasicBlockRef);
 
-        build_gc_root_end(exec);
+        if (!build_gc_root_end(exec, block)) return false;
         LLVMBuildBr(exec->builder, end_branch);
         LLVMPositionBuilderAtEnd(exec->builder, end_branch);
         *return_val = DATA_BOOLEAN(CONST_BOOLEAN(1));
@@ -2566,7 +2569,7 @@ bool block_else_if(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* r
         LLVMBuildBr(exec->builder, end_branch);
 
         LLVMPositionBuilderAtEnd(exec->builder, else_if_branch);
-        build_gc_root_begin(exec);
+        if (!build_gc_root_begin(exec, block)) return false;
 
         control_data_stack_push_data(else_if_fail_branch, LLVMBasicBlockRef);
         control_data_stack_push_data(end_branch, LLVMBasicBlockRef);
@@ -2577,7 +2580,7 @@ bool block_else_if(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* r
         control_data_stack_pop_data(fail_branch, LLVMBasicBlockRef);
         control_data_stack_pop_data(top_branch, LLVMBasicBlockRef);
 
-        build_gc_root_end(exec);
+        if (!build_gc_root_end(exec, block)) return false;
         LLVMBuildBr(exec->builder, end_branch);
 
         LLVMPositionBuilderAtEnd(exec->builder, end_branch);
@@ -2621,7 +2624,7 @@ bool block_if(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return
         LLVMBuildBr(exec->builder, end_branch);
 
         LLVMPositionBuilderAtEnd(exec->builder, then_branch);
-        build_gc_root_begin(exec);
+        if (!build_gc_root_begin(exec, block)) return false;
 
         control_data_stack_push_data(fail_branch, LLVMBasicBlockRef);
         control_data_stack_push_data(end_branch, LLVMBasicBlockRef);
@@ -2631,7 +2634,7 @@ bool block_if(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return
         control_data_stack_pop_data(end_branch, LLVMBasicBlockRef);
         control_data_stack_pop_data(fail_branch, LLVMBasicBlockRef);
 
-        build_gc_root_end(exec);
+        if (!build_gc_root_end(exec, block)) return false;
         LLVMBuildBr(exec->builder, end_branch);
 
         LLVMPositionBuilderAtEnd(exec->builder, end_branch);
@@ -2663,7 +2666,7 @@ bool block_loop(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* retu
 
         LLVMBuildBr(exec->builder, loop);
         LLVMPositionBuilderAtEnd(exec->builder, loop);
-        build_gc_root_begin(exec);
+        if (!build_gc_root_begin(exec, block)) return false;
 
         control_data_stack_push_data(loop, LLVMBasicBlockRef);
         control_data_stack_push_data(loop_end, LLVMBasicBlockRef);
@@ -2673,7 +2676,7 @@ bool block_loop(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* retu
         control_data_stack_pop_data(loop_end, LLVMBasicBlockRef);
         control_data_stack_pop_data(loop, LLVMBasicBlockRef);
 
-        build_gc_root_end(exec);
+        if (!build_gc_root_end(exec, block)) return false;
         LLVMBuildBr(exec->builder, loop);
         LLVMPositionBuilderAtEnd(exec->builder, loop_end);
         *return_val = DATA_BOOLEAN(CONST_BOOLEAN(0));
@@ -2691,9 +2694,9 @@ bool block_do_nothing(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg
     }
 
     if (argv[0].data.control.type == CONTROL_BEGIN) {
-        build_gc_root_begin(exec);
+        if (!build_gc_root_begin(exec, block)) return false;
     } else {
-        build_gc_root_end(exec);
+        if (!build_gc_root_end(exec, block)) return false;
     }
 
     *return_val = DATA_NOTHING;
@@ -2724,7 +2727,7 @@ bool block_define_block(Exec* exec, Block* block, int argc, FuncArg* argv, FuncA
     LLVMPositionBuilderAtEnd(exec->builder, entry);
 
     exec->gc_value = LLVMBuildLoad2(exec->builder, LLVMInt64Type(), LLVMGetNamedGlobal(exec->module, "gc"), "get_gc");
-    build_gc_root_begin(exec);
+    if (!build_gc_root_begin(exec, NULL)) return false;
 
     *return_val = DATA_NOTHING;
     return true;

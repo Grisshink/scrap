@@ -83,6 +83,11 @@ typedef enum {
     STATE_EXEC,
 } CompilerState;
 
+typedef struct {
+    LLVMValueRef root_begin;
+    bool required;
+} GcBlock;
+
 struct Exec {
     BlockChain* code;
     LLVMModuleRef module;
@@ -91,6 +96,9 @@ struct Exec {
 
     Block* control_stack[VM_CONTROL_STACK_SIZE];
     size_t control_stack_len;
+
+    GcBlock gc_block_stack[VM_CONTROL_STACK_SIZE];
+    size_t gc_block_stack_len;
 
     unsigned char control_data_stack[VM_CONTROL_DATA_STACK_SIZE];
     size_t control_data_stack_len;
@@ -165,8 +173,8 @@ bool variable_stack_push(Exec* exec, Block* block, Variable variable);
 Variable* variable_get(Exec* exec, const char* var_name);
 void global_variable_add(Exec* exec, Variable variable);
 
-LLVMValueRef build_gc_root_begin(Exec* exec);
-LLVMValueRef build_gc_root_end(Exec* exec);
+LLVMValueRef build_gc_root_begin(Exec* exec, Block* block);
+LLVMValueRef build_gc_root_end(Exec* exec, Block* block);
 LLVMValueRef build_call(Exec* exec, const char* func_name, ...);
 LLVMValueRef build_call_count(Exec* exec, const char* func_name, size_t func_param_count, ...);
 

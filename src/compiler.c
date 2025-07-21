@@ -417,11 +417,34 @@ DefineFunction* define_function(Exec* exec, Blockdef* blockdef) {
     return define;
 }
 
-LLVMValueRef build_gc_root_begin(Exec* exec) {
-    return build_call(exec, "gc_root_begin", CONST_GC);
+LLVMValueRef build_gc_root_begin(Exec* exec, Block* block) {
+    if (exec->gc_block_stack_len >= VM_CONTROL_STACK_SIZE) {
+        exec_set_error(exec, block, "Gc stack overflow");
+        return NULL;
+    }
+
+    LLVMValueRef root_begin = build_call(exec, "gc_root_begin", CONST_GC);
+    GcBlock gc_block = (GcBlock) {
+        .root_begin = root_begin,
+        .required = false,
+    };
+    exec->gc_block_stack[exec->gc_block_stack_len++] = gc_block;
+
+    return root_begin;
 }
 
-LLVMValueRef build_gc_root_end(Exec* exec) {
+LLVMValueRef build_gc_root_end(Exec* exec, Block* block) {
+    if (exec->gc_block_stack_len == 0) {
+        exec_set_error(exec, block, "Gc stack underflow");
+        return NULL;
+    }
+
+    GcBlock gc_block = exec->gc_block_stack[--exec->gc_block_stack_len];
+    if (!gc_block.required) {
+        LLVMInstructionEraseFromParent(gc_block.root_begin);
+        return (LLVMValueRef)-1;
+    }
+
     return build_call(exec, "gc_root_end", CONST_GC);
 }
 
@@ -443,6 +466,9 @@ static LLVMValueRef build_call_va(Exec* exec, const char* func_name, LLVMValueRe
     for (size_t i = 0; i < vector_size(exec->gc_dirty_funcs); i++) {
         if (func != exec->gc_dirty_funcs[i]) continue;
         exec->gc_dirty = true;
+        if (exec->gc_block_stack_len > 0) {
+            exec->gc_block_stack[exec->gc_block_stack_len - 1].required = true;
+        }
     }
 
     // Should be enough for all functions
@@ -702,6 +728,7 @@ static void free_defined_functions(Exec* exec) {
 static bool compile_program(Exec* exec) {
     exec->compile_func_list = vector_create();
     exec->global_variables = vector_create();
+    exec->gc_block_stack_len = 0;
     exec->control_stack_len = 0;
     exec->control_data_stack_len = 0;
     exec->variable_stack_len = 0;
@@ -721,7 +748,7 @@ static bool compile_program(Exec* exec) {
 
     exec->gc_value = LLVMBuildLoad2(exec->builder, LLVMInt64Type(), LLVMGetNamedGlobal(exec->module, "gc"), "get_gc");
 
-    build_gc_root_begin(exec);
+    if (!build_gc_root_begin(exec, NULL)) return false;
 
     for (size_t i = 0; i < vector_size(exec->code); i++) {
         if (strcmp(exec->code[i].blocks[0].blockdef->id, "on_start")) continue;
@@ -741,14 +768,14 @@ static bool compile_program(Exec* exec) {
     LLVMPositionBuilderAtEnd(exec->builder, last_block);
 
     exec->gc_value = LLVMBuildLoad2(exec->builder, LLVMInt64Type(), LLVMGetNamedGlobal(exec->module, "gc"), "get_gc");
-    build_gc_root_end(exec);
+    if (!build_gc_root_end(exec, NULL)) return false;
     LLVMBuildRetVoid(exec->builder);
 
     for (size_t i = 0; i < vector_size(exec->defined_functions); i++) {
         last_block = LLVMGetLastBasicBlock(exec->defined_functions[i].func);
         LLVMPositionBuilderAtEnd(exec->builder, last_block);
         exec->gc_value = LLVMBuildLoad2(exec->builder, LLVMInt64Type(), LLVMGetNamedGlobal(exec->module, "gc"), "get_gc");
-        build_gc_root_end(exec);
+        if (!build_gc_root_end(exec, NULL)) return false;
         LLVMValueRef val = build_call_count(exec, "std_any_from_value", 2, CONST_GC, CONST_INTEGER(FUNC_ARG_NOTHING));
         LLVMBuildRet(exec->builder, val);
     }
