@@ -242,7 +242,9 @@ static bool evaluate_block(Exec* exec, Block* block, FuncArg* return_val, bool e
     FuncArg* args = vector_create();
     FuncArg* arg;
 
-    if (block->blockdef->type == BLOCKTYPE_CONTROL || block->blockdef->type == BLOCKTYPE_CONTROLEND) {
+    bool control_or_control_end = block->blockdef->type == BLOCKTYPE_CONTROL || block->blockdef->type == BLOCKTYPE_CONTROLEND;
+
+    if (control_or_control_end) {
         LLVMBasicBlockRef control_block = NULL;
         if (!end_block) {
             LLVMBasicBlockRef current = LLVMGetInsertBlock(exec->builder);
@@ -268,7 +270,7 @@ static bool evaluate_block(Exec* exec, Block* block, FuncArg* return_val, bool e
 
     if (block->blockdef->type == BLOCKTYPE_CONTROLEND && !end_block) vector_add(&args, input_val);
 
-    if ((block->blockdef->type != BLOCKTYPE_CONTROL && block->blockdef->type != BLOCKTYPE_CONTROLEND) || !end_block) {
+    if (!control_or_control_end || !end_block) {
         for (size_t i = 0; i < vector_size(block->arguments); i++) {
             FuncArg block_return;
             switch (block->arguments[i].type) {
@@ -293,12 +295,19 @@ static bool evaluate_block(Exec* exec, Block* block, FuncArg* return_val, bool e
                 break;
             }
         }
+        if (control_or_control_end) {
+            control_data_stack_push_data(exec->gc_dirty, bool);
+        }
     }
 
     if (!compile_block(exec, block, vector_size(args), args, return_val)) {
         vector_free(args);
         TraceLog(LOG_ERROR, "[LLVM] Got error while compiling block id: \"%s\" (at block %p)", block->blockdef->id, block);
         return false;
+    }
+
+    if (control_or_control_end && end_block) {
+        control_data_stack_pop_data(exec->gc_dirty, bool);
     }
 
     if (!block->parent && exec->gc_dirty) {
