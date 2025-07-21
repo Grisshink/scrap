@@ -15,21 +15,19 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-
 #include <stdarg.h>
 #include <string.h>
 #include <stdio.h>
 #include <time.h>
+#include <sys/ioctl.h>
 
 #include "std.h"
-// TODO: Remove this dependency by doing stdio
-#define RPRANDAPI static __attribute__ ((unused))
-#include "term.h"
 
 // Explicitly including rprand.h here as this translation unit will soon need 
 // to compile as standalone library, which means we should not depend on 
 // raylib in any way
 #define RPRAND_IMPLEMENTATION
+#define RPRANDAPI static __attribute__ ((unused))
 #include "../external/rprand.h"
 
 #define MAX(x, y) ((x) > (y) ? (x) : (y))
@@ -219,32 +217,32 @@ int std_int_pow(int base, int exp) {
 }
 
 List* std_list_new(Gc* gc) {
-    List* list = gc_malloc(gc, sizeof(List), FUNC_ARG_LIST);
+    List* list = gc_malloc(gc, sizeof(List), ANY_TYPE_LIST);
     list->size = 0;
     list->capacity = 0;
     list->values = NULL;
     return list;
 }
 
-static AnyValue std_get_any(FuncArgType data_type, va_list va) {
+static AnyValue std_get_any(AnyValueType data_type, va_list va) {
     AnyValueData data;
 
     switch (data_type) {
-    case FUNC_ARG_BOOL:
-    case FUNC_ARG_INT:
+    case ANY_TYPE_BOOL:
+    case ANY_TYPE_INT:
         data.int_val = va_arg(va, int);
         break;
-    case FUNC_ARG_DOUBLE:
+    case ANY_TYPE_DOUBLE:
         data.double_val = va_arg(va, double);
         break;
-    case FUNC_ARG_STRING_REF:
-    case FUNC_ARG_STRING_LITERAL:
+    case ANY_TYPE_STRING_REF:
+    case ANY_TYPE_STRING_LITERAL:
         data.str_val = va_arg(va, char*);
         break;
-    case FUNC_ARG_LIST:
+    case ANY_TYPE_LIST:
         data.list_val = va_arg(va, List*);
         break;
-    case FUNC_ARG_ANY:
+    case ANY_TYPE_ANY:
         return *va_arg(va, AnyValue*);
     default:
         break;
@@ -256,7 +254,7 @@ static AnyValue std_get_any(FuncArgType data_type, va_list va) {
     };
 }
 
-void std_list_add(Gc* gc, List* list, FuncArgType data_type, ...) {
+void std_list_add(Gc* gc, List* list, AnyValueType data_type, ...) {
     AnyValue any;
 
     va_list va;
@@ -279,7 +277,7 @@ void std_list_add(Gc* gc, List* list, FuncArgType data_type, ...) {
     list->values[list->size++] = any;
 }
 
-void std_list_set(List* list, int index, FuncArgType data_type, ...) {
+void std_list_set(List* list, int index, AnyValueType data_type, ...) {
     if (index >= list->size || index < 0) return;
 
     AnyValue any;
@@ -293,8 +291,8 @@ void std_list_set(List* list, int index, FuncArgType data_type, ...) {
 }
 
 AnyValue* std_list_get(Gc* gc, List* list, int index) {
-    AnyValue* out = gc_malloc(gc, sizeof(AnyValue), FUNC_ARG_ANY);
-    *out = (AnyValue) { .type = FUNC_ARG_NOTHING };
+    AnyValue* out = gc_malloc(gc, sizeof(AnyValue), ANY_TYPE_ANY);
+    *out = (AnyValue) { .type = ANY_TYPE_NOTHING };
 
     if (index >= list->size || index < 0) return out;
 
@@ -306,25 +304,25 @@ int std_list_length(List* list) {
     return list->size;
 }
 
-AnyValue* std_any_from_value(Gc* gc, FuncArgType data_type, ...) {
+AnyValue* std_any_from_value(Gc* gc, AnyValueType data_type, ...) {
     AnyValue any;
 
     va_list va;
     va_start(va, data_type);
-    if (data_type == FUNC_ARG_ANY) {
+    if (data_type == ANY_TYPE_ANY) {
         return va_arg(va, AnyValue*);
     } else {
         any = std_get_any(data_type, va);
     }
     va_end(va);
 
-    AnyValue* value = gc_malloc(gc, sizeof(AnyValue), FUNC_ARG_ANY);
+    AnyValue* value = gc_malloc(gc, sizeof(AnyValue), ANY_TYPE_ANY);
     *value = any;
     return value;
 }
 
 char* std_string_from_literal(Gc* gc, const char* literal, unsigned int size) {
-    StringHeader* out_str = gc_malloc(gc, sizeof(StringHeader) + size + 1, FUNC_ARG_STRING_REF); // Don't forget null terminator. It is not included in size
+    StringHeader* out_str = gc_malloc(gc, sizeof(StringHeader) + size + 1, ANY_TYPE_STRING_REF); // Don't forget null terminator. It is not included in size
     memcpy(out_str->str, literal, size);
     out_str->size = size;
     out_str->capacity = size;
@@ -385,7 +383,7 @@ char* std_string_join(Gc* gc, char* left, char* right) {
     StringHeader* left_header = ((StringHeader*)left) - 1;
     StringHeader* right_header = ((StringHeader*)right) - 1;
     
-    StringHeader* out_str = gc_malloc(gc, sizeof(StringHeader) + left_header->size + right_header->size + 1, FUNC_ARG_STRING_REF);
+    StringHeader* out_str = gc_malloc(gc, sizeof(StringHeader) + left_header->size + right_header->size + 1, ANY_TYPE_STRING_REF);
     memcpy(out_str->str, left_header->str, left_header->size);
     memcpy(out_str->str + left_header->size, right_header->str, right_header->size);
     out_str->size = left_header->size + right_header->size;
@@ -443,17 +441,17 @@ char* std_string_from_any(Gc* gc, AnyValue* value) {
     if (!value) return std_string_from_literal(gc, "", 0);
 
     switch (value->type) {
-    case FUNC_ARG_INT:
+    case ANY_TYPE_INT:
         return std_string_from_int(gc, value->data.int_val);
-    case FUNC_ARG_DOUBLE:
+    case ANY_TYPE_DOUBLE:
         return std_string_from_double(gc, value->data.double_val);
-    case FUNC_ARG_STRING_LITERAL:
+    case ANY_TYPE_STRING_LITERAL:
         return std_string_from_literal(gc, value->data.str_val, strlen(value->data.str_val));
-    case FUNC_ARG_STRING_REF:
+    case ANY_TYPE_STRING_REF:
         return value->data.str_val;
-    case FUNC_ARG_BOOL:
+    case ANY_TYPE_BOOL:
         return std_string_from_bool(gc, value->data.int_val);
-    case FUNC_ARG_LIST: ;
+    case ANY_TYPE_LIST: ;
         char str[32];
         int size = snprintf(str, 32, "*LIST (%zu)*", value->data.list_val->size);
         return std_string_from_literal(gc, str, size);
@@ -466,13 +464,13 @@ int std_int_from_any(AnyValue* value) {
     if (!value) return 0;
 
     switch (value->type) {
-    case FUNC_ARG_BOOL:
-    case FUNC_ARG_INT:
+    case ANY_TYPE_BOOL:
+    case ANY_TYPE_INT:
         return value->data.int_val;
-    case FUNC_ARG_DOUBLE:
+    case ANY_TYPE_DOUBLE:
         return (int)value->data.double_val;
-    case FUNC_ARG_STRING_REF:
-    case FUNC_ARG_STRING_LITERAL:
+    case ANY_TYPE_STRING_REF:
+    case ANY_TYPE_STRING_LITERAL:
         return atoi(value->data.str_val);
     default:
         return 0;
@@ -483,13 +481,13 @@ int std_double_from_any(AnyValue* value) {
     if (!value) return 0;
 
     switch (value->type) {
-    case FUNC_ARG_BOOL:
-    case FUNC_ARG_INT:
+    case ANY_TYPE_BOOL:
+    case ANY_TYPE_INT:
         return (double)value->data.int_val;
-    case FUNC_ARG_DOUBLE:
+    case ANY_TYPE_DOUBLE:
         return value->data.double_val;
-    case FUNC_ARG_STRING_REF:
-    case FUNC_ARG_STRING_LITERAL:
+    case ANY_TYPE_STRING_REF:
+    case ANY_TYPE_STRING_LITERAL:
         return atof(value->data.str_val);
     default:
         return 0;
@@ -500,13 +498,13 @@ int std_bool_from_any(AnyValue* value) {
     if (!value) return 0;
 
     switch (value->type) {
-    case FUNC_ARG_BOOL:
-    case FUNC_ARG_INT:
+    case ANY_TYPE_BOOL:
+    case ANY_TYPE_INT:
         return value->data.int_val != 0;
-    case FUNC_ARG_DOUBLE:
+    case ANY_TYPE_DOUBLE:
         return value->data.double_val != 0.0;
-    case FUNC_ARG_STRING_REF:
-    case FUNC_ARG_STRING_LITERAL:
+    case ANY_TYPE_STRING_REF:
+    case ANY_TYPE_STRING_LITERAL:
         return *value->data.str_val != 0;
     default:
         return 0;
@@ -517,7 +515,7 @@ List* std_list_from_any(Gc* gc, AnyValue* value) {
     if (!value) return 0;
 
     switch (value->type) {
-    case FUNC_ARG_LIST:
+    case ANY_TYPE_LIST:
         return value->data.list_val;
     default:
         return std_list_new(gc);
@@ -528,18 +526,18 @@ bool std_any_is_eq(AnyValue* left, AnyValue* right) {
     if (left->type != right->type) return false;
 
     switch (left->type) {
-    case FUNC_ARG_NOTHING:
+    case ANY_TYPE_NOTHING:
         return true;
-    case FUNC_ARG_STRING_LITERAL:
+    case ANY_TYPE_STRING_LITERAL:
         return !strcmp(left->data.str_val, right->data.str_val);
-    case FUNC_ARG_STRING_REF:
+    case ANY_TYPE_STRING_REF:
         return std_string_is_eq(left->data.str_val, right->data.str_val);
-    case FUNC_ARG_INT:
-    case FUNC_ARG_BOOL:
+    case ANY_TYPE_INT:
+    case ANY_TYPE_BOOL:
         return left->data.int_val == right->data.int_val;
-    case FUNC_ARG_DOUBLE:
+    case ANY_TYPE_DOUBLE:
         return left->data.double_val == right->data.double_val;
-    case FUNC_ARG_LIST:
+    case ANY_TYPE_LIST:
         return left->data.list_val == right->data.list_val;
     default:
         return false;
@@ -563,6 +561,115 @@ int std_get_random(int min, int max) {
     } else {
         return rprand_get_value(min, max);
     }
+}
+
+#ifdef STANDALONE_STD
+
+static int cursor_x = 0;
+static int cursor_y = 0;
+
+void test_cancel(void) {}
+
+int std_term_print_str(const char* str) {
+    int len = printf("%s", str);
+    fflush(stdout);
+    return len;
+}
+
+int std_term_print_int(int value) {
+    int len = printf("%d", value);
+    fflush(stdout);
+    return len;
+}
+
+int std_term_print_double(double value) {
+    int len = printf("%f", value);
+    fflush(stdout);
+    return len;
+}
+
+int std_term_print_bool(bool value) {
+    int len = printf("%s", value ? "true" : "false");
+    fflush(stdout);
+    return len;
+}
+
+void std_term_set_fg_color(Color color) {
+    // ESC[38;2;⟨r⟩;⟨g⟩;⟨b⟩m Select RGB foreground color
+    printf("\033[38;2;%d;%d;%dm", color.r, color.g, color.b);
+    fflush(stdout);
+}
+
+void std_term_set_bg_color(Color color) {
+    // ESC[48;2;⟨r⟩;⟨g⟩;⟨b⟩m Select RGB background color
+    printf("\033[48;2;%d;%d;%dm", color.r, color.g, color.b);
+    fflush(stdout);
+}
+
+int std_term_cursor_max_y(void) {
+    struct winsize w;
+    if (ioctl(0, TIOCGWINSZ, &w)) return 0;
+    return w.ws_row;
+}
+
+int std_term_cursor_max_x(void) {
+    struct winsize w;
+    if (ioctl(0, TIOCGWINSZ, &w)) return 0;
+    return w.ws_col;
+}
+
+int std_term_cursor_x(void) {
+    return cursor_x;
+}
+
+int std_term_cursor_y(void) {
+    return cursor_y;
+}
+
+void std_term_clear(void) {
+    printf("\033[2J");
+    fflush(stdout);
+}
+
+void std_term_set_cursor(int x, int y) {
+    cursor_x = x;
+    cursor_y = y;
+    printf("\033[%d;%dH", y + 1, x + 1);
+    fflush(stdout);
+}
+
+#else
+
+int std_term_print_str(const char* str) {
+    return term_print_str(str);
+}
+
+int std_term_print_int(int value) {
+    return term_print_int(value);
+}
+
+int std_term_print_double(double value) {
+    return term_print_double(value);
+}
+
+int std_term_print_bool(bool value) {
+    return term_print_bool(value);
+}
+
+void std_term_set_fg_color(Color color) {
+    return term_set_fg_color(color);
+}
+
+void std_term_set_bg_color(Color color) {
+    return term_set_bg_color(color);
+}
+
+void std_term_set_clear_color(Color color) {
+    return term_set_clear_color(color);
+}
+
+void std_term_clear(void) {
+    term_clear();
 }
 
 char* std_term_get_char(Gc* gc) {
@@ -646,21 +753,22 @@ int std_term_print_any(AnyValue* any) {
     if (!any) return 0;
 
     switch (any->type) {
-    case FUNC_ARG_STRING_REF:
-    case FUNC_ARG_STRING_LITERAL:
-        return term_print_str(any->data.str_val);
-    case FUNC_ARG_NOTHING:
+    case ANY_TYPE_STRING_REF:
+    case ANY_TYPE_STRING_LITERAL:
+        return std_term_print_str(any->data.str_val);
+    case ANY_TYPE_NOTHING:
         return 0;
-    case FUNC_ARG_INT:
-        return term_print_int(any->data.int_val);
-    case FUNC_ARG_BOOL:
-        return term_print_bool(any->data.int_val);
-    case FUNC_ARG_DOUBLE:
-        return term_print_double(any->data.double_val);
-    case FUNC_ARG_LIST:
+    case ANY_TYPE_INT:
+        return std_term_print_int(any->data.int_val);
+    case ANY_TYPE_BOOL:
+        return std_term_print_bool(any->data.int_val);
+    case ANY_TYPE_DOUBLE:
+        return std_term_print_double(any->data.double_val);
+    case ANY_TYPE_LIST:
         return std_term_print_list(any->data.list_val);
     default:
-        TraceLog(LOG_WARNING, "[EXEC] Got unknown type in term_print_any");
         return 0;
     }
 }
+
+#endif

@@ -533,16 +533,16 @@ static void add_function(Exec* exec, const char* name, LLVMTypeRef return_type, 
 
 static LLVMValueRef register_globals(Exec* exec) {
     LLVMTypeRef print_func_params[] = { LLVMPointerType(LLVMInt8Type(), 0) };
-    add_function(exec, "std_term_print_str", LLVMInt32Type(), print_func_params, ARRLEN(print_func_params), term_print_str, false, false);
+    add_function(exec, "std_term_print_str", LLVMInt32Type(), print_func_params, ARRLEN(print_func_params), std_term_print_str, false, false);
 
     LLVMTypeRef print_int_func_params[] = { LLVMInt32Type() };
-    add_function(exec, "std_term_print_int", LLVMInt32Type(), print_int_func_params, ARRLEN(print_int_func_params), term_print_int, false, false);
+    add_function(exec, "std_term_print_int", LLVMInt32Type(), print_int_func_params, ARRLEN(print_int_func_params), std_term_print_int, false, false);
 
     LLVMTypeRef print_double_func_params[] = { LLVMDoubleType() };
-    add_function(exec, "std_term_print_double", LLVMInt32Type(), print_double_func_params, ARRLEN(print_double_func_params), term_print_double, false, false);
+    add_function(exec, "std_term_print_double", LLVMInt32Type(), print_double_func_params, ARRLEN(print_double_func_params), std_term_print_double, false, false);
 
     LLVMTypeRef print_bool_func_params[] = { LLVMInt1Type() };
-    add_function(exec, "std_term_print_bool", LLVMInt32Type(), print_bool_func_params, ARRLEN(print_bool_func_params), term_print_bool, false, false);
+    add_function(exec, "std_term_print_bool", LLVMInt32Type(), print_bool_func_params, ARRLEN(print_bool_func_params), std_term_print_bool, false, false);
 
     LLVMTypeRef print_list_func_params[] = { LLVMPointerType(LLVMInt8Type(), 0) };
     add_function(exec, "std_term_print_list", LLVMInt32Type(), print_list_func_params, ARRLEN(print_list_func_params), std_term_print_list, false, false);
@@ -656,23 +656,23 @@ static LLVMValueRef register_globals(Exec* exec) {
     add_function(exec, "std_get_input", LLVMPointerType(LLVMInt8Type(), 0), get_input_func_params, ARRLEN(get_input_func_params), std_term_get_input, true, false);
 
     LLVMTypeRef set_clear_color_func_params[] = { LLVMInt32Type() };
-    add_function(exec, "std_set_clear_color", LLVMVoidType(), set_clear_color_func_params, ARRLEN(set_clear_color_func_params), term_set_clear_color, false, false);
+    add_function(exec, "std_term_set_clear_color", LLVMVoidType(), set_clear_color_func_params, ARRLEN(set_clear_color_func_params), std_term_set_clear_color, false, false);
 
     LLVMTypeRef set_fg_color_func_params[] = { LLVMInt32Type() };
-    add_function(exec, "std_set_fg_color", LLVMVoidType(), set_fg_color_func_params, ARRLEN(set_fg_color_func_params), term_set_fg_color, false, false);
+    add_function(exec, "std_term_set_fg_color", LLVMVoidType(), set_fg_color_func_params, ARRLEN(set_fg_color_func_params), std_term_set_fg_color, false, false);
 
     LLVMTypeRef set_bg_color_func_params[] = { LLVMInt32Type() };
-    add_function(exec, "std_set_bg_color", LLVMVoidType(), set_bg_color_func_params, ARRLEN(set_bg_color_func_params), term_set_bg_color, false, false);
+    add_function(exec, "std_term_set_bg_color", LLVMVoidType(), set_bg_color_func_params, ARRLEN(set_bg_color_func_params), std_term_set_bg_color, false, false);
 
     LLVMTypeRef set_cursor_func_params[] = { LLVMInt32Type(), LLVMInt32Type() };
-    add_function(exec, "std_set_cursor", LLVMVoidType(), set_cursor_func_params, ARRLEN(set_cursor_func_params), std_term_set_cursor, false, false);
+    add_function(exec, "std_term_set_cursor", LLVMVoidType(), set_cursor_func_params, ARRLEN(set_cursor_func_params), std_term_set_cursor, false, false);
 
-    add_function(exec, "std_cursor_x", LLVMInt32Type(), NULL, 0, std_term_cursor_x, false, false);
-    add_function(exec, "std_cursor_y", LLVMInt32Type(), NULL, 0, std_term_cursor_y, false, false);
-    add_function(exec, "std_cursor_max_x", LLVMInt32Type(), NULL, 0, std_term_cursor_max_x, false, false);
-    add_function(exec, "std_cursor_max_y", LLVMInt32Type(), NULL, 0, std_term_cursor_max_y, false, false);
+    add_function(exec, "std_term_cursor_x", LLVMInt32Type(), NULL, 0, std_term_cursor_x, false, false);
+    add_function(exec, "std_term_cursor_y", LLVMInt32Type(), NULL, 0, std_term_cursor_y, false, false);
+    add_function(exec, "std_term_cursor_max_x", LLVMInt32Type(), NULL, 0, std_term_cursor_max_x, false, false);
+    add_function(exec, "std_term_cursor_max_y", LLVMInt32Type(), NULL, 0, std_term_cursor_max_y, false, false);
 
-    add_function(exec, "std_term_clear", LLVMVoidType(), NULL, 0, term_clear, false, false);
+    add_function(exec, "std_term_clear", LLVMVoidType(), NULL, 0, std_term_clear, false, false);
 
     LLVMTypeRef list_new_func_params[] = { LLVMInt64Type() };
     add_function(exec, "std_list_new", LLVMPointerType(LLVMInt8Type(), 0), list_new_func_params, ARRLEN(list_new_func_params), std_list_new, true, false);

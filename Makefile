@@ -39,10 +39,12 @@ else
 	CFLAGS += -g -O0 -DDEBUG
 endif
 
+STD_OBJFILES := $(addprefix src/,vec.o gc-stand.o std-stand.o scrap-runtime.o)
 OBJFILES := $(addprefix src/,filedialogs.o render.o save.o term.o blocks.o scrap.o vec.o util.o input.o scrap_gui.o window.o cfgpath.o platform.o ast.o)
 BUNDLE_FILES := data examples extras locale LICENSE README.md CHANGELOG.md
 SCRAP_HEADERS := src/scrap.h src/ast.h src/config.h src/scrap_gui.h
 EXE_NAME := scrap
+STD_NAME := libscrapstd.a
 
 ifeq ($(USE_COMPILER), FALSE)
 	OBJFILES += src/interpreter.o
@@ -75,11 +77,11 @@ WINDOWS_DIR := $(EXE_NAME)-v$(SCRAP_VERSION)-windows64
 
 .PHONY: all clean target translations
 
-all: target translations
+all: target std translations
 
 clean:
 	$(MAKE) -C raylib/src clean
-	rm -f src/*.o $(EXE_NAME) $(EXE_NAME).exe Scrap-x86_64.AppImage $(LINUX_DIR).tar.gz $(WINDOWS_DIR).zip $(MACOS_DIR).zip scrap.res
+	rm -f src/*.o $(EXE_NAME) $(EXE_NAME).exe Scrap-x86_64.AppImage $(LINUX_DIR).tar.gz $(WINDOWS_DIR).zip $(MACOS_DIR).zip scrap.res $(STD_NAME)
 	rm -rf locale
 
 translations:
@@ -134,6 +136,9 @@ $(EXE_NAME): $(OBJFILES)
 	$(MAKE) -C raylib/src CC=$(CC) CUSTOM_CFLAGS=-DSUPPORT_FILEFORMAT_SVG PLATFORM_OS=$(TARGET)
 	$(CC) -o $@ $^ raylib/src/libraylib.a $(LDFLAGS)
 
+std: $(STD_OBJFILES)
+	ar rcs $(STD_NAME) $^
+
 src/scrap.o: src/scrap.c $(SCRAP_HEADERS)
 	$(CC) $(CFLAGS) -c -o $@ $<
 src/window.o: src/window.c $(SCRAP_HEADERS) external/tinyfiledialogs.h
@@ -160,12 +165,19 @@ src/ast.o: src/ast.c src/ast.h
 	$(CC) $(CFLAGS) -c -o $@ $<
 src/interpreter.o: src/interpreter.c $(SCRAP_HEADERS)
 	$(CC) $(CFLAGS) -c -o $@ $<
-src/compiler.o: src/compiler.c src/compiler.h src/gc.h src/ast.h
+src/compiler.o: src/compiler.c src/compiler.h src/gc.h src/ast.h src/compiler-common.h
 	$(CC) $(CFLAGS) -c -o $@ $<
-src/gc.o: src/gc.c src/gc.h src/compiler-common.h $(SCRAP_HEADERS)
+src/gc.o: src/gc.c src/gc.h src/vec.h src/std-types.h src/std.h
 	$(CC) $(CFLAGS) -c -o $@ $<
-src/std.o: src/std.c src/std.h src/gc.h src/compiler-common.h
+src/std.o: src/std.c src/std.h src/gc.h src/std-types.h src/term.h
 	$(CC) $(CFLAGS) -c -o $@ $<
+
+src/gc-stand.o: src/gc.c src/gc.h src/vec.h src/std-types.h src/std.h
+	$(CC) $(CFLAGS) -DSTANDALONE_STD -c -o $@ $<
+src/std-stand.o: src/std.c src/std.h src/gc.h src/std-types.h
+	$(CC) $(CFLAGS) -DSTANDALONE_STD -c -o $@ $<
+src/scrap-runtime.o: src/scrap-runtime.c src/gc.h
+	$(CC) $(CFLAGS) -DSTANDALONE_STD -c -o $@ $<
 
 src/filedialogs.o: external/tinyfiledialogs.c
 	$(CC) $(CFLAGS) -c -o $@ $<

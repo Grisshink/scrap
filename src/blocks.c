@@ -1974,7 +1974,7 @@ bool block_term_set_clear(Exec* exec, Block* block, int argc, FuncArg* argv, Fun
     }
 
     if (is_set) {
-        build_call(exec, "std_set_clear_color", CONST_INTEGER(*(int*)&col));
+        build_call(exec, "std_term_set_clear_color", CONST_INTEGER(*(int*)&col));
         *return_val = DATA_NOTHING;
     }
     return is_set;
@@ -1993,8 +1993,8 @@ bool block_reset_color(Exec* exec, Block* block, int argc, FuncArg* argv, FuncAr
     (void) block;
     (void) argc;
     (void) argv;
-    build_call(exec, "std_set_fg_color", CONST_INTEGER(*(int*)&WHITE));
-    build_call(exec, "std_set_bg_color", CONST_INTEGER(*(int*)&BLACK));
+    build_call(exec, "std_term_set_fg_color", CONST_INTEGER(*(int*)&WHITE));
+    build_call(exec, "std_term_set_bg_color", CONST_INTEGER(*(int*)&BLACK));
     *return_val = DATA_NOTHING;
     return true;
 }
@@ -2034,7 +2034,7 @@ bool block_set_bg_color(Exec* exec, Block* block, int argc, FuncArg* argv, FuncA
     }
 
     if (is_set) {
-        build_call(exec, "std_set_bg_color", CONST_INTEGER(*(int*)&col));
+        build_call(exec, "std_term_set_bg_color", CONST_INTEGER(*(int*)&col));
         *return_val = DATA_NOTHING;
     }
     return is_set;
@@ -2075,7 +2075,7 @@ bool block_set_fg_color(Exec* exec, Block* block, int argc, FuncArg* argv, FuncA
     }
 
     if (is_set) {
-        build_call(exec, "std_set_fg_color", CONST_INTEGER(*(int*)&col));
+        build_call(exec, "std_term_set_fg_color", CONST_INTEGER(*(int*)&col));
         *return_val = DATA_NOTHING;
     }
     return is_set;
@@ -2089,7 +2089,7 @@ bool block_set_cursor(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg
     LLVMValueRef y = arg_to_int(exec, argv[1]);
     if (!y) return false;
 
-    build_call(exec, "std_set_cursor", x, y);
+    build_call(exec, "std_term_set_cursor", x, y);
     *return_val = DATA_NOTHING;
     return true;
 }
@@ -2098,7 +2098,7 @@ bool block_cursor_max_y(Exec* exec, Block* block, int argc, FuncArg* argv, FuncA
     (void) block;
     (void) argc;
     (void) argv;
-    *return_val = DATA_INTEGER(build_call(exec, "std_cursor_max_y"));
+    *return_val = DATA_INTEGER(build_call(exec, "std_term_cursor_max_y"));
     return true;
 }
 
@@ -2106,7 +2106,7 @@ bool block_cursor_max_x(Exec* exec, Block* block, int argc, FuncArg* argv, FuncA
     (void) block;
     (void) argc;
     (void) argv;
-    *return_val = DATA_INTEGER(build_call(exec, "std_cursor_max_x"));
+    *return_val = DATA_INTEGER(build_call(exec, "std_term_cursor_max_x"));
     return true;
 }
 
@@ -2114,7 +2114,7 @@ bool block_cursor_y(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* 
     (void) block;
     (void) argc;
     (void) argv;
-    *return_val = DATA_INTEGER(build_call(exec, "std_cursor_y"));
+    *return_val = DATA_INTEGER(build_call(exec, "std_term_cursor_y"));
     return true;
 }
 
@@ -2122,7 +2122,7 @@ bool block_cursor_x(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* 
     (void) block;
     (void) argc;
     (void) argv;
-    *return_val = DATA_INTEGER(build_call(exec, "std_cursor_x"));
+    *return_val = DATA_INTEGER(build_call(exec, "std_term_cursor_x"));
     return true;
 }
 

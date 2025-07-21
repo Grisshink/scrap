@@ -17,13 +17,44 @@
 
 #include <assert.h>
 #include <stdio.h>
-#include <pthread.h>
+#include <time.h>
+#include <stdarg.h>
 
 #include "gc.h"
-#include "scrap.h"
-#include "term.h"
+#include "std.h"
+
+#ifdef STANDALONE_STD
+#define EXIT exit(1)
+#define TRACE_LOG(loglevel, ...) fprintf(stderr, __VA_ARGS__)
+#else
+#include <pthread.h>
+#include "raylib.h"
+#define EXIT pthread_exit((void*)0)
+#define TRACE_LOG(loglevel, ...) TraceLog(loglevel, __VA_ARGS__)
+#endif
 
 static void gc_mark_refs(Gc* gc, GcChunkData* chunk);
+
+#define MAX_TEXT_BUFFER_LENGTH 512
+
+static const char *text_format(const char *text, ...) {
+    static char buffer[MAX_TEXT_BUFFER_LENGTH] = {0};
+    buffer[0] = 0;
+
+    va_list args;
+    va_start(args, text);
+    int requiredByteCount = vsnprintf(buffer, MAX_TEXT_BUFFER_LENGTH, text, args);
+    va_end(args);
+
+    // If requiredByteCount is larger than the MAX_TEXT_BUFFER_LENGTH, then overflow occured
+    if (requiredByteCount >= MAX_TEXT_BUFFER_LENGTH) {
+        // Inserting "..." at the end of the string to mark as truncated
+        char *truncBuffer = buffer + MAX_TEXT_BUFFER_LENGTH - 4; // Adding 4 bytes = "...\0"
+        sprintf(truncBuffer, "...");
+    }
+
+    return buffer;
+}
 
 Gc gc_new(size_t memory_max) {
     return (Gc) {
@@ -39,7 +70,7 @@ Gc gc_new(size_t memory_max) {
 
 void gc_free(Gc* gc) {
 #ifdef DEBUG
-    TraceLog(LOG_INFO, "[GC] gc_free: used %zu bytes, allocated %zu chunks", gc->memory_used, vector_size(gc->chunks));
+    TRACE_LOG(LOG_INFO, "[GC] gc_free: used %zu bytes, allocated %zu chunks", gc->memory_used, vector_size(gc->chunks));
 #endif
     for (size_t i = 0; i < vector_size(gc->chunks); i++) {
         free(gc->chunks[i].ptr);
@@ -56,13 +87,13 @@ void gc_free(Gc* gc) {
 static void gc_mark_any(Gc* gc, AnyValue* any) {
     GcChunkData* chunk_inner;
 
-    if (any->type == FUNC_ARG_LIST) {
+    if (any->type == ANY_TYPE_LIST) {
         chunk_inner = ((GcChunkData*)any->data.list_val) - 1;
         if (!chunk_inner->marked) {
             chunk_inner->marked = 1;
             gc_mark_refs(gc, chunk_inner);
         }
-    } else if (any->type == FUNC_ARG_STRING_REF) {
+    } else if (any->type == ANY_TYPE_STRING_REF) {
         StringHeader* str = ((StringHeader*)any->data.str_val) - 1;
         chunk_inner = ((GcChunkData*)str) - 1;
         chunk_inner->marked = 1;
@@ -71,7 +102,7 @@ static void gc_mark_any(Gc* gc, AnyValue* any) {
 
 static void gc_mark_refs(Gc* gc, GcChunkData* chunk) {
     switch (chunk->data_type) {
-    case FUNC_ARG_LIST: ;
+    case ANY_TYPE_LIST: ;
         List* list = (List*)chunk->data;
         if (!list->values) break;
 
@@ -82,7 +113,7 @@ static void gc_mark_refs(Gc* gc, GcChunkData* chunk) {
             gc_mark_any(gc, &list->values[i]);
         }
         break;
-    case FUNC_ARG_ANY: ;
+    case ANY_TYPE_ANY: ;
         gc_mark_any(gc, (AnyValue*)chunk->data);
         break;
     default:
@@ -92,7 +123,8 @@ static void gc_mark_refs(Gc* gc, GcChunkData* chunk) {
 
 void gc_collect(Gc* gc) {
 #ifdef DEBUG
-    Timer t = start_timer("gc_collect");
+    struct timespec t;
+    clock_gettime(CLOCK_MONOTONIC, &t);
 #endif
 
     // Mark roots
@@ -125,23 +157,26 @@ void gc_collect(Gc* gc) {
     gc->memory_used -= memory_freed;
 
 #ifdef DEBUG
-    double gc_time = end_timer(t);
-    TraceLog(LOG_INFO, "[GC] gc_collect: freed %zu bytes, deleted %zu chunks, time: %.2fus", memory_freed, chunks_deleted, gc_time);
+    struct timespec end_time;
+    clock_gettime(CLOCK_MONOTONIC, &end_time);
+
+    double gc_time = (end_time.tv_sec - t.tv_sec) * 1e+6 + (end_time.tv_nsec - t.tv_nsec) * 1e-3;
+    TRACE_LOG(LOG_INFO, "[GC] gc_collect: freed %zu bytes, deleted %zu chunks, time: %.2fus", memory_freed, chunks_deleted, gc_time);
 #endif
 }
 
-void* gc_malloc(Gc* gc, size_t size, FuncArgType data_type) {
+void* gc_malloc(Gc* gc, size_t size, AnyValueType data_type) {
     assert(vector_size(gc->roots_stack) > 0);
 
     if (size > gc->memory_max) {
-        term_print_str(TextFormat("*[GC] Memory limit exeeded! Tried to allocate %zu bytes past maximum memory limit in gc (%zu bytes)*", size, gc->memory_max));
-        pthread_exit((void*)0);
+        std_term_print_str(text_format("*[GC] Memory limit exeeded! Tried to allocate %zu bytes past maximum memory limit in gc (%zu bytes)*", size, gc->memory_max));
+        EXIT;
     }
 
     if (gc->memory_used + size > gc->memory_max) gc_collect(gc);
     if (gc->memory_used + size > gc->memory_max) {
-        term_print_str(TextFormat("*[GC] Memory limit exeeded! Tried to allocate %zu bytes in gc with %zu bytes free*", size, gc->memory_max - gc->memory_used));
-        pthread_exit((void*)0);
+        std_term_print_str(text_format("*[GC] Memory limit exeeded! Tried to allocate %zu bytes in gc with %zu bytes free*", size, gc->memory_max - gc->memory_used));
+        EXIT;
     }
 
     GcChunkData* chunk_data = malloc(size + sizeof(GcChunkData));
@@ -163,8 +198,8 @@ void* gc_malloc(Gc* gc, size_t size, FuncArgType data_type) {
 
 void gc_root_begin(Gc* gc) {
     if (vector_size(gc->roots_stack) > 1024) {
-        term_print_str("*[GC] Root stack overflow!*");
-        pthread_exit((void*)0);
+        std_term_print_str("*[GC] Root stack overflow!*");
+        EXIT;
     }
 
     GcRoot* root = vector_add_dst(&gc->roots_stack);
@@ -192,8 +227,8 @@ void gc_add_str_root(Gc* gc, char* str) {
 
 void gc_root_save(Gc* gc) {
     if (vector_size(gc->roots_bases) > 1024) {
-        term_print_str("*[GC] Root stack overflow!*");
-        pthread_exit((void*)0);
+        std_term_print_str("*[GC] Root stack overflow!*");
+        EXIT;
     }
 
     vector_add(&gc->roots_bases, vector_size(gc->roots_stack));
@@ -201,8 +236,8 @@ void gc_root_save(Gc* gc) {
 
 void gc_root_restore(Gc* gc) {
     if (vector_size(gc->roots_bases) == 0) {
-        term_print_str("*[GC] Root stack underflow!*");
-        pthread_exit((void*)0);
+        std_term_print_str("*[GC] Root stack underflow!*");
+        EXIT;
     }
 
     size_t* size = &vector_get_header(gc->roots_stack)->size;

@@ -18,21 +18,23 @@
 #ifndef SCRAP_STD_H
 #define SCRAP_STD_H
 
-#include "compiler-common.h"
+#include "std-types.h"
 #include "gc.h"
+
+#include <stdbool.h>
 
 // Math
 int std_int_pow(int base, int exp);
 
 // List operations
 List* std_list_new(Gc* gc);
-void std_list_add(Gc* gc, List* list, FuncArgType data_type, ...);
-void std_list_set(List* list, int index, FuncArgType data_type, ...);
+void std_list_add(Gc* gc, List* list, AnyValueType data_type, ...);
+void std_list_set(List* list, int index, AnyValueType data_type, ...);
 AnyValue* std_list_get(Gc* gc, List* list, int index);
 int std_list_length(List* list);
 
 // Any operations
-AnyValue* std_any_from_value(Gc* gc, FuncArgType data_type, ...);
+AnyValue* std_any_from_value(Gc* gc, AnyValueType data_type, ...);
 int std_int_from_any(AnyValue* value);
 int std_double_from_any(AnyValue* value);
 int std_bool_from_any(AnyValue* value);
@@ -64,6 +66,28 @@ int std_term_cursor_max_y(void);
 char* std_term_get_input(Gc* gc);
 int std_term_print_list(List* list);
 int std_term_print_any(AnyValue* any);
+int std_term_print_str(const char* str);
+int std_term_print_int(int value);
+int std_term_print_double(double value);
+int std_term_print_bool(bool value);
+void std_term_clear(void);
+
+#ifdef STANDALONE_STD
+typedef struct {
+    unsigned char r, g, b, a;
+} Color;
+
+void std_term_set_fg_color(Color color);
+void std_term_set_bg_color(Color color);
+void std_term_set_clear_color(Color color);
+#else
+// TODO: Remove this dependency by doing stdio
+#include "term.h"
+
+void std_term_set_fg_color(Color color);
+void std_term_set_bg_color(Color color);
+void std_term_set_clear_color(Color color);
+#endif
 
 // Misc
 int std_sleep(int usecs);

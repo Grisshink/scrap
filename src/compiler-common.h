@@ -25,12 +25,6 @@
 
 typedef struct Exec Exec;
 
-typedef struct {
-    unsigned int size;
-    unsigned int capacity;
-    char str[];
-} StringHeader;
-
 typedef enum {
     CONTROL_BEGIN,
     CONTROL_END,
@@ -66,27 +60,5 @@ typedef struct {
     FuncArgType type;
     FuncArgData data;
 } FuncArg;
-
-typedef struct AnyValue AnyValue;
-typedef struct List List;
-
-typedef union {
-    char* str_val;
-    int int_val;
-    double double_val;
-    List* list_val;
-    AnyValue* any_val;
-} AnyValueData;
-
-struct AnyValue {
-    FuncArgType type;
-    AnyValueData data;
-};
-
-struct List {
-    long size;
-    long capacity;
-    AnyValue* values;
-};
 
 #endif // COMPILER_COMMON_H

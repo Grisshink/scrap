@@ -8,3 +8,5 @@ config.txt
 scrap.res
 private/
 locale/
+a.out
+libscrapstd.a

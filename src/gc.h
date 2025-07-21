@@ -20,12 +20,12 @@
 
 #include <stddef.h>
 
+#include "std-types.h"
 #include "vec.h"
-#include "compiler-common.h"
 
 typedef struct {
     unsigned char marked;
-    FuncArgType data_type;
+    AnyValueType data_type;
     unsigned char data[];
 } GcChunkData;
 
@@ -57,7 +57,7 @@ void gc_free(Gc* gc);
 
 void gc_root_begin(Gc* gc);
 void gc_root_end(Gc* gc);
-void* gc_malloc(Gc* gc, size_t size, FuncArgType data_type);
+void* gc_malloc(Gc* gc, size_t size, AnyValueType data_type);
 void gc_collect(Gc* gc);
 void gc_flush(Gc* gc);
 void gc_add_root(Gc* gc, void* ptr);
