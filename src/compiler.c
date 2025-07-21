@@ -363,7 +363,7 @@ DefineArgument* get_custom_argument(Exec* exec, Blockdef* blockdef, DefineFuncti
 }
 
 static void vector_add_str(char** vec, const char* str) {
-    for (const char* str_val = str; *str_val; str_val++) vector_add(vec, *str_val == ' ' ? '_' : *str_val);
+    for (const char* str_val = str; *str_val; str_val++) vector_add(vec, *str_val);
 }
 
 DefineFunction* define_function(Exec* exec, Blockdef* blockdef) {
@@ -379,30 +379,30 @@ DefineFunction* define_function(Exec* exec, Blockdef* blockdef) {
 
     char* func_name = vector_create();
     vector_add_str(&func_name, blockdef->id);
-    vector_add(&func_name, '_');
+    vector_add(&func_name, ' ');
 
     for (size_t i = 0; i < vector_size(blockdef->inputs); i++) {
         switch (blockdef->inputs[i].type) {
         case INPUT_TEXT_DISPLAY:
             vector_add_str(&func_name, blockdef->inputs[i].data.text);
-            vector_add(&func_name, '_');
+            vector_add(&func_name, ' ');
             break;
         case INPUT_BLOCKDEF_EDITOR:
         case INPUT_DROPDOWN:
-            vector_add_str(&func_name, "arg_");
+            vector_add_str(&func_name, "[] ");
             break;
         case INPUT_IMAGE_DISPLAY:
-            vector_add_str(&func_name, "img_");
+            vector_add_str(&func_name, "img ");
             break;
         case INPUT_ARGUMENT:
             func_params[func_params_count] = LLVMPointerType(LLVMInt8Type(), 0);
             func_params_blockdefs[func_params_count] = blockdef->inputs[i].data.arg.blockdef;
             func_params_count++;
-            vector_add_str(&func_name, "arg_");
+            vector_add_str(&func_name, "[] ");
             break;
         }
     }
-    vector_add(&func_name, 0);
+    func_name[vector_size(func_name) - 1] = 0;
 
     LLVMTypeRef func_type = LLVMFunctionType(LLVMPointerType(LLVMInt8Type(), 0), func_params, func_params_count, false);
     LLVMValueRef func = LLVMAddFunction(exec->module, func_name, func_type);
