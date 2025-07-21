@@ -757,24 +757,14 @@ static bool compile_program(Exec* exec) {
         }
     }
 
+    if (!build_gc_root_end(exec, NULL)) return false;
+    LLVMBuildRetVoid(exec->builder);
+
     for (size_t i = 0; i < vector_size(exec->code); i++) {
         if (!strcmp(exec->code[i].blocks[0].blockdef->id, "on_start")) continue;
         if (!evaluate_chain(exec, &exec->code[i])) {
             return false;
         }
-    }
-
-    LLVMBasicBlockRef last_block = LLVMGetLastBasicBlock(main_func);
-    LLVMPositionBuilderAtEnd(exec->builder, last_block);
-
-    exec->gc_value = LLVMBuildLoad2(exec->builder, LLVMInt64Type(), LLVMGetNamedGlobal(exec->module, "gc"), "get_gc");
-    if (!build_gc_root_end(exec, NULL)) return false;
-    LLVMBuildRetVoid(exec->builder);
-
-    for (size_t i = 0; i < vector_size(exec->defined_functions); i++) {
-        last_block = LLVMGetLastBasicBlock(exec->defined_functions[i].func);
-        LLVMPositionBuilderAtEnd(exec->builder, last_block);
-        exec->gc_value = LLVMBuildLoad2(exec->builder, LLVMInt64Type(), LLVMGetNamedGlobal(exec->module, "gc"), "get_gc");
         if (!build_gc_root_end(exec, NULL)) return false;
         LLVMValueRef val = build_call_count(exec, "std_any_from_value", 2, CONST_GC, CONST_INTEGER(FUNC_ARG_NOTHING));
         LLVMBuildRet(exec->builder, val);

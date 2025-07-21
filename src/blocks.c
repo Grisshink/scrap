@@ -1349,6 +1349,9 @@ bool block_exec_custom(Exec* exec, Block* block, int argc, FuncArg* argv, FuncAr
     }
 
     exec->gc_dirty = true;
+    if (exec->gc_block_stack_len > 0) {
+        exec->gc_block_stack[exec->gc_block_stack_len - 1].required = true;
+    }
     *return_val = DATA_ANY(LLVMBuildCall2(exec->builder, func_type, define->func, func_param_list, argc, ""));
     return true;
 }
