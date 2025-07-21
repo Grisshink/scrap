@@ -44,6 +44,7 @@ typedef struct {
 
 typedef struct {
     GcChunk* chunks;
+    size_t* roots_bases;
     GcRoot* roots_stack;
     ChunkAddrList root_chunks;
     ChunkAddrList root_temp_chunks;
@@ -61,5 +62,7 @@ void gc_collect(Gc* gc);
 void gc_flush(Gc* gc);
 void gc_add_root(Gc* gc, void* ptr);
 void gc_add_str_root(Gc* gc, char* str);
+void gc_root_save(Gc* gc);
+void gc_root_restore(Gc* gc);
 
 #endif // SCRAP_GC_H

@@ -710,6 +710,12 @@ static LLVMValueRef register_globals(Exec* exec) {
     LLVMTypeRef gc_add_str_root_func_params[] = { LLVMInt64Type(), LLVMPointerType(LLVMInt8Type(), 0) };
     add_function(exec, "gc_add_str_root", LLVMVoidType(), gc_add_str_root_func_params, ARRLEN(gc_add_str_root_func_params), gc_add_str_root, false, false);
 
+    LLVMTypeRef gc_root_save_func_params[] = { LLVMInt64Type() };
+    add_function(exec, "gc_root_save", LLVMVoidType(), gc_root_save_func_params, ARRLEN(gc_root_save_func_params), gc_root_save, false, false);
+
+    LLVMTypeRef gc_root_restore_func_params[] = { LLVMInt64Type() };
+    add_function(exec, "gc_root_restore", LLVMVoidType(), gc_root_restore_func_params, ARRLEN(gc_root_restore_func_params), gc_root_restore, false, false);
+
     LLVMAddGlobal(exec->module, LLVMInt64Type(), "gc");
 
     LLVMTypeRef main_func_type = LLVMFunctionType(LLVMVoidType(), NULL, 0, false);
@@ -766,6 +772,7 @@ static bool compile_program(Exec* exec) {
             return false;
         }
         if (!build_gc_root_end(exec, NULL)) return false;
+        build_call(exec, "gc_root_restore", CONST_GC);
         LLVMValueRef val = build_call_count(exec, "std_any_from_value", 2, CONST_GC, CONST_INTEGER(FUNC_ARG_NOTHING));
         LLVMBuildRet(exec->builder, val);
     }

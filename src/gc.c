@@ -29,6 +29,7 @@ Gc gc_new(size_t memory_max) {
     return (Gc) {
         .chunks = vector_create(),
         .roots_stack = vector_create(),
+        .roots_bases = vector_create(),
         .root_chunks = vector_create(),
         .root_temp_chunks = vector_create(),
         .memory_used = 0,
@@ -43,23 +44,13 @@ void gc_free(Gc* gc) {
     for (size_t i = 0; i < vector_size(gc->chunks); i++) {
         free(gc->chunks[i].ptr);
     }
+    vector_free(gc->roots_bases);
     vector_free(gc->root_chunks);
     vector_free(gc->root_temp_chunks);
     vector_free(gc->roots_stack);
     vector_free(gc->chunks);
     gc->memory_max = 0;
     gc->memory_used = 0;
-}
-
-void gc_root_begin(Gc* gc) {
-    if (vector_size(gc->roots_stack) > 1024) {
-        term_print_str("*[GC] Root stack overflow!*");
-        pthread_exit((void*)0);
-    }
-
-    GcRoot* root = vector_add_dst(&gc->roots_stack);
-    root->chunks_base = vector_size(gc->root_chunks);
-    root->temp_chunks_base = vector_size(gc->root_temp_chunks);
 }
 
 static void gc_mark_any(Gc* gc, AnyValue* any) {
@@ -170,6 +161,17 @@ void* gc_malloc(Gc* gc, size_t size, FuncArgType data_type) {
     return chunk_data->data;
 }
 
+void gc_root_begin(Gc* gc) {
+    if (vector_size(gc->roots_stack) > 1024) {
+        term_print_str("*[GC] Root stack overflow!*");
+        pthread_exit((void*)0);
+    }
+
+    GcRoot* root = vector_add_dst(&gc->roots_stack);
+    root->chunks_base = vector_size(gc->root_chunks);
+    root->temp_chunks_base = vector_size(gc->root_temp_chunks);
+}
+
 void gc_root_end(Gc* gc) {
     assert(vector_size(gc->roots_stack) > 0);
     vector_get_header(gc->root_chunks)->size = gc->roots_stack[vector_size(gc->roots_stack) - 1].chunks_base;
@@ -186,6 +188,35 @@ void gc_add_str_root(Gc* gc, char* str) {
     StringHeader* header = ((StringHeader*)str) - 1;
     GcChunkData* chunk_ptr = ((GcChunkData*)header) - 1;
     vector_add(&gc->root_chunks, chunk_ptr);
+}
+
+void gc_root_save(Gc* gc) {
+    if (vector_size(gc->roots_bases) > 1024) {
+        term_print_str("*[GC] Root stack overflow!*");
+        pthread_exit((void*)0);
+    }
+
+    vector_add(&gc->roots_bases, vector_size(gc->roots_stack));
+}
+
+void gc_root_restore(Gc* gc) {
+    if (vector_size(gc->roots_bases) == 0) {
+        term_print_str("*[GC] Root stack underflow!*");
+        pthread_exit((void*)0);
+    }
+
+    size_t* size = &vector_get_header(gc->roots_stack)->size;
+    size_t prev_size = *size;
+    *size = gc->roots_bases[vector_size(gc->roots_bases) - 1];
+    vector_pop(gc->roots_bases);
+
+    if (*size == 0) {
+        vector_clear(gc->root_chunks);
+        vector_clear(gc->root_temp_chunks);
+    } else if (*size < prev_size) {
+        vector_get_header(gc->root_chunks)->size = gc->roots_stack[*size].chunks_base;
+        vector_get_header(gc->root_temp_chunks)->size = gc->roots_stack[*size].temp_chunks_base;
+    }
 }
 
 void gc_flush(Gc* gc) {
