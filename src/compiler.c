@@ -37,14 +37,16 @@
 
 static bool compile_program(Exec* exec);
 static bool run_program(Exec* exec);
+static bool build_program(Exec* exec);
 static void free_defined_functions(Exec* exec);
 
-Exec exec_new(void) {
+Exec exec_new(CompilerMode mode) {
     Exec exec = (Exec) {
         .code = NULL,
         .thread = (pthread_t) {0},
         .running_state = EXEC_STATE_NOT_RUNNING,
         .current_error_block = NULL,
+        .current_mode = mode,
     };
     exec.current_error[0] = 0;
     return exec;
@@ -87,12 +89,12 @@ void* exec_thread_entry(void* thread_exec) {
     exec->current_state = STATE_NONE;
     pthread_cleanup_push(exec_thread_exit, thread_exec);
 
-    if (!compile_program(exec)) {
-        pthread_exit((void*)0);
-    }
+    if (!compile_program(exec)) pthread_exit((void*)0);
 
-    if (!run_program(exec)) {
-        pthread_exit((void*)0);
+    if (exec->current_mode == COMPILER_MODE_JIT) {
+        if (!run_program(exec)) pthread_exit((void*)0);
+    } else {
+        if (!build_program(exec)) pthread_exit((void*)0);
     }
 
     pthread_cleanup_pop(1);
@@ -802,6 +804,57 @@ static bool compile_program(Exec* exec) {
     vector_free(exec->gc_dirty_funcs);
     free_defined_functions(exec);
 
+    return true;
+}
+
+static bool build_program(Exec* exec) {
+    exec->current_state = STATE_PRE_EXEC;
+
+    if (LLVMInitializeNativeTarget()) {
+        exec_set_error(exec, NULL, "[LLVM] Native target initialization failed");
+        return false;
+    }
+    if (LLVMInitializeNativeAsmParser()) {
+        exec_set_error(exec, NULL, "[LLVM] Native asm parser initialization failed");
+        return false;
+    }
+    if (LLVMInitializeNativeAsmPrinter()) {
+        exec_set_error(exec, NULL, "[LLVM] Native asm printer initialization failed");
+        return false;
+    }
+
+    char *error = NULL;
+
+    LLVMTargetRef target;
+
+    if (LLVMGetTargetFromTriple("x86_64-pc-linux-gnu", &target, &error)) {
+        exec_set_error(exec, NULL, "[LLVM] Failed to get target: %s", error);
+        LLVMDisposeMessage(error);
+        return false;
+    }
+
+    LLVMTargetMachineOptionsRef machine_opts = LLVMCreateTargetMachineOptions();
+    LLVMTargetMachineOptionsSetCodeGenOptLevel(machine_opts, LLVMCodeGenLevelDefault);
+    LLVMTargetMachineOptionsSetRelocMode(machine_opts, LLVMRelocPIC);
+
+    LLVMTargetMachineRef machine = LLVMCreateTargetMachineWithOptions(target, "x86_64-pc-linux-gnu", machine_opts);
+    if (!machine) {
+        LLVMDisposeTargetMachineOptions(machine_opts);
+        exec_set_error(exec, NULL, "[LLVM] Failed to create target machine");
+        return false;
+    }
+    LLVMDisposeTargetMachineOptions(machine_opts);
+    
+    if (LLVMTargetMachineEmitToFile(machine, exec->module, "output.o", LLVMObjectFile, &error)) {
+        exec_set_error(exec, NULL, "[LLVM] Failed to save to file: %s", error);
+        LLVMDisposeTargetMachine(machine);
+        LLVMDisposeMessage(error);
+        return false;
+    }
+
+    TraceLog(LOG_INFO, "Built object file successfully");
+
+    LLVMDisposeTargetMachine(machine);
     return true;
 }
 

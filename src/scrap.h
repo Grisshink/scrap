@@ -284,6 +284,7 @@ extern Texture2D list_tex;
 extern Texture2D arrow_left_tex;
 extern Texture2D arrow_right_tex;
 extern Texture2D pi_symbol_tex;
+extern Texture2D build_tex;
 
 extern Exec exec;
 extern char exec_compile_error[MAX_ERROR_LEN];
@@ -291,6 +292,9 @@ extern Block* exec_compile_error_block;
 
 extern Vm vm;
 extern int start_vm_timeout;
+#ifndef USE_INTERPRETER
+extern CompilerMode start_vm_mode;
+#endif
 extern Vector2 camera_pos;
 extern ActionBar actionbar;
 extern BlockCode block_code;
@@ -369,6 +373,7 @@ bool handle_file_button_click(void);
 bool handle_settings_button_click(void);
 bool handle_about_button_click(void);
 bool handle_run_button_click(void);
+bool handle_build_button_click(void);
 bool handle_stop_button_click(void);
 bool handle_code_tab_click(void);
 bool handle_output_tab_click(void);

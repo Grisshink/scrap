@@ -178,11 +178,18 @@ PanelTree* find_panel(PanelTree* root, PanelType panel) {
     return NULL;
 }
 
+#ifdef USE_INTERPRETER
 static bool start_vm(void) {
+#else
+static bool start_vm(CompilerMode mode) {
+#endif
     if (vm.is_running) return false;
 
     for (size_t i = 0; i < vector_size(code_tabs); i++) {
         if (find_panel(code_tabs[i].root_panel, PANEL_TERM)) {
+#ifndef USE_INTERPRETER
+            start_vm_mode = mode;
+#endif
             if (current_tab != (int)i) {
                 shader_time = 0.0;
                 // Delay vm startup until next frame. Because this handler only runs after the layout is computed and
@@ -319,7 +326,20 @@ bool handle_about_button_click(void) {
 }
 
 bool handle_run_button_click(void) {
+#ifdef USE_INTERPRETER
     start_vm();
+#else
+    start_vm(COMPILER_MODE_JIT);
+#endif
+    return true;
+}
+
+bool handle_build_button_click(void) {
+#ifdef USE_INTERPRETER
+    start_vm();
+#else
+    start_vm(COMPILER_MODE_BUILD);
+#endif
     return true;
 }
 
@@ -1059,7 +1079,11 @@ void update_search(void) {
 
 static void handle_key_press(void) {
     if (IsKeyPressed(KEY_F5)) {
+#ifdef USE_INTERPRETER
         start_vm();
+#else
+        start_vm(COMPILER_MODE_JIT);
+#endif
         return;
     }
     if (IsKeyPressed(KEY_F6)) {

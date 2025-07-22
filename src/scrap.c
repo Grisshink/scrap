@@ -67,9 +67,13 @@ Texture2D list_tex;
 Texture2D arrow_left_tex;
 Texture2D arrow_right_tex;
 Texture2D pi_symbol_tex;
+Texture2D build_tex;
 
 Vm vm;
 int start_vm_timeout = -1;
+#ifndef USE_INTERPRETER
+CompilerMode start_vm_mode = COMPILER_MODE_JIT;
+#endif
 Vector2 camera_pos;
 ActionBar actionbar;
 BlockCode block_code = {0};
@@ -420,8 +424,6 @@ void setup(void) {
     render_surface = LoadRenderTexture(GetScreenWidth(), GetScreenHeight());
     SetTextureWrap(render_surface.texture, TEXTURE_WRAP_MIRROR_REPEAT);
 
-    run_tex = LoadTexture(into_data_path(DATA_PATH "run.png"));
-    SetTextureFilter(run_tex, TEXTURE_FILTER_BILINEAR);
     drop_tex = LoadTexture(into_data_path(DATA_PATH "drop.png"));
     SetTextureFilter(drop_tex, TEXTURE_FILTER_BILINEAR);
     close_tex = LoadTexture(into_data_path(DATA_PATH "close.png"));
@@ -431,6 +433,7 @@ void setup(void) {
     logo_tex = LoadTextureFromImage(logo_img);
     SetTextureFilter(logo_tex, TEXTURE_FILTER_BILINEAR);
 
+    run_tex = load_svg(into_data_path(DATA_PATH "run.svg"));
     warn_tex = load_svg(into_data_path(DATA_PATH "warning.svg"));
     stop_tex = load_svg(into_data_path(DATA_PATH "stop.svg"));
     edit_tex = load_svg(into_data_path(DATA_PATH "edit.svg"));
@@ -444,6 +447,7 @@ void setup(void) {
     arrow_left_tex = load_svg(into_data_path(DATA_PATH "arrow_left.svg"));
     arrow_right_tex = load_svg(into_data_path(DATA_PATH "arrow_right.svg"));
     pi_symbol_tex = load_svg(into_data_path(DATA_PATH "pi_symbol.svg"));
+    build_tex = load_svg(into_data_path(DATA_PATH "build.svg"));
 
     int* codepoints = vector_create();
     for (int i = 0; i < CODEPOINT_REGION_COUNT; i++) {

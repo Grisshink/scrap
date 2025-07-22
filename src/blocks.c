@@ -2798,65 +2798,75 @@ void register_blocks(Vm* vm) {
     BlockCategory* cat_data = find_category(gettext("Data"));
     assert(cat_data != NULL);
 
+    BlockdefImage term_img = (BlockdefImage) {
+        .image_ptr = &term_tex,
+        .image_color = (BlockdefColor) { 0xff, 0xff, 0xff, 0xff },
+    };
+
+    BlockdefImage list_img = (BlockdefImage) {
+        .image_ptr = &list_tex,
+        .image_color = (BlockdefColor) { 0xff, 0xff, 0xff, 0xff },
+    };
+
     Blockdef* on_start = blockdef_new("on_start", BLOCKTYPE_HAT, (BlockdefColor) { 0xff, 0x77, 0x00, 0xFF }, block_on_start);
     blockdef_add_text(on_start, gettext("When"));
-    blockdef_add_image(on_start, (BlockdefImage) { .image_ptr = &run_tex });
+    blockdef_add_image(on_start, (BlockdefImage) { .image_ptr = &run_tex, .image_color = (BlockdefColor) { 0x60, 0xff, 0x00, 0xff } });
     blockdef_add_text(on_start, gettext("clicked"));
     blockdef_register(vm, on_start);
     add_to_category(on_start, cat_control);
 
     Blockdef* sc_input = blockdef_new("input", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_TERMINAL_COLOR, block_input);
-    blockdef_add_image(sc_input, (BlockdefImage) { .image_ptr = &term_tex });
+    blockdef_add_image(sc_input, term_img);
     blockdef_add_text(sc_input, gettext("Get input"));
     blockdef_register(vm, sc_input);
     add_to_category(sc_input, cat_terminal);
 
     Blockdef* sc_char = blockdef_new("get_char", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_TERMINAL_COLOR, block_get_char);
-    blockdef_add_image(sc_char, (BlockdefImage) { .image_ptr = &term_tex });
+    blockdef_add_image(sc_char, term_img);
     blockdef_add_text(sc_char, gettext("Get char"));
     blockdef_register(vm, sc_char);
     add_to_category(sc_char, cat_terminal);
 
     Blockdef* sc_print = blockdef_new("print", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_TERMINAL_COLOR, block_print);
-    blockdef_add_image(sc_print, (BlockdefImage) { .image_ptr = &term_tex });
+    blockdef_add_image(sc_print, term_img);
     blockdef_add_text(sc_print, gettext("Print"));
     blockdef_add_argument(sc_print, gettext("Hello, scrap!"), gettext("Abc"), BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_print);
     add_to_category(sc_print, cat_terminal);
 
     Blockdef* sc_println = blockdef_new("println", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_TERMINAL_COLOR, block_println);
-    blockdef_add_image(sc_println, (BlockdefImage) { .image_ptr = &term_tex });
+    blockdef_add_image(sc_println, term_img);
     blockdef_add_text(sc_println, gettext("Print line"));
     blockdef_add_argument(sc_println, gettext("Hello, scrap!"), gettext("Abc"), BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_println);
     add_to_category(sc_println, cat_terminal);
 
     Blockdef* sc_cursor_x = blockdef_new("cursor_x", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_TERMINAL_COLOR, block_cursor_x);
-    blockdef_add_image(sc_cursor_x, (BlockdefImage) { .image_ptr = &term_tex });
+    blockdef_add_image(sc_cursor_x, term_img);
     blockdef_add_text(sc_cursor_x, gettext("Cursor X"));
     blockdef_register(vm, sc_cursor_x);
     add_to_category(sc_cursor_x, cat_terminal);
 
     Blockdef* sc_cursor_y = blockdef_new("cursor_y", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_TERMINAL_COLOR, block_cursor_y);
-    blockdef_add_image(sc_cursor_y, (BlockdefImage) { .image_ptr = &term_tex });
+    blockdef_add_image(sc_cursor_y, term_img);
     blockdef_add_text(sc_cursor_y, gettext("Cursor Y"));
     blockdef_register(vm, sc_cursor_y);
     add_to_category(sc_cursor_y, cat_terminal);
 
     Blockdef* sc_cursor_max_x = blockdef_new("cursor_max_x", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_TERMINAL_COLOR, block_cursor_max_x);
-    blockdef_add_image(sc_cursor_max_x, (BlockdefImage) { .image_ptr = &term_tex });
+    blockdef_add_image(sc_cursor_max_x, term_img);
     blockdef_add_text(sc_cursor_max_x, gettext("Terminal width"));
     blockdef_register(vm, sc_cursor_max_x);
     add_to_category(sc_cursor_max_x, cat_terminal);
 
     Blockdef* sc_cursor_max_y = blockdef_new("cursor_max_y", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_TERMINAL_COLOR, block_cursor_max_y);
-    blockdef_add_image(sc_cursor_max_y, (BlockdefImage) { .image_ptr = &term_tex });
+    blockdef_add_image(sc_cursor_max_y, term_img);
     blockdef_add_text(sc_cursor_max_y, gettext("Terminal height"));
     blockdef_register(vm, sc_cursor_max_y);
     add_to_category(sc_cursor_max_y, cat_terminal);
 
     Blockdef* sc_set_cursor = blockdef_new("set_cursor", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_TERMINAL_COLOR, block_set_cursor);
-    blockdef_add_image(sc_set_cursor, (BlockdefImage) { .image_ptr = &term_tex });
+    blockdef_add_image(sc_set_cursor, term_img);
     blockdef_add_text(sc_set_cursor, gettext("Set cursor X:"));
     blockdef_add_argument(sc_set_cursor, "0", "0", BLOCKCONSTR_UNLIMITED);
     blockdef_add_text(sc_set_cursor, gettext("Y:"));
@@ -2865,33 +2875,33 @@ void register_blocks(Vm* vm) {
     add_to_category(sc_set_cursor, cat_terminal);
 
     Blockdef* sc_set_fg_color = blockdef_new("set_fg_color", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_TERMINAL_COLOR, block_set_fg_color);
-    blockdef_add_image(sc_set_fg_color, (BlockdefImage) { .image_ptr = &term_tex });
+    blockdef_add_image(sc_set_fg_color, term_img);
     blockdef_add_text(sc_set_fg_color, gettext("Set text color"));
     blockdef_add_dropdown(sc_set_fg_color, DROPDOWN_SOURCE_LISTREF, term_color_list_access);
     blockdef_register(vm, sc_set_fg_color);
     add_to_category(sc_set_fg_color, cat_terminal);
 
     Blockdef* sc_set_bg_color = blockdef_new("set_bg_color", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_TERMINAL_COLOR, block_set_bg_color);
-    blockdef_add_image(sc_set_bg_color, (BlockdefImage) { .image_ptr = &term_tex });
+    blockdef_add_image(sc_set_bg_color, term_img);
     blockdef_add_text(sc_set_bg_color, gettext("Set background color"));
     blockdef_add_dropdown(sc_set_bg_color, DROPDOWN_SOURCE_LISTREF, term_color_list_access);
     blockdef_register(vm, sc_set_bg_color);
     add_to_category(sc_set_bg_color, cat_terminal);
 
     Blockdef* sc_reset_color = blockdef_new("reset_color", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_TERMINAL_COLOR, block_reset_color);
-    blockdef_add_image(sc_reset_color, (BlockdefImage) { .image_ptr = &term_tex });
+    blockdef_add_image(sc_reset_color, term_img);
     blockdef_add_text(sc_reset_color, gettext("Reset color"));
     blockdef_register(vm, sc_reset_color);
     add_to_category(sc_reset_color, cat_terminal);
 
     Blockdef* sc_term_clear = blockdef_new("term_clear", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_TERMINAL_COLOR, block_term_clear);
-    blockdef_add_image(sc_term_clear, (BlockdefImage) { .image_ptr = &term_tex });
+    blockdef_add_image(sc_term_clear, term_img);
     blockdef_add_text(sc_term_clear, gettext("Clear terminal"));
     blockdef_register(vm, sc_term_clear);
     add_to_category(sc_term_clear, cat_terminal);
 
     Blockdef* sc_term_set_clear = blockdef_new("term_set_clear", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_TERMINAL_COLOR, block_term_set_clear);
-    blockdef_add_image(sc_term_set_clear, (BlockdefImage) { .image_ptr = &term_tex });
+    blockdef_add_image(sc_term_set_clear, term_img);
     blockdef_add_text(sc_term_set_clear, gettext("Set clear color"));
     blockdef_add_dropdown(sc_term_set_clear, DROPDOWN_SOURCE_LISTREF, term_color_list_access);
     blockdef_register(vm, sc_term_set_clear);
@@ -2992,7 +3002,7 @@ void register_blocks(Vm* vm) {
     add_to_category(sc_math, cat_math);
 
     Blockdef* sc_pi = blockdef_new("pi", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_MATH_COLOR, block_pi);
-    blockdef_add_image(sc_pi, (BlockdefImage) { .image_ptr = &pi_symbol_tex });
+    blockdef_add_image(sc_pi, (BlockdefImage) { .image_ptr = &pi_symbol_tex, .image_color = (BlockdefColor) { 0xff, 0xff, 0xff, 0xff } });
     blockdef_register(vm, sc_pi);
     add_to_category(sc_pi, cat_math);
 
@@ -3226,13 +3236,13 @@ void register_blocks(Vm* vm) {
     add_to_category(sc_set_var, cat_data);
 
     Blockdef* sc_create_list = blockdef_new("create_list", BLOCKTYPE_NORMAL, (BlockdefColor) { 0xff, 0x44, 0x00, 0xff }, block_create_list);
-    blockdef_add_image(sc_create_list, (BlockdefImage) { .image_ptr = &list_tex });
+    blockdef_add_image(sc_create_list, list_img);
     blockdef_add_text(sc_create_list, gettext("Empty list"));
     blockdef_register(vm, sc_create_list);
     add_to_category(sc_create_list, cat_data);
 
     Blockdef* sc_list_add = blockdef_new("list_add", BLOCKTYPE_NORMAL, (BlockdefColor) { 0xff, 0x44, 0x00, 0xff }, block_list_add);
-    blockdef_add_image(sc_list_add, (BlockdefImage) { .image_ptr = &list_tex });
+    blockdef_add_image(sc_list_add, list_img);
     blockdef_add_text(sc_list_add, gettext("Add"));
 #ifdef USE_INTERPRETER
     blockdef_add_argument(sc_list_add, gettext("my variable"), gettext("Abc"), BLOCKCONSTR_UNLIMITED);
@@ -3245,7 +3255,7 @@ void register_blocks(Vm* vm) {
     add_to_category(sc_list_add, cat_data);
 
     Blockdef* sc_list_get = blockdef_new("list_get", BLOCKTYPE_NORMAL, (BlockdefColor) { 0xff, 0x44, 0x00, 0xff }, block_list_get);
-    blockdef_add_image(sc_list_get, (BlockdefImage) { .image_ptr = &list_tex });
+    blockdef_add_image(sc_list_get, list_img);
 #ifdef USE_INTERPRETER
     blockdef_add_argument(sc_list_get, gettext("my variable"), gettext("Abc"), BLOCKCONSTR_UNLIMITED);
 #else
@@ -3257,7 +3267,7 @@ void register_blocks(Vm* vm) {
     add_to_category(sc_list_get, cat_data);
 
     Blockdef* sc_list_set = blockdef_new("list_set", BLOCKTYPE_NORMAL, (BlockdefColor) { 0xff, 0x44, 0x00, 0xff }, block_list_set);
-    blockdef_add_image(sc_list_set, (BlockdefImage) { .image_ptr = &list_tex });
+    blockdef_add_image(sc_list_set, list_img);
 #ifdef USE_INTERPRETER
     blockdef_add_argument(sc_list_set, gettext("my variable"), gettext("Abc"), BLOCKCONSTR_UNLIMITED);
 #else
@@ -3271,7 +3281,7 @@ void register_blocks(Vm* vm) {
     add_to_category(sc_list_set, cat_data);
 
     Blockdef* sc_list_len = blockdef_new("list_length", BLOCKTYPE_NORMAL, (BlockdefColor) { 0xff, 0x44, 0x00, 0xff }, block_list_length);
-    blockdef_add_image(sc_list_len, (BlockdefImage) { .image_ptr = &list_tex });
+    blockdef_add_image(sc_list_len, list_img);
     blockdef_add_text(sc_list_len, gettext("length"));
 #ifdef USE_INTERPRETER
     blockdef_add_argument(sc_list_len, gettext("my variable"), gettext("Abc"), BLOCKCONSTR_UNLIMITED);
@@ -3282,14 +3292,14 @@ void register_blocks(Vm* vm) {
     add_to_category(sc_list_len, cat_data);
 
     Blockdef* sc_define_block = blockdef_new("define_block", BLOCKTYPE_HAT, (BlockdefColor) { 0x99, 0x00, 0xff, 0xff }, block_define_block);
-    blockdef_add_image(sc_define_block, (BlockdefImage) { .image_ptr = &special_tex });
+    blockdef_add_image(sc_define_block, (BlockdefImage) { .image_ptr = &special_tex, .image_color = (BlockdefColor) { 0xff, 0xff, 0xff, 0xff } });
     blockdef_add_text(sc_define_block, gettext("Define"));
     blockdef_add_blockdef_editor(sc_define_block);
     blockdef_register(vm, sc_define_block);
     add_to_category(sc_define_block, cat_control);
 
     Blockdef* sc_return = blockdef_new("return", BLOCKTYPE_NORMAL, (BlockdefColor) { 0x99, 0x00, 0xff, 0xff }, block_return);
-    blockdef_add_image(sc_return, (BlockdefImage) { .image_ptr = &special_tex });
+    blockdef_add_image(sc_return, (BlockdefImage) { .image_ptr = &special_tex, .image_color = (BlockdefColor) { 0xff, 0xff, 0xff, 0xff } });
     blockdef_add_text(sc_return, gettext("Return"));
     blockdef_add_argument(sc_return, "", gettext("any"), BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_return);

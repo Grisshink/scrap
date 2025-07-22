@@ -83,6 +83,11 @@ typedef enum {
     STATE_EXEC,
 } CompilerState;
 
+typedef enum {
+    COMPILER_MODE_JIT,
+    COMPILER_MODE_BUILD,
+} CompilerMode;
+
 typedef struct {
     LLVMValueRef root_begin;
     bool required;
@@ -127,6 +132,7 @@ struct Exec {
     LLVMValueRef* gc_dirty_funcs;
 
     pthread_t thread;
+    CompilerMode current_mode;
     atomic_int running_state;
 };
 
@@ -158,7 +164,7 @@ struct Exec {
 
 typedef bool (*BlockCompileFunc)(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val);
 
-Exec exec_new(void);
+Exec exec_new(CompilerMode mode);
 void exec_free(Exec* exec);
 void exec_copy_code(Vm* vm, Exec* exec, BlockChain* code);
 //bool exec_run_chain(Exec* exec, BlockChain* chain, int argc, Data* argv, Data* return_val);

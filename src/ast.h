@@ -50,6 +50,7 @@ struct BlockdefColor {
 
 struct BlockdefImage {
     void* image_ptr;
+    BlockdefColor image_color;
 };
 
 enum InputArgumentConstraint {

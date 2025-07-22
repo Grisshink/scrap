@@ -411,7 +411,7 @@ static void draw_block(Block* block, bool highlight, bool can_hover) {
             gui_text(gui, &font_cond_shadow, input->data.text, BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
             break;
         case INPUT_IMAGE_DISPLAY:
-            gui_image(gui, input->data.image.image_ptr, BLOCK_IMAGE_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+            gui_image(gui, input->data.image.image_ptr, BLOCK_IMAGE_SIZE, CONVERT_COLOR(input->data.image.image_color, GuiColor));
             break;
         case INPUT_ARGUMENT:
             switch (arg->type) {
@@ -633,12 +633,26 @@ static void draw_tab_bar(void) {
         gui_text(gui, &font_cond, project_name, BLOCK_TEXT_SIZE, (GuiColor) { 0x80, 0x80, 0x80, 0xff });
         gui_grow(gui, DIRECTION_HORIZONTAL);
 
+#ifndef USE_INTERPRETER
+        gui_element_begin(gui);
+            gui_on_hover(gui, button_on_hover);
+            gui_set_custom_data(gui, handle_build_button_click);
+
+            gui_image(gui, &build_tex, tab_bar_size, (GuiColor) { 0xff, 0x99, 0x00, 0xff });
+        gui_element_end(gui);
+
+        gui_spacer(gui, conf.font_size * 0.2, 0);
+#endif
+
         gui_element_begin(gui);
             gui_on_hover(gui, button_on_hover);
             gui_set_custom_data(gui, handle_stop_button_click);
 
-            gui_image(gui, &stop_tex, tab_bar_size, CONVERT_COLOR(WHITE, GuiColor));
+            gui_image(gui, &stop_tex, tab_bar_size, (GuiColor) { 0xff, 0x40, 0x30, 0xff });
         gui_element_end(gui);
+
+        gui_spacer(gui, conf.font_size * 0.2, 0);
+
         gui_element_begin(gui);
             gui_on_hover(gui, button_on_hover);
             gui_set_custom_data(gui, handle_run_button_click);
@@ -647,7 +661,7 @@ static void draw_tab_bar(void) {
                 gui_set_rect(gui, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
                 gui_image(gui, &run_tex, tab_bar_size, (GuiColor) { 0x00, 0x00, 0x00, 0xff });
             } else {
-                gui_image(gui, &run_tex, tab_bar_size, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+                gui_image(gui, &run_tex, tab_bar_size, (GuiColor) { 0x60, 0xff, 0x00, 0xff });
             }
         gui_element_end(gui);
     gui_element_end(gui);
@@ -1610,7 +1624,11 @@ void scrap_gui_process_render(void) {
         term_restart();
         exec_compile_error[0] = 0;
         exec_compile_error_block = NULL;
+#ifdef USE_INTERPRETER
         exec = exec_new();
+#else
+        exec = exec_new(start_vm_mode);
+#endif
         exec_copy_code(&vm, &exec, editor_code);
         if (!exec_start(&vm, &exec)) {
             actionbar_show(gettext("Start failed!"));
