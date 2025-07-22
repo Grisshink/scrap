@@ -780,10 +780,13 @@ static bool compile_program(Exec* exec) {
         if (!evaluate_chain(exec, &exec->code[i])) {
             return false;
         }
-        if (!build_gc_root_end(exec, NULL)) return false;
-        build_call(exec, "gc_root_restore", CONST_GC);
-        LLVMValueRef val = build_call_count(exec, "std_any_from_value", 2, CONST_GC, CONST_INTEGER(FUNC_ARG_NOTHING));
-        LLVMBuildRet(exec->builder, val);
+
+        if (vector_size(exec->code[i].blocks) != 0 && exec->code[i].blocks[0].blockdef->type == BLOCKTYPE_HAT) {
+            if (!build_gc_root_end(exec, NULL)) return false;
+            build_call(exec, "gc_root_restore", CONST_GC);
+            LLVMValueRef val = build_call_count(exec, "std_any_from_value", 2, CONST_GC, CONST_INTEGER(FUNC_ARG_NOTHING));
+            LLVMBuildRet(exec->builder, val);
+        }
     }
 
     char *error = NULL;
