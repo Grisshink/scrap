@@ -563,10 +563,34 @@ int std_get_random(int min, int max) {
     }
 }
 
+int std_term_print_any(AnyValue* any) {
+    if (!any) return 0;
+
+    switch (any->type) {
+    case ANY_TYPE_STRING_REF:
+    case ANY_TYPE_STRING_LITERAL:
+        return std_term_print_str(any->data.str_val);
+    case ANY_TYPE_NOTHING:
+        return 0;
+    case ANY_TYPE_INT:
+        return std_term_print_int(any->data.int_val);
+    case ANY_TYPE_BOOL:
+        return std_term_print_bool(any->data.int_val);
+    case ANY_TYPE_DOUBLE:
+        return std_term_print_double(any->data.double_val);
+    case ANY_TYPE_LIST:
+        return std_term_print_list(any->data.list_val);
+    default:
+        return 0;
+    }
+}
+
 #ifdef STANDALONE_STD
 
 static int cursor_x = 0;
 static int cursor_y = 0;
+static Color clear_color = {0};
+static Color bg_color = {0};
 
 void test_cancel(void) {}
 
@@ -603,7 +627,12 @@ void std_term_set_fg_color(Color color) {
 void std_term_set_bg_color(Color color) {
     // ESC[48;2;⟨r⟩;⟨g⟩;⟨b⟩m Select RGB background color
     printf("\033[48;2;%d;%d;%dm", color.r, color.g, color.b);
+    bg_color = color;
     fflush(stdout);
+}
+
+void std_term_set_clear_color(Color color) {
+    clear_color = color;
 }
 
 int std_term_cursor_max_y(void) {
@@ -627,7 +656,11 @@ int std_term_cursor_y(void) {
 }
 
 void std_term_clear(void) {
+    // ESC[48;2;⟨r⟩;⟨g⟩;⟨b⟩m Select RGB background color
+    printf("\033[48;2;%d;%d;%dm", clear_color.r, clear_color.g, clear_color.b);
     printf("\033[2J");
+    // ESC[48;2;⟨r⟩;⟨g⟩;⟨b⟩m Select RGB background color
+    printf("\033[48;2;%d;%d;%dm", bg_color.r, bg_color.g, bg_color.b);
     fflush(stdout);
 }
 
@@ -636,6 +669,47 @@ void std_term_set_cursor(int x, int y) {
     cursor_y = y;
     printf("\033[%d;%dH", y + 1, x + 1);
     fflush(stdout);
+}
+
+char* std_term_get_char(Gc* gc) {
+    char input[10];
+    input[0] = (char)getchar();
+    if (input[0] == '\n') return std_string_from_literal(gc, "", 0);
+
+    int mb_size = leading_ones(input[0]);
+
+    if (mb_size == 0) mb_size = 1;
+    for (int i = 1; i < mb_size && i < 10; i++) input[i] = (char)getchar();
+    input[mb_size] = 0;
+
+    return std_string_from_literal(gc, input, mb_size);
+}
+
+char* std_term_get_input(Gc* gc) {
+    char* out_string = NULL;
+    char last_char = 0;
+    char buf[256];
+    
+    while (last_char != '\n') {
+        if (!fgets(buf, 256, stdin)) return std_string_from_literal(gc, "", 0);
+        int size = strlen(buf);
+        last_char = buf[size - 1];
+        if (last_char == '\n') buf[--size] = 0;
+
+        if (!out_string) {
+            out_string = std_string_from_literal(gc, buf, size);
+        } else {
+            out_string = std_string_join(gc, out_string, std_string_from_literal(gc, buf, size));
+        }
+    }
+
+    return out_string;
+}
+
+int std_term_print_list(List* list) {
+    int len = printf("*LIST (%zu)*", list->size);
+    fflush(stdout);
+    return len;
 }
 
 #else
@@ -747,28 +821,6 @@ int std_term_print_list(List* list) {
     char converted[32];
     snprintf(converted, 32, "*LIST (%zu)*", list->size);
     return term_print_str(converted);
-}
-
-int std_term_print_any(AnyValue* any) {
-    if (!any) return 0;
-
-    switch (any->type) {
-    case ANY_TYPE_STRING_REF:
-    case ANY_TYPE_STRING_LITERAL:
-        return std_term_print_str(any->data.str_val);
-    case ANY_TYPE_NOTHING:
-        return 0;
-    case ANY_TYPE_INT:
-        return std_term_print_int(any->data.int_val);
-    case ANY_TYPE_BOOL:
-        return std_term_print_bool(any->data.int_val);
-    case ANY_TYPE_DOUBLE:
-        return std_term_print_double(any->data.double_val);
-    case ANY_TYPE_LIST:
-        return std_term_print_list(any->data.list_val);
-    default:
-        return 0;
-    }
 }
 
 #endif

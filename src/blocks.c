@@ -1927,7 +1927,7 @@ bool block_get_char(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* 
     (void) block;
     (void) argc;
     (void) argv;
-    *return_val = DATA_STRING_REF(build_call(exec, "std_get_char", CONST_GC));
+    *return_val = DATA_STRING_REF(build_call(exec, "std_term_get_char", CONST_GC));
     return true;
 }
 
@@ -1935,7 +1935,7 @@ bool block_input(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* ret
     (void) block;
     (void) argc;
     (void) argv;
-    *return_val = DATA_STRING_REF(build_call(exec, "std_get_input", CONST_GC));
+    *return_val = DATA_STRING_REF(build_call(exec, "std_term_get_input", CONST_GC));
     return true;
 }
 

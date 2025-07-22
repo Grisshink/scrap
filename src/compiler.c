@@ -650,10 +650,10 @@ static LLVMValueRef register_globals(Exec* exec) {
     add_function(exec, "floor", LLVMDoubleType(), floor_func_params, ARRLEN(floor_func_params), floor, false, false);
     
     LLVMTypeRef get_char_func_params[] = { LLVMInt64Type() };
-    add_function(exec, "std_get_char", LLVMPointerType(LLVMInt8Type(), 0), get_char_func_params, ARRLEN(get_char_func_params), std_term_get_char, true, false);
+    add_function(exec, "std_term_get_char", LLVMPointerType(LLVMInt8Type(), 0), get_char_func_params, ARRLEN(get_char_func_params), std_term_get_char, true, false);
 
     LLVMTypeRef get_input_func_params[] = { LLVMInt64Type() };
-    add_function(exec, "std_get_input", LLVMPointerType(LLVMInt8Type(), 0), get_input_func_params, ARRLEN(get_input_func_params), std_term_get_input, true, false);
+    add_function(exec, "std_term_get_input", LLVMPointerType(LLVMInt8Type(), 0), get_input_func_params, ARRLEN(get_input_func_params), std_term_get_input, true, false);
 
     LLVMTypeRef set_clear_color_func_params[] = { LLVMInt32Type() };
     add_function(exec, "std_term_set_clear_color", LLVMVoidType(), set_clear_color_func_params, ARRLEN(set_clear_color_func_params), std_term_set_clear_color, false, false);
