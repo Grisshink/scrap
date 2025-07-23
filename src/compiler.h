@@ -84,7 +84,7 @@ typedef enum {
 } CompilerState;
 
 typedef enum {
-    COMPILER_MODE_JIT,
+    COMPILER_MODE_JIT = 0,
     COMPILER_MODE_BUILD,
 } CompilerMode;
 

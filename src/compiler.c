@@ -258,7 +258,9 @@ static bool evaluate_block(Exec* exec, Block* block, FuncArg* return_val, bool e
 
             variable_stack_frame_push(exec);
         } else {
-            build_call(exec, "test_cancel");
+            if (exec->current_mode == COMPILER_MODE_JIT) {
+                build_call(exec, "test_cancel");
+            }
             variable_stack_frame_pop(exec);
         }
 
