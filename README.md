@@ -42,9 +42,9 @@ Scrap is currently in **Beta** stage. Some features may be missing or break, so 
 
 ## Screenshots
 
-![Screenshot1](/extras/scrap_screenshot1.png)
-![Screenshot2](/extras/scrap_screenshot2.png)
-![Screenshot3](/extras/scrap_screenshot3.png)
+![Screenshot1](/assets/ui.png)
+![Screenshot2](/assets//scrap_screenshot2.png)
+![Screenshot3](/assets/scrap_screenshot3.png)
 
 ## Building
 
@@ -196,7 +196,6 @@ All file references should use **relative paths** (e.g., `./assets/image.jpg`) t
       font-style: normal;
       src: url('./assets/nk57.otf');
   }
-  ```
 
 * **Dynamic Content Loading**
   When loading an HTML partial such as a navigation bar using `fetch()` in JavaScript:
