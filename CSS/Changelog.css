@@ -1,0 +1,145 @@
+@font-face {
+  font-family: 'NK57 Monospace Bold';
+  font-weight: normal;
+  font-style: normal;
+  src: url("../assets/nk57-eb.otf");
+}
+
+@font-face {
+  font-family: 'NK57 Monospace Condensed';
+  font-weight: normal;
+  font-style: normal;
+  src: url("../assets/nk57-cond.otf");
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  --bg-color: #fff;
+  --text-color: #272727;
+  --h3-color: #27ae60;
+  --release-date-color: #00796B; 
+  --feature-color: #FF9800;
+}
+
+.darkmode {
+  --bg-color: #222;
+  --text-color: #DDDDDD;
+  --h3-color: #48db71;
+  --release-date-color: #80CBC4; 
+  --feature-color: #FFB74D; 
+}
+
+body {
+  font-family: 'NK57 Monospace Condensed';
+  background-color: var(--bg-color);
+  color: var(--text-color);
+  line-height: 1.6;
+  transition: background-color 0.4s ease, color 0.4s ease;
+  padding: 2rem 1rem;
+}
+
+h3 {
+  color: var(--h3-color);
+  font-family: 'NK57 Monospace Bold', monospace;
+  font-size: 2.5rem;
+  text-align: center;
+  margin-bottom: 2rem;
+  padding-top: 1.5rem;
+}
+
+.release-date {
+  text-align: center;
+  font-size: 18px;
+  padding-top: 15px;
+  color: var(--release-date-color);
+}
+
+.feature {
+  text-align: center;
+  font-size: 20px;
+  padding-top: 10px;
+  color: var(--feature-color);
+}
+
+.description {
+  padding-top: 1px;
+  padding-left: 0;
+  margin-left: 0;
+  font-size: 15px;
+  text-align: center;
+}
+
+.description li {
+  list-style: none; 
+  position: relative;
+  padding-left: 1.5em; 
+  padding-top: 20px;
+  text-align: center;
+}
+
+@media (max-width: 768px) {
+  body {
+    font-size: 16px;
+  }
+
+  h3 {
+    font-size: 20px;
+    padding-top: 2rem;
+  }
+
+  .release-date {
+    font-size: 16px;
+    padding-top: 5px;
+  }
+
+  .feature {
+    font-size: 18px;
+    padding-top: 8px;
+  }
+
+  .description {
+    font-size: 14px;
+    padding-left: 5px;
+    margin-left: 5px;
+  }
+
+  .description li {
+    padding-top: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  body {
+    font-size: 14px;
+  }
+
+  h3 {
+    font-size: 18px;
+    padding-top: 2rem;
+  }
+
+  .release-date {
+    font-size: 14px;
+    padding-top: 5px;
+  }
+
+  .feature {
+    font-size: 16px;
+    padding-top: 5px;
+  }
+
+  .description {
+    font-size: 12px;
+    padding-left: 2px;
+    margin-left: 2px;
+  }
+
+  .description li {
+    padding-top: 15px;
+  }
+}
