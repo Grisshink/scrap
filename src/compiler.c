@@ -28,7 +28,6 @@
 #include <math.h>
 #include <unistd.h>
 #include <errno.h>
-#include <sys/wait.h>
 
 #define ARRLEN(arr) (sizeof(arr) / sizeof(arr[0]))
 #define MAX(x, y) ((x) > (y) ? (x) : (y))
@@ -37,8 +36,8 @@
 
 // Should be enough memory for now
 #define MEMORY_LIMIT 4194304 // 4 MB
-#define TARGET_TRIPLE "x86_64-pc-linux-gnu"
-//#define TARGET_TRIPLE "x86_64-w64-windows-gnu"
+//#define TARGET_TRIPLE "x86_64-pc-linux-gnu"
+#define TARGET_TRIPLE "x86_64-w64-windows-gnu"
 
 static bool compile_program(Exec* exec);
 static bool run_program(Exec* exec);
@@ -860,66 +859,39 @@ static bool build_program(Exec* exec) {
         return false;
     }
     LLVMDisposeTargetMachine(machine);
-
     TraceLog(LOG_INFO, "Built object file successfully");
 
-    pid_t pid = fork();
-    if (pid == -1) {
-        exec_set_error(exec, NULL, "[LLVM] Failed to fork a process: %s", strerror(errno));
-        return false;
-    }
+    //if (execvp("ld", (char*[]) { 
+    //        "ld", 
+    //        "-dynamic-linker", "/lib/ld-linux-x86-64.so.2", 
+    //        "-o", "a.out", 
+    //        "/lib/crt1.o", 
+    //        "output.o", 
+    //        "-L.", "-lscrapstd", "-lm", "-lc",
+    //        NULL,
+    //    }) == -1) {
+    //    perror("execvp");
+    //    exit(1);
+    //}
 
-    if (pid == 0) {
-        // We are newborn
-        // Replace da child with linker
-        if (execvp("ld", (char*[]) { 
-                "ld", 
-                "-dynamic-linker", "/lib/ld-linux-x86-64.so.2", 
-                "-o", "a.out", 
-                "/lib/crt1.o", 
-                "output.o", 
-                "-L.", "-lscrapstd", "-lm", "-lc",
-                NULL,
-            }) == -1) {
-            perror("execvp");
-            exit(1);
-        }
-        // Command for linking on Windows. This thing requires gcc, which is not ideal :/
-        // if (execvp("x86_64-w64-mingw32-gcc", (char*[]) { 
-        //         "x86_64-w64-mingw32-gcc", 
-        //         "-static",
-        //         "-o", "a.exe", 
-        //         "output.o", 
-        //         "-L.", "-lscrapstd-win", "-lm",
-        //         NULL,
-        //     }) == -1) {
-        //     perror("execvp");
-        //     exit(1);
-        // }
-    } else {
-        // We are parent
-        // Wait for child to terminate
-        int status;
-        waitpid(pid, &status, 0);
-        
-        if (WIFEXITED(status)) {
-            int exit_code = WEXITSTATUS(status);
-            if (exit_code == 0) {
-                TraceLog(LOG_INFO, "Linked successfully");
-            } else {
-                exec_set_error(exec, NULL, "Linker exited with exit code: %d", exit_code);
-                return false;
-            }
-        } else if (WIFSIGNALED(status)) {
-            exec_set_error(exec, NULL, "Linker signaled with signal number: %d", WTERMSIG(status));
-            return false;
-        } else {
-            exec_set_error(exec, NULL, "Received unknown child status :/");
-            return false;
-        }
-    }
+    // Command for linking on Windows. This thing requires gcc, which is not ideal :/
+    char link_error[1024];
 
-    return true;
+    bool res = spawn_process(
+        "x86_64-w64-mingw32-gcc", 
+        (char*[]) { 
+            "x86_64-w64-mingw32-gcc", 
+            "-static",
+            "-o", "a.exe", 
+            "output.o", 
+            "-L.", "-lscrapstd-win", "-lm",
+            NULL,
+        },
+        link_error,
+        1024
+    );
+    if (res) TraceLog(LOG_INFO, "Linked successfully");
+    return res;
 }
 
 static bool run_program(Exec* exec) {

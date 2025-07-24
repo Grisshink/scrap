@@ -452,4 +452,8 @@ void scrap_set_env(const char* name, const char* value);
 bool should_do_ram_overload(void);
 #endif
 
+#ifndef USE_INTERPRETER
+bool spawn_process(const char* name, char* args[], char* error, size_t error_len);
+#endif
+
 #endif // SCRAP_H
