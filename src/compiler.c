@@ -35,7 +35,7 @@
 #define CLAMP(x, min, max) (MIN(MAX(min, x), max))
 
 #ifdef _WIN32
-#define THREAD_EXIT(exec) exec_thread_exit(exec); pthread_exit((void*)0)
+#define THREAD_EXIT(exec) do { exec_thread_exit(exec); pthread_exit((void*)0); } while(0)
 #else
 #define THREAD_EXIT(exec) pthread_exit((void*)0)
 #endif
