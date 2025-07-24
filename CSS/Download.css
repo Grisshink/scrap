@@ -1,0 +1,154 @@
+@font-face {
+  font-family: 'NK57 Monospace Condensed';
+  font-weight: normal;
+  font-style: normal;
+  src: url("../assets/nk57-cond.otf");
+}
+
+@font-face {
+  font-family: 'NK57 Monospace';
+  font-weight: normal;
+  font-style: normal;
+  src: url("../assets/nk57.otf");
+}
+
+@font-face {
+  font-family: 'NK57 Monospace Bold';
+  font-weight: normal;
+  font-style: normal;
+  src: url("../assets/nk57-eb.otf");
+}
+
+:root {
+  --bg-color: #fff;
+  --text-color: #272727;
+  --h1-color: #27ae60;
+  --windows-color: #5D93E1;
+  --windows-hover-color: #4A7DCB;
+  --linux-color: #FF6F61;
+  --linux-hover-color: #E65A50;
+  --AppImage-color: #E9967A;
+  --AppImage-hover-color: #C26C5C;
+}
+
+.darkmode {
+  --bg-color: #222;
+  --text-color: #DDDDDD;
+  --h1-color: #48db71;
+  --windows-color: #5D93E1;
+  --windows-hover-color: #4A7DCB;
+  --linux-color: #FF6F61;
+  --linux-hover-color: #E65A50;
+  --AppImage-color: #E9967A;
+  --AppImage-hover-color: #C26C5C;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'NK57 Monospace Condensed';
+  background-color: var(--bg-color);
+  color: var(--text-color);
+  line-height: 1.6;
+  transition: background-color 0.4s ease, color 0.4s ease;
+  padding: 2rem 1rem;
+}
+
+h1 {
+  color: var(--h1-color);
+  font-family: 'NK57 Monospace Bold', monospace;
+  font-size: 2.5rem;
+  text-align: center;
+  margin-bottom: 2rem;
+  padding-top: 1.5rem;
+}
+
+.download-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  align-items: center;
+  margin-top: 1.5rem;
+}
+
+.Download-Button {
+  display: inline-block;
+  padding: 0.85rem 1.4rem;
+  font-family: 'NK57 Monospace';
+  font-weight: 600;
+  text-align: center;
+  border-radius: 6px;
+  color: #fff;
+  text-decoration: none;
+  transition: background-color 0.3s ease;
+  width: fit-content;
+  min-width: 220px;
+}
+
+.Download-Windows {
+  background-color: var(--windows-color);
+}
+
+.Download-Windows:hover,
+.Download-Windows:focus {
+  background-color: var(--windows-hover-color);
+}
+
+.Download-Linux {
+  background-color: var(--linux-color);
+}
+
+.Download-Linux:hover,
+.Download-Linux:focus {
+  background-color: var(--linux-hover-color);
+}
+
+.Download-AppImage {
+  background-color: var(--AppImage-color);
+}
+
+.Download-AppImage:hover,
+.Download-AppImage:focus {
+  background-color: var(--AppImage-hover-color);
+}
+
+.section p {
+  text-align: center;
+  margin-bottom: 1rem;
+}
+
+@media (max-width: 768px) {
+  h1 {
+    font-size: 2rem;
+    padding-top: 2rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .Download-Button {
+    font-size: 0.95rem;
+    padding: 0.75rem 1.2rem;
+    min-width: 200px;
+  }
+}
+
+@media (max-width: 480px) {
+  h1 {
+    font-size: 1.75rem;
+    padding-top: 2rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .Download-Button {
+    width: 100%;
+    max-width: 300px;
+  }
+
+  .download-list {
+    padding: 0 1rem;
+  }
+}
