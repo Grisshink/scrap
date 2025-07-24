@@ -42,9 +42,9 @@ Scrap is currently in **Beta** stage. Some features may be missing or break, so 
 
 ## Screenshots
 
-![Screenshot1](/assets/ui.png)
-![Screenshot2](/assets/scrap_screenshot2.png)
-![Screenshot3](/assets/scrap_screenshot3.png)
+![Screenshot1](/extras/scrap_screenshot1.png)
+![Screenshot2](/extras/scrap_screenshot2.png)
+![Screenshot3](/extras/scrap_screenshot3.png)
 
 ## Building
 
