@@ -1,0 +1,139 @@
+@font-face {
+  font-family: 'NK57 Monospace Condensed';
+  font-weight: normal;
+  font-style: normal;
+  src: url("../assets/nk57-cond.otf");
+}
+
+@font-face {
+  font-family: 'NK57 Monospace';
+  font-weight: normal;
+  font-style: normal;
+  src: url("../assets/nk57.otf");
+}
+
+@font-face {
+  font-family: 'NK57 Monospace Bold';
+  font-weight: normal;
+  font-style: normal;
+  src: url("../assets/nk57-eb.otf");
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  --bg-color: #fff;
+  --text-color: #272727;
+  --h1-color: #27ae60;
+  --hover-link: #42A3EB;
+}
+
+.darkmode {
+  --bg-color: #222;
+  --text-color: #DDDDDD;
+  --h1-color: #48db71;
+}
+
+body {
+  font-family: 'NK57 Monospace Condensed';
+  background-color: var(--bg-color);
+  color: var(--text-color);
+  line-height: 1.6;
+  transition: background-color 0.4s ease, color 0.4s ease;
+  padding: 2rem 1rem;
+}
+
+h1 {
+  color: var(--h1-color);
+  font-family: 'NK57 Monospace Bold', monospace;
+  font-size: 2.5rem;
+  text-align: center;
+  margin-bottom: 2rem;
+  padding-top: 1.5rem;
+}
+
+.content-wrapper {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+  justify-content: center;
+  padding: 10px;
+  box-sizing: border-box;
+}
+
+.content-item {
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  width: 300px;
+  height: 150px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 5px;
+  margin: 10px 0;
+  box-sizing: border-box;
+}
+
+.content-item a {
+  font-family: 'NK57 Monospace';
+  text-decoration: none;
+  display: block;
+  transition: color 0.3s ease-in-out;
+  color: var(--text-color);
+}
+
+.content-item a:hover {
+  color: var(--hover-link);
+}
+
+@media (max-width: 768px) {
+  h1 {
+    font-size: 2rem;
+    padding-top: 2rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .content-wrapper {
+    grid-template-columns: repeat(2, 1fr);
+    padding-bottom: 60px;
+  }
+
+  .content-item {
+    width: 280px;
+    height: 150px;
+  }
+}
+
+@media (max-width: 480px) {
+  h1 {
+    font-size: 1.75rem;
+    padding-top: 2rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .content-wrapper {
+    grid-template-columns: repeat(2, 1fr);
+    padding-bottom: 60px;
+  }
+
+  .content-item {
+    width: 180px;
+    height: 120px;
+  }
+}
+
+@media (pointer: coarse) {
+  .content-item a:hover {
+    color: inherit;
+  }
+
+  .darkmode .content-item a:hover {
+    color: inherit;
+  }
+}
