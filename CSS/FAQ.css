@@ -1,0 +1,117 @@
+@font-face {
+  font-family: 'NK57 Monospace Condensed';
+  font-weight: normal;
+  font-style: normal;
+  src: url("../assets/nk57-cond.otf");
+}
+
+@font-face {
+  font-family: 'NK57 Monospace Bold';
+  font-weight: normal;
+  font-style: normal;
+  src: url("../assets/nk57-eb.otf");
+}
+
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  --bg-color: #fff;
+  --text-color: #272727;
+  --h1-color: #27ae60;
+}
+
+.darkmode {
+  --bg-color: #222;
+  --text-color: #DDDDDD;
+  --h1-color: #48db71;
+}
+
+body {
+  background-color: var(--bg-color);
+  color: var(--text-color);
+  font-family: 'NK57 Monospace Condensed';
+  font-size: 15px;
+  line-height: 1.6;
+  transition: background-color 0.4s ease, color 0.4s ease;
+  padding: 0 20px 50px 20px;
+}
+
+h1 {
+  color: var(--h1-color);
+  font-family: 'NK57 Monospace Bold', monospace;
+  font-size: 2.5rem;
+  text-align: center;
+  margin-bottom: 2rem;
+  padding-top: 3rem;
+}
+
+.faq {
+  max-width: 800px;
+  margin-left: 40px;
+}
+
+.qa {
+  margin-bottom: 30px;
+  padding: 10px 0;
+}
+
+.q {
+  font-weight: 700;
+  font-family: 'NK57 Monospace Bold', monospace;
+  margin-bottom: 10px;
+}
+
+.a {
+  margin-top: 0;
+  line-height: 1.6;
+}
+
+.qa img {
+  height: 256px;
+  display: block;
+  margin: 20px auto;
+  border-radius: 6px;
+  max-width: 100%;
+}
+
+@media (max-width: 768px) {
+  body {
+    padding: 0 15px 40px 15px;
+  }
+
+  h1 {
+    font-size: 2rem;
+    padding-top: 4rem;
+    margin-bottom: 1.5rem;
+  }
+  .faq {
+    margin-left: 20px;
+    max-width: 100%;
+  }
+  
+  .qa img {
+    height: auto;
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  body {
+    padding: 0 10px 30px 10px;
+  }
+  h1 {
+    font-size: 1.75rem;
+    padding-top: 4rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .faq {
+    margin-left: 10px;
+    max-width: 100%;
+  }
+}
