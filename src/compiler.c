@@ -36,14 +36,15 @@
 
 #ifdef _WIN32
 #define THREAD_EXIT(exec) do { exec_thread_exit(exec); pthread_exit((void*)0); } while(0)
+#define TARGET_TRIPLE "x86_64-w64-windows-gnu"
 #else
 #define THREAD_EXIT(exec) pthread_exit((void*)0)
+#define TARGET_TRIPLE "x86_64-pc-linux-gnu"
 #endif
 
 // Should be enough memory for now
 #define MEMORY_LIMIT 4194304 // 4 MB
-//#define TARGET_TRIPLE "x86_64-pc-linux-gnu"
-#define TARGET_TRIPLE "x86_64-w64-windows-gnu"
+
 
 static bool compile_program(Exec* exec);
 static bool run_program(Exec* exec);
@@ -883,6 +884,7 @@ static bool build_program(Exec* exec) {
     // Command for linking on Windows. This thing requires gcc, which is not ideal :/
     char link_error[1024];
 
+#ifdef _WIN32
     bool res = spawn_process(
         "x86_64-w64-mingw32-gcc", 
         (char*[]) { 
@@ -890,12 +892,29 @@ static bool build_program(Exec* exec) {
             "-static",
             "-o", "a.exe", 
             "output.o", 
-            "-L.", "-lscrapstd-win", "-lm",
+            "-L.", "-lscrapstd", "-lm",
             NULL,
         },
         link_error,
         1024
     );
+#else
+    bool res = spawn_process(
+        "ld", 
+        (char*[]) { 
+            "ld", 
+            "-dynamic-linker", "/lib/ld-linux-x86-64.so.2", 
+            "-o", "a.out", 
+            "/lib/crt1.o", 
+            "output.o", 
+            "-L.", "-lscrapstd", "-lm", "-lc",
+            NULL,
+        },
+        link_error,
+        1024
+    );
+#endif
+
     if (res) {
         TraceLog(LOG_INFO, "Linked successfully");
     } else {
