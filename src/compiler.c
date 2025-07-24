@@ -34,6 +34,12 @@
 #define MIN(x, y) ((x) < (y) ? (x) : (y))
 #define CLAMP(x, min, max) (MIN(MAX(min, x), max))
 
+#ifdef _WIN32
+#define THREAD_EXIT(exec) exec_thread_exit(exec); pthread_exit((void*)0)
+#else
+#define THREAD_EXIT(exec) pthread_exit((void*)0)
+#endif
+
 // Should be enough memory for now
 #define MEMORY_LIMIT 4194304 // 4 MB
 //#define TARGET_TRIPLE "x86_64-pc-linux-gnu"
@@ -93,12 +99,12 @@ void* exec_thread_entry(void* thread_exec) {
     exec->current_state = STATE_NONE;
     pthread_cleanup_push(exec_thread_exit, thread_exec);
 
-    if (!compile_program(exec)) pthread_exit((void*)0);
+    if (!compile_program(exec)) THREAD_EXIT(exec);
 
     if (exec->current_mode == COMPILER_MODE_JIT) {
-        if (!run_program(exec)) pthread_exit((void*)0);
+        if (!run_program(exec)) THREAD_EXIT(exec);
     } else {
-        if (!build_program(exec)) pthread_exit((void*)0);
+        if (!build_program(exec)) THREAD_EXIT(exec);
     }
 
     pthread_cleanup_pop(1);
@@ -890,7 +896,12 @@ static bool build_program(Exec* exec) {
         link_error,
         1024
     );
-    if (res) TraceLog(LOG_INFO, "Linked successfully");
+    if (res) {
+        TraceLog(LOG_INFO, "Linked successfully");
+    } else {
+        exec_set_error(exec, NULL, link_error);
+    }
+
     return res;
 }
 
