@@ -75,8 +75,7 @@ bool spawn_process(const char* name, char* args[], char* error, size_t error_len
         &si,                   // Pointer to STARTUPINFO structure
         &pi)                   // Pointer to PROCESS_INFORMATION structure
     ) {
-        //snprintf(error, error_len, "[LLVM] Failed to create a process. Error code: %ld", GetLastError());
-        snprintf(error, error_len, "[LLVM] Failed to create a process.");
+        snprintf(error, error_len, "[LLVM] Failed to create a process. Error code: %ld", GetLastError());
         return false;
     }
 
