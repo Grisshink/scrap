@@ -1,134 +1,102 @@
 <!DOCTYPE html>
 <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Scrap project</title>
-        <link rel="stylesheet" href="style.css" />
-        <link rel="icon" href="assets/favicon.png" />
-    </head>
-    <body>
-        <nav>
-            <a href="#" class="nav-image"><img src="assets/favicon.png" alt="Scrap logo" height="32" /></a>
-            <a href="#downloads">Downloads</a>
-            <a href="https://github.com/Grisshink/scrap">Github</a>
-            <a href="#faq">FAQ</a>
-        </nav>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Scrap is a project that empowers anyone to build software using a simple, block-based interface.">
+    <meta name="keywords" content="Scrap, block-based programming, raylib">
 
-        <canvas id="title-bg"></canvas>
+    <link rel="icon" href="./assets/favicon.png" type="image/x-icon">
+    <link rel="stylesheet" href="./CSS/nav.css">
+    <link rel="stylesheet" href="./CSS/index.css">
+    <script src="./JS/nav.js" defer></script>
+    <script src="./JS/index.js" defer></script>
 
-        <div class="center-h">
-            <div class="center">
-                <img src="assets/favicon.png" alt="Scrap logo" height="96" />
-                <div class="title-group">
-                    <p class="title">Scrap</p>
-                    <p class="subtitle">@Grisshink</p>
-                </div>
-            </div>
-        </div>
+    <title>Scrap Project</title>
+</head>
+<body>
+  <header class="top-bar"></header>
+  <aside class="sidebar"></aside>
+  <header>
+    <canvas class="title-bg"></canvas>
+    <img class="logo" src="./assets/favicon.png" alt="Scrap logo" />
+    <h1 class="title">Scrap</h1>
+    <p class="subtitle">@Grisshink</p>
+  </header>
 
-        <div class="content">
-            <h1>Scrap</h1>
-            <p>Scrap is a new block based programming language with the aim towards advanced users. 
-               It is written in pure C and mostly inspired by other block based languages such as <a href="https://scratch.mit.edu/">Scratch</a> 
-               and its forks such as <a href="https://turbowarp.org">Turbowarp</a>.</p>
+  <main>
+    <article class="intro">
+      <h1>Scrap</h1>
+      <p>
+        Scrap is a new block-based programming language aimed at advanced users. It is written in pure C and is inspired by other block-based languages such as
+        <a class="links" href="https://scratch.mit.edu/">Scratch</a> and its forks like
+        <a class="links" href="https://turbowarp.org">Turbowarp</a>.
+      </p>
+    </article>
 
-            <a class="anchor" id="downloads"></a>
-            <h2>Downloads</h2>
+    <section class="advantages-section">
+      <h2>Notable Advantages from Scratch</h2>
 
-            <div class="download-content">
-                <ul>
-                    <li class="windows">
-                        <a class="download-button" href="https://github.com/Grisshink/scrap/releases/download/v0.4.2-beta/scrap-v0.4.2-beta-windows64.zip">
-                            Download for Windows</a>
-                    </li>
-                    <li class="linux">
-                        <a class="download-button" href="https://github.com/Grisshink/scrap/releases/download/v0.4.2-beta/scrap-v0.4.2-beta-linux.tar.gz">
-                            Download for Linux</a>
-                    </li>
-                    <li class="appimage">
-                        <a class="download-button" href="https://github.com/Grisshink/scrap/releases/download/v0.4.2-beta/Scrap-x86_64.AppImage">
-                            Download for Linux (AppImage)</a>
-                    </li>
-                </ul>
-            </div>
+      <section class="advantages">
+        <article class="section">
+          <p>Faster runtime <em>(still not faster than Turbowarp as Scrap is interpreted for now)</em></p>
+        </article>
+        <article class="section">
+          <p>The code runs in a separate thread, solving some performance issues compared to Scratch.</p>
+        </article>
+        <article class="section">
+          <p>
+            New, more advanced <code>else if</code>, <code>else</code> blocks, reducing nested checks in <code>if-else</code> blocks
+            <em>(a more flexible variant of Snap's
+              <a class="links" href="https://snap.berkeley.edu">Snap!</a>
+              <code>if-else</code> blocks)
+            </em>
+          </p>
+          <img src="./assets/else-if.png" alt="Else if blocks demonstration" />
+        </article>
+        <article class="section">
+          <p class="right-align">
+            Variables can have a lifetime, avoiding name conflicts and allowing temporary variables.
+          </p>
+          <img src="./assets/variables.png" alt="Variable lifetime demonstration" />
+        </article>
+        <article class="section">
+          <p>Custom blocks can return values and be used as arguments for other blocks.</p>
+          <img class="return" src="./assets/return.png" alt="Block return demonstration" />
+        </article>
+        <article class="section">
+          <p class="right-align">Various string manipulation and bitwise operator blocks.</p>
+          <img src="./assets/operators.png" alt="Bitwise and string operators demonstration" />
+        </article>
+        <article class="section">
+          <p>Data type conversion functions.</p>
+          <img src="./assets/convert.png" alt="Conversion operators demonstration" />
+        </article>
+        <article class="section">
+          <p class="right-align">
+            More strict equality checks for <code>[[ ]] = [[ ]]</code> and <code>[[ ]] != [[ ]]</code> blocks (case-sensitive and data-type aware).
+          </p>
+          <img src="./assets/comparison.png" alt="Comparison blocks demonstration" />
+        </article>
+        <article class="section">
+          <p>Lists are now a data type instead of a different variable type, allowing nested lists (though currently inconvenient).</p>
+          <img src="./assets/lists.png" alt="List blocks demonstration" />
+        </article>
+        <article class="section ui-section">
+          <p>Modularized interface—most UI elements can be rearranged or moved to another tab.</p>
+          <img src="./assets/ui.png" alt="Modular UI demonstration" />
+        </article>
+      </section>
+    </section>
 
-            <h2>Notable advantages from scratch</h2>
-
-            <div class="section">
-                <p>Faster runtime <em>(Still not faster than Turbowarp because Scrap is interpreted for now)</em></p>
-            </div>
-            <div class="section">
-                <p>The code runs in a separate thread. This solves some performance issues compared to Scratch</p>
-            </div>
-            <div class="section">
-                <img src="assets/else-if.png" alt="Else if blocks demonstration">
-                <p>New, more advanced else if, else blocks, which 
-                    eliminate a lot of nested checks with if-else blocks <em>(i.e. more flexible variant of if-else block in <a href="https://snap.berkeley.edu">Snap!</a>)</em></p>
-            </div>
-            <div class="section">
-                <p style="text-align: right">Variables can have a lifetime, which avoids variable name conflicts and allows to make temporary variables</p>
-                <img src="assets/variables.png" alt="Variable lifetime demonstration">
-            </div>
-            <div class="section">
-                <img src="assets/return.png" alt="Block return demonstration">
-                <p>Custom blocks can return values and can be used as an argument for other block</p>
-            </div>
-            <div class="section">
-                <p style="text-align: right">Various string manipulation blocks and bitwise operator blocks</p>
-                <img src="assets/operators.png" alt="Bitwise and string operators demonstration">
-            </div>
-            <div class="section">
-                <img src="assets/convert.png" alt="Conversion operators demonstration">
-                <p>Data type conversion functions</p>
-            </div>
-            <div class="section">
-                <p style="text-align: right">More strict checks for [[] = []] and [[] != []] blocks. Now they are case sensitive and will check data type for equality</p>
-                <img src="assets/comparison.png" alt="Comparison blocks demonstration">
-            </div>
-            <div class="section">
-                <img src="assets/lists.png" alt="List blocks demonstration">
-                <p>Lists are now a data type instead of a different type of variable, this allows nesting lists inside a list (although it's not very convenient as of right now)</p>
-            </div>
-            <div class="section" style="flex-direction: column">
-                <p>Modularized interface. Most of the interface can be rearranged or moved to another tab</p>
-                <img src="assets/ui.png" alt="Modular UI demonstration" height=480>
-            </div>
-
-            <a class="anchor" id="faq"></a>
-            <h2>FAQ</h2>
-
-            <div class="qa">
-                <p>Q: Is it any better than something like Snap?</p>
-                <p>A: In its current state, no, but there are several features planned which will make it more comparable to these advanced coding platforms
-                      (like native compilation, static typing, first class functions, multithreading, graphics, etc.)</p>
-            </div>
-            <div class="qa">
-                <p>Q: Why GPLv3 when there are better licenses for that?</p>
-                <p>A: I did this mostly because scratch and turbowarp are endorsing open source (with the former even being licensed with AGPL), so i'm also endorsing that. 
-                      The main plan now is to split up a project into an editor part (which will still be GPLv3) and a library/compiler part 
-                      (which will be licensed more permissively). This should in theory resolve most of the licensing issues in future</p>
-            </div>
-            <div class="qa">
-                <p>Q: Any plans for mobile support?</p>
-                <p>A: Not at all. The UI was not designed with mobile features in mind, so i will not work on the mobile port any time soon. 
-                      Unofficial ports are still welcome, though</p>
-            </div>
-            <div class="qa">
-                <p>Q: Are there any tigers in the project?</p>
-                <p style="display: flex; flex-direction: row; gap: 0.5em">A: Maybe... <img src="assets/tiger.jpg" alt="tiger.jpg" height=256></p>
-            </div>
-        </div>
-
-        <div class="footer">
-            <a href="#">Back to top</a>
-            <div>
-                <a href="https://github.com/Grisshink/scrap/blob/main/LICENSE">License</a>
-                <a href="#downloads">Downloads</a>
-                <a href="https://github.com/Grisshink/scrap">Github</a>
-            </div>
-            <p>© Grisshink, 2025</p>
-        </div>
-        <script src="index.js"></script>
-    </body>
+    <section class="contribute">
+      <p>
+        Scrap is provided under the <a class="links" href="https://github.com/Grisshink/scrap/blob/main/LICENSE">GPLv3</a> license.
+        You can contribute to and follow the development of the project on the
+        <a class="links" href="https://github.com/Grisshink/scrap">official GitHub page</a>.
+      </p>
+    </section>
+  </main>
+  <footer class="footer"></footer>
+</body>
 </html>

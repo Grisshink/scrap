@@ -1,4 +1,4 @@
-![Scrap splash](/extras/scrap_splash_v2.png)
+![Scrap splash](/assets/scrap_splash_v2.png)
 
 # Scrap
 
@@ -42,9 +42,9 @@ Scrap is currently in **Beta** stage. Some features may be missing or break, so 
 
 ## Screenshots
 
-![Screenshot1](/extras/scrap_screenshot1.png)
-![Screenshot2](/extras/scrap_screenshot2.png)
-![Screenshot3](/extras/scrap_screenshot3.png)
+![Screenshot1](/assets/ui.png)
+![Screenshot2](/assets/scrap_screenshot2.png)
+![Screenshot3](/assets/scrap_screenshot3.png)
 
 ## Building
 
@@ -157,3 +157,63 @@ the wallpaper was made by [@Grisshink](https://github.com/Grisshink)
 ## License
 
 All scrap code is licensed under the terms of [GPLv3 license](/LICENSE).
+
+## Project Website Deployment
+
+The website for this project is deployed via **GitHub Pages**, served from the `gh-pages` branch. The project is organized into a structured directory layout to support clarity and maintainability:
+
+* **HTML** — Main HTML files are located at the root level
+* **CSS** — Stylesheets for layout and design
+* **JS** — JavaScript files for interactivity and functionality
+* **assets** — Static resources including images, fonts, and other media
+
+## File Organization and Pathing
+
+All file references should use **relative paths** (e.g., `./assets/image.jpg`) to ensure compatibility across both local development and GitHub Pages deployment. This avoids hardcoded URLs and simplifies environment transitions.
+
+### Reference Examples
+
+* **HTML Files**
+  All HTML files, including reusable components like `nav.html`, are placed at the root of the repository.
+  Example: `./nav.html`
+
+* **CSS Files**
+  Example: `./CSS/FAQ.css`
+
+* **JavaScript Files**
+  Example: `./JS/nav.js`
+
+* **Images and Media**
+  Example: `./assets/tiger.jpg`
+
+* **Fonts**
+  Example usage in a CSS file:
+
+  ```css
+  @font-face {
+      font-family: 'NK57 Monospace';
+      font-weight: normal;
+      font-style: normal;
+      src: url('./assets/nk57.otf');
+  }
+  ```
+
+* **Dynamic Content Loading**
+  When loading an HTML partial such as a navigation bar using `fetch()` in JavaScript:
+  Example: `./nav.html`
+---
+
+## Local Development Workflow
+
+To preview the site locally during development, it's recommended to use a lightweight HTTP server. This ensures proper resolution of relative paths and simulates GitHub Pages behavior.
+
+To start a local server using Python, run the following command from the root of the repository:
+
+```bash
+python -m http.server
+```
+
+The site will be accessible at:
+`http://localhost:8000`
+
+Open this URL in your browser to preview and test the site. No path changes are required between local and production environments, as all paths are defined relatively.
