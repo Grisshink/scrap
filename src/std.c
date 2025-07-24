@@ -19,7 +19,6 @@
 #include <string.h>
 #include <stdio.h>
 #include <time.h>
-#include <sys/ioctl.h>
 
 #include "std.h"
 
@@ -453,7 +452,7 @@ char* std_string_from_any(Gc* gc, AnyValue* value) {
         return std_string_from_bool(gc, value->data.int_val);
     case ANY_TYPE_LIST: ;
         char str[32];
-        int size = snprintf(str, 32, "*LIST (%zu)*", value->data.list_val->size);
+        int size = snprintf(str, 32, "*LIST (%lu)*", value->data.list_val->size);
         return std_string_from_literal(gc, str, size);
     default:
         return std_string_from_literal(gc, "", 0);
@@ -587,6 +586,12 @@ int std_term_print_any(AnyValue* any) {
 
 #ifdef STANDALONE_STD
 
+#ifdef _WIN32
+#include <windows.h>
+#else
+#include <sys/ioctl.h>
+#endif
+
 static int cursor_x = 0;
 static int cursor_y = 0;
 static Color clear_color = {0};
@@ -636,15 +641,27 @@ void std_term_set_clear_color(Color color) {
 }
 
 int std_term_cursor_max_y(void) {
+#ifdef _WIN32
+    CONSOLE_SCREEN_BUFFER_INFO csbi;
+    if (!GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi)) return 0;
+    return csbi.srWindow.Bottom - csbi.srWindow.Top + 1;
+#else
     struct winsize w;
     if (ioctl(0, TIOCGWINSZ, &w)) return 0;
     return w.ws_row;
+#endif
 }
 
 int std_term_cursor_max_x(void) {
+#ifdef _WIN32
+    CONSOLE_SCREEN_BUFFER_INFO csbi;
+    if (!GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi)) return 0;
+    return csbi.srWindow.Right - csbi.srWindow.Left + 1;
+#else
     struct winsize w;
     if (ioctl(0, TIOCGWINSZ, &w)) return 0;
     return w.ws_col;
+#endif
 }
 
 int std_term_cursor_x(void) {
@@ -707,7 +724,7 @@ char* std_term_get_input(Gc* gc) {
 }
 
 int std_term_print_list(List* list) {
-    int len = printf("*LIST (%zu)*", list->size);
+    int len = printf("*LIST (%lu)*", list->size);
     fflush(stdout);
     return len;
 }
