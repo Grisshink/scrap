@@ -18,6 +18,7 @@
 #include "term.h"
 #include "scrap.h"
 #include "vec.h"
+#include "util.h"
 
 #include <unistd.h>
 #include <stdlib.h>
@@ -30,6 +31,7 @@
 #define MAX(x, y) ((x) > (y) ? (x) : (y))
 #define CLAMP(x, min, max) (MIN(MAX(min, x), max))
 #define ARRLEN(arr) (sizeof(arr) / sizeof(arr[0]))
+#define CONVERT_COLOR(color, type) (type) { color.r, color.g, color.b, color.a }
 
 #define MATH_LIST_LEN 10
 #define TERM_COLOR_LIST_LEN 8
@@ -508,21 +510,21 @@ Data block_set_fg_color(Exec* exec, int argc, Data* argv) {
     if (argv[0].type != DATA_STR) RETURN_NOTHING;
 
     if (!strcmp(argv[0].data.str_arg, "black")) {
-        term_set_fg_color(BLACK);
+        term_set_fg_color(CONVERT_COLOR(BLACK, TermColor));
     } else if (!strcmp(argv[0].data.str_arg, "red")) {
-        term_set_fg_color(RED);
+        term_set_fg_color(CONVERT_COLOR(RED, TermColor));
     } else if (!strcmp(argv[0].data.str_arg, "yellow")) {
-        term_set_fg_color(YELLOW);
+        term_set_fg_color(CONVERT_COLOR(YELLOW, TermColor));
     } else if (!strcmp(argv[0].data.str_arg, "green")) {
-        term_set_fg_color(GREEN);
+        term_set_fg_color(CONVERT_COLOR(GREEN, TermColor));
     } else if (!strcmp(argv[0].data.str_arg, "blue")) {
-        term_set_fg_color(BLUE);
+        term_set_fg_color(CONVERT_COLOR(BLUE, TermColor));
     } else if (!strcmp(argv[0].data.str_arg, "purple")) {
-        term_set_fg_color(PURPLE);
+        term_set_fg_color(CONVERT_COLOR(PURPLE, TermColor));
     } else if (!strcmp(argv[0].data.str_arg, "cyan")) {
-        term_set_fg_color((Color) { 0x00, 0xff, 0xff, 0xff});
+        term_set_fg_color((TermColor) { 0x00, 0xff, 0xff, 0xff});
     } else if (!strcmp(argv[0].data.str_arg, "white")) {
-        term_set_fg_color(WHITE);
+        term_set_fg_color(CONVERT_COLOR(WHITE, TermColor));
     }
 
     RETURN_NOTHING;
@@ -534,21 +536,21 @@ Data block_set_bg_color(Exec* exec, int argc, Data* argv) {
     if (argv[0].type != DATA_STR) RETURN_NOTHING;
 
     if (!strcmp(argv[0].data.str_arg, "black")) {
-        term_set_bg_color(BLACK);
+        term_set_bg_color(CONVERT_COLOR(BLACK, TermColor));
     } else if (!strcmp(argv[0].data.str_arg, "red")) {
-        term_set_bg_color(RED);
+        term_set_bg_color(CONVERT_COLOR(RED, TermColor));
     } else if (!strcmp(argv[0].data.str_arg, "yellow")) {
-        term_set_bg_color(YELLOW);
+        term_set_bg_color(CONVERT_COLOR(YELLOW, TermColor));
     } else if (!strcmp(argv[0].data.str_arg, "green")) {
-        term_set_bg_color(GREEN);
+        term_set_bg_color(CONVERT_COLOR(GREEN, TermColor));
     } else if (!strcmp(argv[0].data.str_arg, "blue")) {
-        term_set_bg_color(BLUE);
+        term_set_bg_color(CONVERT_COLOR(BLUE, TermColor));
     } else if (!strcmp(argv[0].data.str_arg, "purple")) {
-        term_set_bg_color(PURPLE);
+        term_set_bg_color(CONVERT_COLOR(PURPLE, TermColor));
     } else if (!strcmp(argv[0].data.str_arg, "cyan")) {
-        term_set_bg_color((Color) { 0x00, 0xff, 0xff, 0xff});
+        term_set_bg_color((TermColor) { 0x00, 0xff, 0xff, 0xff});
     } else if (!strcmp(argv[0].data.str_arg, "white")) {
-        term_set_bg_color(WHITE);
+        term_set_bg_color(CONVERT_COLOR(WHITE, TermColor));
     }
 
     RETURN_NOTHING;
@@ -558,8 +560,8 @@ Data block_reset_color(Exec* exec, int argc, Data* argv) {
     (void) exec;
     (void) argv;
     (void) argc;
-    term_set_fg_color(WHITE);
-    term_set_bg_color(BLACK);
+    term_set_fg_color(CONVERT_COLOR(WHITE, TermColor));
+    term_set_bg_color(CONVERT_COLOR(BLACK, TermColor));
     RETURN_NOTHING;
 }
 
@@ -577,21 +579,21 @@ Data block_term_set_clear(Exec* exec, int argc, Data* argv) {
     if (argv[0].type != DATA_STR) RETURN_NOTHING;
 
     if (!strcmp(argv[0].data.str_arg, "black")) {
-        term_set_clear_color(BLACK);
+        term_set_clear_color(CONVERT_COLOR(BLACK, TermColor));
     } else if (!strcmp(argv[0].data.str_arg, "red")) {
-        term_set_clear_color(RED);
+        term_set_clear_color(CONVERT_COLOR(RED, TermColor));
     } else if (!strcmp(argv[0].data.str_arg, "yellow")) {
-        term_set_clear_color(YELLOW);
+        term_set_clear_color(CONVERT_COLOR(YELLOW, TermColor));
     } else if (!strcmp(argv[0].data.str_arg, "green")) {
-        term_set_clear_color(GREEN);
+        term_set_clear_color(CONVERT_COLOR(GREEN, TermColor));
     } else if (!strcmp(argv[0].data.str_arg, "blue")) {
-        term_set_clear_color(BLUE);
+        term_set_clear_color(CONVERT_COLOR(BLUE, TermColor));
     } else if (!strcmp(argv[0].data.str_arg, "purple")) {
-        term_set_clear_color(PURPLE);
+        term_set_clear_color(CONVERT_COLOR(PURPLE, TermColor));
     } else if (!strcmp(argv[0].data.str_arg, "cyan")) {
-        term_set_clear_color((Color) { 0x00, 0xff, 0xff, 0xff});
+        term_set_clear_color((TermColor) { 0x00, 0xff, 0xff, 0xff});
     } else if (!strcmp(argv[0].data.str_arg, "white")) {
-        term_set_clear_color(WHITE);
+        term_set_clear_color(CONVERT_COLOR(WHITE, TermColor));
     }
 
     RETURN_NOTHING;
