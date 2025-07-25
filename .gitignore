@@ -10,3 +10,4 @@ private/
 locale/
 a.out
 libscrapstd.a
+libscrapstd-win.a

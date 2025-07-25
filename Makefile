@@ -44,7 +44,12 @@ OBJFILES := $(addprefix src/,filedialogs.o render.o save.o term.o blocks.o scrap
 BUNDLE_FILES := data examples extras locale LICENSE README.md CHANGELOG.md
 SCRAP_HEADERS := src/scrap.h src/ast.h src/config.h src/scrap_gui.h
 EXE_NAME := scrap
-STD_NAME := libscrapstd.a
+
+ifeq ($(TARGET), WINDOWS)
+	STD_NAME := libscrapstd-win.a
+else
+	STD_NAME := libscrapstd.a
+endif
 
 ifeq ($(USE_COMPILER), FALSE)
 	OBJFILES += src/interpreter.o

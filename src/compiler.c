@@ -868,23 +868,10 @@ static bool build_program(Exec* exec) {
     LLVMDisposeTargetMachine(machine);
     TraceLog(LOG_INFO, "Built object file successfully");
 
-    //if (execvp("ld", (char*[]) { 
-    //        "ld", 
-    //        "-dynamic-linker", "/lib/ld-linux-x86-64.so.2", 
-    //        "-o", "a.out", 
-    //        "/lib/crt1.o", 
-    //        "output.o", 
-    //        "-L.", "-lscrapstd", "-lm", "-lc",
-    //        NULL,
-    //    }) == -1) {
-    //    perror("execvp");
-    //    exit(1);
-    //}
-
-    // Command for linking on Windows. This thing requires gcc, which is not ideal :/
     char link_error[1024];
 
 #ifdef _WIN32
+    // Command for linking on Windows. This thing requires gcc, which is not ideal :/
     bool res = spawn_process(
         "x86_64-w64-mingw32-gcc", 
         (char*[]) { 
@@ -892,7 +879,7 @@ static bool build_program(Exec* exec) {
             "-static",
             "-o", "a.exe", 
             "output.o", 
-            "-L.", "-lscrapstd", "-lm",
+            "-L.", "-lscrapstd-win", "-lm",
             NULL,
         },
         link_error,
