@@ -243,11 +243,6 @@ typedef enum {
     GUI_TYPE_FILE,
 } WindowGuiType;
 
-typedef struct {
-    struct timespec start;
-    const char* name;
-} Timer;
-
 struct Vm {
     Blockdef** blockdefs;
     // TODO: Maybe remove end_blockdef from here
@@ -401,16 +396,6 @@ bool handle_settings_dropdown_click(void);
 PanelTree* find_panel(PanelTree* root, PanelType panel);
 void update_search(void);
 
-// util.c
-int leading_ones(unsigned char byte);
-const char* into_data_path(const char* path);
-Block block_new_ms(Blockdef* blockdef);
-Timer start_timer(const char* name);
-double end_timer(Timer timer);
-Language code_to_language(const char* code);
-const char* language_to_code(Language lang);
-void scrap_log(int log_level, const char *text, va_list args);
-
 // save.c
 void set_default_config(Config* config);
 void apply_config(Config* dst, Config* src);
@@ -421,6 +406,8 @@ BlockChain* load_code(const char* file_path);
 void config_new(Config* config);
 void config_free(Config* config);
 void config_copy(Config* dst, Config* src);
+const char* language_to_code(Language lang);
+Language code_to_language(const char* code);
 
 // window.c
 void init_gui_window(void);

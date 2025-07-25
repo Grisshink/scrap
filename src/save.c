@@ -66,6 +66,31 @@ bool load_block(SaveArena* save, Block* block);
 void save_blockdef(SaveArena* save, Blockdef* blockdef);
 Blockdef* load_blockdef(SaveArena* save);
 
+const char* language_to_code(Language lang) {
+    switch (lang) {
+        case LANG_SYSTEM: return "system";
+        case LANG_EN: return "en";
+        case LANG_RU: return "ru";
+        case LANG_KK: return "kk";
+        case LANG_UK: return "uk";
+    }
+    assert(false && "Unreachable");
+}
+
+Language code_to_language(const char* code) {
+    if (!strcmp(code, "en")) {
+        return LANG_EN;
+    } else if (!strcmp(code, "ru")) {
+        return LANG_RU;
+    } else if (!strcmp(code, "kk")) {
+        return LANG_KK;
+    } else if (!strcmp(code, "uk")) {
+        return LANG_UK;
+    } else {
+        return LANG_SYSTEM;
+    }
+}
+
 void vector_set_string(char** vec, char* str) {
     vector_clear(*vec);
     for (char* i = str; *i; i++) vector_add(vec, *i);

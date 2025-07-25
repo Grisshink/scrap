@@ -19,6 +19,7 @@
 #include "term.h"
 #include "../external/tinyfiledialogs.h"
 #include "vec.h"
+#include "util.h"
 
 #include <assert.h>
 #include <math.h>
@@ -43,6 +44,15 @@ char* file_menu_list[] = {
     "Save project",
     "Load project",
 };
+
+Block block_new_ms(Blockdef* blockdef) {
+    Block block = block_new(blockdef);
+    for (size_t i = 0; i < vector_size(block.arguments); i++) {
+        if (block.arguments[i].type != ARGUMENT_BLOCKDEF) continue;
+        block.arguments[i].data.blockdef->func = block_exec_custom;
+    }
+    return block;
+}
 
 // Removes a block and all blocks within it if it matches the specified blockdef
 static void block_delete_blockdef(Block* block, Blockdef* blockdef) {

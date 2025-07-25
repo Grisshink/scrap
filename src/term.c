@@ -16,7 +16,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "term.h"
-#include "scrap.h"
+#include "util.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -25,19 +25,26 @@
 
 #define ARRLEN(x) (sizeof(x)/sizeof(x[0]))
 
+#define TERM_WHITE (TermColor) { 0xff, 0xff, 0xff, 0xff }
+#define TERM_BLACK (TermColor) { 0x00, 0x00, 0x00, 0xff }
+
 Terminal term = {0};
 
-void term_init(void) {
+void term_init(MeasureTextSliceFunc measure_text, void* font, unsigned short font_size) {
     sem_init(&term.input_sem, 0, 0);
     pthread_mutexattr_t attr;
     pthread_mutexattr_init(&attr);
     pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
     pthread_mutex_init(&term.lock, &attr);
     pthread_mutexattr_destroy(&attr);
-    term_resize(0, 0);
     term.is_buffer_dirty = true;
-    term.cursor_fg_color = WHITE;
-    term.cursor_bg_color = BLACK;
+    term.cursor_fg_color = TERM_WHITE;
+    term.cursor_bg_color = TERM_BLACK;
+    term.measure_text = measure_text;
+    term.font = font;
+    term.font_size = font_size;
+
+    term_resize(0, 0);
 }
 
 void term_restart(void) {
@@ -45,9 +52,9 @@ void term_restart(void) {
     sem_init(&term.input_sem, 0, 0);
     term.buf_start = 0;
     term.buf_end = 0;
-    term.cursor_fg_color = WHITE;
-    term.cursor_bg_color = BLACK;
-    term.clear_color = BLACK;
+    term.cursor_fg_color = TERM_WHITE;
+    term.cursor_bg_color = TERM_BLACK;
+    term.clear_color = TERM_BLACK;
     term_clear();
 }
 
@@ -78,25 +85,25 @@ void term_scroll_down(void) {
     memmove(term.buffer, term.buffer + term.char_w, term.char_w * (term.char_h - 1) * sizeof(*term.buffer));
     for (int i = term.char_w * (term.char_h - 1); i < term.char_w * term.char_h; i++) {
         strncpy(term.buffer[i].ch, " ", ARRLEN(term.buffer[i].ch));
-        term.buffer[i].fg_color = WHITE;
+        term.buffer[i].fg_color = TERM_WHITE;
         term.buffer[i].bg_color = term.clear_color;
     }
     pthread_mutex_unlock(&term.lock);
 }
 
-void term_set_fg_color(Color color) {
+void term_set_fg_color(TermColor color) {
     pthread_mutex_lock(&term.lock);
     term.cursor_fg_color = color;
     pthread_mutex_unlock(&term.lock);
 }
 
-void term_set_bg_color(Color color) {
+void term_set_bg_color(TermColor color) {
     pthread_mutex_lock(&term.lock);
     term.cursor_bg_color = color;
     pthread_mutex_unlock(&term.lock);
 }
 
-void term_set_clear_color(Color color) {
+void term_set_clear_color(TermColor color) {
     pthread_mutex_lock(&term.lock);
     term.clear_color = color;
     pthread_mutex_unlock(&term.lock);
@@ -165,7 +172,7 @@ void term_clear(void) {
     pthread_mutex_lock(&term.lock);
     for (int i = 0; i < term.char_w * term.char_h; i++) {
         strncpy(term.buffer[i].ch, " ", ARRLEN(term.buffer[i].ch));
-        term.buffer[i].fg_color = WHITE;
+        term.buffer[i].fg_color = TERM_WHITE;
         term.buffer[i].bg_color = term.clear_color;
     }
     term.cursor_pos = 0;
@@ -174,11 +181,10 @@ void term_clear(void) {
 
 void term_resize(float screen_w, float screen_h) {
     pthread_mutex_lock(&term.lock);
-    term.size = (Rectangle) { 0, 0, screen_w, screen_h };
+    term.size = (TermVec) { screen_w, screen_h };
 
-    GuiMeasurement char_size = measure_slice(font_mono, "A", 1, TERM_CHAR_SIZE);
-    term.char_size = (Vector2) { char_size.w, char_size.h };
-    Vector2 new_buffer_size = { term.size.width / term.char_size.x, term.size.height / term.char_size.y };
+    term.char_size = term.measure_text(term.font, "A", 1, term.font_size);
+    TermVec new_buffer_size = { term.size.x / term.char_size.x, term.size.y / term.char_size.y };
 
     if (term.char_w != (int)new_buffer_size.x || term.char_h != (int)new_buffer_size.y) {
         term.char_w = new_buffer_size.x;

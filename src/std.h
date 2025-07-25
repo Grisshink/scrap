@@ -84,9 +84,9 @@ void std_term_set_clear_color(Color color);
 // TODO: Remove this dependency by doing stdio
 #include "term.h"
 
-void std_term_set_fg_color(Color color);
-void std_term_set_bg_color(Color color);
-void std_term_set_clear_color(Color color);
+void std_term_set_fg_color(TermColor color);
+void std_term_set_bg_color(TermColor color);
+void std_term_set_clear_color(TermColor color);
 #endif
 
 // Misc

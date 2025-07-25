@@ -18,30 +18,43 @@
 #ifndef TERM_H
 #define TERM_H
 
-#include "raylib.h"
 #include <semaphore.h>
 #include <pthread.h>
+#include <stdbool.h>
 
 #define TERM_INPUT_BUF_SIZE 256
-#define TERM_CHAR_SIZE (int)(conf.font_size * 0.6)
+
+typedef struct {
+    unsigned char r, g, b, a;
+} TermColor;
 
 typedef struct {
     char ch[5];
-    Color fg_color;
-    Color bg_color;
+    TermColor fg_color;
+    TermColor bg_color;
 } TerminalChar;
 
 typedef struct {
+    float x, y;
+} TermVec;
+
+typedef TermVec (*MeasureTextSliceFunc)(void* font, const char* text, unsigned int text_size, unsigned short font_size);
+
+typedef struct {
+    MeasureTextSliceFunc measure_text;
+    void* font;
+    unsigned short font_size;
+
     pthread_mutex_t lock;
-    Rectangle size;
+    TermVec size;
     int char_w, char_h;
     int cursor_pos;
-    Color cursor_fg_color, cursor_bg_color;
-    Vector2 char_size;
+    TermColor cursor_fg_color, cursor_bg_color;
+    TermVec char_size;
     TerminalChar *buffer;
     bool is_buffer_dirty;
 
-    Color clear_color;
+    TermColor clear_color;
 
     sem_t input_sem;
     char input_buf[TERM_INPUT_BUF_SIZE];
@@ -51,13 +64,13 @@ typedef struct {
 
 extern Terminal term;
 
-void term_init(void);
+void term_init(MeasureTextSliceFunc measure_text, void* font, unsigned short font_size);
 void term_input_put_char(char ch);
 char term_input_get_char(void);
 void term_scroll_down(void);
-void term_set_fg_color(Color color);
-void term_set_bg_color(Color color);
-void term_set_clear_color(Color color);
+void term_set_fg_color(TermColor color);
+void term_set_bg_color(TermColor color);
+void term_set_clear_color(TermColor color);
 int term_print_str(const char* str);
 int term_print_int(int value);
 int term_print_double(double value);

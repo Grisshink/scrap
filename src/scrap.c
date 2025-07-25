@@ -19,6 +19,7 @@
 #include "term.h"
 #include "scrap.h"
 #include "vec.h"
+#include "util.h"
 
 #include <math.h>
 #include <libintl.h>
@@ -148,6 +149,10 @@ char* tab_bar_buttons_text[2] = {
     "Output",
 };
 
+const char* into_data_path(const char* path) {
+    return TextFormat("%s%s", GetApplicationDirectory(), path);
+}
+
 // Recursively checks nested blocks for correct structure and connection with the parent block
 void sanitize_block(Block* block) {
     for (vec_size_t i = 0; i < vector_size(block->arguments); i++) {
@@ -242,6 +247,11 @@ GuiMeasurement measure_slice(Font font, const char *text, unsigned int text_size
 
 GuiMeasurement scrap_gui_measure_text(void* font, const char* text, unsigned int text_size, unsigned short font_size) {
     return measure_slice(*(Font*)font, text, text_size, font_size);
+}
+
+TermVec term_measure_text(void* font, const char* text, unsigned int text_size, unsigned short font_size) {
+    GuiMeasurement m = measure_slice(*(Font*)font, text, text_size, font_size);
+    return (TermVec) { .x = m.w, .y = m.h };
 }
 
 BlockCategory block_category_new(const char* name, Color color) {
@@ -486,7 +496,7 @@ void setup(void) {
     vector_add(&search_list_search, 0);
     update_search();
 
-    term_init();
+    term_init(term_measure_text, &font_mono, conf.font_size * 0.6);
 
 #if defined(RAM_OVERLOAD) && defined(_WIN32)
     if (should_do_ram_overload()) {

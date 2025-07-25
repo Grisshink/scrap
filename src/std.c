@@ -747,15 +747,15 @@ int std_term_print_bool(bool value) {
     return term_print_bool(value);
 }
 
-void std_term_set_fg_color(Color color) {
+void std_term_set_fg_color(TermColor color) {
     return term_set_fg_color(color);
 }
 
-void std_term_set_bg_color(Color color) {
+void std_term_set_bg_color(TermColor color) {
     return term_set_bg_color(color);
 }
 
-void std_term_set_clear_color(Color color) {
+void std_term_set_clear_color(TermColor color) {
     return term_set_clear_color(color);
 }
 

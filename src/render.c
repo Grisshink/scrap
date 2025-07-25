@@ -72,7 +72,7 @@ static void draw_term(int x, int y) {
     if (term.char_w == 0 || term.char_h == 0) goto unlock_term;
     if (!term.buffer) goto unlock_term;
 
-    Rectangle final_pos = { term.size.x + x, term.size.y + y, term.size.width, term.size.height };
+    Rectangle final_pos = { x, y, term.size.x, term.size.y };
     DrawRectangleRec(final_pos, BLACK);
     BeginShaderMode(line_shader);
     DrawRectangleLinesEx(final_pos, 2.0, (Color) { 0x60, 0x60, 0x60, 0xff });
@@ -83,12 +83,12 @@ static void draw_term(int x, int y) {
         pos.x = final_pos.x;
         for (int x = 0; x < term.char_w; x++) {
             TerminalChar buffer_char = term.buffer[x + y*term.char_w];
-            if (!rl_vec_equal(buffer_char.bg_color, BLACK)) {
-                DrawRectangle(pos.x, pos.y, term.char_size.x, TERM_CHAR_SIZE, buffer_char.bg_color);
+            if (!rl_vec_equal(CONVERT_COLOR(buffer_char.bg_color, Color), BLACK)) {
+                DrawRectangle(pos.x, pos.y, term.char_size.x, term.font_size, CONVERT_COLOR(buffer_char.bg_color, Color));
             }
             pos.x += term.char_size.x;
         }
-        pos.y += TERM_CHAR_SIZE;
+        pos.y += term.font_size;
     }
 
     pos = (Vector2) { final_pos.x, final_pos.y };
@@ -96,19 +96,19 @@ static void draw_term(int x, int y) {
         pos.x = final_pos.x;
         for (int x = 0; x < term.char_w; x++) {
             TerminalChar buffer_char = term.buffer[x + y*term.char_w];
-            if (!rl_vec_equal(buffer_char.fg_color, buffer_char.bg_color)) {
-                DrawTextEx(font_mono, buffer_char.ch, pos, TERM_CHAR_SIZE, 0.0, buffer_char.fg_color);
+            if (!rl_vec_equal(CONVERT_COLOR(buffer_char.fg_color, Color), CONVERT_COLOR(buffer_char.bg_color, Color))) {
+                DrawTextEx(font_mono, buffer_char.ch, pos, term.font_size, 0.0, CONVERT_COLOR(buffer_char.fg_color, Color));
             }
             pos.x += term.char_size.x;
         }
-        pos.y += TERM_CHAR_SIZE;
+        pos.y += term.font_size;
     }
     if (fmod(GetTime(), 1.0) <= 0.5) {
         Vector2 cursor_pos = (Vector2) {
             final_pos.x + (term.cursor_pos % term.char_w) * term.char_size.x,
-            final_pos.y + (term.cursor_pos / term.char_w) * TERM_CHAR_SIZE,
+            final_pos.y + (term.cursor_pos / term.char_w) * term.font_size,
         };
-        DrawRectangle(cursor_pos.x, cursor_pos.y, BLOCK_OUTLINE_SIZE, TERM_CHAR_SIZE, term.cursor_fg_color);
+        DrawRectangle(cursor_pos.x, cursor_pos.y, BLOCK_OUTLINE_SIZE, term.font_size, CONVERT_COLOR(term.cursor_fg_color, Color));
     }
 
 unlock_term:

@@ -15,13 +15,22 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-#include "scrap.h"
-#include "raylib.h"
 #include "vec.h"
+#include "util.h"
 
 #include <assert.h>
 #include <string.h>
 #include <stdio.h>
+#include <time.h>
+
+#define LOG_ALL 0
+#define LOG_TRACE 1
+#define LOG_DEBUG 2
+#define LOG_INFO 3
+#define LOG_WARNING 4
+#define LOG_ERROR 5
+#define LOG_FATAL 6
+#define LOG_NONE 7
 
 Timer start_timer(const char* name) {
     Timer timer;
@@ -45,44 +54,6 @@ int leading_ones(unsigned char byte) {
         byte <<= 1;
     }
     return out;
-}
-
-const char* into_data_path(const char* path) {
-    return TextFormat("%s%s", GetApplicationDirectory(), path);
-}
-
-Block block_new_ms(Blockdef* blockdef) {
-    Block block = block_new(blockdef);
-    for (size_t i = 0; i < vector_size(block.arguments); i++) {
-        if (block.arguments[i].type != ARGUMENT_BLOCKDEF) continue;
-        block.arguments[i].data.blockdef->func = block_exec_custom;
-    }
-    return block;
-}
-
-const char* language_to_code(Language lang) {
-    switch (lang) {
-        case LANG_SYSTEM: return "system";
-        case LANG_EN: return "en";
-        case LANG_RU: return "ru";
-        case LANG_KK: return "kk";
-        case LANG_UK: return "uk";
-    }
-    assert(false && "Unreachable");
-}
-
-Language code_to_language(const char* code) {
-    if (!strcmp(code, "en")) {
-        return LANG_EN;
-    } else if (!strcmp(code, "ru")) {
-        return LANG_RU;
-    } else if (!strcmp(code, "kk")) {
-        return LANG_KK;
-    } else if (!strcmp(code, "uk")) {
-        return LANG_UK;
-    } else {
-        return LANG_SYSTEM;
-    }
 }
 
 #define CSI_DARK_GRAY "\e[90m"
