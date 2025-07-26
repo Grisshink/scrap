@@ -79,7 +79,7 @@ bool spawn_process(const char* name, char* args[], char* error, size_t error_len
     command_line[i - 1] = 0;
 
     if(!CreateProcessA(
-        name, command_line,
+        NULL, command_line,
         NULL, NULL, // No security attributes
         TRUE, // Allow to inherit handles
         CREATE_NO_WINDOW, // Don't spawn cmd for a process
