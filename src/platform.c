@@ -100,12 +100,14 @@ bool spawn_process(const char* name, char* args[], char* error, size_t error_len
 
     for (;;) {
         if (!ReadFile(read_pipe, buf, 1024 - 1 /* Save space for null terminator */, &size, NULL)) {
-            snprintf(error, error_len, "[LLVM] Failed to read from pipe. Error code: %ld", GetLastError());
+            long last_error = GetLastError();
+            if (last_error == ERROR_BROKEN_PIPE) break;
+
+            snprintf(error, error_len, "[LLVM] Failed to read from pipe. Error code: %ld", last_error);
             CloseHandle(proc_info.hProcess);
             CloseHandle(proc_info.hThread);
             return false;
         }
-        if (size == 0) break;
         buf[size] = 0;
         term_print_str(buf);
     }
