@@ -82,8 +82,8 @@ bool spawn_process(const char* name, char* args[], char* error, size_t error_len
         name, command_line,
         NULL, NULL, // No security attributes
         TRUE, // Allow to inherit handles
-        0, // Just give me a process
-        NULL, NULL, // Please
+        CREATE_NO_WINDOW, // Don't spawn cmd for a process
+        NULL, NULL, // Just give me a process
         &start_info, // Give STARTUPINFO
         &proc_info) // Get PROCESS_INFORMATION
     ) {
