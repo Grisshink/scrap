@@ -21,7 +21,6 @@
 #include <assert.h>
 #include <string.h>
 #include <stdio.h>
-#include <time.h>
 
 #define LOG_ALL 0
 #define LOG_TRACE 1

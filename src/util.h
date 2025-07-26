@@ -1,6 +1,7 @@
 #ifndef SCRAP_UTIL_H
 #define SCRAP_UTIL_H
 
+#include <time.h>
 #include <stdarg.h>
 
 typedef struct {

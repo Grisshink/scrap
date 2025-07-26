@@ -10,6 +10,8 @@
 #include <string.h>
 #include <errno.h>
 
+#include "term.h"
+
 void scrap_set_env(const char* name, const char* value) {
 #ifdef _WIN32
     char buf[256];
@@ -48,9 +50,23 @@ bool should_do_ram_overload(void) {
 #ifndef USE_INTERPRETER
 bool spawn_process(const char* name, char* args[], char* error, size_t error_len) {
 #ifdef _WIN32
-    STARTUPINFO si = {0};
-    PROCESS_INFORMATION pi = {0};
-    si.cb = sizeof(si);
+    HANDLE read_pipe, write_pipe;
+    STARTUPINFO start_info = {0};
+    PROCESS_INFORMATION proc_info = {0};
+
+    SECURITY_ATTRIBUTES pipe_attrs = {0};
+    pipe_attrs.nLength = sizeof(pipe_attrs);
+    pipe_attrs.bInheritHandle = TRUE;
+
+    if (!CreatePipe(&read_pipe, &write_pipe, &pipe_attrs, 0)) {
+        snprintf(error, error_len, "[LLVM] Failed to create a pipe. Error code: %ld", GetLastError());
+        return false;
+    }
+
+    start_info.cb = sizeof(start_info);
+    start_info.hStdError = write_pipe;
+    start_info.hStdOutput = write_pipe;
+    start_info.dwFlags = STARTF_USESTDHANDLES;
 
     char command_line[512];
     size_t i = 0;
@@ -61,48 +77,69 @@ bool spawn_process(const char* name, char* args[], char* error, size_t error_len
         command_line[i++] = ' ';
     }
     command_line[i - 1] = 0;
-    printf("Command line: %s\n", command_line);
 
-    // Start the child process. 
-    if(!CreateProcessA(NULL,   // No module name (use command line)
-        command_line,          // Command line
-        NULL,                  // Process handle not inheritable
-        NULL,                  // Thread handle not inheritable
-        FALSE,                 // Set handle inheritance to FALSE
-        0,                     // No creation flags
-        NULL,                  // Use parent's environment block
-        NULL,                  // Use parent's starting directory 
-        &si,                   // Pointer to STARTUPINFO structure
-        &pi)                   // Pointer to PROCESS_INFORMATION structure
+    if(!CreateProcessA(
+        name, command_line,
+        NULL, NULL, // No security attributes
+        TRUE, // Allow to inherit handles
+        0, // Just give me a process
+        NULL, NULL, // Please
+        &start_info, // Give STARTUPINFO
+        &proc_info) // Get PROCESS_INFORMATION
     ) {
         snprintf(error, error_len, "[LLVM] Failed to create a process. Error code: %ld", GetLastError());
+        CloseHandle(write_pipe);
+        CloseHandle(read_pipe);
         return false;
     }
 
-    printf("Created new process\n");
+    CloseHandle(write_pipe);
 
-    // Wait until child process exits.
-    WaitForSingleObject(pi.hProcess, INFINITE);
+    long size = 0;
+    char buf[1024];
+
+    for (;;) {
+        if (!ReadFile(read_pipe, buf, 1024 - 1 /* Save space for null terminator */, &size, NULL)) {
+            snprintf(error, error_len, "[LLVM] Failed to read from pipe. Error code: %ld", GetLastError());
+            CloseHandle(proc_info.hProcess);
+            CloseHandle(proc_info.hThread);
+            return false;
+        }
+        if (size == 0) break;
+        buf[size] = 0;
+        term_print_str(buf);
+    }
+
+    WaitForSingleObject(proc_info.hProcess, INFINITE);
 
     long exit_code;
-
-    if (!GetExitCodeProcess(pi.hProcess, &exit_code)) {
+    if (!GetExitCodeProcess(proc_info.hProcess, &exit_code)) {
         snprintf(error, error_len, "[LLVM] Failed to get exit code. Error code: %ld", GetLastError());
-        CloseHandle(pi.hProcess);
-        CloseHandle(pi.hThread);
+        CloseHandle(proc_info.hProcess);
+        CloseHandle(proc_info.hThread);
+        CloseHandle(read_pipe);
         return false;
     }
 
     if (exit_code) {
         snprintf(error, error_len, "Linker exited with exit code: %ld", exit_code);
-        CloseHandle(pi.hProcess);
-        CloseHandle(pi.hThread);
+        CloseHandle(proc_info.hProcess);
+        CloseHandle(proc_info.hThread);
+        CloseHandle(read_pipe);
         return false;
     }
 
-    CloseHandle(pi.hProcess);
-    CloseHandle(pi.hThread);
+    CloseHandle(proc_info.hProcess);
+    CloseHandle(proc_info.hThread);
+    CloseHandle(read_pipe);
 #else
+    int pipefd[2];
+
+    if (pipe(pipefd) == -1) {
+        snprintf(error, error_len, "[LLVM] Failed to create a pipe: %s", strerror(errno));
+        return false;
+    }
+
     pid_t pid = fork();
     if (pid == -1) {
         snprintf(error, error_len, "[LLVM] Failed to fork a process: %s", strerror(errno));
@@ -111,6 +148,24 @@ bool spawn_process(const char* name, char* args[], char* error, size_t error_len
 
     if (pid == 0) {
         // We are newborn
+
+        // Close duplicate read end
+        if (close(pipefd[0]) == -1) {
+            perror("close");
+            exit(1);
+        }
+        
+        // Replace stdout and stderr with pipe
+        if (dup2(pipefd[1], 1) == -1) {
+            perror("dup2");
+            exit(1);
+        }
+
+        if (dup2(pipefd[1], 2) == -1) {
+            perror("dup2");
+            exit(1);
+        }
+
         // Replace da child with linker
         if (execvp(name, args) == -1) {
             perror("execvp");
@@ -118,6 +173,29 @@ bool spawn_process(const char* name, char* args[], char* error, size_t error_len
         }
     } else {
         // We are parent
+
+        // Close duplicate write end
+        if (close(pipefd[1]) == -1) {
+            perror("close");
+            exit(1);
+        }
+
+        ssize_t size = 0;
+        char buf[1024];
+        while ((size = read(pipefd[0], buf, 1024 - 1 /* Save space for null terminator */))) {
+            if (size == -1) {
+                perror("read");
+                exit(1);
+            }
+            buf[size] = 0;   
+            term_print_str(buf);
+        }
+
+        if (close(pipefd[0]) == -1) {
+            perror("close");
+            exit(1);
+        }
+
         // Wait for child to terminate
         int status;
         waitpid(pid, &status, 0);
