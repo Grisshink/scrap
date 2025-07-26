@@ -605,7 +605,7 @@ static LLVMValueRef register_globals(Exec* exec) {
     add_function(exec, "std_string_ord", LLVMInt32Type(), string_ord_func_params, ARRLEN(string_ord_func_params), std_string_ord, false, false);
 
     LLVMTypeRef string_chr_func_params[] = { LLVMInt64Type(), LLVMInt32Type() };
-    add_function(exec, "std_string_chr", LLVMPointerType(LLVMInt8Type(), 0), string_chr_func_params, ARRLEN(string_chr_func_params), std_string_chr, false, false);
+    add_function(exec, "std_string_chr", LLVMPointerType(LLVMInt8Type(), 0), string_chr_func_params, ARRLEN(string_chr_func_params), std_string_chr, true, false);
 
     LLVMTypeRef string_letter_in_func_params[] = { LLVMInt64Type(), LLVMInt32Type(), LLVMPointerType(LLVMInt8Type(), 0) };
     add_function(exec, "std_string_letter_in", LLVMPointerType(LLVMInt8Type(), 0), string_letter_in_func_params, ARRLEN(string_letter_in_func_params), std_string_letter_in, true, false);
