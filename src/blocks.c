@@ -447,7 +447,7 @@ Data block_print(Exec* exec, int argc, Data* argv) {
 
 Data block_println(Exec* exec, int argc, Data* argv) {
     Data out = block_print(exec, argc, argv);
-    term_print_str("\r\n");
+    term_print_str("\n");
     return out;
 }
 
@@ -2169,7 +2169,7 @@ bool block_println(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* r
     (void) block;
     MIN_ARG_COUNT(1);
     block_print(exec, block, argc, argv, return_val);
-    build_call(exec, "std_term_print_str", CONST_STRING_LITERAL("\r\n"));
+    build_call(exec, "std_term_print_str", CONST_STRING_LITERAL("\n"));
     return true;
 }
 

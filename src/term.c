@@ -120,8 +120,14 @@ int term_print_str(const char* str) {
             term.cursor_pos = term.char_w * term.char_h - term.char_w;
             term_scroll_down();
         }
+        if (*str == '\t') {
+            term_print_str("    ");
+            str++;
+            continue;
+        }
         if (*str == '\n') {
             term.cursor_pos += term.char_w;
+            term.cursor_pos -= term.cursor_pos % term.char_w;
             str++;
             if (term.cursor_pos >= term.char_w * term.char_h) {
                 term.cursor_pos -= term.char_w;

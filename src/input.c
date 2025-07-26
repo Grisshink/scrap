@@ -1123,7 +1123,7 @@ static void handle_key_press(void) {
             if (!vm.is_running) return;
             if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_KP_ENTER)) {
                 term_input_put_char('\n');
-                term_print_str("\r\n");
+                term_print_str("\n");
                 render_surface_needs_redraw = true;
                 return;
             }
