@@ -22,6 +22,12 @@
 
 #include "std.h"
 
+#ifdef _WIN32
+#include <windows.h>
+#else
+#include <sys/ioctl.h>
+#endif
+
 // Explicitly including rprand.h here as this translation unit will soon need 
 // to compile as standalone library, which means we should not depend on 
 // raylib in any way
@@ -545,12 +551,15 @@ bool std_any_is_eq(AnyValue* left, AnyValue* right) {
 
 int std_sleep(int usecs) {
     if (usecs < 0) return 0;
-
+#ifdef _WIN32
+    Sleep(usecs / 1000);
+#else
     struct timespec sleep_time = {0};
     sleep_time.tv_sec = usecs / 1000000;
     sleep_time.tv_nsec = (usecs % 1000000) * 1000;
 
     if (nanosleep(&sleep_time, &sleep_time) == -1) return 0;
+#endif
     return usecs;
 }
 
@@ -585,12 +594,6 @@ int std_term_print_any(AnyValue* any) {
 }
 
 #ifdef STANDALONE_STD
-
-#ifdef _WIN32
-#include <windows.h>
-#else
-#include <sys/ioctl.h>
-#endif
 
 static int cursor_x = 0;
 static int cursor_y = 0;
