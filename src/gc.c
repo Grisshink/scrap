@@ -24,14 +24,22 @@
 #include "std.h"
 
 #ifdef STANDALONE_STD
+
 #define EXIT exit(1)
 #define TRACE_LOG(loglevel, ...) fprintf(stderr, __VA_ARGS__)
+
+#ifdef _WIN32
+#include <windows.h>
+#endif // _WIN32
+
 #else
+
 #include <pthread.h>
 #include "raylib.h"
 #define EXIT pthread_exit((void*)0)
 #define TRACE_LOG(loglevel, ...) TraceLog(loglevel, __VA_ARGS__)
-#endif
+
+#endif // STANDALONE_STD
 
 static void gc_mark_refs(Gc* gc, GcChunkData* chunk);
 
@@ -123,9 +131,17 @@ static void gc_mark_refs(Gc* gc, GcChunkData* chunk) {
 
 void gc_collect(Gc* gc) {
 #ifdef DEBUG
+#if defined(_WIN32) && defined(STANDALONE_STD)
+    long t;
+    long t_freq;
+
+    QueryPerformanceCounter((LARGE_INTEGER*)&t);
+    QueryPerformanceFrequency((LARGE_INTEGER*)&t_freq);
+#else
     struct timespec t;
     clock_gettime(CLOCK_MONOTONIC, &t);
-#endif
+#endif // defined(_WIN32) && defined(STANDALONE_STD)
+#endif // DEBUG
 
     // Mark roots
     for (size_t i = 0; i < vector_size(gc->root_chunks); i++) {
@@ -157,12 +173,19 @@ void gc_collect(Gc* gc) {
     gc->memory_used -= memory_freed;
 
 #ifdef DEBUG
+#if defined(_WIN32) && defined(STANDALONE_STD)
+    long end_time;
+    QueryPerformanceCounter((LARGE_INTEGER*)&end_time);
+
+    double gc_time = (double)(end_time - t) * 1e+6 / (double)t_freq;
+#else
     struct timespec end_time;
     clock_gettime(CLOCK_MONOTONIC, &end_time);
 
     double gc_time = (end_time.tv_sec - t.tv_sec) * 1e+6 + (end_time.tv_nsec - t.tv_nsec) * 1e-3;
+#endif // defined(_WIN32) && defined(STANDALONE_STD)
     TRACE_LOG(LOG_INFO, "[GC] gc_collect: freed %zu bytes, deleted %zu chunks, time: %.2fus", memory_freed, chunks_deleted, gc_time);
-#endif
+#endif // DEBUG
 }
 
 void* gc_malloc(Gc* gc, size_t size, AnyValueType data_type) {
