@@ -60,6 +60,11 @@ typedef struct {
     char* font_mono_path;
 } Config;
 
+typedef struct {
+    char* linker_command;
+    char* linker_command_windows;
+} ProjectConfig;
+
 typedef bool (*ButtonClickHandler)(void);
 
 typedef enum {
@@ -241,6 +246,7 @@ typedef enum {
     GUI_TYPE_SETTINGS,
     GUI_TYPE_ABOUT,
     GUI_TYPE_FILE,
+    GUI_TYPE_PROJECT_SETTINGS,
 } WindowGuiType;
 
 struct Vm {
@@ -252,6 +258,7 @@ struct Vm {
 
 extern Config conf;
 extern Config window_conf;
+extern ProjectConfig project_conf;
 extern HoverInfo hover_info;
 extern Shader line_shader;
 extern RenderTexture2D render_surface;
@@ -393,19 +400,26 @@ bool handle_left_slider_button_click(void);
 bool handle_right_slider_button_click(void);
 bool handle_category_click(void);
 bool handle_settings_dropdown_click(void);
+bool handle_project_settings_build_button_click(void);
 PanelTree* find_panel(PanelTree* root, PanelType panel);
 void update_search(void);
 
 // save.c
+void config_new(Config* config);
+void config_free(Config* config);
 void set_default_config(Config* config);
 void apply_config(Config* dst, Config* src);
 void save_config(Config* config);
 void load_config(Config* config);
-void save_code(const char* file_path, BlockChain* code);
-BlockChain* load_code(const char* file_path);
-void config_new(Config* config);
-void config_free(Config* config);
 void config_copy(Config* dst, Config* src);
+
+void save_code(const char* file_path, ProjectConfig* config, BlockChain* code);
+BlockChain* load_code(const char* file_path, ProjectConfig* out_config);
+
+void project_config_new(ProjectConfig* config);
+void project_config_free(ProjectConfig* config);
+void project_config_set_default(ProjectConfig* config);
+
 const char* language_to_code(Language lang);
 Language code_to_language(const char* code);
 
@@ -440,7 +454,7 @@ bool should_do_ram_overload(void);
 #endif
 
 #ifndef USE_INTERPRETER
-bool spawn_process(const char* name, char* args[], char* error, size_t error_len);
+bool spawn_process(char* command, char* error, size_t error_len);
 #endif
 
 #endif // SCRAP_H

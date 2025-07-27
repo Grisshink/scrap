@@ -48,7 +48,30 @@ bool should_do_ram_overload(void) {
 #endif // defined(RAM_OVERLOAD) && defined(_WIN32)
 
 #ifndef USE_INTERPRETER
-bool spawn_process(const char* name, char* args[], char* error, size_t error_len) {
+static size_t next_arg(char* cmd, size_t i, char** out_arg) {
+    *out_arg = NULL;
+
+    while (cmd[i] == ' ') i++;
+    if (cmd[i] == 0) return i;
+
+    if (cmd[i] == '"') {
+        i++;
+        *out_arg = cmd + i;
+        while (cmd[i] != '"' && cmd[i] != 0) i++;
+    } else {
+        *out_arg = cmd + i;
+        while (cmd[i] != ' ' && cmd[i] != 0) i++;
+    }
+
+    if (cmd[i] == 0) {
+        return i;
+    } else {
+        cmd[i] = 0;
+        return i + 1;
+    }
+}
+
+bool spawn_process(char* command, char* error, size_t error_len) {
 #ifdef _WIN32
     HANDLE read_pipe, write_pipe;
     STARTUPINFO start_info = {0};
@@ -68,18 +91,8 @@ bool spawn_process(const char* name, char* args[], char* error, size_t error_len
     start_info.hStdOutput = write_pipe;
     start_info.dwFlags = STARTF_USESTDHANDLES;
 
-    char command_line[512];
-    size_t i = 0;
-    for (char** arg = args; *arg; arg++) {
-        command_line[i++] = '"';
-        for (char* str = *arg; *str && i < 510; str++) command_line[i++] = *str;
-        command_line[i++] = '"';
-        command_line[i++] = ' ';
-    }
-    command_line[i - 1] = 0;
-
     if(!CreateProcessA(
-        NULL, command_line,
+        NULL, command,
         NULL, NULL, // No security attributes
         TRUE, // Allow to inherit handles
         CREATE_NO_WINDOW, // Don't spawn cmd for a process
@@ -167,6 +180,26 @@ bool spawn_process(const char* name, char* args[], char* error, size_t error_len
             perror("dup2");
             exit(1);
         }
+
+        // Parse command line
+        char* name;
+        char* args[256];
+        size_t arg_len = 1;
+
+        size_t i = 0;
+        i = next_arg(command, i, &name);
+        args[0] = name;
+        args[255] = NULL;
+
+        while (args[arg_len - 1] && arg_len < 255) i = next_arg(command, i, &args[arg_len++]);
+
+        printf("Name: %s\n", name);
+
+        printf("Args: ");
+        for (char** arg = args; *arg; arg++) {
+            printf("\"%s\", ", *arg);
+        }
+        printf("\n");
 
         // Replace da child with linker
         if (execvp(name, args) == -1) {

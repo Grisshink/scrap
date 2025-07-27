@@ -407,6 +407,8 @@ void draw_window(void) {
     static int font_path_scroll = 0;
     static int font_bold_path_scroll = 0;
     static int font_mono_path_scroll = 0;
+    static int linker_command_scroll = 0;
+    static int linker_command_windows_scroll = 0;
 
     switch (window.type) {
     case GUI_TYPE_SETTINGS:
@@ -456,6 +458,29 @@ void draw_window(void) {
                 draw_button(gettext("Reset panels"), handle_settings_reset_panels_button_click);
                 draw_button(gettext("Reset"), handle_settings_reset_button_click);
                 draw_button(gettext("Apply"), handle_settings_apply_button_click);
+            gui_element_end(gui);
+        end_window();
+        break;
+    case GUI_TYPE_PROJECT_SETTINGS:
+        begin_window(gettext("Build settings"), 0.6 * gui->win_w, 0.8 * gui->win_h, animation_ease);
+            begin_setting(gettext("Linker command"), false);
+                draw_text_input(&project_conf.linker_command, gettext("command"), &linker_command_scroll);
+            end_setting();
+
+            begin_setting(gettext("Linker command (Windows)"), false);
+                draw_text_input(&project_conf.linker_command_windows, gettext("command"), &linker_command_windows_scroll);
+            end_setting();
+
+            gui_grow(gui, DIRECTION_VERTICAL);
+
+            gui_element_begin(gui);
+                gui_set_grow(gui, DIRECTION_HORIZONTAL);
+                gui_set_direction(gui, DIRECTION_HORIZONTAL);
+                gui_set_gap(gui, WINDOW_ELEMENT_PADDING);
+
+                gui_grow(gui, DIRECTION_HORIZONTAL);
+
+                draw_button(gettext("Build!"), handle_project_settings_build_button_click);
             gui_element_end(gui);
         end_window();
         break;

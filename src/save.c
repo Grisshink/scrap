@@ -59,8 +59,8 @@ Blockdef** save_blockdefs = NULL;
 static unsigned int ver = 0;
 
 int save_find_id(const char* id);
-void save_code(const char* file_path, BlockChain* code);
-BlockChain* load_code(const char* file_path);
+void save_code(const char* file_path, ProjectConfig* config, BlockChain* code);
+BlockChain* load_code(const char* file_path, ProjectConfig* out_config);
 void save_block(SaveArena* save, Block* block);
 bool load_block(SaveArena* save, Block* block);
 void save_blockdef(SaveArena* save, Blockdef* blockdef);
@@ -127,6 +127,22 @@ void set_default_config(Config* config) {
     vector_set_string(&config->font_path, DATA_PATH "nk57-cond.otf");
     vector_set_string(&config->font_bold_path, DATA_PATH "nk57-eb.otf");
     vector_set_string(&config->font_mono_path, DATA_PATH "nk57.otf");
+}
+
+void project_config_new(ProjectConfig* config) {
+    config->linker_command = vector_create();
+    config->linker_command_windows = vector_create();
+}
+
+void project_config_free(ProjectConfig* config) {
+    vector_free(config->linker_command);
+    vector_free(config->linker_command_windows);
+}
+
+void project_config_set_default(ProjectConfig* config) {
+    vector_set_string(&config->linker_command, "ld -dynamic-linker /lib/ld-linux-x86-64.so.2 -o a.out /lib/crt1.o output.o -L. -lscrapstd -lm -lc");
+    // Command for linking on Windows. This thing requires gcc, which is not ideal :/
+    vector_set_string(&config->linker_command_windows, "x86_64-w64-mingw32-gcc.exe -static -o a.exe output.o -L. -lscrapstd-win -lm");
 }
 
 void apply_config(Config* dst, Config* src) {
@@ -560,7 +576,7 @@ void collect_all_code_ids(BlockChain* code) {
     }
 }
 
-void save_code(const char* file_path, BlockChain* code) {
+void save_code(const char* file_path, ProjectConfig* config, BlockChain* code) {
     SaveArena save = new_save(32768);
     ver = 2;
     int chains_count = vector_size(code);
@@ -593,6 +609,9 @@ void save_code(const char* file_path, BlockChain* code) {
 
     save_add_varint(&save, chains_count);
     for (int i = 0; i < chains_count; i++) save_blockchain(&save, &code[i]);
+
+    save_add_array(&save, config->linker_command, vector_size(config->linker_command), sizeof(config->linker_command[0]));
+    save_add_array(&save, config->linker_command_windows, vector_size(config->linker_command_windows), sizeof(config->linker_command_windows[0]));
 
     SaveFileData(file_path, save.ptr, save.used_size);
 
@@ -811,7 +830,11 @@ bool load_blockchain(SaveArena* save, BlockChain* chain) {
     return true;
 }
 
-BlockChain* load_code(const char* file_path) {
+BlockChain* load_code(const char* file_path, ProjectConfig* out_config) {
+    ProjectConfig config;
+    project_config_new(&config);
+    project_config_set_default(&config);
+
     BlockChain* code = vector_create();
     save_blockdefs = vector_create();
     save_block_ids = vector_create();
@@ -870,6 +893,16 @@ BlockChain* load_code(const char* file_path) {
         if (!load_blockchain(&save, &chain)) goto load_fail;
         vector_add(&code, chain);
     }
+
+    unsigned int len;
+    char* linker_command = save_read_array(&save, sizeof(char), &len);
+    if (linker_command) vector_set_string(&config.linker_command, linker_command);
+
+    char* linker_command_windows = save_read_array(&save, sizeof(char), &len);
+    if (linker_command_windows) vector_set_string(&config.linker_command_windows, linker_command_windows);
+
+    *out_config = config;
+
     UnloadFileData(file_data);
     vector_free(save_block_ids);
     vector_free(save_blockdefs);
@@ -878,6 +911,7 @@ BlockChain* load_code(const char* file_path) {
 load_fail:
     if (file_data) UnloadFileData(file_data);
     for (size_t i = 0; i < vector_size(code); i++) blockchain_free(&code[i]);
+    project_config_free(&config);
     vector_free(code);
     vector_free(save_block_ids);
     vector_free(save_blockdefs);

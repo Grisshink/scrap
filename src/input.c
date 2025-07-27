@@ -277,7 +277,7 @@ bool handle_file_menu_click(void) {
     case FILE_MENU_SAVE_PROJECT:
         path = tinyfd_saveFileDialog(NULL, project_name, ARRLEN(filters), filters, "Scrap project files (.scrp)");
         if (!path) break;
-        save_code(path, editor_code);
+        save_code(path, &project_conf, editor_code);
 
         base_path = get_basename(path);
         for (i = 0; base_path[i]; i++) project_name[i] = base_path[i];
@@ -287,11 +287,15 @@ bool handle_file_menu_click(void) {
         path = tinyfd_openFileDialog(NULL, project_name, ARRLEN(filters), filters, "Scrap project files (.scrp)", 0);
         if (!path) break;
 
-        BlockChain* chain = load_code(path);
+        ProjectConfig new_config;
+        BlockChain* chain = load_code(path, &new_config);
         if (!chain) {
             actionbar_show(gettext("File load failed :("));
             break;
         }
+
+        project_config_free(&project_conf);
+        project_conf = new_config;
 
         for (size_t i = 0; i < vector_size(editor_code); i++) blockchain_free(&editor_code[i]);
         vector_free(editor_code);
@@ -345,16 +349,23 @@ bool handle_run_button_click(void) {
 }
 
 bool handle_build_button_click(void) {
-#ifdef USE_INTERPRETER
-    start_vm();
-#else
-    start_vm(COMPILER_MODE_BUILD);
-#endif
+    if (vm.is_running) return true;
+    gui_window_show(GUI_TYPE_PROJECT_SETTINGS);
     return true;
 }
 
 bool handle_stop_button_click(void) {
     stop_vm();
+    return true;
+}
+
+bool handle_project_settings_build_button_click(void) {
+#ifdef USE_INTERPRETER
+    start_vm();
+#else
+    start_vm(COMPILER_MODE_BUILD);
+#endif
+    gui_window_hide();
     return true;
 }
 

@@ -871,35 +871,9 @@ static bool build_program(Exec* exec) {
     char link_error[1024];
 
 #ifdef _WIN32
-    // Command for linking on Windows. This thing requires gcc, which is not ideal :/
-    bool res = spawn_process(
-        "x86_64-w64-mingw32-gcc", 
-        (char*[]) { 
-            "x86_64-w64-mingw32-gcc", 
-            "-static",
-            "-o", "a.exe", 
-            "output.o", 
-            "-L.", "-lscrapstd-win", "-lm",
-            NULL,
-        },
-        link_error,
-        1024
-    );
+    bool res = spawn_process(project_conf.linker_command_windows, link_error, 1024);
 #else
-    bool res = spawn_process(
-        "ld", 
-        (char*[]) { 
-            "ld", 
-            "-dynamic-linker", "/lib/ld-linux-x86-64.so.2", 
-            "-o", "a.out", 
-            "/lib/crt1.o", 
-            "output.o", 
-            "-L.", "-lscrapstd", "-lm", "-lc",
-            NULL,
-        },
-        link_error,
-        1024
-    );
+    bool res = spawn_process(project_conf.linker_command, link_error, 1024);
 #endif
 
     if (res) {

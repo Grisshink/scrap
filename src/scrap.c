@@ -43,6 +43,7 @@ Vector2 camera_pos = {0};
 Vector2 camera_click_pos = {0};
 
 Config conf;
+ProjectConfig project_conf;
 HoverInfo hover_info = {0};
 Shader line_shader;
 
@@ -518,6 +519,9 @@ int main(void) {
     SetTraceLogCallback(scrap_log);
     config_new(&conf);
     config_new(&window_conf);
+    project_config_new(&project_conf);
+    project_config_set_default(&project_conf);
+
     code_tabs = vector_create();
     set_default_config(&conf);
     load_config(&conf);
@@ -642,6 +646,7 @@ int main(void) {
     vector_free(search_list);
     vector_free(code_tabs);
     unregister_categories();
+    project_config_free(&project_conf);
     config_free(&conf);
     config_free(&window_conf);
     CloseWindow();
