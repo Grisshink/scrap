@@ -1178,6 +1178,7 @@ static void handle_mouse_wheel(void) {
     if (hover_info.select_argument) return;
     if (hover_info.is_panel_edit_mode) return;
     if (hover_info.select_input) return;
+    if (gui_window_is_shown()) return;
 
     Vector2 wheel = GetMouseWheelMoveV();
     camera_pos.x -= wheel.x * conf.font_size * 2;
