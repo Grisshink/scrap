@@ -335,6 +335,7 @@ static void argument_on_render(GuiElement* el) {
 
 static void block_on_render(GuiElement* el) {
     hover_info.select_block_pos = (Vector2) { el->abs_x, el->abs_y };
+    hover_info.select_valid = true;
 }
 
 static void block_argument_on_hover(GuiElement* el) {
@@ -911,20 +912,13 @@ static void draw_code_area(void) {
             }
         gui_element_end(gui);
 
-        if (!vm.is_running && exec_compile_error[0]) {
+        if (!vm.is_running && vector_size(exec_compile_error) > 0) {
             gui_element_begin(gui);
                 gui_set_direction(gui, DIRECTION_HORIZONTAL);
                 gui_set_align(gui, ALIGN_CENTER);
                 gui_set_gap(gui, conf.font_size * 0.5);
-                gui_set_padding(gui, conf.font_size * 0.25, conf.font_size * 0.25);
-
-                gui_element_begin(gui);
-                    gui_set_direction(gui, DIRECTION_VERTICAL);
-                    gui_set_align(gui, ALIGN_RIGHT);
-
-                    gui_text(gui, &font_cond, "Got compiler error!", conf.font_size * 0.6, (GuiColor) { 0xff, 0x66, 0x66, 0xff });
-                    gui_text(gui, &font_cond, exec.current_error, conf.font_size * 0.6, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
-                gui_element_end(gui);
+                gui_set_padding(gui, conf.font_size * 0.4, conf.font_size * 0.4);
+                gui_set_rect(gui, (GuiColor) { 0x00, 0x00, 0x00, 0x80 });
 
                 double animation = (fmod(-GetTime(), 1.0) * 0.5 + 1.0) * 255.0;
                 gui_element_begin(gui);
@@ -934,6 +928,32 @@ static void draw_code_area(void) {
                     gui_set_align(gui, ALIGN_CENTER);
 
                     gui_text(gui, &font_eb, "!", conf.font_size, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+                gui_element_end(gui);
+
+                gui_element_begin(gui);
+                    gui_set_direction(gui, DIRECTION_VERTICAL);
+
+                    gui_text(gui, &font_cond, "Got compiler error!", conf.font_size * 0.6, (GuiColor) { 0xff, 0x33, 0x33, 0xff });
+                    for (size_t i = 0; i < vector_size(exec_compile_error); i++) {
+                        gui_text(gui, &font_cond, exec_compile_error[i], conf.font_size * 0.6, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+                    }
+
+                    gui_spacer(gui, 0, conf.font_size * 0.5);
+
+                    gui_element_begin(gui);
+                        gui_set_direction(gui, DIRECTION_HORIZONTAL);   
+                        gui_set_gap(gui, conf.font_size * 0.5);
+
+                        gui_element_begin(gui);
+                            gui_set_border(gui, (GuiColor) { 0x40, 0x40, 0x40, 0xff }, BLOCK_OUTLINE_SIZE);
+                            draw_button(gettext("Jump to block"), conf.font_size, false, button_on_hover, handle_jump_to_block_button_click);
+                        gui_element_end(gui);
+
+                        gui_element_begin(gui);
+                            gui_set_border(gui, (GuiColor) { 0x40, 0x40, 0x40, 0xff }, BLOCK_OUTLINE_SIZE);
+                            draw_button(gettext("Close"), conf.font_size, false, button_on_hover, handle_error_window_close_button_click);
+                        gui_element_end(gui);
+                    gui_element_end(gui);
                 gui_element_end(gui);
             gui_element_end(gui);
         } else {
@@ -1135,9 +1155,11 @@ static void draw_code(void) {
             editor_code[i].y - camera_pos.y,
         };
         Rectangle code_size = hover_info.code_panel_bounds;
-        if (chain_pos.x > code_size.width || chain_pos.y > code_size.height) continue;
-        if (editor_code[i].width > 0 && editor_code[i].height > 0 &&
-            (chain_pos.x + editor_code[i].width < 0 || chain_pos.y + editor_code[i].height < 0)) continue;
+        if (&editor_code[i] != hover_info.select_blockchain) {
+            if (chain_pos.x > code_size.width || chain_pos.y > code_size.height) continue;
+            if (editor_code[i].width > 0 && editor_code[i].height > 0 &&
+                (chain_pos.x + editor_code[i].width < 0 || chain_pos.y + editor_code[i].height < 0)) continue;
+        }
         gui_element_begin(gui);
             gui_set_floating(gui);
             gui_set_position(gui, chain_pos.x, chain_pos.y);
@@ -1622,8 +1644,7 @@ void scrap_gui_process_render(void) {
 
     if (start_vm_timeout == 0) {
         term_restart();
-        exec_compile_error[0] = 0;
-        exec_compile_error_block = NULL;
+        clear_compile_error();
 #ifdef USE_INTERPRETER
         exec = exec_new();
 #else

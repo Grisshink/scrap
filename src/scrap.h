@@ -182,6 +182,7 @@ typedef struct {
     BlockChain* select_blockchain;
     Vector2 select_block_pos;
     Rectangle code_panel_bounds;
+    bool select_valid;
 
     InputHoverInfo input_info;
     char** select_input;
@@ -289,8 +290,9 @@ extern Texture2D pi_symbol_tex;
 extern Texture2D build_tex;
 
 extern Exec exec;
-extern char exec_compile_error[MAX_ERROR_LEN];
+extern char** exec_compile_error;
 extern Block* exec_compile_error_block;
+extern BlockChain* exec_compile_error_blockchain;
 
 extern Vm vm;
 extern int start_vm_timeout;
@@ -359,6 +361,7 @@ Vm vm_new(void);
 void vm_free(Vm* vm);
 size_t blockdef_register(Vm* vm, Blockdef* blockdef);
 void blockdef_unregister(Vm* vm, size_t id);
+void clear_compile_error(void);
 
 // render.c
 void actionbar_show(const char* text);
@@ -401,6 +404,8 @@ bool handle_right_slider_button_click(void);
 bool handle_category_click(void);
 bool handle_settings_dropdown_click(void);
 bool handle_project_settings_build_button_click(void);
+bool handle_jump_to_block_button_click(void);
+bool handle_error_window_close_button_click(void);
 PanelTree* find_panel(PanelTree* root, PanelType panel);
 void update_search(void);
 

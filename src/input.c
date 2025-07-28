@@ -299,6 +299,8 @@ bool handle_file_menu_click(void) {
 
         for (size_t i = 0; i < vector_size(editor_code); i++) blockchain_free(&editor_code[i]);
         vector_free(editor_code);
+        exec_compile_error_block = NULL;
+        exec_compile_error_blockchain = NULL;
         editor_code = chain;
 
         blockchain_select_counter = 0;
@@ -372,6 +374,17 @@ bool handle_project_settings_build_button_click(void) {
 bool handle_category_click(void) {
     palette.current_category = hover_info.category - palette.categories;
     assert(palette.current_category >= 0 && palette.current_category < (int)vector_size(palette.categories));
+    return true;
+}
+
+bool handle_jump_to_block_button_click(void) {
+    hover_info.select_block = exec_compile_error_block;
+    hover_info.select_blockchain = exec_compile_error_blockchain;
+    return true;
+}
+
+bool handle_error_window_close_button_click(void) {
+    clear_compile_error();
     return true;
 }
 
@@ -1298,6 +1311,7 @@ void scrap_gui_process_input(void) {
         hover_info.panel = NULL;
         hover_info.panel_size = (Rectangle) {0};
         hover_info.tab = -1;
+        hover_info.select_valid = false;
 
 #ifdef DEBUG
         Timer t = start_timer("gui process");
@@ -1312,6 +1326,12 @@ void scrap_gui_process_input(void) {
         if (hover_info.block && hover_info.argument) {
             int ind = hover_info.argument - hover_info.block->arguments;
             if (ind < 0 || ind > (int)vector_size(hover_info.block->arguments)) hover_info.argument = NULL;
+        }
+
+        if (hover_info.select_block && !hover_info.select_valid) {
+            TraceLog(LOG_WARNING, "Invalid selection: %p", hover_info.select_block);
+            hover_info.select_block = NULL;
+            hover_info.select_blockchain = NULL;
         }
     }
 

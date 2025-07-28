@@ -36,8 +36,9 @@ bool render_surface_needs_redraw = true;
 int shader_time_loc;
 
 Exec exec = {0};
-char exec_compile_error[MAX_ERROR_LEN] = {0};
+char** exec_compile_error = NULL;
 Block* exec_compile_error_block = NULL;
+BlockChain* exec_compile_error_blockchain = NULL;
 
 Vector2 camera_pos = {0};
 Vector2 camera_click_pos = {0};
@@ -429,6 +430,24 @@ void vm_free(Vm* vm) {
     vector_free(vm->blockdefs);
 }
 
+static BlockChain* find_blockchain(Block* block) {
+    if (!block) return NULL;
+    while (block->parent) block = block->parent;
+    for (size_t i = 0; i < vector_size(editor_code); i++) {
+        if (block >= editor_code[i].blocks && block < editor_code[i].blocks + vector_size(editor_code[i].blocks)) {
+            return &editor_code[i];
+        }
+    }
+    return NULL;
+}
+
+void clear_compile_error(void) {
+    exec_compile_error_block = NULL;
+    exec_compile_error_blockchain = NULL;
+    for (size_t i = 0; i < vector_size(exec_compile_error); i++) vector_free(exec_compile_error[i]);
+    vector_clear(exec_compile_error);
+}
+
 // Initializes resources and settings by loading textures, fonts, and configurations, and sets up GUI and panel interface
 void setup(void) {
     SetExitKey(KEY_NULL);
@@ -484,6 +503,8 @@ void setup(void) {
 
     line_shader = LoadShaderFromMemory(line_shader_vertex, line_shader_fragment);
     shader_time_loc = GetShaderLocation(line_shader, "time");
+
+    exec_compile_error = vector_create();
 
     vm = vm_new();
     register_categories();
@@ -561,8 +582,19 @@ int main(void) {
             } else {
                 actionbar_show(gettext("Vm shitted and died :("));
             }
-            strncpy(exec_compile_error, exec.current_error, MAX_ERROR_LEN);
+
+            size_t i = 0;
+            while (exec.current_error[i]) {
+                vector_add(&exec_compile_error, vector_create());
+                size_t line_len = 0;
+                while (line_len < 50 && exec.current_error[i]) {
+                    vector_add(&exec_compile_error[vector_size(exec_compile_error) - 1], exec.current_error[i++]);
+                    line_len++;
+                }
+                vector_add(&exec_compile_error[vector_size(exec_compile_error) - 1], 0);
+            }
             exec_compile_error_block = exec.current_error_block;
+            exec_compile_error_blockchain = find_blockchain(exec_compile_error_block);
             exec_free(&exec);
             render_surface_needs_redraw = true;
         } else if (vm.is_running) {
@@ -586,7 +618,7 @@ int main(void) {
             }
             pthread_mutex_unlock(&term.lock);
        } else {
-            if (exec_compile_error[0]) render_surface_needs_redraw = true;
+            if (vector_size(exec_compile_error) > 0) render_surface_needs_redraw = true;
        }
 
         actionbar.show_time -= GetFrameTime();
@@ -645,6 +677,7 @@ int main(void) {
     vector_free(search_list_search);
     vector_free(search_list);
     vector_free(code_tabs);
+    vector_free(exec_compile_error);
     unregister_categories();
     project_config_free(&project_conf);
     config_free(&conf);
