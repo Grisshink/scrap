@@ -944,10 +944,12 @@ static void draw_code_area(void) {
                         gui_set_direction(gui, DIRECTION_HORIZONTAL);   
                         gui_set_gap(gui, conf.font_size * 0.5);
 
-                        gui_element_begin(gui);
-                            gui_set_border(gui, (GuiColor) { 0x40, 0x40, 0x40, 0xff }, BLOCK_OUTLINE_SIZE);
-                            draw_button(gettext("Jump to block"), conf.font_size, false, button_on_hover, handle_jump_to_block_button_click);
-                        gui_element_end(gui);
+                        if (exec_compile_error_block) {
+                            gui_element_begin(gui);
+                                gui_set_border(gui, (GuiColor) { 0x40, 0x40, 0x40, 0xff }, BLOCK_OUTLINE_SIZE);
+                                draw_button(gettext("Jump to block"), conf.font_size, false, button_on_hover, handle_jump_to_block_button_click);
+                            gui_element_end(gui);
+                        }
 
                         gui_element_begin(gui);
                             gui_set_border(gui, (GuiColor) { 0x40, 0x40, 0x40, 0xff }, BLOCK_OUTLINE_SIZE);
