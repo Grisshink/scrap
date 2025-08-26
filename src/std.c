@@ -828,9 +828,9 @@ char* std_term_get_input(Gc* gc) {
         input[i] = 0;
 
         if (!out_string) {
-            out_string = std_string_from_literal(gc, input, i);
+            out_string = std_string_from_literal(gc, input, i - 1);
         } else {
-            out_string = std_string_join(gc, out_string, std_string_from_literal(gc, input, i));
+            out_string = std_string_join(gc, out_string, std_string_from_literal(gc, input, i - 1));
         }
     }
 
