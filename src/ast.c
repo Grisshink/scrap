@@ -108,6 +108,7 @@ Block block_copy(Block* block, Block* parent) {
             break;
         case ARGUMENT_BLOCKDEF:
             arg->data.blockdef = blockdef_copy(block->arguments[i].data.blockdef);
+            arg->data.blockdef->ref_count++;
             break;
         default:
             assert(false && "Unimplemented argument copy");
@@ -394,7 +395,7 @@ Blockdef* blockdef_copy(Blockdef* blockdef) {
     new->id = strcpy(malloc((strlen(blockdef->id) + 1) * sizeof(char)), blockdef->id);
     new->color = blockdef->color;
     new->type = blockdef->type;
-    new->ref_count = blockdef->ref_count;
+    new->ref_count = 0;
     new->inputs = vector_create();
     new->func = blockdef->func;
 
