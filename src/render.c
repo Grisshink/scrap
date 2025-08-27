@@ -712,6 +712,7 @@ static void draw_blockchain(BlockChain* chain) {
                 gui_set_min_size(gui, block->width, conf.font_size);
                 gui_set_rect(gui, CONVERT_COLOR(block_color, GuiColor));
                 gui_on_hover(gui, block_on_hover);
+                if (hover_info.select_block == &chain->blocks[i]) gui_on_render(gui, block_on_render);
                 gui_set_custom_data(gui, &chain->blocks[i]);
 
                 gui_element_begin(gui);
