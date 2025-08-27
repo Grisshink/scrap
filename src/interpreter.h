@@ -34,14 +34,19 @@ typedef struct Exec Exec;
 typedef struct ChainStackData ChainStackData;
 
 typedef enum DataControlArgType DataControlArgType;
-typedef enum DataType DataType;
 typedef enum DataStorageType DataStorageType;
 typedef struct DataList DataList;
 typedef union DataContents DataContents;
 typedef struct DataStorage DataStorage;
 typedef struct Data Data;
 
-typedef Data (*BlockFunc)(Exec* exec, int argc, Data* argv);
+typedef enum {
+    CONTROL_STATE_NORMAL = 0,
+    CONTROL_STATE_BEGIN,
+    CONTROL_STATE_END,
+} ControlState;
+
+typedef Data (*BlockFunc)(Exec* exec, Block* block, int argc, Data* argv, ControlState control_state);
 
 enum DataControlArgType {
     CONTROL_ARG_BEGIN,
@@ -79,18 +84,6 @@ struct DataStorage {
     size_t storage_len; // Length is in bytes, so to make copy function work correctly. Only applicable if you don't use DATA_STORAGE_STATIC
 };
 
-enum DataType {
-    DATA_NOTHING = 0,
-    DATA_INT,
-    DATA_DOUBLE,
-    DATA_STR,
-    DATA_BOOL,
-    DATA_LIST,
-    DATA_CONTROL,
-    DATA_OMIT_ARGS, // Marker for vm used in C-blocks that do not require argument recomputation
-    DATA_CHAIN,
-};
-
 struct Data {
     DataType type;
     DataStorage storage;
@@ -114,6 +107,17 @@ struct ChainStackData {
     Data return_arg;
 };
 
+typedef struct {
+    Blockdef* blockdef;
+    int arg_ind;
+} DefineArgument;
+
+typedef struct {
+    Blockdef* blockdef;
+    BlockChain* run_chain;
+    DefineArgument* args;
+} DefineFunction;
+
 struct Exec {
     BlockChain* code;
 
@@ -128,6 +132,8 @@ struct Exec {
 
     ChainStackData chain_stack[VM_CHAIN_STACK_SIZE];
     size_t chain_stack_len;
+
+    DefineFunction* defined_functions;
 
     char current_error[MAX_ERROR_LEN];
     Block* current_error_block;
@@ -163,16 +169,7 @@ struct Exec {
     data = *(type*)(exec->control_stack + exec->control_stack_len);
 
 #define RETURN_NOTHING return (Data) { \
-    .type = DATA_NOTHING, \
-    .storage = (DataStorage) { \
-        .type = DATA_STORAGE_STATIC, \
-        .storage_len = 0, \
-    }, \
-    .data = (DataContents) {0}, \
-}
-
-#define RETURN_OMIT_ARGS return (Data) { \
-    .type = DATA_OMIT_ARGS, \
+    .type = DATA_TYPE_NOTHING, \
     .storage = (DataStorage) { \
         .type = DATA_STORAGE_STATIC, \
         .storage_len = 0, \
@@ -181,7 +178,7 @@ struct Exec {
 }
 
 #define RETURN_INT(val) return (Data) { \
-    .type = DATA_INT, \
+    .type = DATA_TYPE_INT, \
     .storage = (DataStorage) { \
         .type = DATA_STORAGE_STATIC, \
         .storage_len = 0, \
@@ -192,7 +189,7 @@ struct Exec {
 }
 
 #define RETURN_DOUBLE(val) return (Data) { \
-    .type = DATA_DOUBLE, \
+    .type = DATA_TYPE_DOUBLE, \
     .storage = (DataStorage) { \
         .type = DATA_STORAGE_STATIC, \
         .storage_len = 0, \
@@ -203,13 +200,24 @@ struct Exec {
 }
 
 #define RETURN_BOOL(val) return (Data) { \
-    .type = DATA_BOOL, \
+    .type = DATA_TYPE_BOOL, \
     .storage = (DataStorage) { \
         .type = DATA_STORAGE_STATIC, \
         .storage_len = 0, \
     }, \
     .data = (DataContents) { \
         .int_arg = (val) \
+    }, \
+}
+
+#define RETURN_STRING_LITERAL(val) return (Data) { \
+    .type = DATA_TYPE_STRING_LITERAL, \
+    .storage = (DataStorage) { \
+        .type = DATA_STORAGE_STATIC, \
+        .storage_len = 0, \
+    }, \
+    .data = (DataContents) { \
+        .str_arg = (val) \
     }, \
 }
 
@@ -223,6 +231,8 @@ bool exec_join(Vm* vm, Exec* exec, size_t* return_code);
 bool exec_try_join(Vm* vm, Exec* exec, size_t* return_code);
 void exec_set_skip_block(Exec* exec);
 void exec_thread_exit(void* thread_exec);
+
+Data evaluate_argument(Exec* exec, Argument* arg);
 
 bool variable_stack_push_var(Exec* exec, const char* name, Data data);
 Variable* variable_stack_get_variable(Exec* exec, const char* name);

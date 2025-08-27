@@ -385,8 +385,6 @@ Blockdef* blockdef_new(const char* id, BlockdefType type, BlockdefColor color, v
     blockdef->ref_count = 0;
     blockdef->inputs = vector_create();
     blockdef->func = func;
-    blockdef->chain = NULL;
-    blockdef->arg_id = -1;
 
     return blockdef;
 }

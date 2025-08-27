@@ -118,8 +118,6 @@ enum BlockdefType {
 struct Blockdef {
     const char* id;
     int ref_count;
-    BlockChain* chain;
-    int arg_id;
     BlockdefColor color;
     BlockdefType type;
     Input* inputs;

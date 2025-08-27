@@ -471,7 +471,6 @@ void save_blockdef(SaveArena* save, Blockdef* blockdef) {
     save_add_array(save, blockdef->id, strlen(blockdef->id) + 1, sizeof(blockdef->id[0]));
     save_add(save, blockdef->color);
     save_add_varint(save, blockdef->type);
-    save_add_varint(save, blockdef->arg_id);
 
     int input_count = vector_size(blockdef->inputs);
     save_add_varint(save, input_count);
@@ -578,7 +577,7 @@ void collect_all_code_ids(BlockChain* code) {
 
 void save_code(const char* file_path, ProjectConfig* config, BlockChain* code) {
     SaveArena save = new_save(32768);
-    ver = 2;
+    ver = 3;
     int chains_count = vector_size(code);
 
     Blockdef** blockdefs = vector_create();
@@ -682,8 +681,11 @@ Blockdef* load_blockdef(SaveArena* save) {
     BlockdefType type;
     if (!save_read_varint(save, (unsigned int*)&type)) return NULL;
 
-    int arg_id;
-    if (!save_read_varint(save, (unsigned int*)&arg_id)) return NULL;
+    if (ver < 3) {
+        // Deprecated: Arg ids are now not needed for blockdefs
+        int arg_id;
+        if (!save_read_varint(save, (unsigned int*)&arg_id)) return NULL;
+    }
 
     unsigned int input_count;
     if (!save_read_varint(save, &input_count)) return NULL;
@@ -695,8 +697,6 @@ Blockdef* load_blockdef(SaveArena* save) {
     blockdef->ref_count = 0;
     blockdef->inputs = vector_create();
     blockdef->func = block_exec_custom;
-    blockdef->chain = NULL;
-    blockdef->arg_id = arg_id;
 
     for (unsigned int i = 0; i < input_count; i++) {
         Input input;
@@ -850,8 +850,8 @@ BlockChain* load_code(const char* file_path, ProjectConfig* out_config) {
     save.used_size = 0;
 
     if (!save_read_varint(&save, &ver)) goto load_fail;
-    if (ver != 1 && ver != 2) {
-        TraceLog(LOG_ERROR, "[LOAD] Unsupported version %d. Current scrap build expects save versions 1 and 2", ver);
+    if (ver < 1 && ver > 3) {
+        TraceLog(LOG_ERROR, "[LOAD] Unsupported version %d. Current scrap build expects save versions from 1 to 3", ver);
         goto load_fail;
     }
 

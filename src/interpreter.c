@@ -30,6 +30,7 @@ void variable_stack_pop_layer(Exec* exec);
 void variable_stack_cleanup(Exec* exec);
 void chain_stack_push(Exec* exec, ChainStackData data);
 void chain_stack_pop(Exec* exec);
+bool exec_block(Exec* exec, Block block, Data* block_return, ControlState control_state, Data control_arg);
 
 Data data_copy(Data arg) {
     if (arg.storage.type == DATA_STORAGE_STATIC) return arg;
@@ -39,7 +40,7 @@ Data data_copy(Data arg) {
     out.storage.type = DATA_STORAGE_MANAGED;
     out.storage.storage_len = arg.storage.storage_len;
     out.data.custom_arg = malloc(arg.storage.storage_len);
-    if (arg.type == DATA_LIST) {
+    if (arg.type == DATA_TYPE_LIST) {
         out.data.list_arg.len = arg.data.list_arg.len;
         for (size_t i = 0; i < arg.data.list_arg.len; i++) {
             out.data.list_arg.items[i] = data_copy(arg.data.list_arg.items[i]);
@@ -53,7 +54,7 @@ Data data_copy(Data arg) {
 void data_free(Data arg) {
     if (arg.storage.type == DATA_STORAGE_STATIC) return;
     switch (arg.type) {
-    case DATA_LIST:
+    case DATA_TYPE_LIST:
         if (!arg.data.list_arg.items) break;
         for (size_t i = 0; i < arg.data.list_arg.len; i++) {
             data_free(arg.data.list_arg.items[i]);
@@ -69,12 +70,13 @@ void data_free(Data arg) {
 
 int data_to_int(Data arg) {
     switch (arg.type) {
-    case DATA_BOOL:
-    case DATA_INT:
+    case DATA_TYPE_BOOL:
+    case DATA_TYPE_INT:
         return arg.data.int_arg;
-    case DATA_DOUBLE:
+    case DATA_TYPE_DOUBLE:
         return (int)arg.data.double_arg;
-    case DATA_STR:
+    case DATA_TYPE_STRING_LITERAL:
+    case DATA_TYPE_STRING_REF:
         return atoi(arg.data.str_arg);
     default:
         return 0;
@@ -83,12 +85,13 @@ int data_to_int(Data arg) {
 
 double data_to_double(Data arg) {
     switch (arg.type) {
-    case DATA_BOOL:
-    case DATA_INT:
+    case DATA_TYPE_BOOL:
+    case DATA_TYPE_INT:
         return (double)arg.data.int_arg;
-    case DATA_DOUBLE:
+    case DATA_TYPE_DOUBLE:
         return arg.data.double_arg;
-    case DATA_STR:
+    case DATA_TYPE_STRING_LITERAL:
+    case DATA_TYPE_STRING_REF:
         return atof(arg.data.str_arg);
     default:
         return 0.0;
@@ -97,14 +100,15 @@ double data_to_double(Data arg) {
 
 int data_to_bool(Data arg) {
     switch (arg.type) {
-    case DATA_BOOL:
-    case DATA_INT:
+    case DATA_TYPE_BOOL:
+    case DATA_TYPE_INT:
         return arg.data.int_arg != 0;
-    case DATA_DOUBLE:
+    case DATA_TYPE_DOUBLE:
         return arg.data.double_arg != 0.0;
-    case DATA_STR:
+    case DATA_TYPE_STRING_LITERAL:
+    case DATA_TYPE_STRING_REF:
         return *arg.data.str_arg != 0;
-    case DATA_LIST:
+    case DATA_TYPE_LIST:
         return arg.data.list_arg.len != 0;
     default:
         return 0;
@@ -115,19 +119,20 @@ const char* data_to_str(Data arg) {
     static char buf[32];
 
     switch (arg.type) {
-    case DATA_STR:
+    case DATA_TYPE_STRING_REF:
+    case DATA_TYPE_STRING_LITERAL:
         return arg.data.str_arg;
-    case DATA_BOOL:
+    case DATA_TYPE_BOOL:
         return arg.data.int_arg ? "true" : "false";
-    case DATA_DOUBLE:
+    case DATA_TYPE_DOUBLE:
         buf[0] = 0;
         snprintf(buf, 32, "%f", arg.data.double_arg);
         return buf;
-    case DATA_INT:
+    case DATA_TYPE_INT:
         buf[0] = 0;
         snprintf(buf, 32, "%d", arg.data.int_arg);
         return buf;
-    case DATA_LIST:
+    case DATA_TYPE_LIST:
         return "# LIST #";
     default:
         return "";
@@ -156,84 +161,38 @@ void exec_copy_code(Vm* vm, Exec* exec, BlockChain* code) {
     exec->code = code;
 }
 
-bool exec_block(Exec* exec, Block block, Data* block_return, bool from_end, bool omit_args, Data control_arg) {
+Data evaluate_argument(Exec* exec, Argument* arg) {
+    switch (arg->type) {
+    case ARGUMENT_TEXT:
+    case ARGUMENT_CONST_STRING:
+        RETURN_STRING_LITERAL(arg->data.text);
+        break;
+    case ARGUMENT_BLOCK: ; // This fixes gcc-9 error
+        Data arg_return;
+        if (!exec_block(exec, arg->data.block, &arg_return, CONTROL_STATE_NORMAL, (Data) {0})) RETURN_NOTHING;
+        return arg_return;
+    default:
+        RETURN_NOTHING;
+    }
+}
+
+bool exec_block(Exec* exec, Block block, Data* block_return, ControlState control_state, Data control_arg) {
     BlockFunc execute_block = block.blockdef->func;
     if (!execute_block) return false;
 
     int stack_begin = exec->arg_stack_len;
 
-    if (block.blockdef->arg_id != -1) {
-        arg_stack_push_arg(exec, (Data) {
-            .type = DATA_INT,
-            .storage = (DataStorage) {
-                .type = DATA_STORAGE_STATIC,
-                .storage_len = 0,
-            },
-            .data = (DataContents) {
-                .int_arg = block.blockdef->arg_id,
-            },
-        });
+    if (block.blockdef->type == BLOCKTYPE_CONTROLEND && control_state == CONTROL_STATE_BEGIN) {
+        arg_stack_push_arg(exec, control_arg);
     }
 
-    if (block.blockdef->chain) {
-        arg_stack_push_arg(exec, (Data) {
-            .type = DATA_CHAIN,
-            .storage = (DataStorage) {
-                .type = DATA_STORAGE_STATIC,
-                .storage_len = 0,
-            },
-            .data = (DataContents) {
-                .chain_arg = block.blockdef->chain,
-            },
-        });
-    }
-
-    if (block.blockdef->type == BLOCKTYPE_CONTROL || block.blockdef->type == BLOCKTYPE_CONTROLEND) {
-        arg_stack_push_arg(exec, (Data) {
-            .type = DATA_CONTROL,
-            .storage = (DataStorage) {
-                .type = DATA_STORAGE_STATIC,
-                .storage_len = 0,
-            },
-            .data = (DataContents) {
-                .control_arg = from_end ? CONTROL_ARG_END : CONTROL_ARG_BEGIN,
-            },
-        });
-        if (!from_end && block.blockdef->type == BLOCKTYPE_CONTROLEND) {
-            arg_stack_push_arg(exec, control_arg);
-        }
-    }
-    if (!omit_args) {
+    if (control_state != CONTROL_STATE_END) {
         for (vec_size_t i = 0; i < vector_size(block.arguments); i++) {
-            Argument block_arg = block.arguments[i];
-            switch (block_arg.type) {
-            case ARGUMENT_TEXT:
-            case ARGUMENT_CONST_STRING:
-                arg_stack_push_arg(exec, (Data) {
-                    .type = DATA_STR,
-                    .storage = (DataStorage) {
-                        .type = DATA_STORAGE_STATIC,
-                        .storage_len = 0,
-                    },
-                    .data = (DataContents) {
-                        .str_arg = block_arg.data.text,
-                    },
-                });
-                break;
-            case ARGUMENT_BLOCK: ; // This fixes gcc-9 error
-                Data arg_return;
-                if (!exec_block(exec, block_arg.data.block, &arg_return, false, false, (Data) {0})) return false;
-                arg_stack_push_arg(exec, arg_return);
-                break;
-            case ARGUMENT_BLOCKDEF:
-                break;
-            default:
-                return false;
-            }
+            arg_stack_push_arg(exec, evaluate_argument(exec, &block.arguments[i]));
         }
     }
 
-    *block_return = execute_block(exec, exec->arg_stack_len - stack_begin, exec->arg_stack + stack_begin);
+    *block_return = execute_block(exec, &block, exec->arg_stack_len - stack_begin, exec->arg_stack + stack_begin, control_state);
     arg_stack_undo_args(exec, exec->arg_stack_len - stack_begin);
 
     return true;
@@ -252,19 +211,18 @@ bool exec_run_chain(Exec* exec, BlockChain* chain, int argc, Data* argv, Data* r
         .is_returning = false,
         .return_arg = (Data) {0},
     });
+
     exec->running_chain = chain;
     Data block_return;
     for (size_t i = 0; i < vector_size(chain->blocks); i++) {
         pthread_testcancel();
+
         size_t block_ind = i;
         ChainStackData* chain_data = &exec->chain_stack[exec->chain_stack_len - 1];
         chain_data->running_ind = i;
-        bool from_end = false;
-        bool omit_args = false;
+        ControlState control_state = BLOCKDEF->type == BLOCKTYPE_CONTROL ? CONTROL_STATE_BEGIN : CONTROL_STATE_NORMAL;
         bool return_used = false;
-        if (chain_data->is_returning) {
-            break;
-        }
+        if (chain_data->is_returning) break;
 
         if (BLOCKDEF->type == BLOCKTYPE_END || BLOCKDEF->type == BLOCKTYPE_CONTROLEND) {
             if (BLOCKDEF->type == BLOCKTYPE_CONTROLEND && chain_data->layer == 0) continue;
@@ -272,31 +230,33 @@ bool exec_run_chain(Exec* exec, BlockChain* chain, int argc, Data* argv, Data* r
             chain_data->layer--;
             control_stack_pop_data(block_ind, size_t)
             control_stack_pop_data(block_return, Data)
-            if (block_return.type == DATA_OMIT_ARGS) omit_args = true;
             if (block_return.storage.type == DATA_STORAGE_MANAGED) data_free(block_return);
-            from_end = true;
+            control_state = CONTROL_STATE_END;
             if (chain_data->skip_block && skip_layer == chain_data->layer) {
                 chain_data->skip_block = false;
                 skip_layer = -1;
             }
         }
+        
         if (!chain_data->skip_block) {
-            if (!exec_block(exec, chain->blocks[block_ind], &block_return, from_end, omit_args, (Data){0})) {
+            if (!exec_block(exec, chain->blocks[block_ind], &block_return, control_state, (Data){0})) {
                 chain_stack_pop(exec);
                 return false;
             }
             exec->running_chain = chain;
             if (chain_data->running_ind != i) i = chain_data->running_ind;
         }
+
         if (BLOCKDEF->type == BLOCKTYPE_CONTROLEND && block_ind != i) {
-            from_end = false;
-            if (!exec_block(exec, chain->blocks[i], &block_return, from_end, false, block_return)) {
+            control_state = CONTROL_STATE_BEGIN;
+            if (!exec_block(exec, chain->blocks[i], &block_return, control_state, block_return)) {
                 chain_stack_pop(exec);
                 return false;
             }
             if (chain_data->running_ind != i) i = chain_data->running_ind;
             return_used = true;
         }
+
         if (BLOCKDEF->type == BLOCKTYPE_CONTROL || BLOCKDEF->type == BLOCKTYPE_CONTROLEND) {
             control_stack_push_data(block_return, Data)
             control_stack_push_data(i, size_t)
@@ -304,6 +264,7 @@ bool exec_run_chain(Exec* exec, BlockChain* chain, int argc, Data* argv, Data* r
             return_used = true;
             chain_data->layer++;
         }
+
         if (!return_used && block_return.storage.type == DATA_STORAGE_MANAGED) {
             data_free(block_return);
         }
@@ -321,27 +282,48 @@ bool exec_run_chain(Exec* exec, BlockChain* chain, int argc, Data* argv, Data* r
 
 void exec_thread_exit(void* thread_exec) {
     Exec* exec = thread_exec;
+    for (size_t i = 0; i < vector_size(exec->defined_functions); i++) {
+        vector_free(exec->defined_functions[i].args);
+    }
     variable_stack_cleanup(exec);
     arg_stack_undo_args(exec, exec->arg_stack_len);
     exec->running_state = EXEC_STATE_DONE;
 }
 
+void define_function(Exec* exec, Blockdef* blockdef, BlockChain* chain) {
+    DefineFunction* func = vector_add_dst(&exec->defined_functions);
+    func->blockdef = blockdef;
+    func->run_chain = chain;
+    func->args = vector_create();
+
+    int arg_ind = 0;
+    for (size_t i = 0; i < vector_size(blockdef->inputs); i++) {
+        if (blockdef->inputs[i].type != INPUT_ARGUMENT) continue;
+
+        DefineArgument* arg = vector_add_dst(&func->args);
+        arg->blockdef = blockdef->inputs[i].data.arg.blockdef;
+        arg->arg_ind = arg_ind++;
+    }
+}
+
 void* exec_thread_entry(void* thread_exec) {
     Exec* exec = thread_exec;
-    pthread_cleanup_push(exec_thread_exit, thread_exec);
-
     exec->running_state = EXEC_STATE_RUNNING;
     exec->arg_stack_len = 0;
     exec->control_stack_len = 0;
     exec->chain_stack_len = 0;
     exec->running_chain = NULL;
+    exec->defined_functions = vector_create();
+
+    pthread_cleanup_push(exec_thread_exit, thread_exec);
 
     for (size_t i = 0; i < vector_size(exec->code); i++) {
         Block* block = &exec->code[i].blocks[0];
-        if (block->blockdef->type != BLOCKTYPE_HAT) continue;
+        if (strcmp(block->blockdef->id, "define_block")) continue;
+
         for (size_t j = 0; j < vector_size(block->arguments); j++) {
             if (block->arguments[j].type != ARGUMENT_BLOCKDEF) continue;
-            block->arguments[j].data.blockdef->chain = &exec->code[i];
+            define_function(exec, block->arguments[j].data.blockdef, &exec->code[i]);
         }
     }
 

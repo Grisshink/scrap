@@ -524,7 +524,6 @@ bool handle_editor_add_arg_button(void) {
     for (size_t i = 0; i < vector_size(blockdef->inputs); i++) {
         if (blockdef->inputs[i].type == INPUT_ARGUMENT) arg_count++;
     }
-    arg_blockdef->arg_id = arg_count - 1;
 
     deselect_all();
     return true;
@@ -571,14 +570,7 @@ bool handle_editor_del_arg_button(void) {
         }
     }
 
-    bool is_arg = blockdef->inputs[hover_info.editor.blockdef_input].type == INPUT_ARGUMENT;
     blockdef_delete_input(blockdef, hover_info.editor.blockdef_input);
-    if (is_arg) {
-        for (size_t i = hover_info.editor.blockdef_input; i < vector_size(blockdef->inputs); i++) {
-            if (blockdef->inputs[i].type != INPUT_ARGUMENT) continue;
-            blockdef->inputs[i].data.arg.blockdef->arg_id--;
-        }
-    }
 
     deselect_all();
     return true;
