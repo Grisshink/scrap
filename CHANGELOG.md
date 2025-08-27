@@ -4,6 +4,7 @@
 - Fixed numpad Enter key not working in certain scenarios
 - Fixed race condition with thread running state after calling `pthread_create`. This should theoretically fix code not stopping its execution on Windows
 - Fixed code area being able to scroll while window is open
+- Fixed memory leak when copying blockdef with instantiated blocks
 
 # v0.4.2-beta *(12-02-2025)*
 
