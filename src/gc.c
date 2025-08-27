@@ -95,13 +95,13 @@ void gc_free(Gc* gc) {
 static void gc_mark_any(Gc* gc, AnyValue* any) {
     GcChunkData* chunk_inner;
 
-    if (any->type == ANY_TYPE_LIST) {
+    if (any->type == DATA_TYPE_LIST) {
         chunk_inner = ((GcChunkData*)any->data.list_val) - 1;
         if (!chunk_inner->marked) {
             chunk_inner->marked = 1;
             gc_mark_refs(gc, chunk_inner);
         }
-    } else if (any->type == ANY_TYPE_STRING_REF) {
+    } else if (any->type == DATA_TYPE_STRING_REF) {
         StringHeader* str = ((StringHeader*)any->data.str_val) - 1;
         chunk_inner = ((GcChunkData*)str) - 1;
         chunk_inner->marked = 1;
@@ -110,7 +110,7 @@ static void gc_mark_any(Gc* gc, AnyValue* any) {
 
 static void gc_mark_refs(Gc* gc, GcChunkData* chunk) {
     switch (chunk->data_type) {
-    case ANY_TYPE_LIST: ;
+    case DATA_TYPE_LIST: ;
         List* list = (List*)chunk->data;
         if (!list->values) break;
 
@@ -121,7 +121,7 @@ static void gc_mark_refs(Gc* gc, GcChunkData* chunk) {
             gc_mark_any(gc, &list->values[i]);
         }
         break;
-    case ANY_TYPE_ANY: ;
+    case DATA_TYPE_ANY: ;
         gc_mark_any(gc, (AnyValue*)chunk->data);
         break;
     default:
@@ -188,7 +188,7 @@ void gc_collect(Gc* gc) {
 #endif // DEBUG
 }
 
-void* gc_malloc(Gc* gc, size_t size, AnyValueType data_type) {
+void* gc_malloc(Gc* gc, size_t size, DataType data_type) {
     assert(vector_size(gc->roots_stack) > 0);
 
     if (size > gc->memory_max) {

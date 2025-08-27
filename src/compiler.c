@@ -241,7 +241,7 @@ static bool variable_stack_frame_pop(Exec* exec) {
     return true;
 }
 
-static bool evaluate_block(Exec* exec, Block* block, FuncArg* return_val, bool end_block, FuncArg input_val) {
+static bool evaluate_block(Exec* exec, Block* block, FuncArg* return_val, ControlState control_state, FuncArg input_val) {
     if (!block->blockdef) {
         exec_set_error(exec, block, "Tried to compile block without definition");
         return false;
@@ -255,48 +255,36 @@ static bool evaluate_block(Exec* exec, Block* block, FuncArg* return_val, bool e
     FuncArg* args = vector_create();
     FuncArg* arg;
 
-    bool control_or_control_end = block->blockdef->type == BLOCKTYPE_CONTROL || block->blockdef->type == BLOCKTYPE_CONTROLEND;
+    if (control_state == CONTROL_STATE_BEGIN) {
+        LLVMBasicBlockRef current = LLVMGetInsertBlock(exec->builder);
+        LLVMBasicBlockRef control_block = LLVMInsertBasicBlock(current, "control_block");
+        LLVMMoveBasicBlockAfter(control_block, current);
 
-    if (control_or_control_end) {
-        LLVMBasicBlockRef control_block = NULL;
-        if (!end_block) {
-            LLVMBasicBlockRef current = LLVMGetInsertBlock(exec->builder);
-            control_block = LLVMInsertBasicBlock(current, "control_block");
-            LLVMMoveBasicBlockAfter(control_block, current);
+        LLVMBuildBr(exec->builder, control_block);
+        LLVMPositionBuilderAtEnd(exec->builder, control_block);
 
-            LLVMBuildBr(exec->builder, control_block);
-            LLVMPositionBuilderAtEnd(exec->builder, control_block);
-
-            variable_stack_frame_push(exec);
-        } else {
-            if (exec->current_mode == COMPILER_MODE_JIT) {
-                build_call(exec, "test_cancel");
-            }
-            variable_stack_frame_pop(exec);
-        }
-
-        arg = vector_add_dst(&args);
-        arg->type = FUNC_ARG_CONTROL;
-        arg->data.control = (ControlData) {
-            .type = end_block ? CONTROL_END : CONTROL_BEGIN,
-            .block = control_block,
-        };
+        variable_stack_frame_push(exec);
+    } else if (control_state == CONTROL_STATE_END) {
+        if (exec->current_mode == COMPILER_MODE_JIT) build_call(exec, "test_cancel");
+        variable_stack_frame_pop(exec);
     }
 
-    if (block->blockdef->type == BLOCKTYPE_CONTROLEND && !end_block) vector_add(&args, input_val);
+    if (block->blockdef->type == BLOCKTYPE_CONTROLEND && control_state == CONTROL_STATE_BEGIN) {
+        vector_add(&args, input_val);
+    }
 
-    if (!control_or_control_end || !end_block) {
+    if (control_state != CONTROL_STATE_END) {
         for (size_t i = 0; i < vector_size(block->arguments); i++) {
             FuncArg block_return;
             switch (block->arguments[i].type) {
             case ARGUMENT_TEXT:
             case ARGUMENT_CONST_STRING:
                 arg = vector_add_dst(&args);
-                arg->type = FUNC_ARG_STRING_LITERAL;
+                arg->type = DATA_TYPE_STRING_LITERAL;
                 arg->data.str = block->arguments[i].data.text;
                 break;
             case ARGUMENT_BLOCK:
-                if (!evaluate_block(exec, &block->arguments[i].data.block, &block_return, false, DATA_NOTHING)) {
+                if (!evaluate_block(exec, &block->arguments[i].data.block, &block_return, CONTROL_STATE_NORMAL, DATA_NOTHING)) {
                     TraceLog(LOG_ERROR, "[LLVM] While compiling block id: \"%s\" (argument #%d) (at block %p)", block->blockdef->id, i + 1, block);
                     vector_free(args);
                     return false;
@@ -305,23 +293,24 @@ static bool evaluate_block(Exec* exec, Block* block, FuncArg* return_val, bool e
                 break;
             case ARGUMENT_BLOCKDEF:
                 arg = vector_add_dst(&args);
-                arg->type = FUNC_ARG_BLOCKDEF;
+                arg->type = DATA_TYPE_BLOCKDEF;
                 arg->data.blockdef = block->arguments[i].data.blockdef;
                 break;
             }
         }
-        if (control_or_control_end) {
-            control_data_stack_push_data(exec->gc_dirty, bool);
-        }
     }
 
-    if (!compile_block(exec, block, vector_size(args), args, return_val)) {
+    if (control_state == CONTROL_STATE_BEGIN) {
+        control_data_stack_push_data(exec->gc_dirty, bool);
+    }
+
+    if (!compile_block(exec, block, vector_size(args), args, return_val, control_state)) {
         vector_free(args);
         TraceLog(LOG_ERROR, "[LLVM] Got error while compiling block id: \"%s\" (at block %p)", block->blockdef->id, block);
         return false;
     }
 
-    if (control_or_control_end && end_block) {
+    if (control_state == CONTROL_STATE_END) {
         control_data_stack_pop_data(exec->gc_dirty, bool);
     }
 
@@ -343,18 +332,20 @@ static bool evaluate_chain(Exec* exec, BlockChain* chain) {
     for (size_t i = 0; i < vector_size(chain->blocks); i++) {
         FuncArg block_return;
         Block* exec_block = &chain->blocks[i];
-        bool is_end = false;
+        ControlState control_state = chain->blocks[i].blockdef->type == BLOCKTYPE_CONTROL ? CONTROL_STATE_BEGIN : CONTROL_STATE_NORMAL;
 
         if (chain->blocks[i].blockdef->type == BLOCKTYPE_END || chain->blocks[i].blockdef->type == BLOCKTYPE_CONTROLEND) {
             exec_block = control_stack_pop(exec);
             if (!exec_block) return false;
-            is_end = true;
+            control_state = CONTROL_STATE_END;
         }
 
-        if (!evaluate_block(exec, exec_block, &block_return, is_end, DATA_NOTHING)) return false;
+        if (!evaluate_block(exec, exec_block, &block_return, control_state, DATA_NOTHING)) return false;
+
         if (chain->blocks[i].blockdef->type == BLOCKTYPE_CONTROLEND) {
             FuncArg bin;
-            if (!evaluate_block(exec, &chain->blocks[i], &bin, false, block_return)) return false;
+            control_state = CONTROL_STATE_BEGIN;
+            if (!evaluate_block(exec, &chain->blocks[i], &bin, control_state, block_return)) return false;
         }
 
         if (chain->blocks[i].blockdef->type == BLOCKTYPE_CONTROL || chain->blocks[i].blockdef->type == BLOCKTYPE_CONTROLEND) {
@@ -800,7 +791,7 @@ static bool compile_program(Exec* exec) {
         if (vector_size(exec->code[i].blocks) != 0 && exec->code[i].blocks[0].blockdef->type == BLOCKTYPE_HAT) {
             if (!build_gc_root_end(exec, NULL)) return false;
             build_call(exec, "gc_root_restore", CONST_GC);
-            LLVMValueRef val = build_call_count(exec, "std_any_from_value", 2, CONST_GC, CONST_INTEGER(FUNC_ARG_NOTHING));
+            LLVMValueRef val = build_call_count(exec, "std_any_from_value", 2, CONST_GC, CONST_INTEGER(DATA_TYPE_NOTHING));
             LLVMBuildRet(exec->builder, val);
         }
     }

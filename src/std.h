@@ -18,23 +18,50 @@
 #ifndef SCRAP_STD_H
 #define SCRAP_STD_H
 
-#include "std-types.h"
 #include "gc.h"
 
 #include <stdbool.h>
+
+typedef struct {
+    unsigned int size;
+    unsigned int capacity;
+    char str[];
+} StringHeader;
+
+typedef struct AnyValue AnyValue;
+typedef struct List List;
+
+typedef union {
+    char* str_val;
+    int int_val;
+    double double_val;
+    List* list_val;
+    AnyValue* any_val;
+} AnyValueData;
+
+struct AnyValue {
+    DataType type;
+    AnyValueData data;
+};
+
+struct List {
+    long size;
+    long capacity;
+    AnyValue* values;
+};
 
 // Math
 int std_int_pow(int base, int exp);
 
 // List operations
 List* std_list_new(Gc* gc);
-void std_list_add(Gc* gc, List* list, AnyValueType data_type, ...);
-void std_list_set(List* list, int index, AnyValueType data_type, ...);
+void std_list_add(Gc* gc, List* list, DataType data_type, ...);
+void std_list_set(List* list, int index, DataType data_type, ...);
 AnyValue* std_list_get(Gc* gc, List* list, int index);
 int std_list_length(List* list);
 
 // Any operations
-AnyValue* std_any_from_value(Gc* gc, AnyValueType data_type, ...);
+AnyValue* std_any_from_value(Gc* gc, DataType data_type, ...);
 int std_int_from_any(AnyValue* value);
 int std_double_from_any(AnyValue* value);
 int std_bool_from_any(AnyValue* value);

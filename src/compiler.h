@@ -19,11 +19,11 @@
 #define COMPILER_H
 
 #include "gc.h"
+#include "ast.h"
 
 #include <llvm-c/Core.h>
 #include <llvm-c/ExecutionEngine.h>
 #include <stdatomic.h>
-#include "compiler-common.h"
 #include <pthread.h>
 
 #define VM_ARG_STACK_SIZE 1024
@@ -46,6 +46,23 @@
     } \
     exec->control_data_stack_len -= sizeof(type); \
     data = *(type*)(exec->control_data_stack + exec->control_data_stack_len);
+
+typedef enum {
+    CONTROL_STATE_NORMAL = 0,
+    CONTROL_STATE_BEGIN,
+    CONTROL_STATE_END,
+} ControlState;
+
+typedef union {
+    LLVMValueRef value;
+    const char* str;
+    Blockdef* blockdef;
+} FuncArgData;
+
+typedef struct {
+    DataType type;
+    FuncArgData data;
+} FuncArg;
 
 typedef struct {
     FuncArg value;
@@ -93,7 +110,7 @@ typedef struct {
     bool required;
 } GcBlock;
 
-struct Exec {
+typedef struct {
     BlockChain* code;
     LLVMModuleRef module;
     LLVMBuilderRef builder;
@@ -134,7 +151,7 @@ struct Exec {
     pthread_t thread;
     CompilerMode current_mode;
     atomic_int running_state;
-};
+} Exec;
 
 #define MAIN_NAME "llvm_main"
 
@@ -153,16 +170,16 @@ struct Exec {
     }, \
 }
 
-#define DATA_BOOLEAN(val) _DATA(FUNC_ARG_BOOL, val)
-#define DATA_STRING_REF(val) _DATA(FUNC_ARG_STRING_REF, val)
-#define DATA_INTEGER(val) _DATA(FUNC_ARG_INT, val)
-#define DATA_DOUBLE(val) _DATA(FUNC_ARG_DOUBLE, val)
-#define DATA_LIST(val) _DATA(FUNC_ARG_LIST, val)
-#define DATA_ANY(val) _DATA(FUNC_ARG_ANY, val)
-#define DATA_UNKNOWN _DATA(FUNC_ARG_UNKNOWN, NULL)
-#define DATA_NOTHING _DATA(FUNC_ARG_NOTHING, CONST_NOTHING)
+#define DATA_BOOLEAN(val) _DATA(DATA_TYPE_BOOL, val)
+#define DATA_STRING_REF(val) _DATA(DATA_TYPE_STRING_REF, val)
+#define DATA_INTEGER(val) _DATA(DATA_TYPE_INT, val)
+#define DATA_DOUBLE(val) _DATA(DATA_TYPE_DOUBLE, val)
+#define DATA_LIST(val) _DATA(DATA_TYPE_LIST, val)
+#define DATA_ANY(val) _DATA(DATA_TYPE_ANY, val)
+#define DATA_UNKNOWN _DATA(DATA_TYPE_UNKNOWN, NULL)
+#define DATA_NOTHING _DATA(DATA_TYPE_NOTHING, CONST_NOTHING)
 
-typedef bool (*BlockCompileFunc)(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val);
+typedef bool (*BlockCompileFunc)(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state);
 
 Exec exec_new(CompilerMode mode);
 void exec_free(Exec* exec);

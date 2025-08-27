@@ -44,6 +44,19 @@ typedef struct BlockChain BlockChain;
 
 typedef char** (*ListAccessor)(Block* block, size_t* list_len);
 
+typedef enum {
+    DATA_TYPE_UNKNOWN = 0,
+    DATA_TYPE_NOTHING,
+    DATA_TYPE_INT,
+    DATA_TYPE_DOUBLE,
+    DATA_TYPE_STRING_LITERAL, // Literal string, stored in global memory
+    DATA_TYPE_STRING_REF, // Pointer to a string type, managed by the current memory allocator (GC)
+    DATA_TYPE_BOOL,
+    DATA_TYPE_LIST,
+    DATA_TYPE_ANY,
+    DATA_TYPE_BLOCKDEF,
+} DataType;
+
 struct BlockdefColor {
     unsigned char r, g, b, a;
 };

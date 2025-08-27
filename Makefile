@@ -170,16 +170,16 @@ src/ast.o: src/ast.c src/ast.h
 	$(CC) $(CFLAGS) -c -o $@ $<
 src/interpreter.o: src/interpreter.c $(SCRAP_HEADERS)
 	$(CC) $(CFLAGS) -c -o $@ $<
-src/compiler.o: src/compiler.c src/compiler.h src/gc.h src/ast.h src/compiler-common.h
+src/compiler.o: src/compiler.c src/compiler.h src/gc.h src/ast.h
 	$(CC) $(CFLAGS) -c -o $@ $<
-src/gc.o: src/gc.c src/gc.h src/vec.h src/std-types.h src/std.h
+src/gc.o: src/gc.c src/gc.h src/vec.h src/std.h
 	$(CC) $(CFLAGS) -c -o $@ $<
-src/std.o: src/std.c src/std.h src/gc.h src/std-types.h src/term.h
+src/std.o: src/std.c src/std.h src/gc.h src/term.h
 	$(CC) $(CFLAGS) -c -o $@ $<
 
-src/gc-stand.o: src/gc.c src/gc.h src/vec.h src/std-types.h src/std.h
+src/gc-stand.o: src/gc.c src/gc.h src/vec.h src/std.h
 	$(CC) $(CFLAGS) -DSTANDALONE_STD -c -o $@ $<
-src/std-stand.o: src/std.c src/std.h src/gc.h src/std-types.h
+src/std-stand.o: src/std.c src/std.h src/gc.h
 	$(CC) $(CFLAGS) -DSTANDALONE_STD -c -o $@ $<
 src/scrap-runtime.o: src/scrap-runtime.c src/gc.h
 	$(CC) $(CFLAGS) -DSTANDALONE_STD -c -o $@ $<

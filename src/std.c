@@ -222,32 +222,32 @@ int std_int_pow(int base, int exp) {
 }
 
 List* std_list_new(Gc* gc) {
-    List* list = gc_malloc(gc, sizeof(List), ANY_TYPE_LIST);
+    List* list = gc_malloc(gc, sizeof(List), DATA_TYPE_LIST);
     list->size = 0;
     list->capacity = 0;
     list->values = NULL;
     return list;
 }
 
-static AnyValue std_get_any(AnyValueType data_type, va_list va) {
+static AnyValue std_get_any(DataType data_type, va_list va) {
     AnyValueData data;
 
     switch (data_type) {
-    case ANY_TYPE_BOOL:
-    case ANY_TYPE_INT:
+    case DATA_TYPE_BOOL:
+    case DATA_TYPE_INT:
         data.int_val = va_arg(va, int);
         break;
-    case ANY_TYPE_DOUBLE:
+    case DATA_TYPE_DOUBLE:
         data.double_val = va_arg(va, double);
         break;
-    case ANY_TYPE_STRING_REF:
-    case ANY_TYPE_STRING_LITERAL:
+    case DATA_TYPE_STRING_REF:
+    case DATA_TYPE_STRING_LITERAL:
         data.str_val = va_arg(va, char*);
         break;
-    case ANY_TYPE_LIST:
+    case DATA_TYPE_LIST:
         data.list_val = va_arg(va, List*);
         break;
-    case ANY_TYPE_ANY:
+    case DATA_TYPE_ANY:
         return *va_arg(va, AnyValue*);
     default:
         break;
@@ -259,7 +259,7 @@ static AnyValue std_get_any(AnyValueType data_type, va_list va) {
     };
 }
 
-void std_list_add(Gc* gc, List* list, AnyValueType data_type, ...) {
+void std_list_add(Gc* gc, List* list, DataType data_type, ...) {
     AnyValue any;
 
     va_list va;
@@ -282,7 +282,7 @@ void std_list_add(Gc* gc, List* list, AnyValueType data_type, ...) {
     list->values[list->size++] = any;
 }
 
-void std_list_set(List* list, int index, AnyValueType data_type, ...) {
+void std_list_set(List* list, int index, DataType data_type, ...) {
     if (index >= list->size || index < 0) return;
 
     AnyValue any;
@@ -296,8 +296,8 @@ void std_list_set(List* list, int index, AnyValueType data_type, ...) {
 }
 
 AnyValue* std_list_get(Gc* gc, List* list, int index) {
-    AnyValue* out = gc_malloc(gc, sizeof(AnyValue), ANY_TYPE_ANY);
-    *out = (AnyValue) { .type = ANY_TYPE_NOTHING };
+    AnyValue* out = gc_malloc(gc, sizeof(AnyValue), DATA_TYPE_ANY);
+    *out = (AnyValue) { .type = DATA_TYPE_NOTHING };
 
     if (index >= list->size || index < 0) return out;
 
@@ -309,25 +309,25 @@ int std_list_length(List* list) {
     return list->size;
 }
 
-AnyValue* std_any_from_value(Gc* gc, AnyValueType data_type, ...) {
+AnyValue* std_any_from_value(Gc* gc, DataType data_type, ...) {
     AnyValue any;
 
     va_list va;
     va_start(va, data_type);
-    if (data_type == ANY_TYPE_ANY) {
+    if (data_type == DATA_TYPE_ANY) {
         return va_arg(va, AnyValue*);
     } else {
         any = std_get_any(data_type, va);
     }
     va_end(va);
 
-    AnyValue* value = gc_malloc(gc, sizeof(AnyValue), ANY_TYPE_ANY);
+    AnyValue* value = gc_malloc(gc, sizeof(AnyValue), DATA_TYPE_ANY);
     *value = any;
     return value;
 }
 
 char* std_string_from_literal(Gc* gc, const char* literal, unsigned int size) {
-    StringHeader* out_str = gc_malloc(gc, sizeof(StringHeader) + size + 1, ANY_TYPE_STRING_REF); // Don't forget null terminator. It is not included in size
+    StringHeader* out_str = gc_malloc(gc, sizeof(StringHeader) + size + 1, DATA_TYPE_STRING_REF); // Don't forget null terminator. It is not included in size
     memcpy(out_str->str, literal, size);
     out_str->size = size;
     out_str->capacity = size;
@@ -388,7 +388,7 @@ char* std_string_join(Gc* gc, char* left, char* right) {
     StringHeader* left_header = ((StringHeader*)left) - 1;
     StringHeader* right_header = ((StringHeader*)right) - 1;
     
-    StringHeader* out_str = gc_malloc(gc, sizeof(StringHeader) + left_header->size + right_header->size + 1, ANY_TYPE_STRING_REF);
+    StringHeader* out_str = gc_malloc(gc, sizeof(StringHeader) + left_header->size + right_header->size + 1, DATA_TYPE_STRING_REF);
     memcpy(out_str->str, left_header->str, left_header->size);
     memcpy(out_str->str + left_header->size, right_header->str, right_header->size);
     out_str->size = left_header->size + right_header->size;
@@ -446,17 +446,17 @@ char* std_string_from_any(Gc* gc, AnyValue* value) {
     if (!value) return std_string_from_literal(gc, "", 0);
 
     switch (value->type) {
-    case ANY_TYPE_INT:
+    case DATA_TYPE_INT:
         return std_string_from_int(gc, value->data.int_val);
-    case ANY_TYPE_DOUBLE:
+    case DATA_TYPE_DOUBLE:
         return std_string_from_double(gc, value->data.double_val);
-    case ANY_TYPE_STRING_LITERAL:
+    case DATA_TYPE_STRING_LITERAL:
         return std_string_from_literal(gc, value->data.str_val, strlen(value->data.str_val));
-    case ANY_TYPE_STRING_REF:
+    case DATA_TYPE_STRING_REF:
         return value->data.str_val;
-    case ANY_TYPE_BOOL:
+    case DATA_TYPE_BOOL:
         return std_string_from_bool(gc, value->data.int_val);
-    case ANY_TYPE_LIST: ;
+    case DATA_TYPE_LIST: ;
         char str[32];
         int size = snprintf(str, 32, "*LIST (%lu)*", value->data.list_val->size);
         return std_string_from_literal(gc, str, size);
@@ -469,13 +469,13 @@ int std_int_from_any(AnyValue* value) {
     if (!value) return 0;
 
     switch (value->type) {
-    case ANY_TYPE_BOOL:
-    case ANY_TYPE_INT:
+    case DATA_TYPE_BOOL:
+    case DATA_TYPE_INT:
         return value->data.int_val;
-    case ANY_TYPE_DOUBLE:
+    case DATA_TYPE_DOUBLE:
         return (int)value->data.double_val;
-    case ANY_TYPE_STRING_REF:
-    case ANY_TYPE_STRING_LITERAL:
+    case DATA_TYPE_STRING_REF:
+    case DATA_TYPE_STRING_LITERAL:
         return atoi(value->data.str_val);
     default:
         return 0;
@@ -486,13 +486,13 @@ int std_double_from_any(AnyValue* value) {
     if (!value) return 0;
 
     switch (value->type) {
-    case ANY_TYPE_BOOL:
-    case ANY_TYPE_INT:
+    case DATA_TYPE_BOOL:
+    case DATA_TYPE_INT:
         return (double)value->data.int_val;
-    case ANY_TYPE_DOUBLE:
+    case DATA_TYPE_DOUBLE:
         return value->data.double_val;
-    case ANY_TYPE_STRING_REF:
-    case ANY_TYPE_STRING_LITERAL:
+    case DATA_TYPE_STRING_REF:
+    case DATA_TYPE_STRING_LITERAL:
         return atof(value->data.str_val);
     default:
         return 0;
@@ -503,13 +503,13 @@ int std_bool_from_any(AnyValue* value) {
     if (!value) return 0;
 
     switch (value->type) {
-    case ANY_TYPE_BOOL:
-    case ANY_TYPE_INT:
+    case DATA_TYPE_BOOL:
+    case DATA_TYPE_INT:
         return value->data.int_val != 0;
-    case ANY_TYPE_DOUBLE:
+    case DATA_TYPE_DOUBLE:
         return value->data.double_val != 0.0;
-    case ANY_TYPE_STRING_REF:
-    case ANY_TYPE_STRING_LITERAL:
+    case DATA_TYPE_STRING_REF:
+    case DATA_TYPE_STRING_LITERAL:
         return *value->data.str_val != 0;
     default:
         return 0;
@@ -520,7 +520,7 @@ List* std_list_from_any(Gc* gc, AnyValue* value) {
     if (!value) return 0;
 
     switch (value->type) {
-    case ANY_TYPE_LIST:
+    case DATA_TYPE_LIST:
         return value->data.list_val;
     default:
         return std_list_new(gc);
@@ -531,18 +531,18 @@ bool std_any_is_eq(AnyValue* left, AnyValue* right) {
     if (left->type != right->type) return false;
 
     switch (left->type) {
-    case ANY_TYPE_NOTHING:
+    case DATA_TYPE_NOTHING:
         return true;
-    case ANY_TYPE_STRING_LITERAL:
+    case DATA_TYPE_STRING_LITERAL:
         return !strcmp(left->data.str_val, right->data.str_val);
-    case ANY_TYPE_STRING_REF:
+    case DATA_TYPE_STRING_REF:
         return std_string_is_eq(left->data.str_val, right->data.str_val);
-    case ANY_TYPE_INT:
-    case ANY_TYPE_BOOL:
+    case DATA_TYPE_INT:
+    case DATA_TYPE_BOOL:
         return left->data.int_val == right->data.int_val;
-    case ANY_TYPE_DOUBLE:
+    case DATA_TYPE_DOUBLE:
         return left->data.double_val == right->data.double_val;
-    case ANY_TYPE_LIST:
+    case DATA_TYPE_LIST:
         return left->data.list_val == right->data.list_val;
     default:
         return false;
@@ -575,18 +575,18 @@ int std_term_print_any(AnyValue* any) {
     if (!any) return 0;
 
     switch (any->type) {
-    case ANY_TYPE_STRING_REF:
-    case ANY_TYPE_STRING_LITERAL:
+    case DATA_TYPE_STRING_REF:
+    case DATA_TYPE_STRING_LITERAL:
         return std_term_print_str(any->data.str_val);
-    case ANY_TYPE_NOTHING:
+    case DATA_TYPE_NOTHING:
         return 0;
-    case ANY_TYPE_INT:
+    case DATA_TYPE_INT:
         return std_term_print_int(any->data.int_val);
-    case ANY_TYPE_BOOL:
+    case DATA_TYPE_BOOL:
         return std_term_print_bool(any->data.int_val);
-    case ANY_TYPE_DOUBLE:
+    case DATA_TYPE_DOUBLE:
         return std_term_print_double(any->data.double_val);
-    case ANY_TYPE_LIST:
+    case DATA_TYPE_LIST:
         return std_term_print_list(any->data.list_val);
     default:
         return 0;
