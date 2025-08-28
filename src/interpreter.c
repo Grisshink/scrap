@@ -399,16 +399,18 @@ bool exec_try_join(Vm* vm, Exec* exec, size_t* return_code) {
     return true;
 }
 
-bool variable_stack_push_var(Exec* exec, const char* name, Data arg) {
-    if (exec->variable_stack_len >= VM_VARIABLE_STACK_SIZE) return false;
-    if (*name == 0) return false;
+void variable_stack_push_var(Exec* exec, const char* name, Data arg) {
+    if (exec->variable_stack_len >= VM_VARIABLE_STACK_SIZE) {
+        TraceLog(LOG_ERROR, "[VM] Variable stack overflow");
+        PTHREAD_FAIL(exec);
+    }
+    if (*name == 0) return;
     Variable var;
     var.name = name;
     var.value = arg;
     var.chain_layer = exec->chain_stack_len - 1;
     var.layer = exec->chain_stack[var.chain_layer].layer;
     exec->variable_stack[exec->variable_stack_len++] = var;
-    return true;
 }
 
 void variable_stack_pop_layer(Exec* exec) {

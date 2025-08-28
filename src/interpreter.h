@@ -234,7 +234,7 @@ void exec_thread_exit(void* thread_exec);
 
 Data evaluate_argument(Exec* exec, Argument* arg);
 
-bool variable_stack_push_var(Exec* exec, const char* name, Data data);
+void variable_stack_push_var(Exec* exec, const char* name, Data data);
 Variable* variable_stack_get_variable(Exec* exec, const char* name);
 
 int data_to_int(Data arg);

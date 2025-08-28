@@ -299,6 +299,7 @@ Data block_declare_var(Exec* exec, Block* block, int argc, Data* argv, ControlSt
     (void) block;
     if (argc < 2) RETURN_NOTHING;
     if (argv[0].type != DATA_TYPE_STRING_LITERAL || argv[0].storage.type != DATA_STORAGE_STATIC) RETURN_NOTHING;
+    if (block->parent) RETURN_NOTHING;
 
     Data var_value = data_copy(argv[1]);
     if (var_value.storage.type == DATA_STORAGE_MANAGED) var_value.storage.type = DATA_STORAGE_UNMANAGED;
