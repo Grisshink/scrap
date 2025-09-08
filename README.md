@@ -11,9 +11,8 @@ Scrap is a new block based programming language with the aim towards advanced us
 It is written in pure C and mostly inspired by other block based languages such as [Scratch](https://scratch.mit.edu/) and
 its forks such as [Turbowarp](https://turbowarp.org).
 
-## ⚠️ WARNING ⚠️
-
-Scrap is currently in **Beta** stage. Some features may be missing or break, so use with caution!
+> [!WARNING]
+> Scrap is currently in **Beta** stage. Some features may be missing or break, so use with caution!
 
 ## Notable advantages from scratch
 
@@ -140,7 +139,8 @@ gmake MAKE=gmake -j$(nproc)
 
 #### MacOS build
 
-⚠️ WARNING ⚠️ MacOS build is not being tested right now, so it may not work properly or not at all, you have been warned!
+> [!WARNING]
+> MacOS build is not being tested right now, so it may not work properly or not at all, you have been warned!
 
 To build and run Scrap on macOS, you need to install `gcc` and `make`.
 First, install Homebrew:
