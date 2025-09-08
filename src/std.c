@@ -401,10 +401,15 @@ char* std_string_join(Gc* gc, char* left, char* right) {
     return out_str->str;
 }
 
-// FIXME: this should return length in characters, not in bytes
 int std_string_length(char* str) {
-    StringHeader* header = ((StringHeader*)str) - 1;
-    return header->size;
+    int len = 0;
+    while (*str) {
+        int mb_size = leading_ones(*str);
+        if (mb_size == 0) mb_size = 1;
+        str += mb_size;
+        len++;
+    }
+    return len;
 }
 
 bool std_string_is_eq(char* left, char* right) {
