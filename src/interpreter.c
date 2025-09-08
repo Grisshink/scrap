@@ -32,42 +32,6 @@ void chain_stack_push(Exec* exec, ChainStackData data);
 void chain_stack_pop(Exec* exec);
 bool exec_block(Exec* exec, Block block, Data* block_return, ControlState control_state, Data control_arg);
 
-Data data_copy(Data arg) {
-    if (arg.storage.type == DATA_STORAGE_STATIC) return arg;
-
-    Data out;
-    out.type = arg.type;
-    out.storage.type = DATA_STORAGE_MANAGED;
-    out.storage.storage_len = arg.storage.storage_len;
-    out.data.custom_arg = malloc(arg.storage.storage_len);
-    if (arg.type == DATA_TYPE_LIST) {
-        out.data.list_arg.len = arg.data.list_arg.len;
-        for (size_t i = 0; i < arg.data.list_arg.len; i++) {
-            out.data.list_arg.items[i] = data_copy(arg.data.list_arg.items[i]);
-        }
-    } else {
-        memcpy((void*)out.data.custom_arg, arg.data.custom_arg, arg.storage.storage_len);
-    }
-    return out;
-}
-
-void data_free(Data arg) {
-    if (arg.storage.type == DATA_STORAGE_STATIC) return;
-    switch (arg.type) {
-    case DATA_TYPE_LIST:
-        if (!arg.data.list_arg.items) break;
-        for (size_t i = 0; i < arg.data.list_arg.len; i++) {
-            data_free(arg.data.list_arg.items[i]);
-        }
-        free((Data*)arg.data.list_arg.items);
-        break;
-    default:
-        if (!arg.data.custom_arg) break;
-        free((void*)arg.data.custom_arg);
-        break;
-    }
-}
-
 int data_to_int(Data arg) {
     switch (arg.type) {
     case DATA_TYPE_BOOL:
@@ -109,34 +73,22 @@ int data_to_bool(Data arg) {
     case DATA_TYPE_STRING_REF:
         return *arg.data.str_arg != 0;
     case DATA_TYPE_LIST:
-        return arg.data.list_arg.len != 0;
+        return arg.data.list_arg->size != 0;
     default:
         return 0;
     }
 }
 
-const char* data_to_str(Data arg) {
-    static char buf[32];
+char* data_to_string_ref(Exec* exec, Data arg) {
+    AnyValue any;
+    any.type = arg.type;
+    any.data = *(AnyValueData*)&arg.data;
+    return std_string_from_any(&exec->gc, &any);
+}
 
-    switch (arg.type) {
-    case DATA_TYPE_STRING_REF:
-    case DATA_TYPE_STRING_LITERAL:
-        return arg.data.str_arg;
-    case DATA_TYPE_BOOL:
-        return arg.data.int_arg ? "true" : "false";
-    case DATA_TYPE_DOUBLE:
-        buf[0] = 0;
-        snprintf(buf, 32, "%f", arg.data.double_arg);
-        return buf;
-    case DATA_TYPE_INT:
-        buf[0] = 0;
-        snprintf(buf, 32, "%d", arg.data.int_arg);
-        return buf;
-    case DATA_TYPE_LIST:
-        return "# LIST #";
-    default:
-        return "";
-    }
+char* data_to_any_string(Exec* exec, Data arg) {
+    if (arg.type == DATA_TYPE_STRING_LITERAL) return arg.data.str_arg;
+    return data_to_string_ref(exec, arg);
 }
 
 Exec exec_new(void) {
@@ -192,8 +144,12 @@ bool exec_block(Exec* exec, Block block, Data* block_return, ControlState contro
         }
     }
 
+    size_t last_temps = vector_size(exec->gc.root_temp_chunks);
+
     *block_return = execute_block(exec, &block, exec->arg_stack_len - stack_begin, exec->arg_stack + stack_begin, control_state);
     arg_stack_undo_args(exec, exec->arg_stack_len - stack_begin);
+
+    if (!block.parent && vector_size(exec->gc.root_temp_chunks) > last_temps) gc_flush(&exec->gc);
 
     return true;
 }
@@ -212,6 +168,9 @@ bool exec_run_chain(Exec* exec, BlockChain* chain, int argc, Data* argv, Data* r
         .return_arg = (Data) {0},
     });
 
+    gc_root_begin(&exec->gc);
+    gc_root_save(&exec->gc);
+
     exec->running_chain = chain;
     Data block_return;
     for (size_t i = 0; i < vector_size(chain->blocks); i++) {
@@ -221,7 +180,6 @@ bool exec_run_chain(Exec* exec, BlockChain* chain, int argc, Data* argv, Data* r
         ChainStackData* chain_data = &exec->chain_stack[exec->chain_stack_len - 1];
         chain_data->running_ind = i;
         ControlState control_state = BLOCKDEF->type == BLOCKTYPE_CONTROL ? CONTROL_STATE_BEGIN : CONTROL_STATE_NORMAL;
-        bool return_used = false;
         if (chain_data->is_returning) break;
 
         if (BLOCKDEF->type == BLOCKTYPE_END || BLOCKDEF->type == BLOCKTYPE_CONTROLEND) {
@@ -230,7 +188,7 @@ bool exec_run_chain(Exec* exec, BlockChain* chain, int argc, Data* argv, Data* r
             chain_data->layer--;
             control_stack_pop_data(block_ind, size_t)
             control_stack_pop_data(block_return, Data)
-            if (block_return.storage.type == DATA_STORAGE_MANAGED) data_free(block_return);
+            gc_root_end(&exec->gc);
             control_state = CONTROL_STATE_END;
             if (chain_data->skip_block && skip_layer == chain_data->layer) {
                 chain_data->skip_block = false;
@@ -254,21 +212,19 @@ bool exec_run_chain(Exec* exec, BlockChain* chain, int argc, Data* argv, Data* r
                 return false;
             }
             if (chain_data->running_ind != i) i = chain_data->running_ind;
-            return_used = true;
         }
 
         if (BLOCKDEF->type == BLOCKTYPE_CONTROL || BLOCKDEF->type == BLOCKTYPE_CONTROLEND) {
             control_stack_push_data(block_return, Data)
             control_stack_push_data(i, size_t)
+            gc_root_begin(&exec->gc);
             if (chain_data->skip_block && skip_layer == -1) skip_layer = chain_data->layer;
-            return_used = true;
             chain_data->layer++;
         }
-
-        if (!return_used && block_return.storage.type == DATA_STORAGE_MANAGED) {
-            data_free(block_return);
-        }
     }
+    gc_root_restore(&exec->gc);
+    gc_root_end(&exec->gc);
+
     *return_val = exec->chain_stack[exec->chain_stack_len - 1].return_arg;
     while (exec->chain_stack[exec->chain_stack_len - 1].layer >= 0) {
         variable_stack_pop_layer(exec);
@@ -288,6 +244,7 @@ void exec_thread_exit(void* thread_exec) {
     variable_stack_cleanup(exec);
     arg_stack_undo_args(exec, exec->arg_stack_len);
     exec->running_state = EXEC_STATE_DONE;
+    gc_free(&exec->gc);
 }
 
 void define_function(Exec* exec, Blockdef* blockdef, BlockChain* chain) {
@@ -314,6 +271,7 @@ void* exec_thread_entry(void* thread_exec) {
     exec->chain_stack_len = 0;
     exec->running_chain = NULL;
     exec->defined_functions = vector_create();
+    exec->gc = gc_new(MEMORY_LIMIT);
 
     pthread_cleanup_push(exec_thread_exit, thread_exec);
 
@@ -418,22 +376,12 @@ void variable_stack_pop_layer(Exec* exec) {
     for (int i = exec->variable_stack_len - 1; i >= 0 &&
                                                exec->variable_stack[i].layer == exec->chain_stack[exec->chain_stack_len - 1].layer &&
                                                exec->variable_stack[i].chain_layer == exec->chain_stack_len - 1; i--) {
-        Data arg = exec->variable_stack[i].value;
-        if (arg.storage.type == DATA_STORAGE_UNMANAGED || arg.storage.type == DATA_STORAGE_MANAGED) {
-            data_free(arg);
-        }
         count++;
     }
     exec->variable_stack_len -= count;
 }
 
 void variable_stack_cleanup(Exec* exec) {
-    for (size_t i = 0; i < exec->variable_stack_len; i++) {
-        Data arg = exec->variable_stack[i].value;
-        if (arg.storage.type == DATA_STORAGE_UNMANAGED || arg.storage.type == DATA_STORAGE_MANAGED) {
-            data_free(arg);
-        }
-    }
     exec->variable_stack_len = 0;
 }
 
@@ -472,11 +420,6 @@ void arg_stack_undo_args(Exec* exec, size_t count) {
     if (count > exec->arg_stack_len) {
         TraceLog(LOG_ERROR, "[VM] Arg stack underflow");
         PTHREAD_FAIL(exec);
-    }
-    for (size_t i = 0; i < count; i++) {
-        Data arg = exec->arg_stack[exec->arg_stack_len - 1 - i];
-        if (arg.storage.type != DATA_STORAGE_MANAGED) continue;
-        data_free(arg);
     }
     exec->arg_stack_len -= count;
 }

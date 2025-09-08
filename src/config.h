@@ -52,3 +52,6 @@
 #define CATEGORY_DATA_COLOR { 0xff, 0x77, 0x00, 0xff }
 
 #define MAX_ERROR_LEN 512
+
+// Should be enough memory for now
+#define MEMORY_LIMIT 4194304 // 4 MB

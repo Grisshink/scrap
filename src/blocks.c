@@ -64,50 +64,9 @@ char** term_color_list_access(Block* block, size_t* list_len) {
     return term_color_list;
 }
 
-String string_new(size_t cap) {
-    String string;
-    string.str = malloc((cap + 1)* sizeof(char));
-    *string.str = 0;
-    string.len = 0;
-    string.cap = cap;
-    return string;
-}
-
-void string_add(String* string, const char* other) {
-    size_t new_len = string->len + strlen(other);
-    if (new_len > string->cap) {
-        string->str = realloc(string->str, (new_len + 1) * sizeof(char));
-        string->cap = new_len;
-    }
-    strcat(string->str, other);
-    string->len = new_len;
-}
-
-void string_add_array(String* string, const char* arr, int arr_len) {
-    size_t new_len = string->len + arr_len;
-    if (new_len > string->cap) {
-        string->str = realloc(string->str, (new_len + 1) * sizeof(char));
-        string->cap = new_len;
-    }
-    memcpy(&string->str[string->len], arr, arr_len);
-    string->str[new_len] = 0;
-    string->len = new_len;
-}
-
-void string_free(String string) {
-    free(string.str);
-}
-
 #ifdef USE_INTERPRETER
 
-Data string_make_managed(String* string) {
-    Data out;
-    out.type = DATA_TYPE_STRING_REF;
-    out.storage.type = DATA_STORAGE_MANAGED;
-    out.storage.storage_len = string->len + 1;
-    out.data.str_arg = string->str;
-    return out;
-}
+#include "std.h"
 
 Data block_do_nothing(Exec* exec, Block* block, int argc, Data* argv, ControlState control_state) {
     (void) control_state;
@@ -298,21 +257,25 @@ Data block_declare_var(Exec* exec, Block* block, int argc, Data* argv, ControlSt
     (void) control_state;
     (void) block;
     if (argc < 2) RETURN_NOTHING;
-    if (argv[0].type != DATA_TYPE_STRING_LITERAL || argv[0].storage.type != DATA_STORAGE_STATIC) RETURN_NOTHING;
+    if (argv[0].type != DATA_TYPE_STRING_LITERAL) RETURN_NOTHING;
     if (block->parent) RETURN_NOTHING;
 
-    Data var_value = data_copy(argv[1]);
-    if (var_value.storage.type == DATA_STORAGE_MANAGED) var_value.storage.type = DATA_STORAGE_UNMANAGED;
+    variable_stack_push_var(exec, argv[0].data.str_arg, argv[1]);
 
-    variable_stack_push_var(exec, argv[0].data.str_arg, var_value);
-    return var_value;
+    if (argv[1].type == DATA_TYPE_STRING_REF) {
+        gc_add_str_root(&exec->gc, (char*)argv[1].data.str_arg);
+    } else if (argv[1].type == DATA_TYPE_LIST || argv[1].type == DATA_TYPE_ANY) {
+        gc_add_root(&exec->gc, argv[1].data.custom_arg);
+    }
+
+    return argv[1];
 }
 
 Data block_get_var(Exec* exec, Block* block, int argc, Data* argv, ControlState control_state) {
     (void) control_state;
     (void) block;
     if (argc < 1) RETURN_NOTHING;
-    Variable* var = variable_stack_get_variable(exec, data_to_str(argv[0]));
+    Variable* var = variable_stack_get_variable(exec, data_to_any_string(exec, argv[0]));
     if (!var) RETURN_NOTHING;
     return var->value;
 }
@@ -322,17 +285,18 @@ Data block_set_var(Exec* exec, Block* block, int argc, Data* argv, ControlState 
     (void) block;
     if (argc < 2) RETURN_NOTHING;
 
-    Variable* var = variable_stack_get_variable(exec, data_to_str(argv[0]));
+    Variable* var = variable_stack_get_variable(exec, data_to_any_string(exec, argv[0]));
     if (!var) RETURN_NOTHING;
 
-    Data new_value = data_copy(argv[1]);
-    if (new_value.storage.type == DATA_STORAGE_MANAGED) new_value.storage.type = DATA_STORAGE_UNMANAGED;
+    var->value = argv[1];
 
-    if (var->value.storage.type == DATA_STORAGE_UNMANAGED) {
-        data_free(var->value);
+    // FIXME: block_set_var should replace the root chunk, not add a new root every time
+    if (argv[1].type == DATA_TYPE_STRING_REF) {
+        gc_add_str_root(&exec->gc, (char*)argv[1].data.str_arg);
+    } else if (argv[1].type == DATA_TYPE_LIST || argv[1].type == DATA_TYPE_ANY) {
+        gc_add_root(&exec->gc, argv[1].data.custom_arg);
     }
 
-    var->value = new_value;
     return var->value;
 }
 
@@ -343,58 +307,33 @@ Data block_create_list(Exec* exec, Block* block, int argc, Data* argv, ControlSt
     (void) argc;
     (void) argv;
 
-    Data out;
-    out.type = DATA_TYPE_LIST;
-    out.storage.type = DATA_STORAGE_MANAGED;
-    out.storage.storage_len = 0;
-    out.data.list_arg.items = NULL;
-    out.data.list_arg.len = 0;
-    return out;
+    RETURN_LIST(std_list_new(&exec->gc));
 }
 
 Data block_list_add(Exec* exec, Block* block, int argc, Data* argv, ControlState control_state) {
     (void) control_state;
     (void) block;
-    (void) exec;
     if (argc < 2) RETURN_NOTHING;
+    if (argv[0].type != DATA_TYPE_LIST) RETURN_NOTHING;
 
-    Variable* var = variable_stack_get_variable(exec, data_to_str(argv[0]));
-    if (!var) RETURN_NOTHING;
-    if (var->value.type != DATA_TYPE_LIST) RETURN_NOTHING;
-
-    if (!var->value.data.list_arg.items) {
-        var->value.data.list_arg.items = malloc(sizeof(Data));
-        var->value.data.list_arg.len = 1;
-    } else {
-        var->value.data.list_arg.items = realloc(var->value.data.list_arg.items, ++var->value.data.list_arg.len * sizeof(Data));
-    }
-    var->value.storage.storage_len = var->value.data.list_arg.len * sizeof(Data);
-    Data* list_item = &var->value.data.list_arg.items[var->value.data.list_arg.len - 1];
-    if (argv[1].storage.type == DATA_STORAGE_MANAGED) {
-        argv[1].storage.type = DATA_STORAGE_UNMANAGED;
-        *list_item = argv[1];
-    } else {
-        *list_item = data_copy(argv[1]);
-        if (list_item->storage.type == DATA_STORAGE_MANAGED) list_item->storage.type = DATA_STORAGE_UNMANAGED;
-    }
-
-    return *list_item;
+    AnyValue any;
+    any.type = argv[1].type;
+    any.data = *(AnyValueData*)&argv[1].data;
+    std_list_add_any(&exec->gc, argv[0].data.list_arg, any);
+    RETURN_NOTHING;
 }
 
 Data block_list_get(Exec* exec, Block* block, int argc, Data* argv, ControlState control_state) {
     (void) control_state;
     (void) block;
-    (void) exec;
     if (argc < 2) RETURN_NOTHING;
+    if (argv[0].type != DATA_TYPE_LIST) RETURN_NOTHING;
 
-    Variable* var = variable_stack_get_variable(exec, data_to_str(argv[0]));
-    if (!var) RETURN_NOTHING;
-    if (var->value.type != DATA_TYPE_LIST) RETURN_NOTHING;
-    if (!var->value.data.list_arg.items || var->value.data.list_arg.len == 0) RETURN_NOTHING;
-    int index = data_to_int(argv[1]);
-    if (index < 0 || (size_t)index >= var->value.data.list_arg.len) RETURN_NOTHING;
-
-    return var->value.data.list_arg.items[index];
+    AnyValue* any = std_list_get(&exec->gc, argv[0].data.list_arg, data_to_int(argv[1]));
+    Data return_val;
+    return_val.type = any->type;
+    return_val.data = *(DataContents*)&any->data;
+    return return_val;
 }
 
 Data block_list_length(Exec* exec, Block* block, int argc, Data* argv, ControlState control_state) {
@@ -402,12 +341,9 @@ Data block_list_length(Exec* exec, Block* block, int argc, Data* argv, ControlSt
     (void) block;
     (void) exec;
     if (argc < 1) RETURN_INT(0);
-
-    Variable* var = variable_stack_get_variable(exec, data_to_str(argv[0]));
-    if (!var) RETURN_INT(0);
-    if (var->value.type != DATA_TYPE_LIST) RETURN_INT(0);
-
-    RETURN_INT(var->value.data.list_arg.len);
+    if (argv[0].type != DATA_TYPE_LIST) RETURN_INT(0);
+    
+    RETURN_INT(argv[0].data.list_arg->size);
 }
 
 Data block_list_set(Exec* exec, Block* block, int argc, Data* argv, ControlState control_state) {
@@ -415,25 +351,23 @@ Data block_list_set(Exec* exec, Block* block, int argc, Data* argv, ControlState
     (void) block;
     (void) exec;
     if (argc < 3) RETURN_NOTHING;
+    if (argv[0].type != DATA_TYPE_LIST) RETURN_NOTHING;
 
-    Variable* var = variable_stack_get_variable(exec, data_to_str(argv[0]));
-    if (!var) RETURN_NOTHING;
-    if (var->value.type != DATA_TYPE_LIST) RETURN_NOTHING;
-    if (!var->value.data.list_arg.items || var->value.data.list_arg.len == 0) RETURN_NOTHING;
     int index = data_to_int(argv[1]);
-    if (index < 0 || (size_t)index >= var->value.data.list_arg.len) RETURN_NOTHING;
+    if (index >= argv[0].data.list_arg->size || index < 0) RETURN_NOTHING;
 
-    Data new_value = data_copy(argv[2]);
-    if (new_value.storage.type == DATA_STORAGE_MANAGED) new_value.storage.type = DATA_STORAGE_UNMANAGED;
+    AnyValue any;
+    any.type = argv[2].type;
+    any.data = *(AnyValueData*)&argv[2].data;
 
-    if (var->value.data.list_arg.items[index].storage.type == DATA_STORAGE_UNMANAGED) {
-        data_free(var->value.data.list_arg.items[index]);
-    }
-    var->value.data.list_arg.items[index] = new_value;
-    return var->value.data.list_arg.items[index];
+    argv[0].data.list_arg->values[index] = any;
+    RETURN_NOTHING;
 }
 
 Data block_print(Exec* exec, Block* block, int argc, Data* argv, ControlState control_state) {
+    (void) exec;
+    (void) block;
+    (void) control_state;
     if (argc >= 1) {
         int bytes_sent = 0;
         switch (argv[0].type) {
@@ -451,14 +385,9 @@ Data block_print(Exec* exec, Block* block, int argc, Data* argv, ControlState co
             bytes_sent = term_print_double(argv[0].data.double_arg);
             break;
         case DATA_TYPE_LIST:
-            bytes_sent += term_print_str("[");
-            if (argv[0].data.list_arg.items && argv[0].data.list_arg.len) {
-                for (size_t i = 0; i < argv[0].data.list_arg.len; i++) {
-                    bytes_sent += block_print(exec, block, 1, &argv[0].data.list_arg.items[i], control_state).data.int_arg;
-                    bytes_sent += term_print_str(", ");
-                }
-            }
-            bytes_sent += term_print_str("]");
+            bytes_sent = term_print_str("*LIST (");
+            bytes_sent += term_print_int(argv[0].data.list_arg->size);
+            bytes_sent += term_print_str(")*");
             break;
         default:
             break;
@@ -645,42 +574,18 @@ Data block_term_set_clear(Exec* exec, Block* block, int argc, Data* argv, Contro
 Data block_input(Exec* exec, Block* block, int argc, Data* argv, ControlState control_state) {
     (void) control_state;
     (void) block;
-    (void) exec;
     (void) argv;
     (void) argc;
-
-    String string = string_new(0);
-    char input_char = 0;
-
-    while (input_char != '\n') {
-        char input[256];
-        int i = 0;
-        for (; i < 255 && input_char != '\n'; i++) input[i] = (input_char = term_input_get_char());
-        if (input[i - 1] == '\n') input[i - 1] = 0;
-        input[i] = 0;
-        string_add(&string, input);
-    }
-
-    return string_make_managed(&string);
+    RETURN_STRING_REF(std_term_get_input(&exec->gc));
 }
 
 Data block_get_char(Exec* exec, Block* block, int argc, Data* argv, ControlState control_state) {
     (void) control_state;
     (void) block;
-    (void) exec;
     (void) argv;
     (void) argc;
 
-    String string = string_new(0);
-    char input[10];
-    input[0] = term_input_get_char();
-    int mb_size = leading_ones(input[0]);
-    if (mb_size == 0) mb_size = 1;
-    for (int i = 1; i < mb_size && i < 10; i++) input[i] = term_input_get_char();
-    input[mb_size] = 0;
-    string_add(&string, input);
-
-    return string_make_managed(&string);
+    RETURN_STRING_REF(std_term_get_char(&exec->gc));
 }
 
 Data block_random(Exec* exec, Block* block, int argc, Data* argv, ControlState control_state) {
@@ -702,13 +607,9 @@ Data block_random(Exec* exec, Block* block, int argc, Data* argv, ControlState c
 Data block_join(Exec* exec, Block* block, int argc, Data* argv, ControlState control_state) {
     (void) control_state;
     (void) block;
-    (void) exec;
     if (argc < 2) RETURN_NOTHING;
 
-    String string = string_new(0);
-    string_add(&string, data_to_str(argv[0]));
-    string_add(&string, data_to_str(argv[1]));
-    return string_make_managed(&string);
+    RETURN_STRING_REF(std_string_join(&exec->gc, data_to_string_ref(exec, argv[0]), data_to_string_ref(exec, argv[1])));
 }
 
 Data block_ord(Exec* exec, Block* block, int argc, Data* argv, ControlState control_state) {
@@ -717,113 +618,38 @@ Data block_ord(Exec* exec, Block* block, int argc, Data* argv, ControlState cont
     (void) exec;
     if (argc < 1) RETURN_INT(0);
 
-    const char* str = data_to_str(argv[0]);
+    const char* str = data_to_any_string(exec, argv[0]);
     int codepoint_size;
     int codepoint = GetCodepoint(str, &codepoint_size);
-
     RETURN_INT(codepoint);
 }
 
 Data block_chr(Exec* exec, Block* block, int argc, Data* argv, ControlState control_state) {
     (void) control_state;
     (void) block;
-    (void) exec;
     if (argc < 1) RETURN_NOTHING;
-
-    int text_size;
-    const char* text = CodepointToUTF8(data_to_int(argv[0]), &text_size);
-
-    String string = string_new(0);
-    string_add_array(&string, text, text_size);
-    return string_make_managed(&string);
+    RETURN_STRING_REF(std_string_chr(&exec->gc, data_to_int(argv[0])));
 }
 
 Data block_letter_in(Exec* exec, Block* block, int argc, Data* argv, ControlState control_state) {
     (void) control_state;
     (void) block;
-    (void) exec;
     if (argc < 2) RETURN_NOTHING;
-
-    int pos = 0;
-    int target = data_to_int(argv[0]);
-    if (target <= 0) RETURN_NOTHING;
-    for (char* str = (char*)data_to_str(argv[1]); *str; str++) {
-        // Increment pos only on the beginning of multibyte char
-        if ((*str & 0x80) == 0 || (*str & 0x40) != 0) pos++;
-
-        if (pos == target) {
-            int codepoint_size;
-            GetCodepoint(str, &codepoint_size);
-
-            String string = string_new(0);
-            string_add_array(&string, str, codepoint_size);
-            return string_make_managed(&string);
-        }
-    }
-
-    RETURN_NOTHING;
+    RETURN_STRING_REF(std_string_letter_in(&exec->gc, data_to_int(argv[0]), data_to_string_ref(exec, argv[1])));
 }
 
 Data block_substring(Exec* exec, Block* block, int argc, Data* argv, ControlState control_state) {
     (void) control_state;
     (void) block;
-    (void) exec;
     if (argc < 3) RETURN_NOTHING;
-
-    int start_pos = data_to_int(argv[0]);
-    int end_pos = data_to_int(argv[1]);
-    if (start_pos <= 0) start_pos = 1;
-    if (end_pos <= 0) RETURN_NOTHING;
-    if (start_pos > end_pos) RETURN_NOTHING;
-
-    char* substr_start = NULL;
-    int substr_len = 0;
-
-    int pos = 0;
-    for (char* str = (char*)data_to_str(argv[2]); *str; str++) {
-        // Increment pos only on the beginning of multibyte char
-        if ((*str & 0x80) == 0 || (*str & 0x40) != 0) pos++;
-        if (substr_start) substr_len++;
-
-        if (pos == start_pos && !substr_start) {
-            substr_start = str;
-            substr_len = 1;
-        }
-        if (pos == end_pos) {
-            if (!substr_start) RETURN_NOTHING;
-            int codepoint_size;
-            GetCodepoint(str, &codepoint_size);
-            substr_len += codepoint_size - 1;
-
-            String string = string_new(0);
-            string_add_array(&string, substr_start, substr_len);
-            return string_make_managed(&string);
-        }
-    }
-
-    if (substr_start) {
-        String string = string_new(0);
-        string_add_array(&string, substr_start, substr_len);
-        return string_make_managed(&string);
-    }
-
-    RETURN_NOTHING;
+    RETURN_STRING_REF(std_string_substring(&exec->gc, data_to_int(argv[0]), data_to_int(argv[1]), data_to_string_ref(exec, argv[2])));
 }
 
 Data block_length(Exec* exec, Block* block, int argc, Data* argv, ControlState control_state) {
     (void) control_state;
     (void) block;
-    (void) exec;
     if (argc < 1) RETURN_INT(0);
-    int len = 0;
-    const char* str = data_to_str(argv[0]);
-    while (*str) {
-        int mb_size = leading_ones(*str);
-        if (mb_size == 0) mb_size = 1;
-        str += mb_size;
-        len++;
-    }
-    RETURN_INT(len);
+    RETURN_INT(std_string_length(data_to_string_ref(exec, argv[0])));
 }
 
 Data block_unix_time(Exec* exec, Block* block, int argc, Data* argv, ControlState control_state) {
@@ -854,11 +680,8 @@ Data block_convert_float(Exec* exec, Block* block, int argc, Data* argv, Control
 Data block_convert_str(Exec* exec, Block* block, int argc, Data* argv, ControlState control_state) {
     (void) control_state;
     (void) block;
-    (void) exec;
-    String string = string_new(0);
-    if (argc < 1) return string_make_managed(&string);
-    string_add(&string, data_to_str(argv[0]));
-    return string_make_managed(&string);
+    if (argc < 1) RETURN_STRING_REF(std_string_from_literal(&exec->gc, "", 0));
+    RETURN_STRING_REF(data_to_string_ref(exec, argv[0]));
 }
 
 Data block_convert_bool(Exec* exec, Block* block, int argc, Data* argv, ControlState control_state) {
@@ -1180,7 +1003,7 @@ Data block_custom_arg(Exec* exec, Block* block, int argc, Data* argv, ControlSta
         for (size_t j = 0; j < vector_size(exec->defined_functions[i].args); j++) {
             DefineArgument arg = exec->defined_functions[i].args[j];
             if (arg.blockdef == block->blockdef) {
-                return data_copy(exec->chain_stack[exec->chain_stack_len - 1].custom_argv[arg.arg_ind]);
+                return exec->chain_stack[exec->chain_stack_len - 1].custom_argv[arg.arg_ind];
             }
         }
     }
@@ -1195,8 +1018,17 @@ Data block_return(Exec* exec, Block* block, int argc, Data* argv, ControlState c
     (void) control_state;
     (void) block;
     if (argc < 1) RETURN_NOTHING;
-    exec->chain_stack[exec->chain_stack_len - 1].return_arg = data_copy(argv[0]);
+    exec->chain_stack[exec->chain_stack_len - 1].return_arg = argv[0];
     exec->chain_stack[exec->chain_stack_len - 1].is_returning = true;
+    RETURN_NOTHING;
+}
+
+Data block_gc_collect(Exec* exec, Block* block, int argc, Data* argv, ControlState control_state) {
+    (void) control_state;
+    (void) block;
+    (void) argc;
+    (void) argv;
+    gc_collect(&exec->gc);
     RETURN_NOTHING;
 }
 
@@ -3425,12 +3257,7 @@ void register_blocks(Vm* vm) {
     blockdef_register(vm, sc_comment);
     add_to_category(sc_comment, cat_misc);
 
-#ifdef USE_INTERPRETER
-    void* gc_collect_func = block_noop;
-#else
-    void* gc_collect_func = block_gc_collect;
-#endif
-    Blockdef* sc_gc_collect = blockdef_new("gc_collect", BLOCKTYPE_NORMAL, (BlockdefColor) { 0xa0, 0x70, 0x00, 0xff }, gc_collect_func);
+    Blockdef* sc_gc_collect = blockdef_new("gc_collect", BLOCKTYPE_NORMAL, (BlockdefColor) { 0xa0, 0x70, 0x00, 0xff }, block_gc_collect);
     blockdef_add_text(sc_gc_collect, gettext("Collect garbage"));
     blockdef_register(vm, sc_gc_collect);
     add_to_category(sc_gc_collect, cat_misc);

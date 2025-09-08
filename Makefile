@@ -40,7 +40,7 @@ else
 endif
 
 STD_OBJFILES := $(addprefix src/,vec.o gc-stand.o std-stand.o scrap-runtime.o)
-OBJFILES := $(addprefix src/,filedialogs.o render.o save.o term.o blocks.o scrap.o vec.o util.o input.o scrap_gui.o window.o cfgpath.o platform.o ast.o)
+OBJFILES := $(addprefix src/,filedialogs.o render.o save.o term.o blocks.o scrap.o vec.o util.o input.o scrap_gui.o window.o cfgpath.o platform.o ast.o gc.o std.o)
 BUNDLE_FILES := data examples extras locale LICENSE README.md CHANGELOG.md
 SCRAP_HEADERS := src/scrap.h src/ast.h src/config.h src/scrap_gui.h
 EXE_NAME := scrap
@@ -57,7 +57,7 @@ ifeq ($(USE_COMPILER), FALSE)
 	CFLAGS += -DUSE_INTERPRETER
 else
 	LLVM_CONFIG ?= llvm-config
-	OBJFILES += $(addprefix src/,compiler.o gc.o std.o)
+	OBJFILES += $(addprefix src/,compiler.o)
 	SCRAP_HEADERS += src/compiler.h
 
 	ifeq ($(TARGET), WINDOWS)

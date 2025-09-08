@@ -55,6 +55,7 @@ int std_int_pow(int base, int exp);
 
 // List operations
 List* std_list_new(Gc* gc);
+void std_list_add_any(Gc* gc, List* list, AnyValue any);
 void std_list_add(Gc* gc, List* list, DataType data_type, ...);
 void std_list_set(List* list, int index, DataType data_type, ...);
 AnyValue* std_list_get(Gc* gc, List* list, int index);

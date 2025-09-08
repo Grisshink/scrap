@@ -20,6 +20,7 @@
 
 #include "raylib.h"
 #include "ast.h"
+#include "std.h"
 
 #include <pthread.h>
 #include <stdatomic.h>
@@ -48,45 +49,17 @@ typedef enum {
 
 typedef Data (*BlockFunc)(Exec* exec, Block* block, int argc, Data* argv, ControlState control_state);
 
-enum DataControlArgType {
-    CONTROL_ARG_BEGIN,
-    CONTROL_ARG_END,
-};
-
-struct DataList {
-    Data* items;
-    size_t len; // Length is NOT in bytes, if you want length in bytes, use data.storage.storage_len
-};
-
 union DataContents {
     int int_arg;
     double double_arg;
-    const char* str_arg;
-    DataList list_arg;
-    DataControlArgType control_arg;
-    const void* custom_arg;
-    BlockChain* chain_arg;
-};
-
-enum DataStorageType {
-    // Data that is contained within arg or lives for the entire lifetime of exec
-    DATA_STORAGE_STATIC,
-    // Data that is allocated on heap and should be cleaned up by exec.
-    // Exec usually cleans up allocated data right after the block execution
-    DATA_STORAGE_MANAGED,
-    // Data that is allocated on heap and should be cleaned up manually.
-    // Exec may free this memory for you if it's necessary
-    DATA_STORAGE_UNMANAGED,
-};
-
-struct DataStorage {
-    DataStorageType type;
-    size_t storage_len; // Length is in bytes, so to make copy function work correctly. Only applicable if you don't use DATA_STORAGE_STATIC
+    char* str_arg;
+    List* list_arg;
+    AnyValue* any_arg;
+    void* custom_arg;
 };
 
 struct Data {
     DataType type;
-    DataStorage storage;
     DataContents data;
 };
 
@@ -141,6 +114,8 @@ struct Exec {
     pthread_t thread;
     atomic_int running_state;
     BlockChain* running_chain;
+
+    Gc gc;
 };
 
 #ifdef _WIN32
@@ -170,19 +145,11 @@ struct Exec {
 
 #define RETURN_NOTHING return (Data) { \
     .type = DATA_TYPE_NOTHING, \
-    .storage = (DataStorage) { \
-        .type = DATA_STORAGE_STATIC, \
-        .storage_len = 0, \
-    }, \
     .data = (DataContents) {0}, \
 }
 
 #define RETURN_INT(val) return (Data) { \
     .type = DATA_TYPE_INT, \
-    .storage = (DataStorage) { \
-        .type = DATA_STORAGE_STATIC, \
-        .storage_len = 0, \
-    }, \
     .data = (DataContents) { \
         .int_arg = (val) \
     }, \
@@ -190,10 +157,6 @@ struct Exec {
 
 #define RETURN_DOUBLE(val) return (Data) { \
     .type = DATA_TYPE_DOUBLE, \
-    .storage = (DataStorage) { \
-        .type = DATA_STORAGE_STATIC, \
-        .storage_len = 0, \
-    }, \
     .data = (DataContents) { \
         .double_arg = (val) \
     }, \
@@ -201,10 +164,6 @@ struct Exec {
 
 #define RETURN_BOOL(val) return (Data) { \
     .type = DATA_TYPE_BOOL, \
-    .storage = (DataStorage) { \
-        .type = DATA_STORAGE_STATIC, \
-        .storage_len = 0, \
-    }, \
     .data = (DataContents) { \
         .int_arg = (val) \
     }, \
@@ -212,12 +171,22 @@ struct Exec {
 
 #define RETURN_STRING_LITERAL(val) return (Data) { \
     .type = DATA_TYPE_STRING_LITERAL, \
-    .storage = (DataStorage) { \
-        .type = DATA_STORAGE_STATIC, \
-        .storage_len = 0, \
-    }, \
     .data = (DataContents) { \
         .str_arg = (val) \
+    }, \
+}
+
+#define RETURN_STRING_REF(val) return (Data) { \
+    .type = DATA_TYPE_STRING_REF, \
+    .data = (DataContents) { \
+        .str_arg = (val) \
+    }, \
+}
+
+#define RETURN_LIST(val) return (Data) { \
+    .type = DATA_TYPE_LIST, \
+    .data = (DataContents) { \
+        .list_arg = (val) \
     }, \
 }
 
@@ -239,9 +208,8 @@ Variable* variable_stack_get_variable(Exec* exec, const char* name);
 
 int data_to_int(Data arg);
 int data_to_bool(Data arg);
-const char* data_to_str(Data arg);
+char* data_to_string_ref(Exec* exec, Data arg);
+char* data_to_any_string(Exec* exec, Data arg);
 double data_to_double(Data arg);
-Data data_copy(Data arg);
-void data_free(Data data);
 
 #endif // INTERPRETER_H

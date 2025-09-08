@@ -42,10 +42,6 @@
 #define TARGET_TRIPLE "x86_64-pc-linux-gnu"
 #endif
 
-// Should be enough memory for now
-#define MEMORY_LIMIT 4194304 // 4 MB
-
-
 static bool compile_program(Exec* exec);
 static bool run_program(Exec* exec);
 static bool build_program(Exec* exec);

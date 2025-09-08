@@ -261,12 +261,16 @@ static AnyValue std_get_any(DataType data_type, va_list va) {
 
 void std_list_add(Gc* gc, List* list, DataType data_type, ...) {
     AnyValue any;
-
+    
     va_list va;
     va_start(va, data_type);
     any = std_get_any(data_type, va);
     va_end(va);
-    
+
+    std_list_add_any(gc, list, any);
+}
+
+void std_list_add_any(Gc* gc, List* list, AnyValue any) {
     if (!list->values) {
         list->values = gc_malloc(gc, sizeof(AnyValue), 0);
         list->capacity = 1;
@@ -397,6 +401,7 @@ char* std_string_join(Gc* gc, char* left, char* right) {
     return out_str->str;
 }
 
+// FIXME: this should return length in characters, not in bytes
 int std_string_length(char* str) {
     StringHeader* header = ((StringHeader*)str) - 1;
     return header->size;
