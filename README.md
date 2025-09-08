@@ -11,6 +11,10 @@ Scrap is a new block based programming language with the aim towards advanced us
 It is written in pure C and mostly inspired by other block based languages such as [Scratch](https://scratch.mit.edu/) and
 its forks such as [Turbowarp](https://turbowarp.org).
 
+## ⚠️ WARNING ⚠️
+
+Scrap is currently in **Beta** stage. Some features may be missing or break, so use with caution!
+
 ## Notable advantages from scratch
 
 - Faster runtime. The speed is achieved using compilation through LLVM *(WIP)*
@@ -24,10 +28,6 @@ its forks such as [Turbowarp](https://turbowarp.org).
 - The code runs in a separate thread. This solves some performance issues compared to Scratch
 - Modularized interface. Most of the interface can be rearranged or moved to another tab
 - *(WIP)* Standalone builds. Scrap projects can be built and run as native executables without significant runtime overhead
-
-## ⚠️ WARNING ⚠️
-
-Scrap is currently in **Beta** stage. Some features may be missing or break, so use with caution!
 
 ## Controls
 
@@ -58,30 +58,38 @@ Scrap requires these dependencies to run:
 - [gettext](https://www.gnu.org/software/gettext/)
 - [LLVM](https://llvm.org/) *(WIP, only required if building with `USE_COMPILER=TRUE` flag)*
 
-Download commands for MSYS2 UCRT64 (Windows):
+Currently Scrap can be built for *Windows*, *Linux*, *MacOS* and *FreeBSD*. 
+
+#### Download commands for Windows (MSYS2 UCRT64)
 
 ```bash
 pacman -S mingw-w64-ucrt-x86_64-gcc make gettext
 ln -sf "${MSYSTEM_PREFIX}/bin/windres.exe" "${MSYSTEM_PREFIX}/bin/x86_64-w64-mingw32-windres"
 ```
 
-#### Experimental
+#### Download commands for Windows (LLVM) *(Experimental)*
+
 If you are going to compile with `USE_COMPILER=TRUE` flag, then you need to install additional dependencies:
+
 ```bash
 pacman -S mingw-w64-ucrt-x86_64-llvm
 ```
 
-Download command for debian-based distributions:
+#### Download commands for Debian
 
 ```bash
 sudo apt install libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev gettext
 ```
+
+#### Download commands for Arch linux
 
 Download command for arch-based distributions:
 
 ```bash
 sudo pacman -S libx11 libxrandr libxi libxcursor libxinerama gettext
 ```
+
+#### Download commands for OpenSUSE
 
 Download command for openSUSE:
 
@@ -97,8 +105,6 @@ Before building the repo needs to be cloned along with its submodules. To do thi
 git clone --recursive https://github.com/Grisshink/scrap.git
 cd scrap
 ```
-
-Currently Scrap can be built for *Windows*, *Linux*, *MacOS* and *FreeBSD*. 
 
 #### Windows build
 
@@ -164,4 +170,4 @@ the wallpaper was made by [@Grisshink](https://github.com/Grisshink)
 
 ## License
 
-All scrap code is licensed under the terms of [GPLv3 license](/LICENSE).
+All scrap code is licensed under the terms of [GPLv3 license](/LICENSE) *(Subject to change in near future)*.
