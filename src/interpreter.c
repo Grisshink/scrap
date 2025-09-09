@@ -24,71 +24,64 @@
 #include <string.h>
 #include <stdio.h>
 
-void arg_stack_push_arg(Exec* exec, Data data);
+void arg_stack_push_arg(Exec* exec, AnyValue data);
 void arg_stack_undo_args(Exec* exec, size_t count);
 void variable_stack_pop_layer(Exec* exec);
 void variable_stack_cleanup(Exec* exec);
 void chain_stack_push(Exec* exec, ChainStackData data);
 void chain_stack_pop(Exec* exec);
-bool exec_block(Exec* exec, Block block, Data* block_return, ControlState control_state, Data control_arg);
+bool exec_block(Exec* exec, Block block, AnyValue* block_return, ControlState control_state, AnyValue control_arg);
 
-int data_to_int(Data arg) {
+int data_to_int(AnyValue arg) {
     switch (arg.type) {
     case DATA_TYPE_BOOL:
     case DATA_TYPE_INT:
-        return arg.data.int_arg;
+        return arg.data.int_val;
     case DATA_TYPE_DOUBLE:
-        return (int)arg.data.double_arg;
+        return (int)arg.data.double_val;
     case DATA_TYPE_STRING_LITERAL:
     case DATA_TYPE_STRING_REF:
-        return atoi(arg.data.str_arg);
+        return atoi(arg.data.str_val);
     default:
         return 0;
     }
 }
 
-double data_to_double(Data arg) {
+double data_to_double(AnyValue arg) {
     switch (arg.type) {
     case DATA_TYPE_BOOL:
     case DATA_TYPE_INT:
-        return (double)arg.data.int_arg;
+        return (double)arg.data.int_val;
     case DATA_TYPE_DOUBLE:
-        return arg.data.double_arg;
+        return arg.data.double_val;
     case DATA_TYPE_STRING_LITERAL:
     case DATA_TYPE_STRING_REF:
-        return atof(arg.data.str_arg);
+        return atof(arg.data.str_val);
     default:
         return 0.0;
     }
 }
 
-int data_to_bool(Data arg) {
+int data_to_bool(AnyValue arg) {
     switch (arg.type) {
     case DATA_TYPE_BOOL:
     case DATA_TYPE_INT:
-        return arg.data.int_arg != 0;
+        return arg.data.int_val != 0;
     case DATA_TYPE_DOUBLE:
-        return arg.data.double_arg != 0.0;
+        return arg.data.double_val != 0.0;
     case DATA_TYPE_STRING_LITERAL:
     case DATA_TYPE_STRING_REF:
-        return *arg.data.str_arg != 0;
+        return *arg.data.str_val != 0;
     case DATA_TYPE_LIST:
-        return arg.data.list_arg->size != 0;
+        return arg.data.list_val->size != 0;
     default:
         return 0;
     }
 }
 
-char* data_to_string_ref(Exec* exec, Data arg) {
-    AnyValue any;
-    any.type = arg.type;
-    any.data = *(AnyValueData*)&arg.data;
-    return std_string_from_any(&exec->gc, &any);
-}
-
-char* data_to_any_string(Exec* exec, Data arg) {
-    if (arg.type == DATA_TYPE_STRING_LITERAL) return arg.data.str_arg;
-    return data_to_string_ref(exec, arg);
+char* data_to_any_string(Exec* exec, AnyValue arg) {
+    if (arg.type == DATA_TYPE_STRING_LITERAL) return arg.data.str_val;
+    return std_string_from_any(&exec->gc, &arg);
 }
 
 Exec exec_new(void) {
@@ -113,22 +106,22 @@ void exec_copy_code(Vm* vm, Exec* exec, BlockChain* code) {
     exec->code = code;
 }
 
-Data evaluate_argument(Exec* exec, Argument* arg) {
+AnyValue evaluate_argument(Exec* exec, Argument* arg) {
     switch (arg->type) {
     case ARGUMENT_TEXT:
     case ARGUMENT_CONST_STRING:
         RETURN_STRING_LITERAL(arg->data.text);
         break;
     case ARGUMENT_BLOCK: ; // This fixes gcc-9 error
-        Data arg_return;
-        if (!exec_block(exec, arg->data.block, &arg_return, CONTROL_STATE_NORMAL, (Data) {0})) RETURN_NOTHING;
+        AnyValue arg_return;
+        if (!exec_block(exec, arg->data.block, &arg_return, CONTROL_STATE_NORMAL, (AnyValue) {0})) RETURN_NOTHING;
         return arg_return;
     default:
         RETURN_NOTHING;
     }
 }
 
-bool exec_block(Exec* exec, Block block, Data* block_return, ControlState control_state, Data control_arg) {
+bool exec_block(Exec* exec, Block block, AnyValue* block_return, ControlState control_state, AnyValue control_arg) {
     BlockFunc execute_block = block.blockdef->func;
     if (!execute_block) return false;
 
@@ -155,7 +148,7 @@ bool exec_block(Exec* exec, Block block, Data* block_return, ControlState contro
 }
 
 #define BLOCKDEF chain->blocks[i].blockdef
-bool exec_run_chain(Exec* exec, BlockChain* chain, int argc, Data* argv, Data* return_val) {
+bool exec_run_chain(Exec* exec, BlockChain* chain, int argc, AnyValue* argv, AnyValue* return_val) {
     int skip_layer = -1;
     size_t base_len = exec->control_stack_len;
     chain_stack_push(exec, (ChainStackData) {
@@ -165,14 +158,14 @@ bool exec_run_chain(Exec* exec, BlockChain* chain, int argc, Data* argv, Data* r
         .custom_argc = argc,
         .custom_argv = argv,
         .is_returning = false,
-        .return_arg = (Data) {0},
+        .return_arg = (AnyValue) {0},
     });
 
     gc_root_begin(&exec->gc);
     gc_root_save(&exec->gc);
 
     exec->running_chain = chain;
-    Data block_return;
+    AnyValue block_return;
     for (size_t i = 0; i < vector_size(chain->blocks); i++) {
         pthread_testcancel();
 
@@ -187,7 +180,7 @@ bool exec_run_chain(Exec* exec, BlockChain* chain, int argc, Data* argv, Data* r
             variable_stack_pop_layer(exec);
             chain_data->layer--;
             control_stack_pop_data(block_ind, size_t)
-            control_stack_pop_data(block_return, Data)
+            control_stack_pop_data(block_return, AnyValue)
             gc_root_end(&exec->gc);
             control_state = CONTROL_STATE_END;
             if (chain_data->skip_block && skip_layer == chain_data->layer) {
@@ -197,7 +190,7 @@ bool exec_run_chain(Exec* exec, BlockChain* chain, int argc, Data* argv, Data* r
         }
         
         if (!chain_data->skip_block) {
-            if (!exec_block(exec, chain->blocks[block_ind], &block_return, control_state, (Data){0})) {
+            if (!exec_block(exec, chain->blocks[block_ind], &block_return, control_state, (AnyValue){0})) {
                 chain_stack_pop(exec);
                 return false;
             }
@@ -215,7 +208,7 @@ bool exec_run_chain(Exec* exec, BlockChain* chain, int argc, Data* argv, Data* r
         }
 
         if (BLOCKDEF->type == BLOCKTYPE_CONTROL || BLOCKDEF->type == BLOCKTYPE_CONTROLEND) {
-            control_stack_push_data(block_return, Data)
+            control_stack_push_data(block_return, AnyValue)
             control_stack_push_data(i, size_t)
             gc_root_begin(&exec->gc);
             if (chain_data->skip_block && skip_layer == -1) skip_layer = chain_data->layer;
@@ -241,6 +234,7 @@ void exec_thread_exit(void* thread_exec) {
     for (size_t i = 0; i < vector_size(exec->defined_functions); i++) {
         vector_free(exec->defined_functions[i].args);
     }
+    vector_free(exec->defined_functions);
     variable_stack_cleanup(exec);
     arg_stack_undo_args(exec, exec->arg_stack_len);
     exec->running_state = EXEC_STATE_DONE;
@@ -296,7 +290,7 @@ void* exec_thread_entry(void* thread_exec) {
             }
         }
         if (cont) continue;
-        Data bin;
+        AnyValue bin;
         if (!exec_run_chain(exec, &exec->code[i], -1, NULL, &bin)) {
             exec->running_chain = NULL;
             pthread_exit((void*)0);
@@ -357,7 +351,7 @@ bool exec_try_join(Vm* vm, Exec* exec, size_t* return_code) {
     return true;
 }
 
-void variable_stack_push_var(Exec* exec, const char* name, Data arg) {
+void variable_stack_push_var(Exec* exec, const char* name, AnyValue arg) {
     if (exec->variable_stack_len >= VM_VARIABLE_STACK_SIZE) {
         TraceLog(LOG_ERROR, "[VM] Variable stack overflow");
         PTHREAD_FAIL(exec);
@@ -408,7 +402,7 @@ void chain_stack_pop(Exec* exec) {
     exec->chain_stack_len--;
 }
 
-void arg_stack_push_arg(Exec* exec, Data arg) {
+void arg_stack_push_arg(Exec* exec, AnyValue arg) {
     if (exec->arg_stack_len >= VM_ARG_STACK_SIZE) {
         TraceLog(LOG_ERROR, "[VM] Arg stack overflow");
         PTHREAD_FAIL(exec);

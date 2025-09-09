@@ -34,38 +34,17 @@ typedef struct Variable Variable;
 typedef struct Exec Exec;
 typedef struct ChainStackData ChainStackData;
 
-typedef enum DataControlArgType DataControlArgType;
-typedef enum DataStorageType DataStorageType;
-typedef struct DataList DataList;
-typedef union DataContents DataContents;
-typedef struct DataStorage DataStorage;
-typedef struct Data Data;
-
 typedef enum {
     CONTROL_STATE_NORMAL = 0,
     CONTROL_STATE_BEGIN,
     CONTROL_STATE_END,
 } ControlState;
 
-typedef Data (*BlockFunc)(Exec* exec, Block* block, int argc, Data* argv, ControlState control_state);
-
-union DataContents {
-    int int_arg;
-    double double_arg;
-    char* str_arg;
-    List* list_arg;
-    AnyValue* any_arg;
-    void* custom_arg;
-};
-
-struct Data {
-    DataType type;
-    DataContents data;
-};
+typedef AnyValue (*BlockFunc)(Exec* exec, Block* block, int argc, AnyValue* argv, ControlState control_state);
 
 struct Variable {
     const char* name;
-    Data value;
+    AnyValue value;
     size_t chain_layer;
     int layer;
 };
@@ -75,9 +54,9 @@ struct ChainStackData {
     int layer;
     size_t running_ind;
     int custom_argc;
-    Data* custom_argv;
+    AnyValue* custom_argv;
     bool is_returning;
-    Data return_arg;
+    AnyValue return_arg;
 };
 
 typedef struct {
@@ -94,7 +73,7 @@ typedef struct {
 struct Exec {
     BlockChain* code;
 
-    Data arg_stack[VM_ARG_STACK_SIZE];
+    AnyValue arg_stack[VM_ARG_STACK_SIZE];
     size_t arg_stack_len;
 
     unsigned char control_stack[VM_CONTROL_STACK_SIZE];
@@ -143,57 +122,57 @@ struct Exec {
     exec->control_stack_len -= sizeof(type); \
     data = *(type*)(exec->control_stack + exec->control_stack_len);
 
-#define RETURN_NOTHING return (Data) { \
+#define RETURN_NOTHING return (AnyValue) { \
     .type = DATA_TYPE_NOTHING, \
-    .data = (DataContents) {0}, \
+    .data = (AnyValueData) {0}, \
 }
 
-#define RETURN_INT(val) return (Data) { \
+#define RETURN_INT(val) return (AnyValue) { \
     .type = DATA_TYPE_INT, \
-    .data = (DataContents) { \
-        .int_arg = (val) \
+    .data = (AnyValueData) { \
+        .int_val = (val) \
     }, \
 }
 
-#define RETURN_DOUBLE(val) return (Data) { \
+#define RETURN_DOUBLE(val) return (AnyValue) { \
     .type = DATA_TYPE_DOUBLE, \
-    .data = (DataContents) { \
-        .double_arg = (val) \
+    .data = (AnyValueData) { \
+        .double_val = (val) \
     }, \
 }
 
-#define RETURN_BOOL(val) return (Data) { \
+#define RETURN_BOOL(val) return (AnyValue) { \
     .type = DATA_TYPE_BOOL, \
-    .data = (DataContents) { \
-        .int_arg = (val) \
+    .data = (AnyValueData) { \
+        .int_val = (val) \
     }, \
 }
 
-#define RETURN_STRING_LITERAL(val) return (Data) { \
+#define RETURN_STRING_LITERAL(val) return (AnyValue) { \
     .type = DATA_TYPE_STRING_LITERAL, \
-    .data = (DataContents) { \
-        .str_arg = (val) \
+    .data = (AnyValueData) { \
+        .str_val = (val) \
     }, \
 }
 
-#define RETURN_STRING_REF(val) return (Data) { \
+#define RETURN_STRING_REF(val) return (AnyValue) { \
     .type = DATA_TYPE_STRING_REF, \
-    .data = (DataContents) { \
-        .str_arg = (val) \
+    .data = (AnyValueData) { \
+        .str_val = (val) \
     }, \
 }
 
-#define RETURN_LIST(val) return (Data) { \
+#define RETURN_LIST(val) return (AnyValue) { \
     .type = DATA_TYPE_LIST, \
-    .data = (DataContents) { \
-        .list_arg = (val) \
+    .data = (AnyValueData) { \
+        .list_val = (val) \
     }, \
 }
 
 Exec exec_new(void);
 void exec_free(Exec* exec);
 void exec_copy_code(Vm* vm, Exec* exec, BlockChain* code);
-bool exec_run_chain(Exec* exec, BlockChain* chain, int argc, Data* argv, Data* return_val);
+bool exec_run_chain(Exec* exec, BlockChain* chain, int argc, AnyValue* argv, AnyValue* return_val);
 bool exec_start(Vm* vm, Exec* exec);
 bool exec_stop(Vm* vm, Exec* exec);
 bool exec_join(Vm* vm, Exec* exec, size_t* return_code);
@@ -201,15 +180,14 @@ bool exec_try_join(Vm* vm, Exec* exec, size_t* return_code);
 void exec_set_skip_block(Exec* exec);
 void exec_thread_exit(void* thread_exec);
 
-Data evaluate_argument(Exec* exec, Argument* arg);
+AnyValue evaluate_argument(Exec* exec, Argument* arg);
 
-void variable_stack_push_var(Exec* exec, const char* name, Data data);
+void variable_stack_push_var(Exec* exec, const char* name, AnyValue data);
 Variable* variable_stack_get_variable(Exec* exec, const char* name);
 
-int data_to_int(Data arg);
-int data_to_bool(Data arg);
-char* data_to_string_ref(Exec* exec, Data arg);
-char* data_to_any_string(Exec* exec, Data arg);
-double data_to_double(Data arg);
+int data_to_int(AnyValue arg);
+int data_to_bool(AnyValue arg);
+char* data_to_any_string(Exec* exec, AnyValue arg);
+double data_to_double(AnyValue arg);
 
 #endif // INTERPRETER_H
