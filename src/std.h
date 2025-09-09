@@ -33,8 +33,8 @@ typedef struct List List;
 
 typedef union {
     char* str_val;
-    int int_val;
-    double double_val;
+    int integer_val;
+    double float_val;
     List* list_val;
     AnyValue* any_val;
 } AnyValueData;
@@ -63,8 +63,8 @@ int std_list_length(List* list);
 
 // Any operations
 AnyValue* std_any_from_value(Gc* gc, DataType data_type, ...);
-int std_int_from_any(AnyValue* value);
-int std_double_from_any(AnyValue* value);
+int std_integer_from_any(AnyValue* value);
+double std_float_from_any(AnyValue* value);
 int std_bool_from_any(AnyValue* value);
 List* std_list_from_any(Gc* gc, AnyValue* value);
 char* std_string_from_any(Gc* gc, AnyValue* value);
@@ -72,9 +72,9 @@ bool std_any_is_eq(AnyValue* left, AnyValue* right);
 
 // String operations
 char* std_string_from_literal(Gc* gc, const char* literal, unsigned int size);
-char* std_string_from_int(Gc* gc, int value);
+char* std_string_from_integer(Gc* gc, int value);
 char* std_string_from_bool(Gc* gc, bool value);
-char* std_string_from_double(Gc* gc, double value);
+char* std_string_from_float(Gc* gc, double value);
 
 int std_string_length(char* str);
 char* std_string_letter_in(Gc* gc, int target, char* input_str);
@@ -95,8 +95,8 @@ char* std_term_get_input(Gc* gc);
 int std_term_print_list(List* list);
 int std_term_print_any(AnyValue* any);
 int std_term_print_str(const char* str);
-int std_term_print_int(int value);
-int std_term_print_double(double value);
+int std_term_print_integer(int value);
+int std_term_print_float(double value);
 int std_term_print_bool(bool value);
 void std_term_clear(void);
 

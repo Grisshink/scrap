@@ -26,9 +26,9 @@ const char* type_to_str(DataType type) {
     switch (type) {
     case DATA_TYPE_NOTHING:
         return "nothing";
-    case DATA_TYPE_INT:
+    case DATA_TYPE_INTEGER:
         return "int";
-    case DATA_TYPE_DOUBLE:
+    case DATA_TYPE_FLOAT:
         return "float";
     case DATA_TYPE_STRING_REF:
         return "str";

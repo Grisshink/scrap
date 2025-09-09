@@ -537,11 +537,11 @@ static LLVMValueRef register_globals(Exec* exec) {
     LLVMTypeRef print_func_params[] = { LLVMPointerType(LLVMInt8Type(), 0) };
     add_function(exec, "std_term_print_str", LLVMInt32Type(), print_func_params, ARRLEN(print_func_params), std_term_print_str, false, false);
 
-    LLVMTypeRef print_int_func_params[] = { LLVMInt32Type() };
-    add_function(exec, "std_term_print_int", LLVMInt32Type(), print_int_func_params, ARRLEN(print_int_func_params), std_term_print_int, false, false);
+    LLVMTypeRef print_integer_func_params[] = { LLVMInt32Type() };
+    add_function(exec, "std_term_print_integer", LLVMInt32Type(), print_integer_func_params, ARRLEN(print_integer_func_params), std_term_print_integer, false, false);
 
-    LLVMTypeRef print_double_func_params[] = { LLVMDoubleType() };
-    add_function(exec, "std_term_print_double", LLVMInt32Type(), print_double_func_params, ARRLEN(print_double_func_params), std_term_print_double, false, false);
+    LLVMTypeRef print_float_func_params[] = { LLVMDoubleType() };
+    add_function(exec, "std_term_print_float", LLVMInt32Type(), print_float_func_params, ARRLEN(print_float_func_params), std_term_print_float, false, false);
 
     LLVMTypeRef print_bool_func_params[] = { LLVMInt1Type() };
     add_function(exec, "std_term_print_bool", LLVMInt32Type(), print_bool_func_params, ARRLEN(print_bool_func_params), std_term_print_bool, false, false);
@@ -555,23 +555,23 @@ static LLVMValueRef register_globals(Exec* exec) {
     LLVMTypeRef string_literal_func_params[] = { LLVMInt64Type(), LLVMPointerType(LLVMInt8Type(), 0), LLVMInt32Type() };
     add_function(exec, "std_string_from_literal", LLVMPointerType(LLVMInt8Type(), 0), string_literal_func_params, ARRLEN(string_literal_func_params), std_string_from_literal, true, false);
 
-    LLVMTypeRef string_int_func_params[] = { LLVMInt64Type(), LLVMInt32Type() };
-    add_function(exec, "std_string_from_int", LLVMPointerType(LLVMInt8Type(), 0), string_int_func_params, ARRLEN(string_int_func_params), std_string_from_int, true, false);
+    LLVMTypeRef string_integer_func_params[] = { LLVMInt64Type(), LLVMInt32Type() };
+    add_function(exec, "std_string_from_integer", LLVMPointerType(LLVMInt8Type(), 0), string_integer_func_params, ARRLEN(string_integer_func_params), std_string_from_integer, true, false);
 
     LLVMTypeRef string_bool_func_params[] = { LLVMInt64Type(), LLVMInt1Type() };
     add_function(exec, "std_string_from_bool", LLVMPointerType(LLVMInt8Type(), 0), string_bool_func_params, ARRLEN(string_bool_func_params), std_string_from_bool, true, false);
 
-    LLVMTypeRef string_double_func_params[] = { LLVMInt64Type(), LLVMDoubleType() };
-    add_function(exec, "std_string_from_double", LLVMPointerType(LLVMInt8Type(), 0), string_double_func_params, ARRLEN(string_double_func_params), std_string_from_double, true, false);
+    LLVMTypeRef string_float_func_params[] = { LLVMInt64Type(), LLVMDoubleType() };
+    add_function(exec, "std_string_from_float", LLVMPointerType(LLVMInt8Type(), 0), string_float_func_params, ARRLEN(string_float_func_params), std_string_from_float, true, false);
 
     LLVMTypeRef string_any_func_params[] = { LLVMInt64Type(), LLVMPointerType(LLVMInt8Type(), 0) };
     add_function(exec, "std_string_from_any", LLVMPointerType(LLVMInt8Type(), 0), string_any_func_params, ARRLEN(string_any_func_params), std_string_from_any, true, false);
 
-    LLVMTypeRef int_any_func_params[] = { LLVMPointerType(LLVMInt8Type(), 0) };
-    add_function(exec, "std_int_from_any", LLVMInt32Type(), int_any_func_params, ARRLEN(int_any_func_params), std_int_from_any, false, false);
+    LLVMTypeRef integer_any_func_params[] = { LLVMPointerType(LLVMInt8Type(), 0) };
+    add_function(exec, "std_integer_from_any", LLVMInt32Type(), integer_any_func_params, ARRLEN(integer_any_func_params), std_integer_from_any, false, false);
 
-    LLVMTypeRef double_any_func_params[] = { LLVMPointerType(LLVMInt8Type(), 0) };
-    add_function(exec, "std_double_from_any", LLVMDoubleType(), double_any_func_params, ARRLEN(double_any_func_params), std_double_from_any, false, false);
+    LLVMTypeRef float_any_func_params[] = { LLVMPointerType(LLVMInt8Type(), 0) };
+    add_function(exec, "std_float_from_any", LLVMDoubleType(), float_any_func_params, ARRLEN(float_any_func_params), std_float_from_any, false, false);
 
     LLVMTypeRef bool_any_func_params[] = { LLVMPointerType(LLVMInt8Type(), 0) };
     add_function(exec, "std_bool_from_any", LLVMInt1Type(), bool_any_func_params, ARRLEN(bool_any_func_params), std_bool_from_any, false, false);

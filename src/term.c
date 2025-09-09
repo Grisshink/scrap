@@ -158,13 +158,13 @@ int term_print_str(const char* str) {
     return len;
 }
 
-int term_print_int(int value) {
+int term_print_integer(int value) {
     char converted[12];
     snprintf(converted, 12, "%d", value);
     return term_print_str(converted);
 }
 
-int term_print_double(double value) {
+int term_print_float(double value) {
     char converted[20];
     snprintf(converted, 20, "%f", value);
     return term_print_str(converted);

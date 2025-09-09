@@ -234,11 +234,11 @@ static AnyValue std_get_any(DataType data_type, va_list va) {
 
     switch (data_type) {
     case DATA_TYPE_BOOL:
-    case DATA_TYPE_INT:
-        data.int_val = va_arg(va, int);
+    case DATA_TYPE_INTEGER:
+        data.integer_val = va_arg(va, int);
         break;
-    case DATA_TYPE_DOUBLE:
-        data.double_val = va_arg(va, double);
+    case DATA_TYPE_FLOAT:
+        data.float_val = va_arg(va, double);
         break;
     case DATA_TYPE_STRING_REF:
     case DATA_TYPE_STRING_LITERAL:
@@ -436,7 +436,7 @@ int std_string_ord(char* str) {
     return codepoint;
 }
 
-char* std_string_from_int(Gc* gc, int value) {
+char* std_string_from_integer(Gc* gc, int value) {
     char str[20];
     unsigned int len = snprintf(str, 20, "%d", value);
     return std_string_from_literal(gc, str, len);
@@ -446,7 +446,7 @@ char* std_string_from_bool(Gc* gc, bool value) {
     return value ? std_string_from_literal(gc, "true", 4) : std_string_from_literal(gc, "false", 5);
 }
 
-char* std_string_from_double(Gc* gc, double value) {
+char* std_string_from_float(Gc* gc, double value) {
     char str[20];
     unsigned int len = snprintf(str, 20, "%f", value);
     return std_string_from_literal(gc, str, len);
@@ -456,16 +456,16 @@ char* std_string_from_any(Gc* gc, AnyValue* value) {
     if (!value) return std_string_from_literal(gc, "", 0);
 
     switch (value->type) {
-    case DATA_TYPE_INT:
-        return std_string_from_int(gc, value->data.int_val);
-    case DATA_TYPE_DOUBLE:
-        return std_string_from_double(gc, value->data.double_val);
+    case DATA_TYPE_INTEGER:
+        return std_string_from_integer(gc, value->data.integer_val);
+    case DATA_TYPE_FLOAT:
+        return std_string_from_float(gc, value->data.float_val);
     case DATA_TYPE_STRING_LITERAL:
         return std_string_from_literal(gc, value->data.str_val, strlen(value->data.str_val));
     case DATA_TYPE_STRING_REF:
         return value->data.str_val;
     case DATA_TYPE_BOOL:
-        return std_string_from_bool(gc, value->data.int_val);
+        return std_string_from_bool(gc, value->data.integer_val);
     case DATA_TYPE_LIST: ;
         char str[32];
         int size = snprintf(str, 32, "*LIST (%lu)*", value->data.list_val->size);
@@ -475,15 +475,15 @@ char* std_string_from_any(Gc* gc, AnyValue* value) {
     }
 }
 
-int std_int_from_any(AnyValue* value) {
+int std_integer_from_any(AnyValue* value) {
     if (!value) return 0;
 
     switch (value->type) {
     case DATA_TYPE_BOOL:
-    case DATA_TYPE_INT:
-        return value->data.int_val;
-    case DATA_TYPE_DOUBLE:
-        return (int)value->data.double_val;
+    case DATA_TYPE_INTEGER:
+        return value->data.integer_val;
+    case DATA_TYPE_FLOAT:
+        return (int)value->data.float_val;
     case DATA_TYPE_STRING_REF:
     case DATA_TYPE_STRING_LITERAL:
         return atoi(value->data.str_val);
@@ -492,15 +492,15 @@ int std_int_from_any(AnyValue* value) {
     }
 }
 
-int std_double_from_any(AnyValue* value) {
+double std_float_from_any(AnyValue* value) {
     if (!value) return 0;
 
     switch (value->type) {
     case DATA_TYPE_BOOL:
-    case DATA_TYPE_INT:
-        return (double)value->data.int_val;
-    case DATA_TYPE_DOUBLE:
-        return value->data.double_val;
+    case DATA_TYPE_INTEGER:
+        return (double)value->data.integer_val;
+    case DATA_TYPE_FLOAT:
+        return value->data.float_val;
     case DATA_TYPE_STRING_REF:
     case DATA_TYPE_STRING_LITERAL:
         return atof(value->data.str_val);
@@ -514,10 +514,10 @@ int std_bool_from_any(AnyValue* value) {
 
     switch (value->type) {
     case DATA_TYPE_BOOL:
-    case DATA_TYPE_INT:
-        return value->data.int_val != 0;
-    case DATA_TYPE_DOUBLE:
-        return value->data.double_val != 0.0;
+    case DATA_TYPE_INTEGER:
+        return value->data.integer_val != 0;
+    case DATA_TYPE_FLOAT:
+        return value->data.float_val != 0.0;
     case DATA_TYPE_STRING_REF:
     case DATA_TYPE_STRING_LITERAL:
         return *value->data.str_val != 0;
@@ -547,11 +547,11 @@ bool std_any_is_eq(AnyValue* left, AnyValue* right) {
         return !strcmp(left->data.str_val, right->data.str_val);
     case DATA_TYPE_STRING_REF:
         return std_string_is_eq(left->data.str_val, right->data.str_val);
-    case DATA_TYPE_INT:
+    case DATA_TYPE_INTEGER:
     case DATA_TYPE_BOOL:
-        return left->data.int_val == right->data.int_val;
-    case DATA_TYPE_DOUBLE:
-        return left->data.double_val == right->data.double_val;
+        return left->data.integer_val == right->data.integer_val;
+    case DATA_TYPE_FLOAT:
+        return left->data.float_val == right->data.float_val;
     case DATA_TYPE_LIST:
         return left->data.list_val == right->data.list_val;
     default:
@@ -590,12 +590,12 @@ int std_term_print_any(AnyValue* any) {
         return std_term_print_str(any->data.str_val);
     case DATA_TYPE_NOTHING:
         return 0;
-    case DATA_TYPE_INT:
-        return std_term_print_int(any->data.int_val);
+    case DATA_TYPE_INTEGER:
+        return std_term_print_integer(any->data.integer_val);
     case DATA_TYPE_BOOL:
-        return std_term_print_bool(any->data.int_val);
-    case DATA_TYPE_DOUBLE:
-        return std_term_print_double(any->data.double_val);
+        return std_term_print_bool(any->data.integer_val);
+    case DATA_TYPE_FLOAT:
+        return std_term_print_float(any->data.float_val);
     case DATA_TYPE_LIST:
         return std_term_print_list(any->data.list_val);
     default:
@@ -618,13 +618,13 @@ int std_term_print_str(const char* str) {
     return len;
 }
 
-int std_term_print_int(int value) {
+int std_term_print_integer(int value) {
     int len = printf("%d", value);
     fflush(stdout);
     return len;
 }
 
-int std_term_print_double(double value) {
+int std_term_print_float(double value) {
     int len = printf("%f", value);
     fflush(stdout);
     return len;
@@ -748,12 +748,12 @@ int std_term_print_str(const char* str) {
     return term_print_str(str);
 }
 
-int std_term_print_int(int value) {
-    return term_print_int(value);
+int std_term_print_integer(int value) {
+    return term_print_integer(value);
 }
 
-int std_term_print_double(double value) {
-    return term_print_double(value);
+int std_term_print_float(double value) {
+    return term_print_float(value);
 }
 
 int std_term_print_bool(bool value) {

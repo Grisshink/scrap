@@ -128,18 +128,18 @@ struct Exec {
 }
 
 #define DATA_INTEGER(val) (AnyValue) { \
-    .type = DATA_TYPE_INT, \
-    .data = (AnyValueData) { .int_val = (val) }, \
+    .type = DATA_TYPE_INTEGER, \
+    .data = (AnyValueData) { .integer_val = (val) }, \
 }
 
-#define DATA_DOUBLE(val) (AnyValue) { \
-    .type = DATA_TYPE_DOUBLE, \
-    .data = (AnyValueData) { .double_val = (val) }, \
+#define DATA_FLOAT(val) (AnyValue) { \
+    .type = DATA_TYPE_FLOAT, \
+    .data = (AnyValueData) { .float_val = (val) }, \
 }
 
 #define DATA_BOOL(val) (AnyValue) { \
     .type = DATA_TYPE_BOOL, \
-    .data = (AnyValueData) { .int_val = (val) }, \
+    .data = (AnyValueData) { .integer_val = (val) }, \
 }
 
 #define DATA_STRING_LITERAL(val) (AnyValue) { \
@@ -174,9 +174,9 @@ bool evaluate_argument(Exec* exec, Argument* arg, AnyValue* return_val);
 void variable_stack_push_var(Exec* exec, const char* name, AnyValue data);
 Variable* variable_stack_get_variable(Exec* exec, const char* name);
 
-int data_to_int(AnyValue arg);
+int data_to_integer(AnyValue arg);
 int data_to_bool(AnyValue arg);
 char* data_to_any_string(Exec* exec, AnyValue arg);
-double data_to_double(AnyValue arg);
+double data_to_float(AnyValue arg);
 
 #endif // INTERPRETER_H

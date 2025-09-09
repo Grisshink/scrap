@@ -32,13 +32,13 @@ void chain_stack_push(Exec* exec, ChainStackData data);
 void chain_stack_pop(Exec* exec);
 bool exec_block(Exec* exec, Block* block, AnyValue* block_return, ControlState control_state, AnyValue control_arg);
 
-int data_to_int(AnyValue arg) {
+int data_to_integer(AnyValue arg) {
     switch (arg.type) {
     case DATA_TYPE_BOOL:
-    case DATA_TYPE_INT:
-        return arg.data.int_val;
-    case DATA_TYPE_DOUBLE:
-        return (int)arg.data.double_val;
+    case DATA_TYPE_INTEGER:
+        return arg.data.integer_val;
+    case DATA_TYPE_FLOAT:
+        return (int)arg.data.float_val;
     case DATA_TYPE_STRING_LITERAL:
     case DATA_TYPE_STRING_REF:
         return atoi(arg.data.str_val);
@@ -47,13 +47,13 @@ int data_to_int(AnyValue arg) {
     }
 }
 
-double data_to_double(AnyValue arg) {
+double data_to_float(AnyValue arg) {
     switch (arg.type) {
     case DATA_TYPE_BOOL:
-    case DATA_TYPE_INT:
-        return (double)arg.data.int_val;
-    case DATA_TYPE_DOUBLE:
-        return arg.data.double_val;
+    case DATA_TYPE_INTEGER:
+        return (double)arg.data.integer_val;
+    case DATA_TYPE_FLOAT:
+        return arg.data.float_val;
     case DATA_TYPE_STRING_LITERAL:
     case DATA_TYPE_STRING_REF:
         return atof(arg.data.str_val);
@@ -65,10 +65,10 @@ double data_to_double(AnyValue arg) {
 int data_to_bool(AnyValue arg) {
     switch (arg.type) {
     case DATA_TYPE_BOOL:
-    case DATA_TYPE_INT:
-        return arg.data.int_val != 0;
-    case DATA_TYPE_DOUBLE:
-        return arg.data.double_val != 0.0;
+    case DATA_TYPE_INTEGER:
+        return arg.data.integer_val != 0;
+    case DATA_TYPE_FLOAT:
+        return arg.data.float_val != 0.0;
     case DATA_TYPE_STRING_LITERAL:
     case DATA_TYPE_STRING_REF:
         return *arg.data.str_val != 0;

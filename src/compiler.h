@@ -158,7 +158,7 @@ typedef struct {
 #define CONST_NOTHING LLVMConstPointerNull(LLVMVoidType())
 #define CONST_INTEGER(val) LLVMConstInt(LLVMInt32Type(), val, true)
 #define CONST_BOOLEAN(val) LLVMConstInt(LLVMInt1Type(), val, false)
-#define CONST_DOUBLE(val) LLVMConstReal(LLVMDoubleType(), val)
+#define CONST_FLOAT(val) LLVMConstReal(LLVMDoubleType(), val)
 #define CONST_STRING_LITERAL(val) LLVMBuildGlobalStringPtr(exec->builder, val, "")
 #define CONST_GC exec->gc_value
 #define CONST_EXEC LLVMConstInt(LLVMInt64Type(), (unsigned long long)exec, false)
@@ -172,8 +172,8 @@ typedef struct {
 
 #define DATA_BOOLEAN(val) _DATA(DATA_TYPE_BOOL, val)
 #define DATA_STRING_REF(val) _DATA(DATA_TYPE_STRING_REF, val)
-#define DATA_INTEGER(val) _DATA(DATA_TYPE_INT, val)
-#define DATA_DOUBLE(val) _DATA(DATA_TYPE_DOUBLE, val)
+#define DATA_INTEGER(val) _DATA(DATA_TYPE_INTEGER, val)
+#define DATA_FLOAT(val) _DATA(DATA_TYPE_FLOAT, val)
 #define DATA_LIST(val) _DATA(DATA_TYPE_LIST, val)
 #define DATA_ANY(val) _DATA(DATA_TYPE_ANY, val)
 #define DATA_UNKNOWN _DATA(DATA_TYPE_UNKNOWN, NULL)
