@@ -36,7 +36,8 @@ endif
 ifeq ($(BUILD_MODE), RELEASE)
 	CFLAGS += -s -O3
 else
-	CFLAGS += -g -O0 -DDEBUG
+	CFLAGS += -g -O1 -DDEBUG -fsanitize=address -fsanitize=undefined -fno-omit-frame-pointer
+	LDFLAGS += -fsanitize=address -fsanitize=undefined -fno-omit-frame-pointer
 endif
 
 STD_OBJFILES := $(addprefix src/,vec.o gc-stand.o std-stand.o scrap-runtime.o)
