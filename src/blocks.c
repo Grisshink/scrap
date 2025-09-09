@@ -299,7 +299,7 @@ bool block_declare_var(Exec* exec, Block* block, int argc, AnyValue* argv, AnyVa
     (void) argc;
 
     if (argv[0].type != DATA_TYPE_STRING_LITERAL) {
-        exec_set_error(exec, block, "Received non constant string argument");
+        exec_set_error(exec, block, "Invalid data type %s, expected %s", type_to_str(argv[0].type), type_to_str(DATA_TYPE_STRING_LITERAL));
         return false;
     }
     if (block->parent) {
@@ -1227,7 +1227,7 @@ LLVMValueRef arg_to_bool(Exec* exec, Block* block, FuncArg arg) {
         return build_call(exec, "std_bool_from_any", arg.data.value);
     case DATA_TYPE_BLOCKDEF:
     case DATA_TYPE_UNKNOWN:
-        exec_set_error(exec, block, "Cannot cast type %s into bool", type_to_str(arg.type));
+        exec_set_error(exec, block, "Cannot cast type %s into %s", type_to_str(arg.type), type_to_str(DATA_TYPE_BOOL));
         return NULL;
     }
     assert(false && "Unhandled cast to bool");
@@ -1252,10 +1252,10 @@ LLVMValueRef arg_to_integer(Exec* exec, Block* block, FuncArg arg) {
         return build_call(exec, "std_integer_from_any", arg.data.value);
     case DATA_TYPE_BLOCKDEF:
     case DATA_TYPE_UNKNOWN:
-        exec_set_error(exec, block, "Cannot cast type %s into int", type_to_str(arg.type));
+        exec_set_error(exec, block, "Cannot cast type %s into %s", type_to_str(arg.type), type_to_str(DATA_TYPE_INTEGER));
         return NULL;
     }
-    assert(false && "Unhandled cast to int");
+    assert(false && "Unhandled cast to integer");
 }
 
 LLVMValueRef arg_to_float(Exec* exec, Block* block, FuncArg arg) {
@@ -1277,7 +1277,7 @@ LLVMValueRef arg_to_float(Exec* exec, Block* block, FuncArg arg) {
         return build_call(exec, "std_float_from_any", arg.data.value);
     case DATA_TYPE_BLOCKDEF:
     case DATA_TYPE_UNKNOWN:
-        exec_set_error(exec, block, "Cannot cast type %s into float", type_to_str(arg.type));
+        exec_set_error(exec, block, "Cannot cast type %s into %s", type_to_str(arg.type), type_to_str(DATA_TYPE_FLOAT));
         return NULL;
     }
     assert(false && "Unhandled cast to float");
@@ -1329,7 +1329,7 @@ LLVMValueRef arg_to_string_ref(Exec* exec, Block* block, FuncArg arg) {
         return build_call(exec, "std_string_from_any", CONST_GC, arg.data.value);
     case DATA_TYPE_UNKNOWN:
     case DATA_TYPE_BLOCKDEF:
-        exec_set_error(exec, block, "Cannot cast type %s into str", type_to_str(arg.type));
+        exec_set_error(exec, block, "Cannot cast type %s into %s", type_to_str(arg.type), type_to_str(DATA_TYPE_STRING_REF));
         return NULL;
     }
     assert(false && "Unhandled cast to string ref");
@@ -1351,7 +1351,7 @@ LLVMValueRef arg_to_list(Exec* exec, Block* block, FuncArg arg) {
         return build_call(exec, "std_list_from_any", CONST_GC, arg.data.value);
     case DATA_TYPE_UNKNOWN:
     case DATA_TYPE_BLOCKDEF:
-        exec_set_error(exec, block, "Cannot cast type %s into list", type_to_str(arg.type));
+        exec_set_error(exec, block, "Cannot cast type %s into %s", type_to_str(arg.type), type_to_str(DATA_TYPE_LIST));
         return NULL;
     }
     assert(false && "Unhandled cast to string ref");
@@ -1372,7 +1372,7 @@ LLVMValueRef arg_to_any(Exec* exec, Block* block, FuncArg arg) {
         return arg.data.value;
     case DATA_TYPE_UNKNOWN:
     case DATA_TYPE_BLOCKDEF:
-        exec_set_error(exec, block, "Cannot cast type %s into any", type_to_str(arg.type));
+        exec_set_error(exec, block, "Cannot cast type %s into %s", type_to_str(arg.type), type_to_str(DATA_TYPE_ANY));
         return NULL;
     }
     assert(false && "Unhandled cast to string ref");
@@ -1398,7 +1398,7 @@ FuncArg arg_cast(Exec* exec, Block* block, FuncArg arg, DataType cast_to_type) {
     case DATA_TYPE_NOTHING:
     case DATA_TYPE_UNKNOWN:
     case DATA_TYPE_BLOCKDEF:
-        exec_set_error(exec, block, "Cannot cast type %s into %s", type_to_str(arg.type), cast_to_type);
+        exec_set_error(exec, block, "Cannot cast type %s into %s", type_to_str(arg.type), type_to_str(cast_to_type));
         return DATA_UNKNOWN;
     }
     assert(false && "Unhandled cast to value typed");
@@ -1828,7 +1828,7 @@ bool block_rem(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* retur
 
     if (LLVMIsPoison(return_val->data.value)) {
         // TODO: Uncorporate runtime checks for division by zero
-        exec_set_error(exec, block, "Division by zero!");
+        exec_set_error(exec, block, "Division by zero");
         return false;
     }
     return true;
@@ -1881,8 +1881,7 @@ bool block_div(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* retur
     }
 
     if (LLVMIsPoison(return_val->data.value)) {
-        // TODO: Uncorporate runtime checks for division by zero
-        exec_set_error(exec, block, "Division by zero!");
+        exec_set_error(exec, block, "Division by zero");
         return false;
     }
     return true;
@@ -2328,10 +2327,10 @@ bool block_print(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* ret
     case DATA_TYPE_ANY:
         *return_val = DATA_INTEGER(build_call(exec, "std_term_print_any", argv[0].data.value));
         return true;
-    default:
-        exec_set_error(exec, block, "Unhandled type %s in print function", type_to_str(argv[0].type));
-        return false;
     }
+
+    exec_set_error(exec, block, "Unhandled type %s in print function", type_to_str(argv[0].type));
+    return false;
 }
 
 bool block_println(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
@@ -2427,7 +2426,7 @@ bool block_set_var(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* r
     (void) block;
     MIN_ARG_COUNT(2);
     if (argv[0].type != DATA_TYPE_STRING_LITERAL) {
-        exec_set_error(exec, block, "Received non constant string argument");
+        exec_set_error(exec, block, "Invalid data type %s, expected %s", type_to_str(argv[0].type), type_to_str(DATA_TYPE_STRING_LITERAL));
         return false;
     }
 
@@ -2462,7 +2461,7 @@ bool block_get_var(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* r
     (void) block;
     MIN_ARG_COUNT(1);
     if (argv[0].type != DATA_TYPE_STRING_LITERAL) {
-        exec_set_error(exec, block, "Received non constant string argument");
+        exec_set_error(exec, block, "Invalid data type %s, expected %s", type_to_str(argv[0].type), type_to_str(DATA_TYPE_STRING_LITERAL));
         return false;
     }
 
@@ -2497,7 +2496,7 @@ bool block_declare_var(Exec* exec, Block* block, int argc, FuncArg* argv, FuncAr
     }
     
     if (argv[0].type != DATA_TYPE_STRING_LITERAL) {
-        exec_set_error(exec, block, "Received non constant string argument");
+        exec_set_error(exec, block, "Invalid data type %s, expected %s", type_to_str(argv[0].type), type_to_str(DATA_TYPE_STRING_LITERAL));
         return false;
     }
 
