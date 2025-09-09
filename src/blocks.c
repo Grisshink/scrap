@@ -68,43 +68,47 @@ char** term_color_list_access(Block* block, size_t* list_len) {
 
 #include "std.h"
 
-AnyValue block_do_nothing(Exec* exec, Block* block, int argc, AnyValue* argv, ControlState control_state) {
+bool block_do_nothing(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     (void) exec;
     (void) argc;
     (void) argv;
-    RETURN_NOTHING;
+    *return_val = DATA_NOTHING;
+    return true;
 }
 
-AnyValue block_noop(Exec* exec, Block* block, int argc, AnyValue* argv, ControlState control_state) {
+bool block_noop(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     (void) exec;
     (void) argc;
     (void) argv;
-    RETURN_NOTHING;
+    *return_val = DATA_NOTHING;
+    return true;
 }
 
-AnyValue block_on_start(Exec* exec, Block* block, int argc, AnyValue* argv, ControlState control_state) {
+bool block_on_start(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     (void) exec;
     (void) argc;
     (void) argv;
-    RETURN_NOTHING;
+    *return_val = DATA_NOTHING;
+    return true;
 }
 
-AnyValue block_define_block(Exec* exec, Block* block, int argc, AnyValue* argv, ControlState control_state) {
+bool block_define_block(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     (void) exec;
     (void) argc;
     (void) argv;
-    RETURN_NOTHING;
+    *return_val = DATA_NOTHING;
+    return true;
 }
 
-AnyValue block_loop(Exec* exec, Block* block, int argc, AnyValue* argv, ControlState control_state) {
+bool block_loop(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) block;
     (void) argc;
     (void) argv;
@@ -116,10 +120,11 @@ AnyValue block_loop(Exec* exec, Block* block, int argc, AnyValue* argv, ControlS
         control_stack_push_data(exec->chain_stack[exec->chain_stack_len - 1].running_ind, size_t)
     }
 
-    RETURN_BOOL(1);
+    *return_val = DATA_BOOL(1);
+    return true;
 }
 
-AnyValue block_if(Exec* exec, Block* block, int argc, AnyValue* argv, ControlState control_state) {
+bool block_if(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) block;
 
     if (control_state == CONTROL_STATE_BEGIN) {
@@ -129,16 +134,20 @@ AnyValue block_if(Exec* exec, Block* block, int argc, AnyValue* argv, ControlSta
         } else {
             control_stack_push_data((int)1, int)
         }
-        RETURN_NOTHING;
+        *return_val = DATA_NOTHING;
     } else if (control_state == CONTROL_STATE_END) {
         int is_success = 0;
         control_stack_pop_data(is_success, int)
-        RETURN_BOOL(is_success);
+        *return_val = DATA_BOOL(is_success);
+    } else {
+        // ERROR: Invalid control state
+        return false;
     }
-    RETURN_BOOL(1);
+
+    return true;
 }
 
-AnyValue block_else_if(Exec* exec, Block* block, int argc, AnyValue* argv, ControlState control_state) {
+bool block_else_if(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) block;
 
     if (control_state == CONTROL_STATE_BEGIN) {
@@ -150,27 +159,34 @@ AnyValue block_else_if(Exec* exec, Block* block, int argc, AnyValue* argv, Contr
             if (!condition) exec_set_skip_block(exec);
             control_stack_push_data(condition, int)
         }
-        RETURN_NOTHING;
+        *return_val = DATA_NOTHING;
     } else if (control_state == CONTROL_STATE_END) {
         int is_success = 0;
         control_stack_pop_data(is_success, int)
-        RETURN_BOOL(is_success);
+        *return_val = DATA_BOOL(is_success);
+    } else {
+        // ERROR: Invalid control state
+        return false;
     }
-    RETURN_BOOL(1);
+    return true;
 }
 
-AnyValue block_else(Exec* exec, Block* block, int argc, AnyValue* argv, ControlState control_state) {
+bool block_else(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) block;
 
     if (control_state == CONTROL_STATE_BEGIN) {
         if (argc < 1 || data_to_bool(argv[0])) {
             exec_set_skip_block(exec);
         }
-        RETURN_NOTHING;
+        *return_val = DATA_NOTHING;
     } else if (control_state == CONTROL_STATE_END) {
-        RETURN_BOOL(1);
+        *return_val = DATA_BOOL(1);
+    } else {
+        // ERROR: Invalid control state
+        return false;
     }
-    RETURN_BOOL(1);
+
+    return true;
 }
 
 // Visualization of control stack (stack grows downwards):
@@ -180,7 +196,7 @@ AnyValue block_else(Exec* exec, Block* block, int argc, AnyValue* argv, ControlS
 //
 // If the loop should not loop then the stack will look like this:
 // - 0 <- indicator for end block that it should stop immediately
-AnyValue block_repeat(Exec* exec, Block* block, int argc, AnyValue* argv, ControlState control_state) {
+bool block_repeat(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) block;
 
     if (control_state == CONTROL_STATE_BEGIN) {
@@ -188,7 +204,8 @@ AnyValue block_repeat(Exec* exec, Block* block, int argc, AnyValue* argv, Contro
         if (cycles <= 0) {
             exec_set_skip_block(exec);
             control_stack_push_data((int)0, int) // This indicates the end block that it should NOT loop
-            RETURN_NOTHING;
+            *return_val = DATA_NOTHING;
+            return true;
         }
         control_stack_push_data(exec->chain_stack[exec->chain_stack_len - 1].running_ind, size_t)
         control_stack_push_data(cycles - 1, int)
@@ -196,7 +213,10 @@ AnyValue block_repeat(Exec* exec, Block* block, int argc, AnyValue* argv, Contro
     } else if (control_state == CONTROL_STATE_END) {
         int should_loop = 0;
         control_stack_pop_data(should_loop, int)
-        if (!should_loop) RETURN_BOOL(0);
+        if (!should_loop) {
+            *return_val = DATA_BOOL(0);
+            return true;
+        }
 
         int left = -1;
         control_stack_pop_data(left, int)
@@ -204,61 +224,88 @@ AnyValue block_repeat(Exec* exec, Block* block, int argc, AnyValue* argv, Contro
             size_t bin;
             control_stack_pop_data(bin, size_t)
             (void) bin; // Cleanup stack
-            RETURN_BOOL(1);
+            *return_val = DATA_BOOL(1);
+            return true;
         }
 
         control_stack_pop_data(exec->chain_stack[exec->chain_stack_len - 1].running_ind, size_t)
         control_stack_push_data(exec->chain_stack[exec->chain_stack_len - 1].running_ind, size_t)
         control_stack_push_data(left - 1, int)
         control_stack_push_data((int)1, int)
+    } else {
+        // ERROR: Invalid control state
+        return false;
     }
 
-    RETURN_NOTHING;
+    *return_val = DATA_NOTHING;
+    return true;
 }
 
-AnyValue block_while(Exec* exec, Block* block, int argc, AnyValue* argv, ControlState control_state) {
+bool block_while(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     if (control_state == CONTROL_STATE_BEGIN) {
         if (argc < 1 || !data_to_bool(argv[0])) {
             exec_set_skip_block(exec);
         }
         control_stack_push_data(exec->chain_stack[exec->chain_stack_len - 1].running_ind, size_t)
     } else if (control_state == CONTROL_STATE_END) {
-        if (vector_size(block->arguments) < 1 || !data_to_bool(evaluate_argument(exec, &block->arguments[0]))) {
+        AnyValue out_val;
+        if (!evaluate_argument(exec, &block->arguments[0], &out_val)) return false;
+
+        if (vector_size(block->arguments) < 1 || !data_to_bool(out_val)) {
             size_t bin;
             control_stack_pop_data(bin, size_t)
             (void) bin;
-            RETURN_BOOL(1);
+            *return_val = DATA_BOOL(1);
+            return true;
         }
 
         control_stack_pop_data(exec->chain_stack[exec->chain_stack_len - 1].running_ind, size_t)
         control_stack_push_data(exec->chain_stack[exec->chain_stack_len - 1].running_ind, size_t)
+    } else {
+        // ERROR: Invalid control state
+        return false;
     }
 
-    RETURN_NOTHING;
+    *return_val = DATA_NOTHING;
+    return true;
 }
 
-AnyValue block_sleep(Exec* exec, Block* block, int argc, AnyValue* argv, ControlState control_state) {
+bool block_sleep(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     (void) exec;
-    if (argc < 1) RETURN_INT(0);
+    (void) argc;
     int usecs = data_to_int(argv[0]);
-    if (usecs < 0) RETURN_INT(0);
+    if (usecs < 0) {
+        *return_val = DATA_INTEGER(0);
+        return true;
+    }
 
     struct timespec sleep_time = {0};
     sleep_time.tv_sec = usecs / 1000000;
     sleep_time.tv_nsec = (usecs % 1000000) * 1000;
 
-    if (nanosleep(&sleep_time, &sleep_time) == -1) RETURN_INT(0);
-    RETURN_INT(usecs);
+    if (nanosleep(&sleep_time, &sleep_time) == -1) {
+        *return_val = DATA_INTEGER(0);
+        return true;
+    }
+
+    *return_val = DATA_INTEGER(usecs);
+    return true;
 }
 
-AnyValue block_declare_var(Exec* exec, Block* block, int argc, AnyValue* argv, ControlState control_state) {
+bool block_declare_var(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
-    if (argc < 2) RETURN_NOTHING;
-    if (argv[0].type != DATA_TYPE_STRING_LITERAL) RETURN_NOTHING;
-    if (block->parent) RETURN_NOTHING;
+    (void) argc;
+    if (argv[0].type != DATA_TYPE_STRING_LITERAL) {
+        // ERROR: Invalid argument
+        return false;
+    }
+    if (block->parent) {
+        // ERROR: block_declare_var cannot be used in expressions
+        return false;
+    }
 
     variable_stack_push_var(exec, argv[0].data.str_val, argv[1]);
 
@@ -268,25 +315,34 @@ AnyValue block_declare_var(Exec* exec, Block* block, int argc, AnyValue* argv, C
         gc_add_root(&exec->gc, &argv[1].data);
     }
 
-    return argv[1];
+    *return_val = argv[1];
+    return true;
 }
 
-AnyValue block_get_var(Exec* exec, Block* block, int argc, AnyValue* argv, ControlState control_state) {
+bool block_get_var(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
-    if (argc < 1) RETURN_NOTHING;
+    (void) argc;
+    
     Variable* var = variable_stack_get_variable(exec, data_to_any_string(exec, argv[0]));
-    if (!var) RETURN_NOTHING;
-    return var->value;
+    if (!var) {
+        // ERROR: Variable does not exist
+        return false;
+    }
+    *return_val = var->value;
+    return true;
 }
 
-AnyValue block_set_var(Exec* exec, Block* block, int argc, AnyValue* argv, ControlState control_state) {
+bool block_set_var(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
-    if (argc < 2) RETURN_NOTHING;
+    (void) argc;
 
     Variable* var = variable_stack_get_variable(exec, data_to_any_string(exec, argv[0]));
-    if (!var) RETURN_NOTHING;
+    if (!var) {
+        // ERROR: Variable does not exist
+        return false;
+    }
 
     var->value = argv[1];
 
@@ -297,170 +353,208 @@ AnyValue block_set_var(Exec* exec, Block* block, int argc, AnyValue* argv, Contr
         gc_add_root(&exec->gc, &argv[1].data);
     }
 
-    return var->value;
+    *return_val = var->value;
+    return true;
 }
 
-AnyValue block_create_list(Exec* exec, Block* block, int argc, AnyValue* argv, ControlState control_state) {
+bool block_create_list(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     (void) exec;
     (void) argc;
     (void) argv;
 
-    RETURN_LIST(std_list_new(&exec->gc));
+    *return_val = DATA_LIST(std_list_new(&exec->gc));
+    return true;
 }
 
-AnyValue block_list_add(Exec* exec, Block* block, int argc, AnyValue* argv, ControlState control_state) {
+bool block_list_add(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
-    if (argc < 2) RETURN_NOTHING;
-    if (argv[0].type != DATA_TYPE_LIST) RETURN_NOTHING;
+    (void) argc;
+    if (argv[0].type != DATA_TYPE_LIST) {
+        // ERROR: Invalid data type
+        return false;
+    }
 
     std_list_add_any(&exec->gc, argv[0].data.list_val, argv[1]);
-    RETURN_NOTHING;
+    *return_val = DATA_NOTHING;
+    return true;
 }
 
-AnyValue block_list_get(Exec* exec, Block* block, int argc, AnyValue* argv, ControlState control_state) {
+bool block_list_get(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
-    if (argc < 2) RETURN_NOTHING;
-    if (argv[0].type != DATA_TYPE_LIST) RETURN_NOTHING;
+    (void) argc;
+    if (argv[0].type != DATA_TYPE_LIST) {
+        // ERROR: Invalid data type
+        return false;
+    }
 
-    return *std_list_get(&exec->gc, argv[0].data.list_val, data_to_int(argv[1]));
+    *return_val = *std_list_get(&exec->gc, argv[0].data.list_val, data_to_int(argv[1]));
+    return true;
 }
 
-AnyValue block_list_length(Exec* exec, Block* block, int argc, AnyValue* argv, ControlState control_state) {
-    (void) control_state;
-    (void) block;
-    (void) exec;
-    if (argc < 1) RETURN_INT(0);
-    if (argv[0].type != DATA_TYPE_LIST) RETURN_INT(0);
-    
-    RETURN_INT(argv[0].data.list_val->size);
-}
-
-AnyValue block_list_set(Exec* exec, Block* block, int argc, AnyValue* argv, ControlState control_state) {
+bool block_list_length(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     (void) exec;
-    if (argc < 3) RETURN_NOTHING;
-    if (argv[0].type != DATA_TYPE_LIST) RETURN_NOTHING;
+    (void) argc;
+    if (argv[0].type != DATA_TYPE_LIST) {
+        // ERROR: Invalid data type
+        return false;
+    }
+
+    *return_val = DATA_INTEGER(argv[0].data.list_val->size);
+    return true;
+}
+
+bool block_list_set(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
+    (void) control_state;
+    (void) block;
+    (void) exec;
+    (void) argc;
+    if (argv[0].type != DATA_TYPE_LIST) {
+        // ERROR: Invalid data type
+        return false;
+    }
 
     int index = data_to_int(argv[1]);
-    if (index >= argv[0].data.list_val->size || index < 0) RETURN_NOTHING;
+    if (index >= argv[0].data.list_val->size || index < 0) {
+        // ERROR: Out of bounds list access
+        return false;
+    }
 
     argv[0].data.list_val->values[index] = argv[2];
-    RETURN_NOTHING;
+    *return_val = DATA_NOTHING;
+    return true;
 }
 
-AnyValue block_print(Exec* exec, Block* block, int argc, AnyValue* argv, ControlState control_state) {
+bool block_print(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) exec;
     (void) block;
     (void) control_state;
-    if (argc >= 1) {
-        int bytes_sent = 0;
-        switch (argv[0].type) {
-        case DATA_TYPE_INT:
-            bytes_sent = term_print_int(argv[0].data.int_val);
-            break;
-        case DATA_TYPE_BOOL:
-            bytes_sent = term_print_str(argv[0].data.int_val ? "true" : "false");
-            break;
-        case DATA_TYPE_STRING_LITERAL:
-        case DATA_TYPE_STRING_REF:
-            bytes_sent = term_print_str(argv[0].data.str_val);
-            break;
-        case DATA_TYPE_DOUBLE:
-            bytes_sent = term_print_double(argv[0].data.double_val);
-            break;
-        case DATA_TYPE_LIST:
-            bytes_sent = term_print_str("*LIST (");
-            bytes_sent += term_print_int(argv[0].data.list_val->size);
-            bytes_sent += term_print_str(")*");
-            break;
-        default:
-            break;
-        }
-        RETURN_INT(bytes_sent);
+    (void) argc;
+
+    int bytes_sent = 0;
+    switch (argv[0].type) {
+    case DATA_TYPE_INT:
+        bytes_sent = term_print_int(argv[0].data.int_val);
+        break;
+    case DATA_TYPE_BOOL:
+        bytes_sent = term_print_str(argv[0].data.int_val ? "true" : "false");
+        break;
+    case DATA_TYPE_STRING_LITERAL:
+    case DATA_TYPE_STRING_REF:
+        bytes_sent = term_print_str(argv[0].data.str_val);
+        break;
+    case DATA_TYPE_DOUBLE:
+        bytes_sent = term_print_double(argv[0].data.double_val);
+        break;
+    case DATA_TYPE_LIST:
+        bytes_sent = term_print_str("*LIST (");
+        bytes_sent += term_print_int(argv[0].data.list_val->size);
+        bytes_sent += term_print_str(")*");
+        break;
+    default:
+        break;
     }
-    RETURN_INT(0);
+    *return_val = DATA_INTEGER(bytes_sent);
+    return true;
 }
 
-AnyValue block_println(Exec* exec, Block* block, int argc, AnyValue* argv, ControlState control_state) {
-    AnyValue out = block_print(exec, block, argc, argv, control_state);
+bool block_println(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
+    if (!block_print(exec, block, argc, argv, return_val, control_state)) return false;
     term_print_str("\n");
-    return out;
+    return true;
 }
 
-AnyValue block_cursor_x(Exec* exec, Block* block, int argc, AnyValue* argv, ControlState control_state) {
+bool block_cursor_x(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     (void) exec;
     (void) argv;
     (void) argc;
+
     pthread_mutex_lock(&term.lock);
     int cur_x = 0;
     if (term.char_w != 0) cur_x = term.cursor_pos % term.char_w;
     pthread_mutex_unlock(&term.lock);
-    RETURN_INT(cur_x);
+    *return_val = DATA_INTEGER(cur_x);
+    return true;
 }
 
-AnyValue block_cursor_y(Exec* exec, Block* block, int argc, AnyValue* argv, ControlState control_state) {
+bool block_cursor_y(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     (void) exec;
     (void) argv;
     (void) argc;
+
     pthread_mutex_lock(&term.lock);
     int cur_y = 0;
     if (term.char_w != 0) cur_y = term.cursor_pos / term.char_w;
     pthread_mutex_unlock(&term.lock);
-    RETURN_INT(cur_y);
+
+    *return_val = DATA_INTEGER(cur_y);
+    return true;
 }
 
-AnyValue block_cursor_max_x(Exec* exec, Block* block, int argc, AnyValue* argv, ControlState control_state) {
+bool block_cursor_max_x(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     (void) exec;
     (void) argv;
     (void) argc;
+
     pthread_mutex_lock(&term.lock);
     int cur_max_x = term.char_w;
     pthread_mutex_unlock(&term.lock);
-    RETURN_INT(cur_max_x);
+
+    *return_val = DATA_INTEGER(cur_max_x);
+    return true;
 }
 
-AnyValue block_cursor_max_y(Exec* exec, Block* block, int argc, AnyValue* argv, ControlState control_state) {
+bool block_cursor_max_y(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     (void) exec;
     (void) argv;
     (void) argc;
+
     pthread_mutex_lock(&term.lock);
     int cur_max_y = term.char_h;
     pthread_mutex_unlock(&term.lock);
-    RETURN_INT(cur_max_y);
+
+    *return_val = DATA_INTEGER(cur_max_y);
+    return true;
 }
 
-AnyValue block_set_cursor(Exec* exec, Block* block, int argc, AnyValue* argv, ControlState control_state) {
+bool block_set_cursor(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     (void) exec;
-    if (argc < 2) RETURN_NOTHING;
+    (void) argc;
+
     pthread_mutex_lock(&term.lock);
     int x = CLAMP(data_to_int(argv[0]), 0, term.char_w - 1);
     int y = CLAMP(data_to_int(argv[1]), 0, term.char_h - 1);
     term.cursor_pos = x + y * term.char_w;
     pthread_mutex_unlock(&term.lock);
-    RETURN_NOTHING;
+
+    *return_val = DATA_NOTHING;
+    return true;
 }
 
-AnyValue block_set_fg_color(Exec* exec, Block* block, int argc, AnyValue* argv, ControlState control_state) {
+bool block_set_fg_color(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     (void) exec;
-    if (argc < 1) RETURN_NOTHING;
-    if (argv[0].type != DATA_TYPE_STRING_LITERAL) RETURN_NOTHING;
+    (void) argc;
+    if (argv[0].type != DATA_TYPE_STRING_LITERAL) {
+        // ERROR: Invalid data type
+        return false;
+    }
 
     if (!strcmp(argv[0].data.str_val, "black")) {
         term_set_fg_color(CONVERT_COLOR(BLACK, TermColor));
@@ -480,15 +574,19 @@ AnyValue block_set_fg_color(Exec* exec, Block* block, int argc, AnyValue* argv, 
         term_set_fg_color(CONVERT_COLOR(WHITE, TermColor));
     }
 
-    RETURN_NOTHING;
+    *return_val = DATA_NOTHING;
+    return true;
 }
 
-AnyValue block_set_bg_color(Exec* exec, Block* block, int argc, AnyValue* argv, ControlState control_state) {
+bool block_set_bg_color(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     (void) exec;
-    if (argc < 1) RETURN_NOTHING;
-    if (argv[0].type != DATA_TYPE_STRING_LITERAL) RETURN_NOTHING;
+    (void) argc;
+    if (argv[0].type != DATA_TYPE_STRING_LITERAL) {
+        // ERROR: Invalid data type
+        return false;
+    }
 
     if (!strcmp(argv[0].data.str_val, "black")) {
         term_set_bg_color(CONVERT_COLOR(BLACK, TermColor));
@@ -508,10 +606,11 @@ AnyValue block_set_bg_color(Exec* exec, Block* block, int argc, AnyValue* argv, 
         term_set_bg_color(CONVERT_COLOR(WHITE, TermColor));
     }
 
-    RETURN_NOTHING;
+    *return_val = DATA_NOTHING;
+    return true;
 }
 
-AnyValue block_reset_color(Exec* exec, Block* block, int argc, AnyValue* argv, ControlState control_state) {
+bool block_reset_color(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     (void) exec;
@@ -519,25 +618,32 @@ AnyValue block_reset_color(Exec* exec, Block* block, int argc, AnyValue* argv, C
     (void) argc;
     term_set_fg_color(CONVERT_COLOR(WHITE, TermColor));
     term_set_bg_color(CONVERT_COLOR(BLACK, TermColor));
-    RETURN_NOTHING;
+
+    *return_val = DATA_NOTHING;
+    return true;
 }
 
-AnyValue block_term_clear(Exec* exec, Block* block, int argc, AnyValue* argv, ControlState control_state) {
+bool block_term_clear(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     (void) exec;
     (void) argv;
     (void) argc;
     term_clear();
-    RETURN_NOTHING;
+
+    *return_val = DATA_NOTHING;
+    return true;
 }
 
-AnyValue block_term_set_clear(Exec* exec, Block* block, int argc, AnyValue* argv, ControlState control_state) {
+bool block_term_set_clear(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     (void) exec;
-    if (argc < 1) RETURN_NOTHING;
-    if (argv[0].type != DATA_TYPE_STRING_LITERAL) RETURN_NOTHING;
+    (void) argc;
+    if (argv[0].type != DATA_TYPE_STRING_LITERAL) {
+        // ERROR: invalid data type
+        return false;
+    }
 
     if (!strcmp(argv[0].data.str_val, "black")) {
         term_set_clear_color(CONVERT_COLOR(BLACK, TermColor));
@@ -557,31 +663,35 @@ AnyValue block_term_set_clear(Exec* exec, Block* block, int argc, AnyValue* argv
         term_set_clear_color(CONVERT_COLOR(WHITE, TermColor));
     }
 
-    RETURN_NOTHING;
+    *return_val = DATA_NOTHING;
+    return true;
 }
 
-AnyValue block_input(Exec* exec, Block* block, int argc, AnyValue* argv, ControlState control_state) {
+bool block_input(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     (void) argv;
     (void) argc;
-    RETURN_STRING_REF(std_term_get_input(&exec->gc));
+    *return_val = DATA_STRING_REF(std_term_get_input(&exec->gc));
+    return true;
 }
 
-AnyValue block_get_char(Exec* exec, Block* block, int argc, AnyValue* argv, ControlState control_state) {
+bool block_get_char(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     (void) argv;
     (void) argc;
 
-    RETURN_STRING_REF(std_term_get_char(&exec->gc));
+    *return_val = DATA_STRING_REF(std_term_get_char(&exec->gc));
+    return true;
 }
 
-AnyValue block_random(Exec* exec, Block* block, int argc, AnyValue* argv, ControlState control_state) {
+bool block_random(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     (void) exec;
-    if (argc < 2) RETURN_INT(0);
+    (void) argc;
+
     int min = data_to_int(argv[0]);
     int max = data_to_int(argv[1]);
     if (min > max) {
@@ -590,161 +700,183 @@ AnyValue block_random(Exec* exec, Block* block, int argc, AnyValue* argv, Contro
         max = temp;
     }
     int val = GetRandomValue(min, max);
-    RETURN_INT(val);
+    *return_val = DATA_INTEGER(val);
+    return true;
 }
 
-AnyValue block_join(Exec* exec, Block* block, int argc, AnyValue* argv, ControlState control_state) {
+bool block_join(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
+    (void) argc;
     (void) block;
-    if (argc < 2) RETURN_NOTHING;
 
-    RETURN_STRING_REF(std_string_join(&exec->gc, std_string_from_any(&exec->gc, &argv[0]), std_string_from_any(&exec->gc, &argv[1])));
+    *return_val = DATA_STRING_REF(std_string_join(&exec->gc, std_string_from_any(&exec->gc, &argv[0]), std_string_from_any(&exec->gc, &argv[1])));
+    return true;
 }
 
-AnyValue block_ord(Exec* exec, Block* block, int argc, AnyValue* argv, ControlState control_state) {
+bool block_ord(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     (void) exec;
-    if (argc < 1) RETURN_INT(0);
+    (void) argc;
 
     const char* str = data_to_any_string(exec, argv[0]);
     int codepoint_size;
     int codepoint = GetCodepoint(str, &codepoint_size);
-    RETURN_INT(codepoint);
+    *return_val = DATA_INTEGER(codepoint);
+    return true;
 }
 
-AnyValue block_chr(Exec* exec, Block* block, int argc, AnyValue* argv, ControlState control_state) {
+bool block_chr(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
-    if (argc < 1) RETURN_NOTHING;
-    RETURN_STRING_REF(std_string_chr(&exec->gc, data_to_int(argv[0])));
+    (void) argc;
+    *return_val = DATA_STRING_REF(std_string_chr(&exec->gc, data_to_int(argv[0])));
+    return true;
 }
 
-AnyValue block_letter_in(Exec* exec, Block* block, int argc, AnyValue* argv, ControlState control_state) {
+bool block_letter_in(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
-    if (argc < 2) RETURN_NOTHING;
-    RETURN_STRING_REF(std_string_letter_in(&exec->gc, data_to_int(argv[0]), std_string_from_any(&exec->gc, &argv[1])));
+    (void) argc;
+    *return_val = DATA_STRING_REF(std_string_letter_in(&exec->gc, data_to_int(argv[0]), std_string_from_any(&exec->gc, &argv[1])));
+    return true;
 }
 
-AnyValue block_substring(Exec* exec, Block* block, int argc, AnyValue* argv, ControlState control_state) {
+bool block_substring(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
-    if (argc < 3) RETURN_NOTHING;
-    RETURN_STRING_REF(std_string_substring(&exec->gc, data_to_int(argv[0]), data_to_int(argv[1]), std_string_from_any(&exec->gc, &argv[2])));
+    (void) argc;
+    *return_val = DATA_STRING_REF(std_string_substring(&exec->gc, data_to_int(argv[0]), data_to_int(argv[1]), std_string_from_any(&exec->gc, &argv[2])));
+    return true;
 }
 
-AnyValue block_length(Exec* exec, Block* block, int argc, AnyValue* argv, ControlState control_state) {
+bool block_length(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
-    if (argc < 1) RETURN_INT(0);
-    RETURN_INT(std_string_length(std_string_from_any(&exec->gc, &argv[0])));
+    (void) argc;
+    *return_val = DATA_INTEGER(std_string_length(std_string_from_any(&exec->gc, &argv[0])));
+    return true;
 }
 
-AnyValue block_unix_time(Exec* exec, Block* block, int argc, AnyValue* argv, ControlState control_state) {
+bool block_unix_time(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     (void) exec;
     (void) argc;
     (void) argv;
-    RETURN_INT(time(NULL));
+    *return_val = DATA_INTEGER(time(NULL));
+    return true;
 }
 
-AnyValue block_convert_int(Exec* exec, Block* block, int argc, AnyValue* argv, ControlState control_state) {
+bool block_convert_int(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     (void) exec;
-    if (argc < 1) RETURN_INT(0);
-    RETURN_INT(data_to_int(argv[0]));
+    (void) argc;
+    *return_val = DATA_INTEGER(data_to_int(argv[0]));
+    return true;
 }
 
-AnyValue block_convert_float(Exec* exec, Block* block, int argc, AnyValue* argv, ControlState control_state) {
+bool block_convert_float(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     (void) exec;
-    if (argc < 1) RETURN_DOUBLE(0.0);
-    RETURN_DOUBLE(data_to_double(argv[0]));
+    (void) argc;
+    *return_val = DATA_DOUBLE(data_to_double(argv[0]));
+    return true;
 }
 
-AnyValue block_convert_str(Exec* exec, Block* block, int argc, AnyValue* argv, ControlState control_state) {
+bool block_convert_str(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
-    if (argc < 1) RETURN_STRING_REF(std_string_from_literal(&exec->gc, "", 0));
-    RETURN_STRING_REF(std_string_from_any(&exec->gc, &argv[0]));
+    (void) argc;
+    *return_val = DATA_STRING_REF(std_string_from_any(&exec->gc, &argv[0]));
+    return true;
 }
 
-AnyValue block_convert_bool(Exec* exec, Block* block, int argc, AnyValue* argv, ControlState control_state) {
-    (void) control_state;
-    (void) block;
-    (void) exec;
-    if (argc < 1) RETURN_BOOL(0);
-    RETURN_BOOL(data_to_bool(argv[0]));
-}
-
-AnyValue block_plus(Exec* exec, Block* block, int argc, AnyValue* argv, ControlState control_state) {
+bool block_convert_bool(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     (void) exec;
-    if (argc < 2) RETURN_INT(0);
+    (void) argc;
+    *return_val = DATA_BOOL(data_to_bool(argv[0]));
+    return true;
+}
+
+bool block_plus(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
+    (void) control_state;
+    (void) block;
+    (void) exec;
+    (void) argc;
     if (argv[0].type == DATA_TYPE_DOUBLE) {
-        RETURN_DOUBLE(argv[0].data.double_val + data_to_double(argv[1]));
+        *return_val = DATA_DOUBLE(argv[0].data.double_val + data_to_double(argv[1]));
     } else {
-        RETURN_INT(data_to_int(argv[0]) + data_to_int(argv[1]));
+        *return_val = DATA_INTEGER(data_to_int(argv[0]) + data_to_int(argv[1]));
     }
+    return true;
 }
 
-AnyValue block_minus(Exec* exec, Block* block, int argc, AnyValue* argv, ControlState control_state) {
+bool block_minus(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     (void) exec;
-    if (argc < 2) RETURN_INT(0);
+    (void) argc;
     if (argv[0].type == DATA_TYPE_DOUBLE) {
-        RETURN_DOUBLE(argv[0].data.double_val - data_to_double(argv[1]));
+        *return_val = DATA_DOUBLE(argv[0].data.double_val - data_to_double(argv[1]));
     } else {
-        RETURN_INT(data_to_int(argv[0]) - data_to_int(argv[1]));
+        *return_val = DATA_INTEGER(data_to_int(argv[0]) - data_to_int(argv[1]));
     }
+    return true;
 }
 
-AnyValue block_mult(Exec* exec, Block* block, int argc, AnyValue* argv, ControlState control_state) {
+bool block_mult(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     (void) exec;
-    if (argc < 2) RETURN_INT(0);
+    (void) argc;
     if (argv[0].type == DATA_TYPE_DOUBLE) {
-        RETURN_DOUBLE(argv[0].data.double_val * data_to_double(argv[1]));
+        *return_val = DATA_DOUBLE(argv[0].data.double_val * data_to_double(argv[1]));
     } else {
-        RETURN_INT(data_to_int(argv[0]) * data_to_int(argv[1]));
+        *return_val = DATA_INTEGER(data_to_int(argv[0]) * data_to_int(argv[1]));
     }
+    return true;
 }
 
-AnyValue block_div(Exec* exec, Block* block, int argc, AnyValue* argv, ControlState control_state) {
+bool block_div(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     (void) exec;
-    if (argc < 2) RETURN_INT(0);
+    (void) argc;
+
     if (argv[0].type == DATA_TYPE_DOUBLE) {
-        RETURN_DOUBLE(argv[0].data.double_val / data_to_double(argv[1]));
+        *return_val = DATA_DOUBLE(argv[0].data.double_val / data_to_double(argv[1]));
     } else {
         int divisor = data_to_int(argv[1]);
         if (divisor == 0) {
-            term_print_str("VM ERROR: Division by zero!");
-            TraceLog(LOG_ERROR, "[VM] Division by zero");
-            PTHREAD_FAIL(exec);
+            // ERROR: Division by zero
+            return false;
         }
-        RETURN_INT(data_to_int(argv[0]) / divisor);
+        *return_val = DATA_INTEGER(data_to_int(argv[0]) / divisor);
     }
+    return true;
 }
 
-AnyValue block_pow(Exec* exec, Block* block, int argc, AnyValue* argv, ControlState control_state) {
+bool block_pow(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     (void) exec;
-    if (argc < 2) RETURN_INT(0);
-    if (argv[0].type == DATA_TYPE_DOUBLE) RETURN_DOUBLE(pow(argv[0].data.double_val, data_to_double(argv[1])));
+    (void) argc;
+    if (argv[0].type == DATA_TYPE_DOUBLE) {
+        *return_val = DATA_DOUBLE(pow(argv[0].data.double_val, data_to_double(argv[1])));
+        return true;
+    }
 
     int base = data_to_int(argv[0]);
     unsigned int exp = data_to_int(argv[1]);
-    if (!exp) RETURN_INT(1);
+    if (!exp) {
+        *return_val = DATA_INTEGER(1);
+        return true;
+    }
 
     int result = 1;
     while (exp) {
@@ -752,239 +884,262 @@ AnyValue block_pow(Exec* exec, Block* block, int argc, AnyValue* argv, ControlSt
         exp >>= 1;
         base *= base;
     }
-    RETURN_INT(result);
+    *return_val = DATA_INTEGER(result);
+    return true;
 }
 
-AnyValue block_math(Exec* exec, Block* block, int argc, AnyValue* argv, ControlState control_state) {
+bool block_math(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     (void) exec;
-    if (argc < 2) RETURN_DOUBLE(0.0);
-    if (argv[0].type != DATA_TYPE_STRING_LITERAL) RETURN_DOUBLE(0.0);
+    (void) argc;
+    if (argv[0].type != DATA_TYPE_STRING_LITERAL) {
+        // ERROR: Invalid data type
+        return false;
+    }
 
     if (!strcmp(argv[0].data.str_val, "sin")) {
-        RETURN_DOUBLE(sin(data_to_double(argv[1])));
+        *return_val = DATA_DOUBLE(sin(data_to_double(argv[1])));
     } else if (!strcmp(argv[0].data.str_val, "cos")) {
-        RETURN_DOUBLE(cos(data_to_double(argv[1])));
+        *return_val = DATA_DOUBLE(cos(data_to_double(argv[1])));
     } else if (!strcmp(argv[0].data.str_val, "tan")) {
-        RETURN_DOUBLE(tan(data_to_double(argv[1])));
+        *return_val = DATA_DOUBLE(tan(data_to_double(argv[1])));
     } else if (!strcmp(argv[0].data.str_val, "asin")) {
-        RETURN_DOUBLE(asin(data_to_double(argv[1])));
+        *return_val = DATA_DOUBLE(asin(data_to_double(argv[1])));
     } else if (!strcmp(argv[0].data.str_val, "acos")) {
-        RETURN_DOUBLE(acos(data_to_double(argv[1])));
+        *return_val = DATA_DOUBLE(acos(data_to_double(argv[1])));
     } else if (!strcmp(argv[0].data.str_val, "atan")) {
-        RETURN_DOUBLE(atan(data_to_double(argv[1])));
+        *return_val = DATA_DOUBLE(atan(data_to_double(argv[1])));
     } else if (!strcmp(argv[0].data.str_val, "sqrt")) {
-        RETURN_DOUBLE(sqrt(data_to_double(argv[1])));
+        *return_val = DATA_DOUBLE(sqrt(data_to_double(argv[1])));
     } else if (!strcmp(argv[0].data.str_val, "round")) {
-        RETURN_DOUBLE(round(data_to_double(argv[1])));
+        *return_val = DATA_DOUBLE(round(data_to_double(argv[1])));
     } else if (!strcmp(argv[0].data.str_val, "floor")) {
-        RETURN_DOUBLE(floor(data_to_double(argv[1])));
+        *return_val = DATA_DOUBLE(floor(data_to_double(argv[1])));
     } else if (!strcmp(argv[0].data.str_val, "ceil")) {
-        RETURN_DOUBLE(ceil(data_to_double(argv[1])));
+        *return_val = DATA_DOUBLE(ceil(data_to_double(argv[1])));
     } else {
-        RETURN_DOUBLE(0.0);
+        // ERROR: Invalid input item
+        return false;
     }
+    return true;
 }
 
-AnyValue block_pi(Exec* exec, Block* block, int argc, AnyValue* argv, ControlState control_state) {
+bool block_pi(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     (void) exec;
     (void) argc;
     (void) argv;
-    RETURN_DOUBLE(M_PI);
+    *return_val = DATA_DOUBLE(M_PI);
+    return true;
 }
 
-AnyValue block_bit_not(Exec* exec, Block* block, int argc, AnyValue* argv, ControlState control_state) {
+bool block_bit_not(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     (void) exec;
-    if (argc < 1) RETURN_INT(~0);
-    RETURN_INT(~data_to_int(argv[0]));
+    (void) argc;
+    *return_val = DATA_INTEGER(~data_to_int(argv[0]));
+    return true;
 }
 
-AnyValue block_bit_and(Exec* exec, Block* block, int argc, AnyValue* argv, ControlState control_state) {
+bool block_bit_and(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     (void) exec;
-    if (argc < 2) RETURN_INT(0);
-    RETURN_INT(data_to_int(argv[0]) & data_to_int(argv[1]));
+    (void) argc;
+    *return_val = DATA_INTEGER(data_to_int(argv[0]) & data_to_int(argv[1]));
+    return true;
 }
 
-AnyValue block_bit_xor(Exec* exec, Block* block, int argc, AnyValue* argv, ControlState control_state) {
+bool block_bit_xor(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     (void) exec;
-    if (argc < 1) RETURN_INT(0);
-    if (argc < 2) RETURN_INT(data_to_int(argv[0]));
-    RETURN_INT(data_to_int(argv[0]) ^ data_to_int(argv[1]));
+    (void) argc;
+    *return_val = DATA_INTEGER(data_to_int(argv[0]) ^ data_to_int(argv[1]));
+    return true;
 }
 
-AnyValue block_bit_or(Exec* exec, Block* block, int argc, AnyValue* argv, ControlState control_state) {
+bool block_bit_or(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     (void) exec;
-    if (argc < 1) RETURN_INT(0);
-    if (argc < 2) RETURN_INT(data_to_int(argv[0]));
-    RETURN_INT(data_to_int(argv[0]) | data_to_int(argv[1]));
+    (void) argc;
+    *return_val = DATA_INTEGER(data_to_int(argv[0]) | data_to_int(argv[1]));
+    return true;
 }
 
-AnyValue block_rem(Exec* exec, Block* block, int argc, AnyValue* argv, ControlState control_state) {
+bool block_rem(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     (void) exec;
-    if (argc < 2) RETURN_INT(0);
+    (void) argc;
     if (argv[0].type == DATA_TYPE_DOUBLE) {
-        RETURN_DOUBLE(fmod(argv[0].data.double_val, data_to_double(argv[1])));
+        *return_val = DATA_DOUBLE(fmod(argv[0].data.double_val, data_to_double(argv[1])));
     } else {
-        RETURN_INT(data_to_int(argv[0]) % data_to_int(argv[1]));
+        *return_val = DATA_INTEGER(data_to_int(argv[0]) % data_to_int(argv[1]));
     }
+    return true;
 }
 
-AnyValue block_less(Exec* exec, Block* block, int argc, AnyValue* argv, ControlState control_state) {
+bool block_less(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     (void) exec;
-    if (argc < 1) RETURN_BOOL(0);
-    if (argc < 2) RETURN_BOOL(data_to_int(argv[0]) < 0);
+    (void) argc;
+
     if (argv[0].type == DATA_TYPE_DOUBLE) {
-        RETURN_BOOL(argv[0].data.double_val < data_to_double(argv[1]));
+        *return_val = DATA_BOOL(argv[0].data.double_val < data_to_double(argv[1]));
     } else {
-        RETURN_BOOL(data_to_int(argv[0]) < data_to_int(argv[1]));
+        *return_val = DATA_BOOL(data_to_int(argv[0]) < data_to_int(argv[1]));
     }
+    return true;
 }
 
-AnyValue block_less_eq(Exec* exec, Block* block, int argc, AnyValue* argv, ControlState control_state) {
+bool block_less_eq(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     (void) exec;
-    if (argc < 1) RETURN_BOOL(0);
-    if (argc < 2) RETURN_BOOL(data_to_int(argv[0]) <= 0);
+    (void) argc;
     if (argv[0].type == DATA_TYPE_DOUBLE) {
-        RETURN_BOOL(argv[0].data.double_val <= data_to_double(argv[1]));
+        *return_val = DATA_BOOL(argv[0].data.double_val <= data_to_double(argv[1]));
     } else {
-        RETURN_BOOL(data_to_int(argv[0]) <= data_to_int(argv[1]));
+        *return_val = DATA_BOOL(data_to_int(argv[0]) <= data_to_int(argv[1]));
     }
+    return true;
 }
 
-AnyValue block_more(Exec* exec, Block* block, int argc, AnyValue* argv, ControlState control_state) {
+bool block_more(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     (void) exec;
-    if (argc < 1) RETURN_BOOL(0);
-    if (argc < 2) RETURN_BOOL(data_to_int(argv[0]) > 0);
+    (void) argc;
     if (argv[0].type == DATA_TYPE_DOUBLE) {
-        RETURN_BOOL(argv[0].data.double_val > data_to_double(argv[1]));
+        *return_val = DATA_BOOL(argv[0].data.double_val > data_to_double(argv[1]));
     } else {
-        RETURN_BOOL(data_to_int(argv[0]) > data_to_int(argv[1]));
+        *return_val = DATA_BOOL(data_to_int(argv[0]) > data_to_int(argv[1]));
     }
+    return true;
 }
 
-AnyValue block_more_eq(Exec* exec, Block* block, int argc, AnyValue* argv, ControlState control_state) {
+bool block_more_eq(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     (void) exec;
-    if (argc < 1) RETURN_BOOL(0);
-    if (argc < 2) RETURN_BOOL(data_to_int(argv[0]) >= 0);
+    (void) argc;
     if (argv[0].type == DATA_TYPE_DOUBLE) {
-        RETURN_BOOL(argv[0].data.double_val >= data_to_double(argv[1]));
+        *return_val = DATA_BOOL(argv[0].data.double_val >= data_to_double(argv[1]));
     } else {
-        RETURN_BOOL(data_to_int(argv[0]) >= data_to_int(argv[1]));
+        *return_val = DATA_BOOL(data_to_int(argv[0]) >= data_to_int(argv[1]));
     }
+    return true;
 }
 
-AnyValue block_not(Exec* exec, Block* block, int argc, AnyValue* argv, ControlState control_state) {
+bool block_not(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     (void) exec;
-    if (argc < 1) RETURN_BOOL(1);
-    RETURN_BOOL(!data_to_bool(argv[0]));
+    (void) argc;
+    *return_val = DATA_BOOL(!data_to_bool(argv[0]));
+    return true;
 }
 
-AnyValue block_and(Exec* exec, Block* block, int argc, AnyValue* argv, ControlState control_state) {
+bool block_and(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     (void) exec;
-    if (argc < 2) RETURN_BOOL(0);
-    RETURN_BOOL(data_to_bool(argv[0]) && data_to_bool(argv[1]));
+    (void) argc;
+    *return_val = DATA_BOOL(data_to_bool(argv[0]) && data_to_bool(argv[1]));
+    return true;
 }
 
-AnyValue block_or(Exec* exec, Block* block, int argc, AnyValue* argv, ControlState control_state) {
+bool block_or(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     (void) exec;
-    if (argc < 2) RETURN_BOOL(0);
-    RETURN_BOOL(data_to_bool(argv[0]) || data_to_bool(argv[1]));
+    (void) argc;
+    *return_val = DATA_BOOL(data_to_bool(argv[0]) || data_to_bool(argv[1]));
+    return true;
 }
 
-AnyValue block_true(Exec* exec, Block* block, int argc, AnyValue* argv, ControlState control_state) {
+bool block_true(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     (void) exec;
     (void) argc;
     (void) argv;
-    RETURN_BOOL(1);
+    *return_val = DATA_BOOL(1);
+    return true;
 }
 
-AnyValue block_false(Exec* exec, Block* block, int argc, AnyValue* argv, ControlState control_state) {
+bool block_false(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     (void) exec;
     (void) argc;
     (void) argv;
-    RETURN_BOOL(0);
+    *return_val = DATA_BOOL(0);
+    return true;
 }
 
-AnyValue block_eq(Exec* exec, Block* block, int argc, AnyValue* argv, ControlState control_state) {
+bool block_eq(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     (void) exec;
-    if (argc < 2) RETURN_BOOL(0);
+    (void) argc;
     if ((argv[0].type != DATA_TYPE_STRING_LITERAL && argv[0].type != DATA_TYPE_STRING_REF) || 
         (argv[1].type != DATA_TYPE_STRING_LITERAL && argv[1].type != DATA_TYPE_STRING_REF)) {
-        if (argv[0].type != argv[1].type) RETURN_BOOL(0);
+        if (argv[0].type != argv[1].type) {
+            *return_val = DATA_BOOL(0);
+            return true;
+        }
     }
 
     switch (argv[0].type) {
     case DATA_TYPE_BOOL:
     case DATA_TYPE_INT:
-        RETURN_BOOL(argv[0].data.int_val == argv[1].data.int_val);
+        *return_val = DATA_BOOL(argv[0].data.int_val == argv[1].data.int_val);
+        break;
     case DATA_TYPE_DOUBLE:
-        RETURN_BOOL(argv[0].data.double_val == argv[1].data.double_val);
+        *return_val = DATA_BOOL(argv[0].data.double_val == argv[1].data.double_val);
+        break;
     case DATA_TYPE_STRING_LITERAL:
     case DATA_TYPE_STRING_REF:
-        RETURN_BOOL(!strcmp(argv[0].data.str_val, argv[1].data.str_val));
+        *return_val = DATA_BOOL(!strcmp(argv[0].data.str_val, argv[1].data.str_val));
+        break;
     case DATA_TYPE_NOTHING:
-        RETURN_BOOL(1);
+        *return_val = DATA_BOOL(1);
+        break;
     default:
-        RETURN_BOOL(0);
+        *return_val = DATA_BOOL(0);
+        break;
     }
+    return true;
 }
 
-AnyValue block_not_eq(Exec* exec, Block* block, int argc, AnyValue* argv, ControlState control_state) {
-    AnyValue out = block_eq(exec, block, argc, argv, control_state);
-    out.data.int_val = !out.data.int_val;
-    return out;
+bool block_not_eq(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
+    if (!block_eq(exec, block, argc, argv, return_val, control_state)) return false;
+    return_val->data.int_val = !return_val->data.int_val;
+    return true;
 }
 
-AnyValue block_exec_custom(Exec* exec, Block* block, int argc, AnyValue* argv, ControlState control_state) {
+bool block_exec_custom(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     for (size_t i = 0; i < vector_size(exec->defined_functions); i++) {
         if (block->blockdef == exec->defined_functions[i].blockdef) {
-            AnyValue return_val;
-            exec_run_chain(exec, exec->defined_functions[i].run_chain, argc, argv, &return_val);
-            return return_val;
+            if (!exec_run_chain(exec, exec->defined_functions[i].run_chain, argc, argv, return_val)) return false;
+            return true;
         }
     }
 
-    TraceLog(LOG_ERROR, "[VM] Unknown function %s", block->blockdef->id);
-    term_print_str(TextFormat("Unknown function: %s", block->blockdef->id));
-    PTHREAD_FAIL(exec);
+    // ERROR: Unknown function
+    return false;
 }
 
 // Checks the arguments and returns the value from custom_argv at index if all conditions are met
-AnyValue block_custom_arg(Exec* exec, Block* block, int argc, AnyValue* argv, ControlState control_state) {
+bool block_custom_arg(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) argc;
     (void) argv;
     (void) control_state;
@@ -992,33 +1147,35 @@ AnyValue block_custom_arg(Exec* exec, Block* block, int argc, AnyValue* argv, Co
         for (size_t j = 0; j < vector_size(exec->defined_functions[i].args); j++) {
             DefineArgument arg = exec->defined_functions[i].args[j];
             if (arg.blockdef == block->blockdef) {
-                return exec->chain_stack[exec->chain_stack_len - 1].custom_argv[arg.arg_ind];
+                *return_val = exec->chain_stack[exec->chain_stack_len - 1].custom_argv[arg.arg_ind];
+                return true;
             }
         }
     }
 
-    TraceLog(LOG_ERROR, "[VM] Unknown argument %s", block->blockdef->id);
-    term_print_str(TextFormat("Unknown argument: %s", block->blockdef->id));
-    PTHREAD_FAIL(exec);
+    // ERROR: Unknown argument
+    return false;
 }
 
 // Modifies the internal state of the current code chain so that it returns early with the data written to .return_arg
-AnyValue block_return(Exec* exec, Block* block, int argc, AnyValue* argv, ControlState control_state) {
+bool block_return(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
-    if (argc < 1) RETURN_NOTHING;
+    (void) argc;
     exec->chain_stack[exec->chain_stack_len - 1].return_arg = argv[0];
     exec->chain_stack[exec->chain_stack_len - 1].is_returning = true;
-    RETURN_NOTHING;
+    *return_val = DATA_NOTHING;
+    return true;
 }
 
-AnyValue block_gc_collect(Exec* exec, Block* block, int argc, AnyValue* argv, ControlState control_state) {
+bool block_gc_collect(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     (void) argc;
     (void) argv;
     gc_collect(&exec->gc);
-    RETURN_NOTHING;
+    *return_val = DATA_NOTHING;
+    return true;
 }
 
 #else

@@ -106,19 +106,21 @@ void exec_copy_code(Vm* vm, Exec* exec, BlockChain* code) {
     exec->code = code;
 }
 
-AnyValue evaluate_argument(Exec* exec, Argument* arg) {
+bool evaluate_argument(Exec* exec, Argument* arg, AnyValue* return_val) {
     switch (arg->type) {
     case ARGUMENT_TEXT:
     case ARGUMENT_CONST_STRING:
-        RETURN_STRING_LITERAL(arg->data.text);
-        break;
-    case ARGUMENT_BLOCK: ; // This fixes gcc-9 error
-        AnyValue arg_return;
-        if (!exec_block(exec, arg->data.block, &arg_return, CONTROL_STATE_NORMAL, (AnyValue) {0})) RETURN_NOTHING;
-        return arg_return;
-    default:
-        RETURN_NOTHING;
+        *return_val = DATA_STRING_LITERAL(arg->data.text);
+        return true;
+    case ARGUMENT_BLOCK:
+        if (!exec_block(exec, arg->data.block, return_val, CONTROL_STATE_NORMAL, (AnyValue) {0})) {
+            return false;
+        }
+        return true;
+    case ARGUMENT_BLOCKDEF:
+        return true;
     }
+    return false;
 }
 
 bool exec_block(Exec* exec, Block block, AnyValue* block_return, ControlState control_state, AnyValue control_arg) {
@@ -133,13 +135,22 @@ bool exec_block(Exec* exec, Block block, AnyValue* block_return, ControlState co
 
     if (control_state != CONTROL_STATE_END) {
         for (vec_size_t i = 0; i < vector_size(block.arguments); i++) {
-            arg_stack_push_arg(exec, evaluate_argument(exec, &block.arguments[i]));
+            AnyValue arg;
+            if (!evaluate_argument(exec, &block.arguments[i], &arg)) {
+                TraceLog(LOG_ERROR, "[VM] From block id: \"%s\" (at block %p)", block.blockdef->id, &block);
+                return false;
+            }
+            arg_stack_push_arg(exec, arg);
         }
     }
 
     size_t last_temps = vector_size(exec->gc.root_temp_chunks);
 
-    *block_return = execute_block(exec, &block, exec->arg_stack_len - stack_begin, exec->arg_stack + stack_begin, control_state);
+    if (!execute_block(exec, &block, exec->arg_stack_len - stack_begin, exec->arg_stack + stack_begin, block_return, control_state)) {
+        TraceLog(LOG_ERROR, "[VM] Error from block id: \"%s\" (at block %p)", block.blockdef->id, &block);
+        return false;
+    }
+
     arg_stack_undo_args(exec, exec->arg_stack_len - stack_begin);
 
     if (!block.parent && vector_size(exec->gc.root_temp_chunks) > last_temps) gc_flush(&exec->gc);

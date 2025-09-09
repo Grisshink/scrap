@@ -444,8 +444,8 @@ void register_categories(void);
 void unregister_categories(void);
 
 #ifdef USE_INTERPRETER
-AnyValue block_custom_arg(Exec* exec, Block* block, int argc, AnyValue* argv, ControlState control_state);
-AnyValue block_exec_custom(Exec* exec, Block* block, int argc, AnyValue* argv, ControlState control_state);
+bool block_custom_arg(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state);
+bool block_exec_custom(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state);
 #else
 bool block_custom_arg(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state);
 bool block_exec_custom(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state);

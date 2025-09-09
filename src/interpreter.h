@@ -40,7 +40,7 @@ typedef enum {
     CONTROL_STATE_END,
 } ControlState;
 
-typedef AnyValue (*BlockFunc)(Exec* exec, Block* block, int argc, AnyValue* argv, ControlState control_state);
+typedef bool (*BlockFunc)(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state);
 
 struct Variable {
     const char* name;
@@ -122,51 +122,39 @@ struct Exec {
     exec->control_stack_len -= sizeof(type); \
     data = *(type*)(exec->control_stack + exec->control_stack_len);
 
-#define RETURN_NOTHING return (AnyValue) { \
+#define DATA_NOTHING (AnyValue) { \
     .type = DATA_TYPE_NOTHING, \
     .data = (AnyValueData) {0}, \
 }
 
-#define RETURN_INT(val) return (AnyValue) { \
+#define DATA_INTEGER(val) (AnyValue) { \
     .type = DATA_TYPE_INT, \
-    .data = (AnyValueData) { \
-        .int_val = (val) \
-    }, \
+    .data = (AnyValueData) { .int_val = (val) }, \
 }
 
-#define RETURN_DOUBLE(val) return (AnyValue) { \
+#define DATA_DOUBLE(val) (AnyValue) { \
     .type = DATA_TYPE_DOUBLE, \
-    .data = (AnyValueData) { \
-        .double_val = (val) \
-    }, \
+    .data = (AnyValueData) { .double_val = (val) }, \
 }
 
-#define RETURN_BOOL(val) return (AnyValue) { \
+#define DATA_BOOL(val) (AnyValue) { \
     .type = DATA_TYPE_BOOL, \
-    .data = (AnyValueData) { \
-        .int_val = (val) \
-    }, \
+    .data = (AnyValueData) { .int_val = (val) }, \
 }
 
-#define RETURN_STRING_LITERAL(val) return (AnyValue) { \
+#define DATA_STRING_LITERAL(val) (AnyValue) { \
     .type = DATA_TYPE_STRING_LITERAL, \
-    .data = (AnyValueData) { \
-        .str_val = (val) \
-    }, \
+    .data = (AnyValueData) { .str_val = (val) }, \
 }
 
-#define RETURN_STRING_REF(val) return (AnyValue) { \
+#define DATA_STRING_REF(val) (AnyValue) { \
     .type = DATA_TYPE_STRING_REF, \
-    .data = (AnyValueData) { \
-        .str_val = (val) \
-    }, \
+    .data = (AnyValueData) { .str_val = (val) }, \
 }
 
-#define RETURN_LIST(val) return (AnyValue) { \
+#define DATA_LIST(val) (AnyValue) { \
     .type = DATA_TYPE_LIST, \
-    .data = (AnyValueData) { \
-        .list_val = (val) \
-    }, \
+    .data = (AnyValueData) { .list_val = (val) }, \
 }
 
 Exec exec_new(void);
@@ -180,7 +168,7 @@ bool exec_try_join(Vm* vm, Exec* exec, size_t* return_code);
 void exec_set_skip_block(Exec* exec);
 void exec_thread_exit(void* thread_exec);
 
-AnyValue evaluate_argument(Exec* exec, Argument* arg);
+bool evaluate_argument(Exec* exec, Argument* arg, AnyValue* return_val);
 
 void variable_stack_push_var(Exec* exec, const char* name, AnyValue data);
 Variable* variable_stack_get_variable(Exec* exec, const char* name);
