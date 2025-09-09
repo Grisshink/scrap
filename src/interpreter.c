@@ -30,7 +30,7 @@ void variable_stack_pop_layer(Exec* exec);
 void variable_stack_cleanup(Exec* exec);
 void chain_stack_push(Exec* exec, ChainStackData data);
 void chain_stack_pop(Exec* exec);
-bool exec_block(Exec* exec, Block block, AnyValue* block_return, ControlState control_state, AnyValue control_arg);
+bool exec_block(Exec* exec, Block* block, AnyValue* block_return, ControlState control_state, AnyValue control_arg);
 
 int data_to_int(AnyValue arg) {
     switch (arg.type) {
@@ -106,6 +106,15 @@ void exec_copy_code(Vm* vm, Exec* exec, BlockChain* code) {
     exec->code = code;
 }
 
+void exec_set_error(Exec* exec, Block* block, const char* fmt, ...) {
+    exec->current_error_block = block;
+    va_list va;
+    va_start(va, fmt);
+    vsnprintf(exec->current_error, MAX_ERROR_LEN, fmt, va);
+    va_end(va);
+    TraceLog(LOG_ERROR, "[EXEC] %s", exec->current_error);
+}
+
 bool evaluate_argument(Exec* exec, Argument* arg, AnyValue* return_val) {
     switch (arg->type) {
     case ARGUMENT_TEXT:
@@ -113,7 +122,7 @@ bool evaluate_argument(Exec* exec, Argument* arg, AnyValue* return_val) {
         *return_val = DATA_STRING_LITERAL(arg->data.text);
         return true;
     case ARGUMENT_BLOCK:
-        if (!exec_block(exec, arg->data.block, return_val, CONTROL_STATE_NORMAL, (AnyValue) {0})) {
+        if (!exec_block(exec, &arg->data.block, return_val, CONTROL_STATE_NORMAL, (AnyValue) {0})) {
             return false;
         }
         return true;
@@ -123,21 +132,21 @@ bool evaluate_argument(Exec* exec, Argument* arg, AnyValue* return_val) {
     return false;
 }
 
-bool exec_block(Exec* exec, Block block, AnyValue* block_return, ControlState control_state, AnyValue control_arg) {
-    BlockFunc execute_block = block.blockdef->func;
+bool exec_block(Exec* exec, Block* block, AnyValue* block_return, ControlState control_state, AnyValue control_arg) {
+    BlockFunc execute_block = block->blockdef->func;
     if (!execute_block) return false;
 
     int stack_begin = exec->arg_stack_len;
 
-    if (block.blockdef->type == BLOCKTYPE_CONTROLEND && control_state == CONTROL_STATE_BEGIN) {
+    if (block->blockdef->type == BLOCKTYPE_CONTROLEND && control_state == CONTROL_STATE_BEGIN) {
         arg_stack_push_arg(exec, control_arg);
     }
 
     if (control_state != CONTROL_STATE_END) {
-        for (vec_size_t i = 0; i < vector_size(block.arguments); i++) {
+        for (vec_size_t i = 0; i < vector_size(block->arguments); i++) {
             AnyValue arg;
-            if (!evaluate_argument(exec, &block.arguments[i], &arg)) {
-                TraceLog(LOG_ERROR, "[VM] From block id: \"%s\" (at block %p)", block.blockdef->id, &block);
+            if (!evaluate_argument(exec, &block->arguments[i], &arg)) {
+                TraceLog(LOG_ERROR, "[VM] From block id: \"%s\" (at block %p)", block->blockdef->id, &block);
                 return false;
             }
             arg_stack_push_arg(exec, arg);
@@ -146,14 +155,14 @@ bool exec_block(Exec* exec, Block block, AnyValue* block_return, ControlState co
 
     size_t last_temps = vector_size(exec->gc.root_temp_chunks);
 
-    if (!execute_block(exec, &block, exec->arg_stack_len - stack_begin, exec->arg_stack + stack_begin, block_return, control_state)) {
-        TraceLog(LOG_ERROR, "[VM] Error from block id: \"%s\" (at block %p)", block.blockdef->id, &block);
+    if (!execute_block(exec, block, exec->arg_stack_len - stack_begin, exec->arg_stack + stack_begin, block_return, control_state)) {
+        TraceLog(LOG_ERROR, "[VM] Error from block id: \"%s\" (at block %p)", block->blockdef->id, &block);
         return false;
     }
 
     arg_stack_undo_args(exec, exec->arg_stack_len - stack_begin);
 
-    if (!block.parent && vector_size(exec->gc.root_temp_chunks) > last_temps) gc_flush(&exec->gc);
+    if (!block->parent && vector_size(exec->gc.root_temp_chunks) > last_temps) gc_flush(&exec->gc);
 
     return true;
 }
@@ -201,7 +210,7 @@ bool exec_run_chain(Exec* exec, BlockChain* chain, int argc, AnyValue* argv, Any
         }
         
         if (!chain_data->skip_block) {
-            if (!exec_block(exec, chain->blocks[block_ind], &block_return, control_state, (AnyValue){0})) {
+            if (!exec_block(exec, &chain->blocks[block_ind], &block_return, control_state, (AnyValue){0})) {
                 chain_stack_pop(exec);
                 return false;
             }
@@ -211,7 +220,7 @@ bool exec_run_chain(Exec* exec, BlockChain* chain, int argc, AnyValue* argv, Any
 
         if (BLOCKDEF->type == BLOCKTYPE_CONTROLEND && block_ind != i) {
             control_state = CONTROL_STATE_BEGIN;
-            if (!exec_block(exec, chain->blocks[i], &block_return, control_state, block_return)) {
+            if (!exec_block(exec, &chain->blocks[i], &block_return, control_state, block_return)) {
                 chain_stack_pop(exec);
                 return false;
             }

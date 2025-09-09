@@ -189,4 +189,6 @@ void argument_set_block(Argument* block_arg, Block block);
 void argument_set_const_string(Argument* block_arg, char* text);
 void argument_set_text(Argument* block_arg, char* text);
 
+const char* type_to_str(DataType type);
+
 #endif // AST_H

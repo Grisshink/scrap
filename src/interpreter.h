@@ -167,6 +167,7 @@ bool exec_join(Vm* vm, Exec* exec, size_t* return_code);
 bool exec_try_join(Vm* vm, Exec* exec, size_t* return_code);
 void exec_set_skip_block(Exec* exec);
 void exec_thread_exit(void* thread_exec);
+void exec_set_error(Exec* exec, Block* block, const char* fmt, ...);
 
 bool evaluate_argument(Exec* exec, Argument* arg, AnyValue* return_val);
 

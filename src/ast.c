@@ -22,6 +22,32 @@
 #include <libintl.h>
 #include <string.h>
 
+const char* type_to_str(DataType type) {
+    switch (type) {
+    case DATA_TYPE_NOTHING:
+        return "nothing";
+    case DATA_TYPE_INT:
+        return "int";
+    case DATA_TYPE_DOUBLE:
+        return "float";
+    case DATA_TYPE_STRING_REF:
+        return "str";
+    case DATA_TYPE_STRING_LITERAL:
+        return "literal";
+    case DATA_TYPE_BOOL:
+        return "bool";
+    case DATA_TYPE_LIST:
+        return "list";
+    case DATA_TYPE_ANY:
+        return "any";
+    case DATA_TYPE_BLOCKDEF:
+        return "blockdef";
+    case DATA_TYPE_UNKNOWN:
+        return "unknown";
+    }
+    assert(false && "Unhandled type_to_str");
+}
+
 Block block_new(Blockdef* blockdef) {
     Block block;
     block.blockdef = blockdef;

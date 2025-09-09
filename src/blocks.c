@@ -140,7 +140,7 @@ bool block_if(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* retu
         control_stack_pop_data(is_success, int)
         *return_val = DATA_BOOL(is_success);
     } else {
-        // ERROR: Invalid control state
+        exec_set_error(exec, block, "Invalid control state");
         return false;
     }
 
@@ -165,7 +165,7 @@ bool block_else_if(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue*
         control_stack_pop_data(is_success, int)
         *return_val = DATA_BOOL(is_success);
     } else {
-        // ERROR: Invalid control state
+        exec_set_error(exec, block, "Invalid control state");
         return false;
     }
     return true;
@@ -182,7 +182,7 @@ bool block_else(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* re
     } else if (control_state == CONTROL_STATE_END) {
         *return_val = DATA_BOOL(1);
     } else {
-        // ERROR: Invalid control state
+        exec_set_error(exec, block, "Invalid control state");
         return false;
     }
 
@@ -233,7 +233,7 @@ bool block_repeat(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* 
         control_stack_push_data(left - 1, int)
         control_stack_push_data((int)1, int)
     } else {
-        // ERROR: Invalid control state
+        exec_set_error(exec, block, "Invalid control state");
         return false;
     }
 
@@ -262,7 +262,7 @@ bool block_while(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* r
         control_stack_pop_data(exec->chain_stack[exec->chain_stack_len - 1].running_ind, size_t)
         control_stack_push_data(exec->chain_stack[exec->chain_stack_len - 1].running_ind, size_t)
     } else {
-        // ERROR: Invalid control state
+        exec_set_error(exec, block, "Invalid control state");
         return false;
     }
 
@@ -296,14 +296,14 @@ bool block_sleep(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* r
 
 bool block_declare_var(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
-    (void) block;
     (void) argc;
+
     if (argv[0].type != DATA_TYPE_STRING_LITERAL) {
-        // ERROR: Invalid argument
+        exec_set_error(exec, block, "Received non constant string argument");
         return false;
     }
     if (block->parent) {
-        // ERROR: block_declare_var cannot be used in expressions
+        exec_set_error(exec, block, "Variable declarations are not allowed inside an expression");
         return false;
     }
 
@@ -324,9 +324,10 @@ bool block_get_var(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue*
     (void) block;
     (void) argc;
     
-    Variable* var = variable_stack_get_variable(exec, data_to_any_string(exec, argv[0]));
+    char* var_name = data_to_any_string(exec, argv[0]);
+    Variable* var = variable_stack_get_variable(exec, var_name);
     if (!var) {
-        // ERROR: Variable does not exist
+        exec_set_error(exec, block, "Variable with name \"%s\" does not exist in the current scope", var_name);
         return false;
     }
     *return_val = var->value;
@@ -338,9 +339,10 @@ bool block_set_var(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue*
     (void) block;
     (void) argc;
 
-    Variable* var = variable_stack_get_variable(exec, data_to_any_string(exec, argv[0]));
+    char* var_name = data_to_any_string(exec, argv[0]);
+    Variable* var = variable_stack_get_variable(exec, var_name);
     if (!var) {
-        // ERROR: Variable does not exist
+        exec_set_error(exec, block, "Variable with name \"%s\" does not exist in the current scope", var_name);
         return false;
     }
 
@@ -370,10 +372,9 @@ bool block_create_list(Exec* exec, Block* block, int argc, AnyValue* argv, AnyVa
 
 bool block_list_add(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
-    (void) block;
     (void) argc;
     if (argv[0].type != DATA_TYPE_LIST) {
-        // ERROR: Invalid data type
+        exec_set_error(exec, block, "Invalid data type %s, expected %s", type_to_str(argv[0].type), type_to_str(DATA_TYPE_LIST));
         return false;
     }
 
@@ -387,7 +388,7 @@ bool block_list_get(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue
     (void) block;
     (void) argc;
     if (argv[0].type != DATA_TYPE_LIST) {
-        // ERROR: Invalid data type
+        exec_set_error(exec, block, "Invalid data type %s, expected %s", type_to_str(argv[0].type), type_to_str(DATA_TYPE_LIST));
         return false;
     }
 
@@ -401,7 +402,7 @@ bool block_list_length(Exec* exec, Block* block, int argc, AnyValue* argv, AnyVa
     (void) exec;
     (void) argc;
     if (argv[0].type != DATA_TYPE_LIST) {
-        // ERROR: Invalid data type
+        exec_set_error(exec, block, "Invalid data type %s, expected %s", type_to_str(argv[0].type), type_to_str(DATA_TYPE_LIST));
         return false;
     }
 
@@ -415,13 +416,13 @@ bool block_list_set(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue
     (void) exec;
     (void) argc;
     if (argv[0].type != DATA_TYPE_LIST) {
-        // ERROR: Invalid data type
+        exec_set_error(exec, block, "Invalid data type %s, expected %s", type_to_str(argv[0].type), type_to_str(DATA_TYPE_LIST));
         return false;
     }
 
     int index = data_to_int(argv[1]);
     if (index >= argv[0].data.list_val->size || index < 0) {
-        // ERROR: Out of bounds list access
+        exec_set_error(exec, block, "Tried to access index %d for list of length %d", index, argv[0].data.list_val->size);
         return false;
     }
 
@@ -552,7 +553,7 @@ bool block_set_fg_color(Exec* exec, Block* block, int argc, AnyValue* argv, AnyV
     (void) exec;
     (void) argc;
     if (argv[0].type != DATA_TYPE_STRING_LITERAL) {
-        // ERROR: Invalid data type
+        exec_set_error(exec, block, "Invalid data type %s, expected %s", type_to_str(argv[0].type), type_to_str(DATA_TYPE_STRING_LITERAL));
         return false;
     }
 
@@ -584,7 +585,7 @@ bool block_set_bg_color(Exec* exec, Block* block, int argc, AnyValue* argv, AnyV
     (void) exec;
     (void) argc;
     if (argv[0].type != DATA_TYPE_STRING_LITERAL) {
-        // ERROR: Invalid data type
+        exec_set_error(exec, block, "Invalid data type %s, expected %s", type_to_str(argv[0].type), type_to_str(DATA_TYPE_STRING_LITERAL));
         return false;
     }
 
@@ -641,7 +642,7 @@ bool block_term_set_clear(Exec* exec, Block* block, int argc, AnyValue* argv, An
     (void) exec;
     (void) argc;
     if (argv[0].type != DATA_TYPE_STRING_LITERAL) {
-        // ERROR: invalid data type
+        exec_set_error(exec, block, "Invalid data type %s, expected %s", type_to_str(argv[0].type), type_to_str(DATA_TYPE_STRING_LITERAL));
         return false;
     }
 
@@ -853,7 +854,7 @@ bool block_div(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* ret
     } else {
         int divisor = data_to_int(argv[1]);
         if (divisor == 0) {
-            // ERROR: Division by zero
+            exec_set_error(exec, block, "Division by zero");
             return false;
         }
         *return_val = DATA_INTEGER(data_to_int(argv[0]) / divisor);
@@ -894,7 +895,7 @@ bool block_math(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* re
     (void) exec;
     (void) argc;
     if (argv[0].type != DATA_TYPE_STRING_LITERAL) {
-        // ERROR: Invalid data type
+        exec_set_error(exec, block, "Invalid data type %s, expected %s", type_to_str(argv[0].type), type_to_str(DATA_TYPE_STRING_LITERAL));
         return false;
     }
 
@@ -919,7 +920,7 @@ bool block_math(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* re
     } else if (!strcmp(argv[0].data.str_val, "ceil")) {
         *return_val = DATA_DOUBLE(ceil(data_to_double(argv[1])));
     } else {
-        // ERROR: Invalid input item
+        exec_set_error(exec, block, "Invalid input item %s", argv[0].data.str_val);
         return false;
     }
     return true;
@@ -1134,7 +1135,7 @@ bool block_exec_custom(Exec* exec, Block* block, int argc, AnyValue* argv, AnyVa
         }
     }
 
-    // ERROR: Unknown function
+    exec_set_error(exec, block, "Unknown function id \"%s\"", block->blockdef->id);
     return false;
 }
 
@@ -1153,7 +1154,7 @@ bool block_custom_arg(Exec* exec, Block* block, int argc, AnyValue* argv, AnyVal
         }
     }
 
-    // ERROR: Unknown argument
+    exec_set_error(exec, block, "Unknown argument id \"%s\"", block->blockdef->id);
     return false;
 }
 
@@ -1185,32 +1186,6 @@ bool block_gc_collect(Exec* exec, Block* block, int argc, AnyValue* argv, AnyVal
         TraceLog(LOG_ERROR, "[LLVM] Not enough arguments! Expected: %d or more, Got: %d", count, argc); \
         return false; \
     }
-
-const char* type_to_str(DataType type) {
-    switch (type) {
-    case DATA_TYPE_NOTHING:
-        return "nothing";
-    case DATA_TYPE_INT:
-        return "int";
-    case DATA_TYPE_DOUBLE:
-        return "float";
-    case DATA_TYPE_STRING_REF:
-        return "str";
-    case DATA_TYPE_STRING_LITERAL:
-        return "literal";
-    case DATA_TYPE_BOOL:
-        return "bool";
-    case DATA_TYPE_LIST:
-        return "list";
-    case DATA_TYPE_ANY:
-        return "any";
-    case DATA_TYPE_BLOCKDEF:
-        return "blockdef";
-    case DATA_TYPE_UNKNOWN:
-        return "unknown";
-    }
-    assert(false && "Unhandled type_to_str");
-}
 
 LLVMValueRef arg_to_value(Exec* exec, Block* block, FuncArg arg) {
     switch (arg.type) {
