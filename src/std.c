@@ -241,8 +241,10 @@ static AnyValue std_get_any(DataType data_type, va_list va) {
         data.float_val = va_arg(va, double);
         break;
     case DATA_TYPE_STRING_REF:
+        data.str_val = va_arg(va, StringHeader*);
+        break;
     case DATA_TYPE_STRING_LITERAL:
-        data.str_val = va_arg(va, char*);
+        data.literal_val = va_arg(va, char*);
         break;
     case DATA_TYPE_LIST:
         data.list_val = va_arg(va, List*);
@@ -330,19 +332,23 @@ AnyValue* std_any_from_value(Gc* gc, DataType data_type, ...) {
     return value;
 }
 
-char* std_string_from_literal(Gc* gc, const char* literal, unsigned int size) {
+StringHeader* std_string_from_literal(Gc* gc, const char* literal, unsigned int size) {
     StringHeader* out_str = gc_malloc(gc, sizeof(StringHeader) + size + 1, DATA_TYPE_STRING_REF); // Don't forget null terminator. It is not included in size
     memcpy(out_str->str, literal, size);
     out_str->size = size;
     out_str->capacity = size;
     out_str->str[size] = 0;
-    return out_str->str;
+    return out_str;
 }
 
-char* std_string_letter_in(Gc* gc, int target, char* input_str) {
+char* std_string_get_data(StringHeader* str) {
+    return str->str;
+}
+
+StringHeader* std_string_letter_in(Gc* gc, int target, StringHeader* input_str) {
     int pos = 0;
     if (target <= 0) return std_string_from_literal(gc, "", 0);
-    for (char* str = input_str; *str; str++) {
+    for (char* str = input_str->str; *str; str++) {
         // Increment pos only on the beginning of multibyte char
         if ((*str & 0x80) == 0 || (*str & 0x40) != 0) pos++;
 
@@ -356,7 +362,7 @@ char* std_string_letter_in(Gc* gc, int target, char* input_str) {
     return std_string_from_literal(gc, "", 0);
 }
 
-char* std_string_substring(Gc* gc, int begin, int end, char* input_str) {
+StringHeader* std_string_substring(Gc* gc, int begin, int end, StringHeader* input_str) {
     if (begin <= 0) begin = 1;
     if (end <= 0) return std_string_from_literal(gc, "", 0);
     if (begin > end) return std_string_from_literal(gc, "", 0);
@@ -365,7 +371,7 @@ char* std_string_substring(Gc* gc, int begin, int end, char* input_str) {
     int substr_len = 0;
 
     int pos = 0;
-    for (char* str = input_str; *str; str++) {
+    for (char* str = input_str->str; *str; str++) {
         // Increment pos only on the beginning of multibyte char
         if ((*str & 0x80) == 0 || (*str & 0x40) != 0) pos++;
         if (substr_start) substr_len++;
@@ -388,23 +394,20 @@ char* std_string_substring(Gc* gc, int begin, int end, char* input_str) {
     return std_string_from_literal(gc, "", 0);
 }
 
-char* std_string_join(Gc* gc, char* left, char* right) {
-    StringHeader* left_header = ((StringHeader*)left) - 1;
-    StringHeader* right_header = ((StringHeader*)right) - 1;
-    
-    StringHeader* out_str = gc_malloc(gc, sizeof(StringHeader) + left_header->size + right_header->size + 1, DATA_TYPE_STRING_REF);
-    memcpy(out_str->str, left_header->str, left_header->size);
-    memcpy(out_str->str + left_header->size, right_header->str, right_header->size);
-    out_str->size = left_header->size + right_header->size;
+StringHeader* std_string_join(Gc* gc, StringHeader* left, StringHeader* right) {
+    StringHeader* out_str = gc_malloc(gc, sizeof(StringHeader) + left->size + right->size + 1, DATA_TYPE_STRING_REF);
+    memcpy(out_str->str, left->str, left->size);
+    memcpy(out_str->str + left->size, right->str, right->size);
+    out_str->size = left->size + right->size;
     out_str->capacity = out_str->size;
     out_str->str[out_str->size] = 0;
-    return out_str->str;
+    return out_str;
 }
 
-int std_string_length(char* str) {
+int std_string_length(StringHeader* str) {
     int len = 0;
-    while (*str) {
-        int mb_size = leading_ones(*str);
+    while (*str->str) {
+        int mb_size = leading_ones(*str->str);
         if (mb_size == 0) mb_size = 1;
         str += mb_size;
         len++;
@@ -412,47 +415,44 @@ int std_string_length(char* str) {
     return len;
 }
 
-bool std_string_is_eq(char* left, char* right) {
-    StringHeader* left_header = ((StringHeader*)left) - 1;
-    StringHeader* right_header = ((StringHeader*)right) - 1;
-
-    if (left_header->size != right_header->size) return false;
-    for (unsigned int i = 0; i < left_header->size; i++) {
-        if (left_header->str[i] != right_header->str[i]) return false;
+bool std_string_is_eq(StringHeader* left, StringHeader* right) {
+    if (left->size != right->size) return false;
+    for (unsigned int i = 0; i < left->size; i++) {
+        if (left->str[i] != right->str[i]) return false;
     }
     return true;
 }
 
-char* std_string_chr(Gc* gc, int value) {
+StringHeader* std_string_chr(Gc* gc, int value) {
     int text_size;
     const char* text = codepoint_to_utf8(value, &text_size);
     return std_string_from_literal(gc, text, text_size);
 }
 
-int std_string_ord(char* str) {
+int std_string_ord(StringHeader* str) {
     int codepoint_size;
-    int codepoint = get_codepoint(str, &codepoint_size);
+    int codepoint = get_codepoint(str->str, &codepoint_size);
     (void) codepoint_size;
     return codepoint;
 }
 
-char* std_string_from_integer(Gc* gc, int value) {
+StringHeader* std_string_from_integer(Gc* gc, int value) {
     char str[20];
     unsigned int len = snprintf(str, 20, "%d", value);
     return std_string_from_literal(gc, str, len);
 }
 
-char* std_string_from_bool(Gc* gc, bool value) {
+StringHeader* std_string_from_bool(Gc* gc, bool value) {
     return value ? std_string_from_literal(gc, "true", 4) : std_string_from_literal(gc, "false", 5);
 }
 
-char* std_string_from_float(Gc* gc, double value) {
+StringHeader* std_string_from_float(Gc* gc, double value) {
     char str[20];
     unsigned int len = snprintf(str, 20, "%f", value);
     return std_string_from_literal(gc, str, len);
 }
 
-char* std_string_from_any(Gc* gc, AnyValue* value) {
+StringHeader* std_string_from_any(Gc* gc, AnyValue* value) {
     if (!value) return std_string_from_literal(gc, "", 0);
 
     switch (value->type) {
@@ -461,7 +461,7 @@ char* std_string_from_any(Gc* gc, AnyValue* value) {
     case DATA_TYPE_FLOAT:
         return std_string_from_float(gc, value->data.float_val);
     case DATA_TYPE_STRING_LITERAL:
-        return std_string_from_literal(gc, value->data.str_val, strlen(value->data.str_val));
+        return std_string_from_literal(gc, value->data.literal_val, strlen(value->data.literal_val));
     case DATA_TYPE_STRING_REF:
         return value->data.str_val;
     case DATA_TYPE_BOOL:
@@ -485,8 +485,9 @@ int std_integer_from_any(AnyValue* value) {
     case DATA_TYPE_FLOAT:
         return (int)value->data.float_val;
     case DATA_TYPE_STRING_REF:
+        return atoi(value->data.str_val->str);
     case DATA_TYPE_STRING_LITERAL:
-        return atoi(value->data.str_val);
+        return atoi(value->data.literal_val);
     default:
         return 0;
     }
@@ -502,8 +503,9 @@ double std_float_from_any(AnyValue* value) {
     case DATA_TYPE_FLOAT:
         return value->data.float_val;
     case DATA_TYPE_STRING_REF:
+        return atof(value->data.str_val->str);
     case DATA_TYPE_STRING_LITERAL:
-        return atof(value->data.str_val);
+        return atof(value->data.literal_val);
     default:
         return 0;
     }
@@ -519,8 +521,9 @@ int std_bool_from_any(AnyValue* value) {
     case DATA_TYPE_FLOAT:
         return value->data.float_val != 0.0;
     case DATA_TYPE_STRING_REF:
+        return value->data.str_val->size > 0;
     case DATA_TYPE_STRING_LITERAL:
-        return *value->data.str_val != 0;
+        return *value->data.literal_val != 0;
     default:
         return 0;
     }
@@ -544,7 +547,7 @@ bool std_any_is_eq(AnyValue* left, AnyValue* right) {
     case DATA_TYPE_NOTHING:
         return true;
     case DATA_TYPE_STRING_LITERAL:
-        return !strcmp(left->data.str_val, right->data.str_val);
+        return !strcmp(left->data.literal_val, right->data.literal_val);
     case DATA_TYPE_STRING_REF:
         return std_string_is_eq(left->data.str_val, right->data.str_val);
     case DATA_TYPE_INTEGER:
@@ -586,8 +589,9 @@ int std_term_print_any(AnyValue* any) {
 
     switch (any->type) {
     case DATA_TYPE_STRING_REF:
+        return std_term_print_str(any->data.str_val->str);
     case DATA_TYPE_STRING_LITERAL:
-        return std_term_print_str(any->data.str_val);
+        return std_term_print_str(any->data.literal_val);
     case DATA_TYPE_NOTHING:
         return 0;
     case DATA_TYPE_INTEGER:
@@ -701,7 +705,7 @@ void std_term_set_cursor(int x, int y) {
     fflush(stdout);
 }
 
-char* std_term_get_char(Gc* gc) {
+StringHeader* std_term_get_char(Gc* gc) {
     char input[10];
     input[0] = (char)getchar();
     if (input[0] == '\n') return std_string_from_literal(gc, "", 0);
@@ -715,8 +719,8 @@ char* std_term_get_char(Gc* gc) {
     return std_string_from_literal(gc, input, mb_size);
 }
 
-char* std_term_get_input(Gc* gc) {
-    char* out_string = NULL;
+StringHeader* std_term_get_input(Gc* gc) {
+    StringHeader* out_string = NULL;
     char last_char = 0;
     char buf[256];
     
@@ -776,7 +780,7 @@ void std_term_clear(void) {
     term_clear();
 }
 
-char* std_term_get_char(Gc* gc) {
+StringHeader* std_term_get_char(Gc* gc) {
     char input[10];
     input[0] = term_input_get_char();
     int mb_size = leading_ones(input[0]);
@@ -826,9 +830,9 @@ int std_term_cursor_max_y(void) {
     return cur_max_y;
 }
 
-char* std_term_get_input(Gc* gc) {
+StringHeader* std_term_get_input(Gc* gc) {
     char input_char = 0;
-    char* out_string = NULL;
+    StringHeader* out_string = NULL;
 
     while (input_char != '\n') {
         char input[256];

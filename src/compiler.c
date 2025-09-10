@@ -567,6 +567,9 @@ static LLVMValueRef register_globals(Exec* exec) {
     LLVMTypeRef string_any_func_params[] = { LLVMInt64Type(), LLVMPointerType(LLVMInt8Type(), 0) };
     add_function(exec, "std_string_from_any", LLVMPointerType(LLVMInt8Type(), 0), string_any_func_params, ARRLEN(string_any_func_params), std_string_from_any, true, false);
 
+    LLVMTypeRef string_get_data_func_params[] = { LLVMPointerType(LLVMInt8Type(), 0) };
+    add_function(exec, "std_string_get_data", LLVMPointerType(LLVMInt8Type(), 0), string_get_data_func_params, ARRLEN(string_get_data_func_params), std_string_get_data, false, false);
+
     LLVMTypeRef integer_any_func_params[] = { LLVMPointerType(LLVMInt8Type(), 0) };
     add_function(exec, "std_integer_from_any", LLVMInt32Type(), integer_any_func_params, ARRLEN(integer_any_func_params), std_integer_from_any, false, false);
 

@@ -32,7 +32,8 @@ typedef struct AnyValue AnyValue;
 typedef struct List List;
 
 typedef union {
-    char* str_val;
+    char* literal_val;
+    StringHeader* str_val;
     int integer_val;
     double float_val;
     List* list_val;
@@ -67,31 +68,32 @@ int std_integer_from_any(AnyValue* value);
 double std_float_from_any(AnyValue* value);
 int std_bool_from_any(AnyValue* value);
 List* std_list_from_any(Gc* gc, AnyValue* value);
-char* std_string_from_any(Gc* gc, AnyValue* value);
+StringHeader* std_string_from_any(Gc* gc, AnyValue* value);
 bool std_any_is_eq(AnyValue* left, AnyValue* right);
 
 // String operations
-char* std_string_from_literal(Gc* gc, const char* literal, unsigned int size);
-char* std_string_from_integer(Gc* gc, int value);
-char* std_string_from_bool(Gc* gc, bool value);
-char* std_string_from_float(Gc* gc, double value);
+StringHeader* std_string_from_literal(Gc* gc, const char* literal, unsigned int size);
+StringHeader* std_string_from_integer(Gc* gc, int value);
+StringHeader* std_string_from_bool(Gc* gc, bool value);
+StringHeader* std_string_from_float(Gc* gc, double value);
+char* std_string_get_data(StringHeader* str);
 
-int std_string_length(char* str);
-char* std_string_letter_in(Gc* gc, int target, char* input_str);
-char* std_string_substring(Gc* gc, int begin, int end, char* input_str);
-char* std_string_join(Gc* gc, char* left, char* right);
-bool std_string_is_eq(char* left, char* right);
-char* std_string_chr(Gc* gc, int value);
-int std_string_ord(char* str);
+int std_string_length(StringHeader* str);
+StringHeader* std_string_letter_in(Gc* gc, int target, StringHeader* input_str);
+StringHeader* std_string_substring(Gc* gc, int begin, int end, StringHeader* input_str);
+StringHeader* std_string_join(Gc* gc, StringHeader* left, StringHeader* right);
+bool std_string_is_eq(StringHeader* left, StringHeader* right);
+StringHeader* std_string_chr(Gc* gc, int value);
+int std_string_ord(StringHeader* str);
 
 // Terminal control
-char* std_term_get_char(Gc* gc);
+StringHeader* std_term_get_char(Gc* gc);
 void std_term_set_cursor(int x, int y);
 int std_term_cursor_x(void);
 int std_term_cursor_y(void);
 int std_term_cursor_max_x(void);
 int std_term_cursor_max_y(void);
-char* std_term_get_input(Gc* gc);
+StringHeader* std_term_get_input(Gc* gc);
 int std_term_print_list(List* list);
 int std_term_print_any(AnyValue* any);
 int std_term_print_str(const char* str);

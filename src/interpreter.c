@@ -40,8 +40,9 @@ int data_to_integer(AnyValue arg) {
     case DATA_TYPE_FLOAT:
         return (int)arg.data.float_val;
     case DATA_TYPE_STRING_LITERAL:
+        return atoi(arg.data.literal_val);
     case DATA_TYPE_STRING_REF:
-        return atoi(arg.data.str_val);
+        return atoi(arg.data.str_val->str);
     default:
         return 0;
     }
@@ -55,8 +56,9 @@ double data_to_float(AnyValue arg) {
     case DATA_TYPE_FLOAT:
         return arg.data.float_val;
     case DATA_TYPE_STRING_LITERAL:
+        return atof(arg.data.literal_val);
     case DATA_TYPE_STRING_REF:
-        return atof(arg.data.str_val);
+        return atof(arg.data.str_val->str);
     default:
         return 0.0;
     }
@@ -70,8 +72,9 @@ int data_to_bool(AnyValue arg) {
     case DATA_TYPE_FLOAT:
         return arg.data.float_val != 0.0;
     case DATA_TYPE_STRING_LITERAL:
+        return *arg.data.literal_val != 0;
     case DATA_TYPE_STRING_REF:
-        return *arg.data.str_val != 0;
+        return *arg.data.str_val->str != 0;
     case DATA_TYPE_LIST:
         return arg.data.list_val->size != 0;
     default:
@@ -80,8 +83,8 @@ int data_to_bool(AnyValue arg) {
 }
 
 char* data_to_any_string(Exec* exec, AnyValue arg) {
-    if (arg.type == DATA_TYPE_STRING_LITERAL) return arg.data.str_val;
-    return std_string_from_any(&exec->gc, &arg);
+    if (arg.type == DATA_TYPE_STRING_LITERAL) return arg.data.literal_val;
+    return std_string_from_any(&exec->gc, &arg)->str;
 }
 
 Exec exec_new(void) {

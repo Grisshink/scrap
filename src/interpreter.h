@@ -144,7 +144,7 @@ struct Exec {
 
 #define DATA_STRING_LITERAL(val) (AnyValue) { \
     .type = DATA_TYPE_STRING_LITERAL, \
-    .data = (AnyValueData) { .str_val = (val) }, \
+    .data = (AnyValueData) { .literal_val = (val) }, \
 }
 
 #define DATA_STRING_REF(val) (AnyValue) { \

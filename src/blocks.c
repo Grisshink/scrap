@@ -307,11 +307,9 @@ bool block_declare_var(Exec* exec, Block* block, int argc, AnyValue* argv, AnyVa
         return false;
     }
 
-    variable_stack_push_var(exec, argv[0].data.str_val, argv[1]);
+    variable_stack_push_var(exec, argv[0].data.literal_val, argv[1]);
 
-    if (argv[1].type == DATA_TYPE_STRING_REF) {
-        gc_add_str_root(&exec->gc, (char*)argv[1].data.str_val);
-    } else if (argv[1].type == DATA_TYPE_LIST || argv[1].type == DATA_TYPE_ANY) {
+    if (argv[1].type == DATA_TYPE_LIST || argv[1].type == DATA_TYPE_ANY || argv[1].type == DATA_TYPE_STRING_REF) {
         gc_add_root(&exec->gc, &argv[1].data);
     }
 
@@ -349,9 +347,7 @@ bool block_set_var(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue*
     var->value = argv[1];
 
     // FIXME: block_set_var should replace the root chunk, not add a new root every time
-    if (argv[1].type == DATA_TYPE_STRING_REF) {
-        gc_add_str_root(&exec->gc, (char*)argv[1].data.str_val);
-    } else if (argv[1].type == DATA_TYPE_LIST || argv[1].type == DATA_TYPE_ANY) {
+    if (argv[1].type == DATA_TYPE_LIST || argv[1].type == DATA_TYPE_ANY || argv[1].type == DATA_TYPE_STRING_REF) {
         gc_add_root(&exec->gc, &argv[1].data);
     }
 
@@ -446,8 +442,10 @@ bool block_print(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* r
         bytes_sent = term_print_str(argv[0].data.integer_val ? "true" : "false");
         break;
     case DATA_TYPE_STRING_LITERAL:
+        bytes_sent = term_print_str(argv[0].data.literal_val);
+        break;
     case DATA_TYPE_STRING_REF:
-        bytes_sent = term_print_str(argv[0].data.str_val);
+        bytes_sent = term_print_str(argv[0].data.str_val->str);
         break;
     case DATA_TYPE_FLOAT:
         bytes_sent = term_print_float(argv[0].data.float_val);
@@ -557,21 +555,21 @@ bool block_set_fg_color(Exec* exec, Block* block, int argc, AnyValue* argv, AnyV
         return false;
     }
 
-    if (!strcmp(argv[0].data.str_val, "black")) {
+    if (!strcmp(argv[0].data.literal_val, "black")) {
         term_set_fg_color(CONVERT_COLOR(BLACK, TermColor));
-    } else if (!strcmp(argv[0].data.str_val, "red")) {
+    } else if (!strcmp(argv[0].data.literal_val, "red")) {
         term_set_fg_color(CONVERT_COLOR(RED, TermColor));
-    } else if (!strcmp(argv[0].data.str_val, "yellow")) {
+    } else if (!strcmp(argv[0].data.literal_val, "yellow")) {
         term_set_fg_color(CONVERT_COLOR(YELLOW, TermColor));
-    } else if (!strcmp(argv[0].data.str_val, "green")) {
+    } else if (!strcmp(argv[0].data.literal_val, "green")) {
         term_set_fg_color(CONVERT_COLOR(GREEN, TermColor));
-    } else if (!strcmp(argv[0].data.str_val, "blue")) {
+    } else if (!strcmp(argv[0].data.literal_val, "blue")) {
         term_set_fg_color(CONVERT_COLOR(BLUE, TermColor));
-    } else if (!strcmp(argv[0].data.str_val, "purple")) {
+    } else if (!strcmp(argv[0].data.literal_val, "purple")) {
         term_set_fg_color(CONVERT_COLOR(PURPLE, TermColor));
-    } else if (!strcmp(argv[0].data.str_val, "cyan")) {
+    } else if (!strcmp(argv[0].data.literal_val, "cyan")) {
         term_set_fg_color((TermColor) { 0x00, 0xff, 0xff, 0xff});
-    } else if (!strcmp(argv[0].data.str_val, "white")) {
+    } else if (!strcmp(argv[0].data.literal_val, "white")) {
         term_set_fg_color(CONVERT_COLOR(WHITE, TermColor));
     }
 
@@ -589,21 +587,21 @@ bool block_set_bg_color(Exec* exec, Block* block, int argc, AnyValue* argv, AnyV
         return false;
     }
 
-    if (!strcmp(argv[0].data.str_val, "black")) {
+    if (!strcmp(argv[0].data.literal_val, "black")) {
         term_set_bg_color(CONVERT_COLOR(BLACK, TermColor));
-    } else if (!strcmp(argv[0].data.str_val, "red")) {
+    } else if (!strcmp(argv[0].data.literal_val, "red")) {
         term_set_bg_color(CONVERT_COLOR(RED, TermColor));
-    } else if (!strcmp(argv[0].data.str_val, "yellow")) {
+    } else if (!strcmp(argv[0].data.literal_val, "yellow")) {
         term_set_bg_color(CONVERT_COLOR(YELLOW, TermColor));
-    } else if (!strcmp(argv[0].data.str_val, "green")) {
+    } else if (!strcmp(argv[0].data.literal_val, "green")) {
         term_set_bg_color(CONVERT_COLOR(GREEN, TermColor));
-    } else if (!strcmp(argv[0].data.str_val, "blue")) {
+    } else if (!strcmp(argv[0].data.literal_val, "blue")) {
         term_set_bg_color(CONVERT_COLOR(BLUE, TermColor));
-    } else if (!strcmp(argv[0].data.str_val, "purple")) {
+    } else if (!strcmp(argv[0].data.literal_val, "purple")) {
         term_set_bg_color(CONVERT_COLOR(PURPLE, TermColor));
-    } else if (!strcmp(argv[0].data.str_val, "cyan")) {
+    } else if (!strcmp(argv[0].data.literal_val, "cyan")) {
         term_set_bg_color((TermColor) { 0x00, 0xff, 0xff, 0xff});
-    } else if (!strcmp(argv[0].data.str_val, "white")) {
+    } else if (!strcmp(argv[0].data.literal_val, "white")) {
         term_set_bg_color(CONVERT_COLOR(WHITE, TermColor));
     }
 
@@ -646,21 +644,21 @@ bool block_term_set_clear(Exec* exec, Block* block, int argc, AnyValue* argv, An
         return false;
     }
 
-    if (!strcmp(argv[0].data.str_val, "black")) {
+    if (!strcmp(argv[0].data.literal_val, "black")) {
         term_set_clear_color(CONVERT_COLOR(BLACK, TermColor));
-    } else if (!strcmp(argv[0].data.str_val, "red")) {
+    } else if (!strcmp(argv[0].data.literal_val, "red")) {
         term_set_clear_color(CONVERT_COLOR(RED, TermColor));
-    } else if (!strcmp(argv[0].data.str_val, "yellow")) {
+    } else if (!strcmp(argv[0].data.literal_val, "yellow")) {
         term_set_clear_color(CONVERT_COLOR(YELLOW, TermColor));
-    } else if (!strcmp(argv[0].data.str_val, "green")) {
+    } else if (!strcmp(argv[0].data.literal_val, "green")) {
         term_set_clear_color(CONVERT_COLOR(GREEN, TermColor));
-    } else if (!strcmp(argv[0].data.str_val, "blue")) {
+    } else if (!strcmp(argv[0].data.literal_val, "blue")) {
         term_set_clear_color(CONVERT_COLOR(BLUE, TermColor));
-    } else if (!strcmp(argv[0].data.str_val, "purple")) {
+    } else if (!strcmp(argv[0].data.literal_val, "purple")) {
         term_set_clear_color(CONVERT_COLOR(PURPLE, TermColor));
-    } else if (!strcmp(argv[0].data.str_val, "cyan")) {
+    } else if (!strcmp(argv[0].data.literal_val, "cyan")) {
         term_set_clear_color((TermColor) { 0x00, 0xff, 0xff, 0xff});
-    } else if (!strcmp(argv[0].data.str_val, "white")) {
+    } else if (!strcmp(argv[0].data.literal_val, "white")) {
         term_set_clear_color(CONVERT_COLOR(WHITE, TermColor));
     }
 
@@ -899,28 +897,28 @@ bool block_math(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* re
         return false;
     }
 
-    if (!strcmp(argv[0].data.str_val, "sin")) {
+    if (!strcmp(argv[0].data.literal_val, "sin")) {
         *return_val = DATA_FLOAT(sin(data_to_float(argv[1])));
-    } else if (!strcmp(argv[0].data.str_val, "cos")) {
+    } else if (!strcmp(argv[0].data.literal_val, "cos")) {
         *return_val = DATA_FLOAT(cos(data_to_float(argv[1])));
-    } else if (!strcmp(argv[0].data.str_val, "tan")) {
+    } else if (!strcmp(argv[0].data.literal_val, "tan")) {
         *return_val = DATA_FLOAT(tan(data_to_float(argv[1])));
-    } else if (!strcmp(argv[0].data.str_val, "asin")) {
+    } else if (!strcmp(argv[0].data.literal_val, "asin")) {
         *return_val = DATA_FLOAT(asin(data_to_float(argv[1])));
-    } else if (!strcmp(argv[0].data.str_val, "acos")) {
+    } else if (!strcmp(argv[0].data.literal_val, "acos")) {
         *return_val = DATA_FLOAT(acos(data_to_float(argv[1])));
-    } else if (!strcmp(argv[0].data.str_val, "atan")) {
+    } else if (!strcmp(argv[0].data.literal_val, "atan")) {
         *return_val = DATA_FLOAT(atan(data_to_float(argv[1])));
-    } else if (!strcmp(argv[0].data.str_val, "sqrt")) {
+    } else if (!strcmp(argv[0].data.literal_val, "sqrt")) {
         *return_val = DATA_FLOAT(sqrt(data_to_float(argv[1])));
-    } else if (!strcmp(argv[0].data.str_val, "round")) {
+    } else if (!strcmp(argv[0].data.literal_val, "round")) {
         *return_val = DATA_FLOAT(round(data_to_float(argv[1])));
-    } else if (!strcmp(argv[0].data.str_val, "floor")) {
+    } else if (!strcmp(argv[0].data.literal_val, "floor")) {
         *return_val = DATA_FLOAT(floor(data_to_float(argv[1])));
-    } else if (!strcmp(argv[0].data.str_val, "ceil")) {
+    } else if (!strcmp(argv[0].data.literal_val, "ceil")) {
         *return_val = DATA_FLOAT(ceil(data_to_float(argv[1])));
     } else {
-        exec_set_error(exec, block, "Invalid input item %s", argv[0].data.str_val);
+        exec_set_error(exec, block, "Invalid input item %s", argv[0].data.literal_val);
         return false;
     }
     return true;
@@ -1107,8 +1105,10 @@ bool block_eq(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* retu
         *return_val = DATA_BOOL(argv[0].data.float_val == argv[1].data.float_val);
         break;
     case DATA_TYPE_STRING_LITERAL:
+        *return_val = DATA_BOOL(!strcmp(argv[0].data.literal_val, argv[1].data.literal_val));
+        break;
     case DATA_TYPE_STRING_REF:
-        *return_val = DATA_BOOL(!strcmp(argv[0].data.str_val, argv[1].data.str_val));
+        *return_val = DATA_BOOL(std_string_is_eq(argv[0].data.str_val, argv[1].data.str_val));
         break;
     case DATA_TYPE_NOTHING:
         *return_val = DATA_BOOL(1);
@@ -1212,7 +1212,7 @@ LLVMValueRef arg_to_bool(Exec* exec, Block* block, FuncArg arg) {
     case DATA_TYPE_STRING_LITERAL:
         return CONST_BOOLEAN(*arg.data.str != 0);
     case DATA_TYPE_STRING_REF: ;
-        LLVMValueRef first_char = LLVMBuildLoad2(exec->builder, LLVMInt8Type(), arg.data.value, "bool_cast");
+        LLVMValueRef first_char = LLVMBuildLoad2(exec->builder, LLVMInt8Type(), build_call(exec, "std_string_get_data", arg.data.value), "bool_cast");
         return LLVMBuildICmp(exec->builder, LLVMIntNE, first_char, LLVMConstInt(LLVMInt8Type(), 0, true), "bool_cast");
     case DATA_TYPE_LIST:
     case DATA_TYPE_NOTHING:
@@ -1238,7 +1238,7 @@ LLVMValueRef arg_to_integer(Exec* exec, Block* block, FuncArg arg) {
     case DATA_TYPE_STRING_LITERAL:
         return CONST_INTEGER(atoi(arg.data.str));
     case DATA_TYPE_STRING_REF: ;
-        return build_call(exec, "atoi", arg.data.value);
+        return build_call(exec, "atoi", build_call(exec, "std_string_get_data", arg.data.value));
     case DATA_TYPE_LIST:
     case DATA_TYPE_NOTHING:
         return CONST_INTEGER(0);
@@ -1263,7 +1263,7 @@ LLVMValueRef arg_to_float(Exec* exec, Block* block, FuncArg arg) {
     case DATA_TYPE_STRING_LITERAL:
         return CONST_FLOAT(atof(arg.data.str));
     case DATA_TYPE_STRING_REF:
-        return build_call(exec, "atof", arg.data.value);
+        return build_call(exec, "atof", build_call(exec, "std_string_get_data", arg.data.value));
     case DATA_TYPE_LIST:
     case DATA_TYPE_NOTHING:
         return CONST_FLOAT(0.0);
@@ -2337,7 +2337,7 @@ bool block_print(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* ret
                                    : CONST_INTEGER(0));
         return true;
     case DATA_TYPE_STRING_REF:
-        *return_val = DATA_INTEGER(build_call(exec, "std_term_print_str", argv[0].data.value));
+        *return_val = DATA_INTEGER(build_call(exec, "std_term_print_str", build_call(exec, "std_string_get_data", argv[0].data.value)));
         return true;
     case DATA_TYPE_NOTHING:
         *return_val = DATA_INTEGER(CONST_INTEGER(0));
@@ -2478,7 +2478,7 @@ bool block_set_var(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* r
     }
 
     if (LLVMTypeOf(argv[1].data.value) == LLVMPointerType(LLVMInt8Type(), 0)) {
-        build_call(exec, argv[1].type == DATA_TYPE_STRING_REF ? "gc_add_str_root" : "gc_add_root", CONST_GC, argv[1].data.value);
+        build_call(exec, "gc_add_root", CONST_GC, argv[1].data.value);
     }
 
     LLVMBuildStore(exec->builder, argv[1].data.value, var->value.data.value);
@@ -2577,7 +2577,7 @@ bool block_declare_var(Exec* exec, Block* block, int argc, FuncArg* argv, FuncAr
 
     LLVMBuildStore(exec->builder, argv[1].data.value, var.value.data.value);
     if (data_type == LLVMPointerType(LLVMInt8Type(), 0)) {
-        build_call(exec, argv[1].type == DATA_TYPE_STRING_REF ? "gc_add_str_root" : "gc_add_root", CONST_GC, argv[1].data.value);
+        build_call(exec, "gc_add_root", CONST_GC, argv[1].data.value);
     }
     *return_val = argv[1];
     return true;
