@@ -406,10 +406,11 @@ StringHeader* std_string_join(Gc* gc, StringHeader* left, StringHeader* right) {
 
 int std_string_length(StringHeader* str) {
     int len = 0;
-    while (*str->str) {
-        int mb_size = leading_ones(*str->str);
+    char* cur = str->str;
+    while (*cur) {
+        int mb_size = leading_ones(*cur);
         if (mb_size == 0) mb_size = 1;
-        str += mb_size;
+        cur += mb_size;
         len++;
     }
     return len;
