@@ -802,6 +802,15 @@ bool block_convert_bool(Exec* exec, Block* block, int argc, AnyValue* argv, AnyV
     return true;
 }
 
+bool block_typeof(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
+    (void) control_state;
+    (void) block;
+    (void) exec;
+    (void) argc;
+    *return_val = DATA_STRING_LITERAL((char*)type_to_str(argv[0].type));
+    return true;
+}
+
 bool block_plus(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
@@ -1968,6 +1977,21 @@ bool block_plus(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* retu
         if (!right) return false;
         *return_val = DATA_FLOAT(LLVMBuildFAdd(exec->builder, argv[0].data.value, right, "add"));
     }
+    return true;
+}
+
+// TODO: Make this block evaluate arguments lazily
+bool block_typeof(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
+    (void) control_state;
+    (void) block;
+    (void) exec;
+    (void) argc;
+    *return_val = (FuncArg) {
+        .type = DATA_TYPE_STRING_LITERAL,
+        .data = (FuncArgData) {
+            .str = (char*)type_to_str(argv[0].type),
+        },
+    };
     return true;
 }
 
@@ -3395,6 +3419,12 @@ void register_blocks(Vm* vm) {
     blockdef_add_argument(sc_bool, "", gettext("any"), BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_bool);
     add_to_category(sc_bool, cat_misc);
+
+    Blockdef* sc_typeof = blockdef_new("typeof", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_MISC_COLOR, block_typeof);
+    blockdef_add_text(sc_typeof, gettext("Type of"));
+    blockdef_add_argument(sc_typeof, "", gettext("any"), BLOCKCONSTR_UNLIMITED);
+    blockdef_register(vm, sc_typeof);
+    add_to_category(sc_typeof, cat_misc);
 
     Blockdef* sc_nothing = blockdef_new("nothing", BLOCKTYPE_NORMAL, (BlockdefColor) { 0x77, 0x77, 0x77, 0xff }, block_noop);
     blockdef_add_text(sc_nothing, gettext("Nothing"));
