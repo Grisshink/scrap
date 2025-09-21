@@ -2563,6 +2563,11 @@ bool block_declare_var(Exec* exec, Block* block, int argc, FuncArg* argv, FuncAr
         return false;
     }
 
+    if (*argv[0].data.str == 0) {
+        exec_set_error(exec, block, "Cannot declare variable with empty name");
+        return false;
+    }
+
     if (argv[1].type == DATA_TYPE_NOTHING) {
         exec_set_error(exec, block, "Cannot declare a variable with zero sized type (i.e. Nothing)");
         return false;
