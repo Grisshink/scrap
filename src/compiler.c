@@ -718,6 +718,9 @@ static LLVMValueRef register_globals(Exec* exec) {
     LLVMTypeRef gc_add_root_func_params[] = { LLVMInt64Type(), LLVMPointerType(LLVMInt8Type(), 0) };
     add_function(exec, "gc_add_root", LLVMVoidType(), gc_add_root_func_params, ARRLEN(gc_add_root_func_params), gc_add_root, false, false);
 
+    LLVMTypeRef gc_add_temp_root_func_params[] = { LLVMInt64Type(), LLVMPointerType(LLVMInt8Type(), 0) };
+    add_function(exec, "gc_add_temp_root", LLVMVoidType(), gc_add_temp_root_func_params, ARRLEN(gc_add_temp_root_func_params), gc_add_temp_root, false, false);
+
     LLVMTypeRef gc_collect_func_params[] = { LLVMInt64Type() };
     add_function(exec, "gc_collect", LLVMVoidType(), gc_collect_func_params, ARRLEN(gc_collect_func_params), gc_collect, false, false);
 

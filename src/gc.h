@@ -60,6 +60,7 @@ void* gc_malloc(Gc* gc, size_t size, DataType data_type);
 void gc_collect(Gc* gc);
 void gc_flush(Gc* gc);
 void gc_add_root(Gc* gc, void* ptr);
+void gc_add_temp_root(Gc* gc, void* ptr);
 void gc_root_save(Gc* gc);
 void gc_root_restore(Gc* gc);
 

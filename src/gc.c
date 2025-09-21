@@ -241,6 +241,11 @@ void gc_add_root(Gc* gc, void* stack_ptr) {
     vector_add(&gc->root_chunks, stack_ptr);
 }
 
+void gc_add_temp_root(Gc* gc, void* ptr) {
+    GcChunkData* chunk = ((GcChunkData*)ptr) - 1;
+    vector_add(&gc->root_temp_chunks, chunk);
+}
+
 void gc_root_save(Gc* gc) {
     if (vector_size(gc->roots_bases) > 1024) {
         std_term_print_str("*[GC] Root stack overflow!*");

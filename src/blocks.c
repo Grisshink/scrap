@@ -1144,6 +1144,10 @@ bool block_exec_custom(Exec* exec, Block* block, int argc, AnyValue* argv, AnyVa
     for (size_t i = 0; i < vector_size(exec->defined_functions); i++) {
         if (block->blockdef == exec->defined_functions[i].blockdef) {
             if (!exec_run_chain(exec, exec->defined_functions[i].run_chain, argc, argv, return_val)) return false;
+
+            if (return_val->type == DATA_TYPE_LIST || return_val->type == DATA_TYPE_ANY || return_val->type == DATA_TYPE_STRING) {
+                gc_add_temp_root(&exec->gc, (void*)return_val->data.literal_val);
+            }
             return true;
         }
     }
@@ -1434,6 +1438,11 @@ bool block_return(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* re
     LLVMPositionBuilderAtEnd(exec->builder, return_block);
 
     build_call(exec, "gc_root_restore", CONST_GC);
+
+    LLVMTypeRef data_type = LLVMTypeOf(argv[0].data.value);
+    if (data_type == LLVMPointerType(LLVMInt8Type(), 0)) {
+        build_call(exec, "gc_add_temp_root", CONST_GC, argv[0].data.value);
+    }
     
     LLVMValueRef custom_return = arg_to_any(exec, block, argv[0]);
     if (!custom_return) return false;
