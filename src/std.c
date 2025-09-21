@@ -240,10 +240,10 @@ static AnyValue std_get_any(DataType data_type, va_list va) {
     case DATA_TYPE_FLOAT:
         data.float_val = va_arg(va, double);
         break;
-    case DATA_TYPE_STRING_REF:
+    case DATA_TYPE_STRING:
         data.str_val = va_arg(va, StringHeader*);
         break;
-    case DATA_TYPE_STRING_LITERAL:
+    case DATA_TYPE_LITERAL:
         data.literal_val = va_arg(va, char*);
         break;
     case DATA_TYPE_LIST:
@@ -333,7 +333,7 @@ AnyValue* std_any_from_value(Gc* gc, DataType data_type, ...) {
 }
 
 StringHeader* std_string_from_literal(Gc* gc, const char* literal, unsigned int size) {
-    StringHeader* out_str = gc_malloc(gc, sizeof(StringHeader) + size + 1, DATA_TYPE_STRING_REF); // Don't forget null terminator. It is not included in size
+    StringHeader* out_str = gc_malloc(gc, sizeof(StringHeader) + size + 1, DATA_TYPE_STRING); // Don't forget null terminator. It is not included in size
     memcpy(out_str->str, literal, size);
     out_str->size = size;
     out_str->capacity = size;
@@ -395,7 +395,7 @@ StringHeader* std_string_substring(Gc* gc, int begin, int end, StringHeader* inp
 }
 
 StringHeader* std_string_join(Gc* gc, StringHeader* left, StringHeader* right) {
-    StringHeader* out_str = gc_malloc(gc, sizeof(StringHeader) + left->size + right->size + 1, DATA_TYPE_STRING_REF);
+    StringHeader* out_str = gc_malloc(gc, sizeof(StringHeader) + left->size + right->size + 1, DATA_TYPE_STRING);
     memcpy(out_str->str, left->str, left->size);
     memcpy(out_str->str + left->size, right->str, right->size);
     out_str->size = left->size + right->size;
@@ -461,9 +461,9 @@ StringHeader* std_string_from_any(Gc* gc, AnyValue* value) {
         return std_string_from_integer(gc, value->data.integer_val);
     case DATA_TYPE_FLOAT:
         return std_string_from_float(gc, value->data.float_val);
-    case DATA_TYPE_STRING_LITERAL:
+    case DATA_TYPE_LITERAL:
         return std_string_from_literal(gc, value->data.literal_val, strlen(value->data.literal_val));
-    case DATA_TYPE_STRING_REF:
+    case DATA_TYPE_STRING:
         return value->data.str_val;
     case DATA_TYPE_BOOL:
         return std_string_from_bool(gc, value->data.integer_val);
@@ -485,9 +485,9 @@ int std_integer_from_any(AnyValue* value) {
         return value->data.integer_val;
     case DATA_TYPE_FLOAT:
         return (int)value->data.float_val;
-    case DATA_TYPE_STRING_REF:
+    case DATA_TYPE_STRING:
         return atoi(value->data.str_val->str);
-    case DATA_TYPE_STRING_LITERAL:
+    case DATA_TYPE_LITERAL:
         return atoi(value->data.literal_val);
     default:
         return 0;
@@ -503,9 +503,9 @@ double std_float_from_any(AnyValue* value) {
         return (double)value->data.integer_val;
     case DATA_TYPE_FLOAT:
         return value->data.float_val;
-    case DATA_TYPE_STRING_REF:
+    case DATA_TYPE_STRING:
         return atof(value->data.str_val->str);
-    case DATA_TYPE_STRING_LITERAL:
+    case DATA_TYPE_LITERAL:
         return atof(value->data.literal_val);
     default:
         return 0;
@@ -521,9 +521,9 @@ int std_bool_from_any(AnyValue* value) {
         return value->data.integer_val != 0;
     case DATA_TYPE_FLOAT:
         return value->data.float_val != 0.0;
-    case DATA_TYPE_STRING_REF:
+    case DATA_TYPE_STRING:
         return value->data.str_val->size > 0;
-    case DATA_TYPE_STRING_LITERAL:
+    case DATA_TYPE_LITERAL:
         return *value->data.literal_val != 0;
     default:
         return 0;
@@ -547,9 +547,9 @@ bool std_any_is_eq(AnyValue* left, AnyValue* right) {
     switch (left->type) {
     case DATA_TYPE_NOTHING:
         return true;
-    case DATA_TYPE_STRING_LITERAL:
+    case DATA_TYPE_LITERAL:
         return !strcmp(left->data.literal_val, right->data.literal_val);
-    case DATA_TYPE_STRING_REF:
+    case DATA_TYPE_STRING:
         return std_string_is_eq(left->data.str_val, right->data.str_val);
     case DATA_TYPE_INTEGER:
     case DATA_TYPE_BOOL:
@@ -589,9 +589,9 @@ int std_term_print_any(AnyValue* any) {
     if (!any) return 0;
 
     switch (any->type) {
-    case DATA_TYPE_STRING_REF:
+    case DATA_TYPE_STRING:
         return std_term_print_str(any->data.str_val->str);
-    case DATA_TYPE_STRING_LITERAL:
+    case DATA_TYPE_LITERAL:
         return std_term_print_str(any->data.literal_val);
     case DATA_TYPE_NOTHING:
         return 0;

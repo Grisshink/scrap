@@ -276,7 +276,7 @@ static bool evaluate_block(Exec* exec, Block* block, FuncArg* return_val, Contro
             case ARGUMENT_TEXT:
             case ARGUMENT_CONST_STRING:
                 arg = vector_add_dst(&args);
-                arg->type = DATA_TYPE_STRING_LITERAL;
+                arg->type = DATA_TYPE_LITERAL;
                 arg->data.str = block->arguments[i].data.text;
                 break;
             case ARGUMENT_BLOCK:

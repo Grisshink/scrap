@@ -142,13 +142,13 @@ struct Exec {
     .data = (AnyValueData) { .integer_val = (val) }, \
 }
 
-#define DATA_STRING_LITERAL(val) (AnyValue) { \
-    .type = DATA_TYPE_STRING_LITERAL, \
+#define DATA_LITERAL(val) (AnyValue) { \
+    .type = DATA_TYPE_LITERAL, \
     .data = (AnyValueData) { .literal_val = (val) }, \
 }
 
-#define DATA_STRING_REF(val) (AnyValue) { \
-    .type = DATA_TYPE_STRING_REF, \
+#define DATA_STRING(val) (AnyValue) { \
+    .type = DATA_TYPE_STRING, \
     .data = (AnyValueData) { .str_val = (val) }, \
 }
 

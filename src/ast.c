@@ -27,12 +27,12 @@ const char* type_to_str(DataType type) {
     case DATA_TYPE_NOTHING:
         return "nothing";
     case DATA_TYPE_INTEGER:
-        return "int";
+        return "integer";
     case DATA_TYPE_FLOAT:
         return "float";
-    case DATA_TYPE_STRING_REF:
+    case DATA_TYPE_STRING:
         return "str";
-    case DATA_TYPE_STRING_LITERAL:
+    case DATA_TYPE_LITERAL:
         return "literal";
     case DATA_TYPE_BOOL:
         return "bool";

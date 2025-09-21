@@ -101,7 +101,7 @@ static void gc_mark_any(Gc* gc, AnyValue* any) {
             chunk_inner->marked = 1;
             gc_mark_refs(gc, chunk_inner);
         }
-    } else if (any->type == DATA_TYPE_STRING_REF) {
+    } else if (any->type == DATA_TYPE_STRING) {
         chunk_inner = ((GcChunkData*)any->data.str_val) - 1;
         chunk_inner->marked = 1;
     }

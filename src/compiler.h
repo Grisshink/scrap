@@ -171,7 +171,7 @@ typedef struct {
 }
 
 #define DATA_BOOLEAN(val) _DATA(DATA_TYPE_BOOL, val)
-#define DATA_STRING_REF(val) _DATA(DATA_TYPE_STRING_REF, val)
+#define DATA_STRING_REF(val) _DATA(DATA_TYPE_STRING, val)
 #define DATA_INTEGER(val) _DATA(DATA_TYPE_INTEGER, val)
 #define DATA_FLOAT(val) _DATA(DATA_TYPE_FLOAT, val)
 #define DATA_LIST(val) _DATA(DATA_TYPE_LIST, val)

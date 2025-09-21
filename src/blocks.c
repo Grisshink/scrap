@@ -298,8 +298,8 @@ bool block_declare_var(Exec* exec, Block* block, int argc, AnyValue* argv, AnyVa
     (void) control_state;
     (void) argc;
 
-    if (argv[0].type != DATA_TYPE_STRING_LITERAL) {
-        exec_set_error(exec, block, "Invalid data type %s, expected %s", type_to_str(argv[0].type), type_to_str(DATA_TYPE_STRING_LITERAL));
+    if (argv[0].type != DATA_TYPE_LITERAL) {
+        exec_set_error(exec, block, "Invalid data type %s, expected %s", type_to_str(argv[0].type), type_to_str(DATA_TYPE_LITERAL));
         return false;
     }
     if (block->parent) {
@@ -309,7 +309,7 @@ bool block_declare_var(Exec* exec, Block* block, int argc, AnyValue* argv, AnyVa
 
     variable_stack_push_var(exec, argv[0].data.literal_val, argv[1]);
 
-    if (argv[1].type == DATA_TYPE_LIST || argv[1].type == DATA_TYPE_ANY || argv[1].type == DATA_TYPE_STRING_REF) {
+    if (argv[1].type == DATA_TYPE_LIST || argv[1].type == DATA_TYPE_ANY || argv[1].type == DATA_TYPE_STRING) {
         gc_add_root(&exec->gc, &argv[1].data);
     }
 
@@ -347,7 +347,7 @@ bool block_set_var(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue*
     var->value = argv[1];
 
     // FIXME: block_set_var should replace the root chunk, not add a new root every time
-    if (argv[1].type == DATA_TYPE_LIST || argv[1].type == DATA_TYPE_ANY || argv[1].type == DATA_TYPE_STRING_REF) {
+    if (argv[1].type == DATA_TYPE_LIST || argv[1].type == DATA_TYPE_ANY || argv[1].type == DATA_TYPE_STRING) {
         gc_add_root(&exec->gc, &argv[1].data);
     }
 
@@ -441,10 +441,10 @@ bool block_print(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* r
     case DATA_TYPE_BOOL:
         bytes_sent = term_print_str(argv[0].data.integer_val ? "true" : "false");
         break;
-    case DATA_TYPE_STRING_LITERAL:
+    case DATA_TYPE_LITERAL:
         bytes_sent = term_print_str(argv[0].data.literal_val);
         break;
-    case DATA_TYPE_STRING_REF:
+    case DATA_TYPE_STRING:
         bytes_sent = term_print_str(argv[0].data.str_val->str);
         break;
     case DATA_TYPE_FLOAT:
@@ -550,8 +550,8 @@ bool block_set_fg_color(Exec* exec, Block* block, int argc, AnyValue* argv, AnyV
     (void) block;
     (void) exec;
     (void) argc;
-    if (argv[0].type != DATA_TYPE_STRING_LITERAL) {
-        exec_set_error(exec, block, "Invalid data type %s, expected %s", type_to_str(argv[0].type), type_to_str(DATA_TYPE_STRING_LITERAL));
+    if (argv[0].type != DATA_TYPE_LITERAL) {
+        exec_set_error(exec, block, "Invalid data type %s, expected %s", type_to_str(argv[0].type), type_to_str(DATA_TYPE_LITERAL));
         return false;
     }
 
@@ -582,8 +582,8 @@ bool block_set_bg_color(Exec* exec, Block* block, int argc, AnyValue* argv, AnyV
     (void) block;
     (void) exec;
     (void) argc;
-    if (argv[0].type != DATA_TYPE_STRING_LITERAL) {
-        exec_set_error(exec, block, "Invalid data type %s, expected %s", type_to_str(argv[0].type), type_to_str(DATA_TYPE_STRING_LITERAL));
+    if (argv[0].type != DATA_TYPE_LITERAL) {
+        exec_set_error(exec, block, "Invalid data type %s, expected %s", type_to_str(argv[0].type), type_to_str(DATA_TYPE_LITERAL));
         return false;
     }
 
@@ -639,8 +639,8 @@ bool block_term_set_clear(Exec* exec, Block* block, int argc, AnyValue* argv, An
     (void) block;
     (void) exec;
     (void) argc;
-    if (argv[0].type != DATA_TYPE_STRING_LITERAL) {
-        exec_set_error(exec, block, "Invalid data type %s, expected %s", type_to_str(argv[0].type), type_to_str(DATA_TYPE_STRING_LITERAL));
+    if (argv[0].type != DATA_TYPE_LITERAL) {
+        exec_set_error(exec, block, "Invalid data type %s, expected %s", type_to_str(argv[0].type), type_to_str(DATA_TYPE_LITERAL));
         return false;
     }
 
@@ -671,7 +671,7 @@ bool block_input(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* r
     (void) block;
     (void) argv;
     (void) argc;
-    *return_val = DATA_STRING_REF(std_term_get_input(&exec->gc));
+    *return_val = DATA_STRING(std_term_get_input(&exec->gc));
     return true;
 }
 
@@ -681,7 +681,7 @@ bool block_get_char(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue
     (void) argv;
     (void) argc;
 
-    *return_val = DATA_STRING_REF(std_term_get_char(&exec->gc));
+    *return_val = DATA_STRING(std_term_get_char(&exec->gc));
     return true;
 }
 
@@ -708,7 +708,7 @@ bool block_join(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* re
     (void) argc;
     (void) block;
 
-    *return_val = DATA_STRING_REF(std_string_join(&exec->gc, std_string_from_any(&exec->gc, &argv[0]), std_string_from_any(&exec->gc, &argv[1])));
+    *return_val = DATA_STRING(std_string_join(&exec->gc, std_string_from_any(&exec->gc, &argv[0]), std_string_from_any(&exec->gc, &argv[1])));
     return true;
 }
 
@@ -729,7 +729,7 @@ bool block_chr(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* ret
     (void) control_state;
     (void) block;
     (void) argc;
-    *return_val = DATA_STRING_REF(std_string_chr(&exec->gc, data_to_integer(argv[0])));
+    *return_val = DATA_STRING(std_string_chr(&exec->gc, data_to_integer(argv[0])));
     return true;
 }
 
@@ -737,7 +737,7 @@ bool block_letter_in(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValu
     (void) control_state;
     (void) block;
     (void) argc;
-    *return_val = DATA_STRING_REF(std_string_letter_in(&exec->gc, data_to_integer(argv[0]), std_string_from_any(&exec->gc, &argv[1])));
+    *return_val = DATA_STRING(std_string_letter_in(&exec->gc, data_to_integer(argv[0]), std_string_from_any(&exec->gc, &argv[1])));
     return true;
 }
 
@@ -745,7 +745,7 @@ bool block_substring(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValu
     (void) control_state;
     (void) block;
     (void) argc;
-    *return_val = DATA_STRING_REF(std_string_substring(&exec->gc, data_to_integer(argv[0]), data_to_integer(argv[1]), std_string_from_any(&exec->gc, &argv[2])));
+    *return_val = DATA_STRING(std_string_substring(&exec->gc, data_to_integer(argv[0]), data_to_integer(argv[1]), std_string_from_any(&exec->gc, &argv[2])));
     return true;
 }
 
@@ -789,7 +789,7 @@ bool block_convert_str(Exec* exec, Block* block, int argc, AnyValue* argv, AnyVa
     (void) control_state;
     (void) block;
     (void) argc;
-    *return_val = DATA_STRING_REF(std_string_from_any(&exec->gc, &argv[0]));
+    *return_val = DATA_STRING(std_string_from_any(&exec->gc, &argv[0]));
     return true;
 }
 
@@ -807,7 +807,7 @@ bool block_typeof(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* 
     (void) block;
     (void) exec;
     (void) argc;
-    *return_val = DATA_STRING_LITERAL((char*)type_to_str(argv[0].type));
+    *return_val = DATA_LITERAL((char*)type_to_str(argv[0].type));
     return true;
 }
 
@@ -901,8 +901,8 @@ bool block_math(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* re
     (void) block;
     (void) exec;
     (void) argc;
-    if (argv[0].type != DATA_TYPE_STRING_LITERAL) {
-        exec_set_error(exec, block, "Invalid data type %s, expected %s", type_to_str(argv[0].type), type_to_str(DATA_TYPE_STRING_LITERAL));
+    if (argv[0].type != DATA_TYPE_LITERAL) {
+        exec_set_error(exec, block, "Invalid data type %s, expected %s", type_to_str(argv[0].type), type_to_str(DATA_TYPE_LITERAL));
         return false;
     }
 
@@ -1097,8 +1097,8 @@ bool block_eq(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* retu
     (void) block;
     (void) exec;
     (void) argc;
-    if ((argv[0].type != DATA_TYPE_STRING_LITERAL && argv[0].type != DATA_TYPE_STRING_REF) || 
-        (argv[1].type != DATA_TYPE_STRING_LITERAL && argv[1].type != DATA_TYPE_STRING_REF)) {
+    if ((argv[0].type != DATA_TYPE_LITERAL && argv[0].type != DATA_TYPE_STRING) || 
+        (argv[1].type != DATA_TYPE_LITERAL && argv[1].type != DATA_TYPE_STRING)) {
         if (argv[0].type != argv[1].type) {
             *return_val = DATA_BOOL(0);
             return true;
@@ -1113,10 +1113,10 @@ bool block_eq(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* retu
     case DATA_TYPE_FLOAT:
         *return_val = DATA_BOOL(argv[0].data.float_val == argv[1].data.float_val);
         break;
-    case DATA_TYPE_STRING_LITERAL:
+    case DATA_TYPE_LITERAL:
         *return_val = DATA_BOOL(!strcmp(argv[0].data.literal_val, argv[1].data.literal_val));
         break;
-    case DATA_TYPE_STRING_REF:
+    case DATA_TYPE_STRING:
         *return_val = DATA_BOOL(std_string_is_eq(argv[0].data.str_val, argv[1].data.str_val));
         break;
     case DATA_TYPE_NOTHING:
@@ -1198,10 +1198,10 @@ bool block_gc_collect(Exec* exec, Block* block, int argc, AnyValue* argv, AnyVal
 
 LLVMValueRef arg_to_value(Exec* exec, Block* block, FuncArg arg) {
     switch (arg.type) {
-    case DATA_TYPE_STRING_LITERAL:
+    case DATA_TYPE_LITERAL:
         return CONST_STRING_LITERAL(arg.data.str);
     case DATA_TYPE_LIST:
-    case DATA_TYPE_STRING_REF:
+    case DATA_TYPE_STRING:
     case DATA_TYPE_NOTHING:
     case DATA_TYPE_INTEGER:
     case DATA_TYPE_FLOAT:
@@ -1218,9 +1218,9 @@ LLVMValueRef arg_to_value(Exec* exec, Block* block, FuncArg arg) {
 
 LLVMValueRef arg_to_bool(Exec* exec, Block* block, FuncArg arg) {
     switch (arg.type) {
-    case DATA_TYPE_STRING_LITERAL:
+    case DATA_TYPE_LITERAL:
         return CONST_BOOLEAN(*arg.data.str != 0);
-    case DATA_TYPE_STRING_REF: ;
+    case DATA_TYPE_STRING: ;
         LLVMValueRef first_char = LLVMBuildLoad2(exec->builder, LLVMInt8Type(), build_call(exec, "std_string_get_data", arg.data.value), "bool_cast");
         return LLVMBuildICmp(exec->builder, LLVMIntNE, first_char, LLVMConstInt(LLVMInt8Type(), 0, true), "bool_cast");
     case DATA_TYPE_LIST:
@@ -1244,9 +1244,9 @@ LLVMValueRef arg_to_bool(Exec* exec, Block* block, FuncArg arg) {
 
 LLVMValueRef arg_to_integer(Exec* exec, Block* block, FuncArg arg) {
     switch (arg.type) {
-    case DATA_TYPE_STRING_LITERAL:
+    case DATA_TYPE_LITERAL:
         return CONST_INTEGER(atoi(arg.data.str));
-    case DATA_TYPE_STRING_REF: ;
+    case DATA_TYPE_STRING: ;
         return build_call(exec, "atoi", build_call(exec, "std_string_get_data", arg.data.value));
     case DATA_TYPE_LIST:
     case DATA_TYPE_NOTHING:
@@ -1269,9 +1269,9 @@ LLVMValueRef arg_to_integer(Exec* exec, Block* block, FuncArg arg) {
 
 LLVMValueRef arg_to_float(Exec* exec, Block* block, FuncArg arg) {
     switch (arg.type) {
-    case DATA_TYPE_STRING_LITERAL:
+    case DATA_TYPE_LITERAL:
         return CONST_FLOAT(atof(arg.data.str));
-    case DATA_TYPE_STRING_REF:
+    case DATA_TYPE_STRING:
         return build_call(exec, "atof", build_call(exec, "std_string_get_data", arg.data.value));
     case DATA_TYPE_LIST:
     case DATA_TYPE_NOTHING:
@@ -1294,11 +1294,11 @@ LLVMValueRef arg_to_float(Exec* exec, Block* block, FuncArg arg) {
 
 LLVMValueRef arg_to_any_string(Exec* exec, Block* block, FuncArg arg) {
     switch (arg.type) {
-    case DATA_TYPE_STRING_LITERAL:
+    case DATA_TYPE_LITERAL:
         return CONST_STRING_LITERAL(arg.data.str);
     case DATA_TYPE_NOTHING:
         return CONST_STRING_LITERAL("nothing");
-    case DATA_TYPE_STRING_REF:
+    case DATA_TYPE_STRING:
         return arg.data.value;
     case DATA_TYPE_INTEGER:
         return build_call(exec, "std_string_from_integer", CONST_GC, arg.data.value);
@@ -1320,13 +1320,13 @@ LLVMValueRef arg_to_any_string(Exec* exec, Block* block, FuncArg arg) {
 
 LLVMValueRef arg_to_string_ref(Exec* exec, Block* block, FuncArg arg) {
     switch (arg.type) {
-    case DATA_TYPE_STRING_LITERAL:
+    case DATA_TYPE_LITERAL:
         return build_call(exec, "std_string_from_literal", CONST_GC, CONST_STRING_LITERAL(arg.data.str), CONST_INTEGER(strlen(arg.data.str)));
     case DATA_TYPE_NOTHING:
         return build_call(exec, "std_string_from_literal", CONST_GC, CONST_STRING_LITERAL("nothing"), CONST_INTEGER(sizeof("nothing") - 1));
     case DATA_TYPE_LIST:
         return build_call(exec, "std_string_from_literal", CONST_GC, CONST_STRING_LITERAL(""), CONST_INTEGER(0));
-    case DATA_TYPE_STRING_REF:
+    case DATA_TYPE_STRING:
         return arg.data.value;
     case DATA_TYPE_INTEGER:
         return build_call(exec, "std_string_from_integer", CONST_GC, arg.data.value);
@@ -1338,7 +1338,7 @@ LLVMValueRef arg_to_string_ref(Exec* exec, Block* block, FuncArg arg) {
         return build_call(exec, "std_string_from_any", CONST_GC, arg.data.value);
     case DATA_TYPE_UNKNOWN:
     case DATA_TYPE_BLOCKDEF:
-        exec_set_error(exec, block, "Cannot cast type %s into %s", type_to_str(arg.type), type_to_str(DATA_TYPE_STRING_REF));
+        exec_set_error(exec, block, "Cannot cast type %s into %s", type_to_str(arg.type), type_to_str(DATA_TYPE_STRING));
         return NULL;
     }
     assert(false && "Unhandled cast to string ref");
@@ -1349,9 +1349,9 @@ LLVMValueRef arg_to_list(Exec* exec, Block* block, FuncArg arg) {
     case DATA_TYPE_BOOL:
     case DATA_TYPE_NOTHING:
     case DATA_TYPE_INTEGER:
-    case DATA_TYPE_STRING_REF:
+    case DATA_TYPE_STRING:
     case DATA_TYPE_FLOAT:
-    case DATA_TYPE_STRING_LITERAL:
+    case DATA_TYPE_LITERAL:
         exec_set_error(exec, block, "Cannot cast type %s into list type", type_to_str(arg.type));
         return NULL;
     case DATA_TYPE_LIST:
@@ -1372,9 +1372,9 @@ LLVMValueRef arg_to_any(Exec* exec, Block* block, FuncArg arg) {
         return build_call_count(exec, "std_any_from_value", 2, CONST_GC, CONST_INTEGER(arg.type));
     case DATA_TYPE_BOOL:
     case DATA_TYPE_INTEGER:
-    case DATA_TYPE_STRING_REF:
+    case DATA_TYPE_STRING:
     case DATA_TYPE_FLOAT:
-    case DATA_TYPE_STRING_LITERAL:
+    case DATA_TYPE_LITERAL:
     case DATA_TYPE_LIST:
         return build_call_count(exec, "std_any_from_value", 3, CONST_GC, CONST_INTEGER(arg.type), arg_to_value(exec, block, arg));
     case DATA_TYPE_ANY:
@@ -1389,11 +1389,11 @@ LLVMValueRef arg_to_any(Exec* exec, Block* block, FuncArg arg) {
 
 FuncArg arg_cast(Exec* exec, Block* block, FuncArg arg, DataType cast_to_type) {
     switch (cast_to_type) {
-    case DATA_TYPE_STRING_LITERAL:
-        if (arg.type == DATA_TYPE_STRING_LITERAL) return arg;
+    case DATA_TYPE_LITERAL:
+        if (arg.type == DATA_TYPE_LITERAL) return arg;
         assert(false && "Attempted to cast LLVM value to string literal");
-    case DATA_TYPE_STRING_REF:
-        return DATA_STRING_REF(arg_to_string_ref(exec, block, arg));
+    case DATA_TYPE_STRING:
+        return DATA_STRING(arg_to_string_ref(exec, block, arg));
     case DATA_TYPE_INTEGER:
         return DATA_INTEGER(arg_to_integer(exec, block, arg));
     case DATA_TYPE_BOOL:
@@ -1492,7 +1492,7 @@ bool block_not_eq(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* re
     (void) control_state;
     (void) block;
     MIN_ARG_COUNT(2);
-    if (argv[0].type == DATA_TYPE_STRING_LITERAL && argv[1].type == DATA_TYPE_STRING_LITERAL) {
+    if (argv[0].type == DATA_TYPE_LITERAL && argv[1].type == DATA_TYPE_LITERAL) {
         *return_val = DATA_BOOLEAN(CONST_BOOLEAN(!!strcmp(argv[0].data.str, argv[1].data.str)));
         return true;
     }
@@ -1500,11 +1500,11 @@ bool block_not_eq(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* re
     FuncArg left;
     FuncArg right;
 
-    if (argv[0].type == DATA_TYPE_STRING_LITERAL) {
+    if (argv[0].type == DATA_TYPE_LITERAL) {
         left = arg_cast(exec, block, argv[0], argv[1].type);
         if (!left.data.value) return false;
         right = argv[1];
-    } else if (argv[1].type == DATA_TYPE_STRING_LITERAL) {
+    } else if (argv[1].type == DATA_TYPE_LITERAL) {
         left = argv[0];
         right = arg_cast(exec, block, argv[1], argv[0].type);
         if (!right.data.value) return false;
@@ -1520,7 +1520,7 @@ bool block_not_eq(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* re
     case DATA_TYPE_NOTHING:
         *return_val = DATA_BOOLEAN(CONST_BOOLEAN(0));
         break;
-    case DATA_TYPE_STRING_REF: ;
+    case DATA_TYPE_STRING: ;
         LLVMValueRef eq_return = build_call(exec, "std_string_is_eq", left.data.value, right.data.value);
         *return_val = DATA_BOOLEAN(LLVMBuildXor(exec->builder, eq_return, CONST_BOOLEAN(1), "string_neq"));
         break;
@@ -1552,7 +1552,7 @@ bool block_eq(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return
     (void) control_state;
     (void) block;
     MIN_ARG_COUNT(2);
-    if (argv[0].type == DATA_TYPE_STRING_LITERAL && argv[1].type == DATA_TYPE_STRING_LITERAL) {
+    if (argv[0].type == DATA_TYPE_LITERAL && argv[1].type == DATA_TYPE_LITERAL) {
         *return_val = DATA_BOOLEAN(CONST_BOOLEAN(!strcmp(argv[0].data.str, argv[1].data.str)));
         return true;
     }
@@ -1560,11 +1560,11 @@ bool block_eq(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return
     FuncArg left;
     FuncArg right;
 
-    if (argv[0].type == DATA_TYPE_STRING_LITERAL) {
+    if (argv[0].type == DATA_TYPE_LITERAL) {
         left = arg_cast(exec, block, argv[0], argv[1].type);
         if (!left.data.value) return false;
         right = argv[1];
-    } else if (argv[1].type == DATA_TYPE_STRING_LITERAL) {
+    } else if (argv[1].type == DATA_TYPE_LITERAL) {
         left = argv[0];
         right = arg_cast(exec, block, argv[1], argv[0].type);
         if (!right.data.value) return false;
@@ -1580,7 +1580,7 @@ bool block_eq(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return
     case DATA_TYPE_NOTHING:
         *return_val = DATA_BOOLEAN(CONST_BOOLEAN(1));
         break;
-    case DATA_TYPE_STRING_REF: ;
+    case DATA_TYPE_STRING: ;
         *return_val = DATA_BOOLEAN(build_call(exec, "std_string_is_eq", left.data.value, right.data.value));
         break;
     case DATA_TYPE_BOOL:
@@ -1792,7 +1792,7 @@ bool block_math(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* retu
     (void) control_state;
     (void) block;
     MIN_ARG_COUNT(2);
-    if (argv[0].type != DATA_TYPE_STRING_LITERAL) return false;
+    if (argv[0].type != DATA_TYPE_LITERAL) return false;
 
     LLVMValueRef value = arg_to_float(exec, block, argv[1]);
     if (!value) return false;
@@ -1987,7 +1987,7 @@ bool block_typeof(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* re
     (void) exec;
     (void) argc;
     *return_val = (FuncArg) {
-        .type = DATA_TYPE_STRING_LITERAL,
+        .type = DATA_TYPE_LITERAL,
         .data = (FuncArgData) {
             .str = (char*)type_to_str(argv[0].type),
         },
@@ -2011,7 +2011,7 @@ bool block_convert_str(Exec* exec, Block* block, int argc, FuncArg* argv, FuncAr
     MIN_ARG_COUNT(1);
     LLVMValueRef value = arg_to_string_ref(exec, block, argv[0]);
     if (!value) return false;
-    *return_val = DATA_STRING_REF(value);
+    *return_val = DATA_STRING(value);
     return true;
 }
 
@@ -2068,7 +2068,7 @@ bool block_substring(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg*
     LLVMValueRef str = arg_to_string_ref(exec, block, argv[2]);
     if (!str) return false;
 
-    *return_val = DATA_STRING_REF(build_call(exec, "std_string_substring", CONST_GC, begin, end, str));
+    *return_val = DATA_STRING(build_call(exec, "std_string_substring", CONST_GC, begin, end, str));
     return true;
 }
 
@@ -2082,7 +2082,7 @@ bool block_letter_in(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg*
     LLVMValueRef str = arg_to_string_ref(exec, block, argv[1]);
     if (!str) return false;
 
-    *return_val = DATA_STRING_REF(build_call(exec, "std_string_letter_in", CONST_GC, target, str));
+    *return_val = DATA_STRING(build_call(exec, "std_string_letter_in", CONST_GC, target, str));
     return true;
 }
 
@@ -2093,7 +2093,7 @@ bool block_chr(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* retur
     LLVMValueRef value = arg_to_integer(exec, block, argv[0]);
     if (!value) return false;
 
-    *return_val = DATA_STRING_REF(build_call(exec, "std_string_chr", CONST_GC, value));
+    *return_val = DATA_STRING(build_call(exec, "std_string_chr", CONST_GC, value));
     return true;
 }
 
@@ -2117,7 +2117,7 @@ bool block_join(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* retu
     LLVMValueRef right = arg_to_string_ref(exec, block, argv[1]);
     if (!right) return false;
 
-    *return_val = DATA_STRING_REF(build_call(exec, "std_string_join", CONST_GC, left, right));
+    *return_val = DATA_STRING(build_call(exec, "std_string_join", CONST_GC, left, right));
     return true;
 }
 
@@ -2139,7 +2139,7 @@ bool block_get_char(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* 
     (void) block;
     (void) argc;
     (void) argv;
-    *return_val = DATA_STRING_REF(build_call(exec, "std_term_get_char", CONST_GC));
+    *return_val = DATA_STRING(build_call(exec, "std_term_get_char", CONST_GC));
     return true;
 }
 
@@ -2148,7 +2148,7 @@ bool block_input(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* ret
     (void) block;
     (void) argc;
     (void) argv;
-    *return_val = DATA_STRING_REF(build_call(exec, "std_term_get_input", CONST_GC));
+    *return_val = DATA_STRING(build_call(exec, "std_term_get_input", CONST_GC));
     return true;
 }
 
@@ -2156,7 +2156,7 @@ bool block_term_set_clear(Exec* exec, Block* block, int argc, FuncArg* argv, Fun
     (void) control_state;
     (void) block;
     MIN_ARG_COUNT(1);
-    if (argv[0].type != DATA_TYPE_STRING_LITERAL) return false;
+    if (argv[0].type != DATA_TYPE_LITERAL) return false;
 
     Color col;
     bool is_set = false;
@@ -2219,7 +2219,7 @@ bool block_set_bg_color(Exec* exec, Block* block, int argc, FuncArg* argv, FuncA
     (void) control_state;
     (void) block;
     MIN_ARG_COUNT(1);
-    if (argv[0].type != DATA_TYPE_STRING_LITERAL) return false;
+    if (argv[0].type != DATA_TYPE_LITERAL) return false;
 
     Color col;
     bool is_set = false;
@@ -2261,7 +2261,7 @@ bool block_set_fg_color(Exec* exec, Block* block, int argc, FuncArg* argv, FuncA
     (void) control_state;
     (void) block;
     MIN_ARG_COUNT(1);
-    if (argv[0].type != DATA_TYPE_STRING_LITERAL) return false;
+    if (argv[0].type != DATA_TYPE_LITERAL) return false;
 
     Color col;
     bool is_set = false;
@@ -2355,12 +2355,12 @@ bool block_print(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* ret
     MIN_ARG_COUNT(1);
 
     switch (argv[0].type) {
-    case DATA_TYPE_STRING_LITERAL:
+    case DATA_TYPE_LITERAL:
         *return_val = DATA_INTEGER(*argv[0].data.str
                                    ? build_call(exec, "std_term_print_str", CONST_STRING_LITERAL(argv[0].data.str))
                                    : CONST_INTEGER(0));
         return true;
-    case DATA_TYPE_STRING_REF:
+    case DATA_TYPE_STRING:
         *return_val = DATA_INTEGER(build_call(exec, "std_term_print_str", build_call(exec, "std_string_get_data", argv[0].data.value)));
         return true;
     case DATA_TYPE_NOTHING:
@@ -2479,8 +2479,8 @@ bool block_set_var(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* r
     (void) control_state;
     (void) block;
     MIN_ARG_COUNT(2);
-    if (argv[0].type != DATA_TYPE_STRING_LITERAL) {
-        exec_set_error(exec, block, "Invalid data type %s, expected %s", type_to_str(argv[0].type), type_to_str(DATA_TYPE_STRING_LITERAL));
+    if (argv[0].type != DATA_TYPE_LITERAL) {
+        exec_set_error(exec, block, "Invalid data type %s, expected %s", type_to_str(argv[0].type), type_to_str(DATA_TYPE_LITERAL));
         return false;
     }
 
@@ -2495,7 +2495,7 @@ bool block_set_var(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* r
         return false;
     }
 
-    if (var->value.type == DATA_TYPE_STRING_LITERAL) {
+    if (var->value.type == DATA_TYPE_LITERAL) {
         var->value = argv[1];
         *return_val = argv[1];
         return true;
@@ -2514,8 +2514,8 @@ bool block_get_var(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* r
     (void) control_state;
     (void) block;
     MIN_ARG_COUNT(1);
-    if (argv[0].type != DATA_TYPE_STRING_LITERAL) {
-        exec_set_error(exec, block, "Invalid data type %s, expected %s", type_to_str(argv[0].type), type_to_str(DATA_TYPE_STRING_LITERAL));
+    if (argv[0].type != DATA_TYPE_LITERAL) {
+        exec_set_error(exec, block, "Invalid data type %s, expected %s", type_to_str(argv[0].type), type_to_str(DATA_TYPE_LITERAL));
         return false;
     }
 
@@ -2525,7 +2525,7 @@ bool block_get_var(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* r
         return false;
     }
 
-    if (var->value.type == DATA_TYPE_STRING_LITERAL) {
+    if (var->value.type == DATA_TYPE_LITERAL) {
         *return_val = var->value;
         return true;
     }
@@ -2549,8 +2549,8 @@ bool block_declare_var(Exec* exec, Block* block, int argc, FuncArg* argv, FuncAr
         return false;
     }
     
-    if (argv[0].type != DATA_TYPE_STRING_LITERAL) {
-        exec_set_error(exec, block, "Invalid data type %s, expected %s", type_to_str(argv[0].type), type_to_str(DATA_TYPE_STRING_LITERAL));
+    if (argv[0].type != DATA_TYPE_LITERAL) {
+        exec_set_error(exec, block, "Invalid data type %s, expected %s", type_to_str(argv[0].type), type_to_str(DATA_TYPE_LITERAL));
         return false;
     }
 
@@ -2562,7 +2562,7 @@ bool block_declare_var(Exec* exec, Block* block, int argc, FuncArg* argv, FuncAr
     LLVMValueRef func_current = LLVMGetBasicBlockParent(LLVMGetInsertBlock(exec->builder));
     LLVMValueRef func_main = LLVMGetNamedFunction(exec->module, MAIN_NAME);
 
-    if (argv[1].type == DATA_TYPE_STRING_LITERAL) {
+    if (argv[1].type == DATA_TYPE_LITERAL) {
         Variable var = (Variable) {
             .type = LLVMVoidType(),
             .value = argv[1],

@@ -39,9 +39,9 @@ int data_to_integer(AnyValue arg) {
         return arg.data.integer_val;
     case DATA_TYPE_FLOAT:
         return (int)arg.data.float_val;
-    case DATA_TYPE_STRING_LITERAL:
+    case DATA_TYPE_LITERAL:
         return atoi(arg.data.literal_val);
-    case DATA_TYPE_STRING_REF:
+    case DATA_TYPE_STRING:
         return atoi(arg.data.str_val->str);
     default:
         return 0;
@@ -55,9 +55,9 @@ double data_to_float(AnyValue arg) {
         return (double)arg.data.integer_val;
     case DATA_TYPE_FLOAT:
         return arg.data.float_val;
-    case DATA_TYPE_STRING_LITERAL:
+    case DATA_TYPE_LITERAL:
         return atof(arg.data.literal_val);
-    case DATA_TYPE_STRING_REF:
+    case DATA_TYPE_STRING:
         return atof(arg.data.str_val->str);
     default:
         return 0.0;
@@ -71,9 +71,9 @@ int data_to_bool(AnyValue arg) {
         return arg.data.integer_val != 0;
     case DATA_TYPE_FLOAT:
         return arg.data.float_val != 0.0;
-    case DATA_TYPE_STRING_LITERAL:
+    case DATA_TYPE_LITERAL:
         return *arg.data.literal_val != 0;
-    case DATA_TYPE_STRING_REF:
+    case DATA_TYPE_STRING:
         return *arg.data.str_val->str != 0;
     case DATA_TYPE_LIST:
         return arg.data.list_val->size != 0;
@@ -83,7 +83,7 @@ int data_to_bool(AnyValue arg) {
 }
 
 char* data_to_any_string(Exec* exec, AnyValue arg) {
-    if (arg.type == DATA_TYPE_STRING_LITERAL) return arg.data.literal_val;
+    if (arg.type == DATA_TYPE_LITERAL) return arg.data.literal_val;
     return std_string_from_any(&exec->gc, &arg)->str;
 }
 
@@ -122,7 +122,7 @@ bool evaluate_argument(Exec* exec, Argument* arg, AnyValue* return_val) {
     switch (arg->type) {
     case ARGUMENT_TEXT:
     case ARGUMENT_CONST_STRING:
-        *return_val = DATA_STRING_LITERAL(arg->data.text);
+        *return_val = DATA_LITERAL(arg->data.text);
         return true;
     case ARGUMENT_BLOCK:
         if (!exec_block(exec, &arg->data.block, return_val, CONTROL_STATE_NORMAL, (AnyValue) {0})) {
