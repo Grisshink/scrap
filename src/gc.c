@@ -144,9 +144,10 @@ void gc_collect(Gc* gc) {
 
     // Mark roots
     for (size_t i = 0; i < vector_size(gc->root_chunks); i++) {
-        if (gc->root_chunks[i]->marked) continue;
-        gc->root_chunks[i]->marked = 1;
-        gc_mark_refs(gc, gc->root_chunks[i]);
+        GcChunkData* chunk = (*gc->root_chunks[i]) - 1;
+        if (chunk->marked) continue;
+        chunk->marked = 1;
+        gc_mark_refs(gc, chunk);
     }
 
     for (size_t i = 0; i < vector_size(gc->root_temp_chunks); i++) {
@@ -236,15 +237,8 @@ void gc_root_end(Gc* gc) {
     vector_pop(gc->roots_stack);
 }
 
-void gc_add_root(Gc* gc, void* ptr) {
-    GcChunkData* chunk_ptr = ((GcChunkData*)ptr) - 1;
-    vector_add(&gc->root_chunks, chunk_ptr);
-}
-
-void gc_add_str_root(Gc* gc, char* str) {
-    StringHeader* header = ((StringHeader*)str) - 1;
-    GcChunkData* chunk_ptr = ((GcChunkData*)header) - 1;
-    vector_add(&gc->root_chunks, chunk_ptr);
+void gc_add_root(Gc* gc, void* stack_ptr) {
+    vector_add(&gc->root_chunks, stack_ptr);
 }
 
 void gc_root_save(Gc* gc) {

@@ -29,9 +29,6 @@ typedef struct {
     unsigned char data[];
 } GcChunkData;
 
-typedef GcChunkData* ChunkAddr;
-typedef GcChunkData** ChunkAddrList;
-
 typedef struct {
     GcChunkData* ptr;
     size_t len;
@@ -46,8 +43,10 @@ typedef struct {
     GcChunk* chunks;
     size_t* roots_bases;
     GcRoot* roots_stack;
-    ChunkAddrList root_chunks;
-    ChunkAddrList root_temp_chunks;
+    // NOTE: This variable stores a list of stack addresses pointing at gc_malloc'd memory, 
+    // so you need to offset a pointer by -1 before dereferencing GcChunkData
+    GcChunkData*** root_chunks;
+    GcChunkData** root_temp_chunks;
     size_t memory_used;
     size_t memory_max;
 } Gc;
@@ -61,7 +60,6 @@ void* gc_malloc(Gc* gc, size_t size, DataType data_type);
 void gc_collect(Gc* gc);
 void gc_flush(Gc* gc);
 void gc_add_root(Gc* gc, void* ptr);
-void gc_add_str_root(Gc* gc, char* str);
 void gc_root_save(Gc* gc);
 void gc_root_restore(Gc* gc);
 

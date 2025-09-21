@@ -307,10 +307,14 @@ bool block_declare_var(Exec* exec, Block* block, int argc, AnyValue* argv, AnyVa
         return false;
     }
 
-    variable_stack_push_var(exec, argv[0].data.literal_val, argv[1]);
+    Variable* var = variable_stack_push_var(exec, argv[0].data.literal_val, argv[1]);
+    if (!var) {
+        exec_set_error(exec, block, "Cannot declare variable with empty name");
+        return false;
+    }
 
     if (argv[1].type == DATA_TYPE_LIST || argv[1].type == DATA_TYPE_ANY || argv[1].type == DATA_TYPE_STRING) {
-        gc_add_root(&exec->gc, &argv[1].data);
+        gc_add_root(&exec->gc, &var->value.data);
     }
 
     *return_val = argv[1];
@@ -344,12 +348,12 @@ bool block_set_var(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue*
         return false;
     }
 
-    var->value = argv[1];
-
-    // FIXME: block_set_var should replace the root chunk, not add a new root every time
-    if (argv[1].type == DATA_TYPE_LIST || argv[1].type == DATA_TYPE_ANY || argv[1].type == DATA_TYPE_STRING) {
-        gc_add_root(&exec->gc, &argv[1].data);
+    if (argv[1].type != var->value.type) {
+        exec_set_error(exec, block, "Assign to variable \"%s\" of type %s with type %s", var_name, type_to_str(var->value.type), type_to_str(argv[1].type));
+        return false;
     }
+
+    var->value = argv[1];
 
     *return_val = var->value;
     return true;
@@ -2501,10 +2505,6 @@ bool block_set_var(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* r
         return true;
     }
 
-    if (LLVMTypeOf(argv[1].data.value) == LLVMPointerType(LLVMInt8Type(), 0)) {
-        build_call(exec, "gc_add_root", CONST_GC, argv[1].data.value);
-    }
-
     LLVMBuildStore(exec->builder, argv[1].data.value, var->value.data.value);
     *return_val = argv[1];
     return true;
@@ -2601,7 +2601,7 @@ bool block_declare_var(Exec* exec, Block* block, int argc, FuncArg* argv, FuncAr
 
     LLVMBuildStore(exec->builder, argv[1].data.value, var.value.data.value);
     if (data_type == LLVMPointerType(LLVMInt8Type(), 0)) {
-        build_call(exec, "gc_add_root", CONST_GC, argv[1].data.value);
+        build_call(exec, "gc_add_root", CONST_GC, var.value.data.value);
     }
     *return_val = argv[1];
     return true;

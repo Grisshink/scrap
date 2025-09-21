@@ -145,6 +145,8 @@ bool exec_block(Exec* exec, Block* block, AnyValue* block_return, ControlState c
         arg_stack_push_arg(exec, control_arg);
     }
 
+    size_t last_temps = vector_size(exec->gc.root_temp_chunks);
+
     if (control_state != CONTROL_STATE_END) {
         for (vec_size_t i = 0; i < vector_size(block->arguments); i++) {
             AnyValue arg;
@@ -155,8 +157,6 @@ bool exec_block(Exec* exec, Block* block, AnyValue* block_return, ControlState c
             arg_stack_push_arg(exec, arg);
         }
     }
-
-    size_t last_temps = vector_size(exec->gc.root_temp_chunks);
 
     if (!execute_block(exec, block, exec->arg_stack_len - stack_begin, exec->arg_stack + stack_begin, block_return, control_state)) {
         TraceLog(LOG_ERROR, "[VM] Error from block id: \"%s\" (at block %p)", block->blockdef->id, &block);
@@ -374,18 +374,19 @@ bool exec_try_join(Vm* vm, Exec* exec, size_t* return_code) {
     return true;
 }
 
-void variable_stack_push_var(Exec* exec, const char* name, AnyValue arg) {
+Variable* variable_stack_push_var(Exec* exec, const char* name, AnyValue arg) {
     if (exec->variable_stack_len >= VM_VARIABLE_STACK_SIZE) {
         TraceLog(LOG_ERROR, "[VM] Variable stack overflow");
         PTHREAD_FAIL(exec);
     }
-    if (*name == 0) return;
+    if (*name == 0) return NULL;
     Variable var;
     var.name = name;
     var.value = arg;
     var.chain_layer = exec->chain_stack_len - 1;
     var.layer = exec->chain_stack[var.chain_layer].layer;
     exec->variable_stack[exec->variable_stack_len++] = var;
+    return &exec->variable_stack[exec->variable_stack_len - 1];
 }
 
 void variable_stack_pop_layer(Exec* exec) {

@@ -171,7 +171,7 @@ void exec_set_error(Exec* exec, Block* block, const char* fmt, ...);
 
 bool evaluate_argument(Exec* exec, Argument* arg, AnyValue* return_val);
 
-void variable_stack_push_var(Exec* exec, const char* name, AnyValue data);
+Variable* variable_stack_push_var(Exec* exec, const char* name, AnyValue arg);
 Variable* variable_stack_get_variable(Exec* exec, const char* name);
 
 int data_to_integer(AnyValue arg);
