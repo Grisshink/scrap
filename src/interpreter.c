@@ -382,6 +382,9 @@ Variable* variable_stack_push_var(Exec* exec, const char* name, AnyValue arg) {
     if (*name == 0) return NULL;
     Variable var;
     var.name = name;
+    var.chunk_header.marked = 0;
+    var.chunk_header.data_type = DATA_TYPE_ANY;
+    var.value_ptr = &exec->variable_stack[exec->variable_stack_len].value;
     var.value = arg;
     var.chain_layer = exec->chain_stack_len - 1;
     var.layer = exec->chain_stack[var.chain_layer].layer;

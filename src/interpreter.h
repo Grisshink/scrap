@@ -44,7 +44,15 @@ typedef bool (*BlockFunc)(Exec* exec, Block* block, int argc, AnyValue* argv, An
 
 struct Variable {
     const char* name;
+    // This is a pretty hacky way to make gc think this area of memory is allocated with
+    // gc_malloc even though it is not. The data_type field in header should be set to
+    // DATA_TYPE_ANY so that gc could check the potential heap references inside the any
+    // value. This essentially allows interpreter to change variable type without
+    // invalidating gc root pointers.
+    AnyValue* value_ptr;
+    GcChunkData chunk_header;
     AnyValue value;
+
     size_t chain_layer;
     int layer;
 };

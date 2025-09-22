@@ -170,6 +170,11 @@ void gc_collect(Gc* gc) {
         vector_remove(gc->chunks, i);
     }
 
+    for (size_t i = 0; i < vector_size(gc->root_chunks); i++) {
+        GcChunkData* chunk = (*gc->root_chunks[i]) - 1;
+        chunk->marked = 0;
+    }
+
     gc->memory_used -= memory_freed;
 
 #ifdef DEBUG

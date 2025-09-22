@@ -314,7 +314,7 @@ bool block_declare_var(Exec* exec, Block* block, int argc, AnyValue* argv, AnyVa
     }
 
     if (argv[1].type == DATA_TYPE_LIST || argv[1].type == DATA_TYPE_ANY || argv[1].type == DATA_TYPE_STRING) {
-        gc_add_root(&exec->gc, &var->value.data);
+        gc_add_root(&exec->gc, &var->value_ptr);
     }
 
     *return_val = argv[1];
@@ -345,11 +345,6 @@ bool block_set_var(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue*
     Variable* var = variable_stack_get_variable(exec, var_name);
     if (!var) {
         exec_set_error(exec, block, "Variable with name \"%s\" does not exist in the current scope", var_name);
-        return false;
-    }
-
-    if (argv[1].type != var->value.type) {
-        exec_set_error(exec, block, "Assign to variable \"%s\" of type %s with type %s", var_name, type_to_str(var->value.type), type_to_str(argv[1].type));
         return false;
     }
 
