@@ -387,7 +387,15 @@ bool block_list_get(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue
         return false;
     }
 
-    *return_val = *std_list_get(&exec->gc, argv[0].data.list_val, data_to_integer(argv[1]));
+    List* list = argv[0].data.list_val;
+    int index = data_to_integer(argv[1]);
+
+    if (index >= list->size || index < 0) {
+        *return_val = DATA_NOTHING;
+        return true;
+    }
+
+    *return_val = list->values[index];
     return true;
 }
 
