@@ -721,22 +721,25 @@ StringHeader* std_term_get_char(Gc* gc) {
 }
 
 StringHeader* std_term_get_input(Gc* gc) {
-    StringHeader* out_string = NULL;
+    char* string_buf = vector_create();
     char last_char = 0;
     char buf[256];
     
     while (last_char != '\n') {
-        if (!fgets(buf, 256, stdin)) return std_string_from_literal(gc, "", 0);
+        if (!fgets(buf, 256, stdin)) {
+            vector_free(string_buf);
+            return std_string_from_literal(gc, "", 0);
+        }
+
         int size = strlen(buf);
         last_char = buf[size - 1];
         if (last_char == '\n') buf[--size] = 0;
 
-        if (!out_string) {
-            out_string = std_string_from_literal(gc, buf, size);
-        } else {
-            out_string = std_string_join(gc, out_string, std_string_from_literal(gc, buf, size));
-        }
+        for (char* str = buf; *str; str++) vector_add(&string_buf, *str);
     }
+
+    StringHeader* out_string = std_string_from_literal(gc, string_buf, vector_size(string_buf));
+    vector_free(string_buf);
 
     return out_string;
 }
@@ -833,7 +836,7 @@ int std_term_cursor_max_y(void) {
 
 StringHeader* std_term_get_input(Gc* gc) {
     char input_char = 0;
-    StringHeader* out_string = NULL;
+    char* string_buf = vector_create();
 
     while (input_char != '\n') {
         char input[256];
@@ -842,12 +845,11 @@ StringHeader* std_term_get_input(Gc* gc) {
         if (input[i - 1] == '\n') input[i - 1] = 0;
         input[i] = 0;
 
-        if (!out_string) {
-            out_string = std_string_from_literal(gc, input, i - 1);
-        } else {
-            out_string = std_string_join(gc, out_string, std_string_from_literal(gc, input, i - 1));
-        }
+        for (char* str = input; *str; str++) vector_add(&string_buf, *str);
     }
+
+    StringHeader* out_string = std_string_from_literal(gc, string_buf, vector_size(string_buf));
+    vector_free(string_buf);
 
     return out_string;
 }
