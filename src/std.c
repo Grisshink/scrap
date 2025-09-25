@@ -261,7 +261,7 @@ static AnyValue std_get_any(DataType data_type, va_list va) {
     };
 }
 
-void std_list_add(Gc* gc, List* list, DataType data_type, ...) {
+void std_list_add(Gc* gc, List** list, DataType data_type, ...) {
     AnyValue any;
     
     va_list va;
@@ -272,14 +272,21 @@ void std_list_add(Gc* gc, List* list, DataType data_type, ...) {
     std_list_add_any(gc, list, any);
 }
 
-void std_list_add_any(Gc* gc, List* list, AnyValue any) {
+void std_list_add_any(Gc* gc, List** listref, AnyValue any) {
+    List* list = *listref;
+
     if (!list->values) {
-        list->values = gc_malloc(gc, sizeof(AnyValue), 0);
+        AnyValue* new_list = gc_malloc(gc, sizeof(AnyValue), 0);
+        list = *listref;
+
+        list->values = new_list;
         list->capacity = 1;
     }
 
     if (list->size >= list->capacity) {
         AnyValue* new_list = gc_malloc(gc, sizeof(AnyValue) * list->size * 2, 0);
+        list = *listref;
+
         memcpy(new_list, list->values, sizeof(AnyValue) * list->size);
         list->values = new_list;
         list->capacity = list->size * 2;
@@ -301,9 +308,11 @@ void std_list_set(List* list, int index, DataType data_type, ...) {
     list->values[index] = any;
 }
 
-AnyValue* std_list_get(Gc* gc, List* list, int index) {
+AnyValue* std_list_get(Gc* gc, List** listref, int index) {
     AnyValue* out = gc_malloc(gc, sizeof(AnyValue), DATA_TYPE_ANY);
     *out = (AnyValue) { .type = DATA_TYPE_NOTHING };
+
+    List* list = *listref;
 
     if (index >= list->size || index < 0) return out;
 
@@ -341,6 +350,20 @@ StringHeader* std_string_from_literal(Gc* gc, const char* literal, unsigned int 
     return out_str;
 }
 
+static StringHeader* std_string_from_literal_precopy(Gc* gc, const char* literal, unsigned int size) {
+    if (size <= 1024) {
+        char stack_literal[size];
+        memcpy(stack_literal, literal, size);
+        return std_string_from_literal(gc, stack_literal, size);
+    } else {
+        char* heap_literal = malloc(sizeof(char) * size);
+        memcpy(heap_literal, literal, size);
+        StringHeader* out = std_string_from_literal(gc, heap_literal, size);
+        free(heap_literal);
+        return out;
+    }
+}
+
 char* std_string_get_data(StringHeader* str) {
     return str->str;
 }
@@ -355,7 +378,7 @@ StringHeader* std_string_letter_in(Gc* gc, int target, StringHeader* input_str) 
         if (pos == target) {
             int codepoint_size;
             get_codepoint(str, &codepoint_size);
-            return std_string_from_literal(gc, str, codepoint_size);
+            return std_string_from_literal_precopy(gc, str, codepoint_size);
         }
     }
 
@@ -386,16 +409,18 @@ StringHeader* std_string_substring(Gc* gc, int begin, int end, StringHeader* inp
             get_codepoint(str, &codepoint_size);
             substr_len += codepoint_size - 1;
 
-            return std_string_from_literal(gc, substr_start, substr_len);
+            return std_string_from_literal_precopy(gc, substr_start, substr_len);
         }
     }
 
-    if (substr_start) return std_string_from_literal(gc, substr_start, substr_len);
+    if (substr_start) return std_string_from_literal_precopy(gc, substr_start, substr_len);
     return std_string_from_literal(gc, "", 0);
 }
 
-StringHeader* std_string_join(Gc* gc, StringHeader* left, StringHeader* right) {
-    StringHeader* out_str = gc_malloc(gc, sizeof(StringHeader) + left->size + right->size + 1, DATA_TYPE_STRING);
+StringHeader* std_string_join(Gc* gc, StringHeader** leftref, StringHeader** rightref) {
+    StringHeader* out_str = gc_malloc(gc, sizeof(StringHeader) + (*leftref)->size + (*rightref)->size + 1, DATA_TYPE_STRING);
+    StringHeader* left = *leftref;
+    StringHeader* right = *rightref;
     memcpy(out_str->str, left->str, left->size);
     memcpy(out_str->str + left->size, right->str, right->size);
     out_str->size = left->size + right->size;
@@ -462,7 +487,7 @@ StringHeader* std_string_from_any(Gc* gc, AnyValue* value) {
     case DATA_TYPE_FLOAT:
         return std_string_from_float(gc, value->data.float_val);
     case DATA_TYPE_LITERAL:
-        return std_string_from_literal(gc, value->data.literal_val, strlen(value->data.literal_val));
+        return std_string_from_literal_precopy(gc, value->data.literal_val, strlen(value->data.literal_val));
     case DATA_TYPE_STRING:
         return value->data.str_val;
     case DATA_TYPE_BOOL:

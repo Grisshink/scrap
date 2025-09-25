@@ -24,31 +24,28 @@
 #include "vec.h"
 
 typedef struct {
-    unsigned char marked;
+    void* copy_ptr;
     DataType data_type;
+    size_t len;
     unsigned char data[];
 } GcChunkData;
 
 typedef struct {
-    GcChunkData* ptr;
-    size_t len;
-} GcChunk;
+    void* mem;
+    size_t mem_used;
+    size_t mem_max;
+    size_t chunks_count;
+} GcAlloc;
 
 typedef struct {
-    size_t chunks_base;
-    size_t temp_chunks_base;
-} GcRoot;
+    GcAlloc main_alloc;
+    GcAlloc second_alloc;
 
-typedef struct {
-    GcChunk* chunks;
     size_t* roots_bases;
-    GcRoot* roots_stack;
+    size_t* roots_stack;
     // NOTE: This variable stores a list of stack addresses pointing at gc_malloc'd memory, 
     // so you need to offset a pointer by -1 before dereferencing GcChunkData
     GcChunkData*** root_chunks;
-    GcChunkData** root_temp_chunks;
-    size_t memory_used;
-    size_t memory_max;
 } Gc;
 
 Gc gc_new(size_t memory_max);
@@ -58,9 +55,7 @@ void gc_root_begin(Gc* gc);
 void gc_root_end(Gc* gc);
 void* gc_malloc(Gc* gc, size_t size, DataType data_type);
 void gc_collect(Gc* gc);
-void gc_flush(Gc* gc);
 void gc_add_root(Gc* gc, void* ptr);
-void gc_add_temp_root(Gc* gc, void* ptr);
 void gc_root_save(Gc* gc);
 void gc_root_restore(Gc* gc);
 

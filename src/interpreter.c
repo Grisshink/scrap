@@ -145,8 +145,6 @@ bool exec_block(Exec* exec, Block* block, AnyValue* block_return, ControlState c
         arg_stack_push_arg(exec, control_arg);
     }
 
-    size_t last_temps = vector_size(exec->gc.root_temp_chunks);
-
     if (control_state != CONTROL_STATE_END) {
         for (vec_size_t i = 0; i < vector_size(block->arguments); i++) {
             AnyValue arg;
@@ -164,8 +162,6 @@ bool exec_block(Exec* exec, Block* block, AnyValue* block_return, ControlState c
     }
 
     arg_stack_undo_args(exec, exec->arg_stack_len - stack_begin);
-
-    if (!block->parent && vector_size(exec->gc.root_temp_chunks) > last_temps) gc_flush(&exec->gc);
 
     return true;
 }
@@ -382,9 +378,6 @@ Variable* variable_stack_push_var(Exec* exec, const char* name, AnyValue arg) {
     if (*name == 0) return NULL;
     Variable var;
     var.name = name;
-    var.chunk_header.marked = 0;
-    var.chunk_header.data_type = DATA_TYPE_ANY;
-    var.value_ptr = &exec->variable_stack[exec->variable_stack_len].value;
     var.value = arg;
     var.chain_layer = exec->chain_stack_len - 1;
     var.layer = exec->chain_stack[var.chain_layer].layer;

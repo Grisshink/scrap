@@ -56,10 +56,10 @@ int std_int_pow(int base, int exp);
 
 // List operations
 List* std_list_new(Gc* gc);
-void std_list_add_any(Gc* gc, List* list, AnyValue any);
-void std_list_add(Gc* gc, List* list, DataType data_type, ...);
+void std_list_add_any(Gc* gc, List** list, AnyValue any);
+void std_list_add(Gc* gc, List** list, DataType data_type, ...);
 void std_list_set(List* list, int index, DataType data_type, ...);
-AnyValue* std_list_get(Gc* gc, List* list, int index);
+AnyValue* std_list_get(Gc* gc, List** list, int index);
 int std_list_length(List* list);
 
 // Any operations
@@ -81,7 +81,7 @@ char* std_string_get_data(StringHeader* str);
 int std_string_length(StringHeader* str);
 StringHeader* std_string_letter_in(Gc* gc, int target, StringHeader* input_str);
 StringHeader* std_string_substring(Gc* gc, int begin, int end, StringHeader* input_str);
-StringHeader* std_string_join(Gc* gc, StringHeader* left, StringHeader* right);
+StringHeader* std_string_join(Gc* gc, StringHeader** left, StringHeader** right);
 bool std_string_is_eq(StringHeader* left, StringHeader* right);
 StringHeader* std_string_chr(Gc* gc, int value);
 int std_string_ord(StringHeader* str);

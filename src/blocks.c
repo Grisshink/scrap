@@ -314,7 +314,7 @@ bool block_declare_var(Exec* exec, Block* block, int argc, AnyValue* argv, AnyVa
     }
 
     if (argv[1].type == DATA_TYPE_LIST || argv[1].type == DATA_TYPE_ANY || argv[1].type == DATA_TYPE_STRING) {
-        gc_add_root(&exec->gc, &var->value_ptr);
+        gc_add_root(&exec->gc, &var->value.data);
     }
 
     *return_val = argv[1];
@@ -373,7 +373,7 @@ bool block_list_add(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue
         return false;
     }
 
-    std_list_add_any(&exec->gc, argv[0].data.list_val, argv[1]);
+    std_list_add_any(&exec->gc, &argv[0].data.list_val, argv[1]);
     *return_val = DATA_NOTHING;
     return true;
 }
@@ -715,7 +715,10 @@ bool block_join(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* re
     (void) argc;
     (void) block;
 
-    *return_val = DATA_STRING(std_string_join(&exec->gc, std_string_from_any(&exec->gc, &argv[0]), std_string_from_any(&exec->gc, &argv[1])));
+    StringHeader* left = std_string_from_any(&exec->gc, &argv[0]);
+    StringHeader* right = std_string_from_any(&exec->gc, &argv[1]);
+
+    *return_val = DATA_STRING(std_string_join(&exec->gc, &left, &right));
     return true;
 }
 
@@ -1147,10 +1150,6 @@ bool block_exec_custom(Exec* exec, Block* block, int argc, AnyValue* argv, AnyVa
     for (size_t i = 0; i < vector_size(exec->defined_functions); i++) {
         if (block->blockdef == exec->defined_functions[i].blockdef) {
             if (!exec_run_chain(exec, exec->defined_functions[i].run_chain, argc, argv, return_val)) return false;
-
-            if (return_val->type == DATA_TYPE_LIST || return_val->type == DATA_TYPE_ANY || return_val->type == DATA_TYPE_STRING) {
-                gc_add_temp_root(&exec->gc, (void*)return_val->data.literal_val);
-            }
             return true;
         }
     }
