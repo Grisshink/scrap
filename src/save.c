@@ -338,7 +338,6 @@ void load_config(Config* config) {
         if (file[cursor] == '\0') has_lines = false;
         file[cursor++] = '\0';
 
-        TraceLog(LOG_INFO, "Field = \"%s\" Value = \"%s\"", field, value);
         if (!strcmp(field, "UI_SIZE")) {
             int val = atoi(value);
             config->font_size = val ? val : config->font_size;
