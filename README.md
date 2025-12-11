@@ -121,7 +121,7 @@ To fix this, just type `exit` in the cmd and the cleanup process will proceed
 
 #### Linux build
 
-To build and run Scrap on linux you need to install `gcc` and `make`. After install, just run following commands:
+To build and run Scrap on linux you need to install `gcc` (10+) and `make`. After install, just run following commands:
 
 ```bash
 make -j$(nproc)
@@ -130,7 +130,7 @@ make -j$(nproc)
 
 #### FreeBSD build
 
-To build and run Scrap on FreeBSD you need to install `gcc` and `gmake`. After install, just run following commands:
+To build and run Scrap on FreeBSD you need to install `gcc` (10+) and `gmake`. After install, just run following commands:
 
 ```bash
 gmake MAKE=gmake -j$(nproc)
@@ -142,7 +142,7 @@ gmake MAKE=gmake -j$(nproc)
 > [!WARNING]
 > MacOS build is not being tested right now, so it may not work properly or not at all, you have been warned!
 
-To build and run Scrap on macOS, you need to install `gcc` and `make`.
+To build and run Scrap on macOS, you need to install `gcc` (10+) and `make`.
 First, install Homebrew:
 
 ```
