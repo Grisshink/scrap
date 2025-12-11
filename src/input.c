@@ -1122,6 +1122,7 @@ static void handle_key_press(void) {
         !hover_info.is_panel_edit_mode &&
         hover_info.panel &&
         hover_info.panel->type == PANEL_CODE &&
+        !vm.is_running &&
         !gui_window_is_shown() &&
         !hover_info.select_input)
     {
