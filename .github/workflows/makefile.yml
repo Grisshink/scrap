@@ -16,7 +16,7 @@ jobs:
             - name: Install dependencies
               run: |
                 sudo apt-get update -y
-                sudo apt-get install -y --no-install-recommends libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev gettext libstdc++-11-dev
+                sudo apt-get install -y --no-install-recommends libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev gettext
 
             - name: Install LLVM
               run: |
@@ -33,9 +33,9 @@ jobs:
             - name: Build project (With compiler)
               run: |
                 make clean
-                make CC=gcc-9 USE_COMPILER=TRUE LLVM_CONFIG=llvm-config-19
+                make USE_COMPILER=TRUE LLVM_CONFIG=llvm-config-19
 
             - name: Build project (With interpreter)
               run: |
                 make clean
-                make CC=gcc-9
+                make
