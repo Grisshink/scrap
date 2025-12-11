@@ -8,6 +8,8 @@ config.txt
 scrap.res
 private/
 locale/
+scrap.AppDir/
+tmp/
 a.out
 libscrapstd.a
 libscrapstd-win.a
