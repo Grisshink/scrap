@@ -85,6 +85,8 @@ WINDOWS_DIR := $(EXE_NAME)-v$(SCRAP_VERSION)-windows64
 
 all: target std translations
 
+rebuild: clean all
+
 clean:
 	$(MAKE) -C raylib/src clean
 	rm -f src/*.o $(EXE_NAME) $(EXE_NAME).exe Scrap-x86_64.AppImage $(LINUX_DIR).tar.gz $(WINDOWS_DIR).zip $(MACOS_DIR).zip scrap.res $(STD_NAME)
