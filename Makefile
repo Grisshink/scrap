@@ -40,8 +40,8 @@ else
 	LDFLAGS += -fsanitize=address -fsanitize=undefined -fno-omit-frame-pointer
 endif
 
-STD_OBJFILES := $(addprefix src/,vec.o gc-stand.o std-stand.o scrap-runtime.o)
-OBJFILES := $(addprefix src/,filedialogs.o render.o save.o term.o blocks.o scrap.o vec.o util.o input.o scrap_gui.o window.o cfgpath.o platform.o ast.o gc.o std.o)
+STD_OBJFILES := $(addprefix tmp/,vec.o gc-stand.o std-stand.o scrap-runtime.o)
+OBJFILES := $(addprefix tmp/,filedialogs.o render.o save.o term.o blocks.o scrap.o vec.o util.o input.o scrap_gui.o window.o cfgpath.o platform.o ast.o gc.o std.o)
 BUNDLE_FILES := data examples extras locale LICENSE README.md CHANGELOG.md
 SCRAP_HEADERS := src/scrap.h src/ast.h src/config.h src/scrap_gui.h
 EXE_NAME := scrap
@@ -53,12 +53,12 @@ else
 endif
 
 ifeq ($(USE_COMPILER), FALSE)
-	OBJFILES += src/interpreter.o
+	OBJFILES += $(addprefix tmp/,interpreter.o)
 	SCRAP_HEADERS += src/interpreter.h
 	CFLAGS += -DUSE_INTERPRETER
 else
 	LLVM_CONFIG ?= llvm-config
-	OBJFILES += $(addprefix src/,compiler.o)
+	OBJFILES += $(addprefix tmp/,compiler.o)
 	SCRAP_HEADERS += src/compiler.h
 
 	ifeq ($(TARGET), WINDOWS)
@@ -87,10 +87,13 @@ all: target std translations
 
 rebuild: clean all
 
+tmp:
+	mkdir -p tmp
+
 clean:
 	$(MAKE) -C raylib/src clean
 	rm -f src/*.o $(EXE_NAME) $(EXE_NAME).exe Scrap-x86_64.AppImage $(LINUX_DIR).tar.gz $(WINDOWS_DIR).zip $(MACOS_DIR).zip scrap.res $(STD_NAME)
-	rm -rf locale
+	rm -rf locale tmp
 
 translations:
 	@echo === Generating locales... ===
@@ -130,9 +133,9 @@ appimage: translations target
 	rm -r scrap.AppDir
 
 ifeq ($(TARGET), WINDOWS)
-target: $(EXE_NAME).exe
+target: tmp $(EXE_NAME).exe
 else
-target: $(EXE_NAME)
+target: tmp $(EXE_NAME)
 endif
 
 $(EXE_NAME).exe: $(OBJFILES)
@@ -147,47 +150,47 @@ $(EXE_NAME): $(OBJFILES)
 std: $(STD_OBJFILES)
 	ar rcs $(STD_NAME) $^
 
-src/scrap.o: src/scrap.c $(SCRAP_HEADERS)
+tmp/scrap.o: src/scrap.c $(SCRAP_HEADERS)
 	$(CC) $(CFLAGS) -c -o $@ $<
-src/window.o: src/window.c $(SCRAP_HEADERS) external/tinyfiledialogs.h
+tmp/window.o: src/window.c $(SCRAP_HEADERS) external/tinyfiledialogs.h
 	$(CC) $(CFLAGS) -c -o $@ $<
-src/scrap_gui.o: src/scrap_gui.c src/scrap_gui.h
+tmp/scrap_gui.o: src/scrap_gui.c src/scrap_gui.h
 	$(CC) $(CFLAGS) -c -o $@ $<
-src/render.o: src/render.c $(SCRAP_HEADERS)
+tmp/render.o: src/render.c $(SCRAP_HEADERS)
 	$(CC) $(CFLAGS) -c -o $@ $<
-src/save.o: src/save.c $(SCRAP_HEADERS) external/cfgpath.h
+tmp/save.o: src/save.c $(SCRAP_HEADERS) external/cfgpath.h
 	$(CC) $(CFLAGS) -c -o $@ $<
-src/term.o: src/term.c src/term.h $(SCRAP_HEADERS)
+tmp/term.o: src/term.c src/term.h $(SCRAP_HEADERS)
 	$(CC) $(CFLAGS) -c -o $@ $<
-src/blocks.o: src/blocks.c $(SCRAP_HEADERS)
+tmp/blocks.o: src/blocks.c $(SCRAP_HEADERS)
 	$(CC) $(CFLAGS) -c -o $@ $<
-src/vec.o: src/vec.c
+tmp/vec.o: src/vec.c
 	$(CC) $(CFLAGS) -c -o $@ $<
-src/util.o: src/util.c $(SCRAP_HEADERS)
+tmp/util.o: src/util.c $(SCRAP_HEADERS)
 	$(CC) $(CFLAGS) -c -o $@ $<
-src/input.o: src/input.c $(SCRAP_HEADERS)
+tmp/input.o: src/input.c $(SCRAP_HEADERS)
 	$(CC) $(CFLAGS) -c -o $@ $<
-src/platform.o: src/platform.c
+tmp/platform.o: src/platform.c
 	$(CC) $(CFLAGS) -c -o $@ $<
-src/ast.o: src/ast.c src/ast.h
+tmp/ast.o: src/ast.c src/ast.h
 	$(CC) $(CFLAGS) -c -o $@ $<
-src/interpreter.o: src/interpreter.c $(SCRAP_HEADERS)
+tmp/interpreter.o: src/interpreter.c $(SCRAP_HEADERS)
 	$(CC) $(CFLAGS) -c -o $@ $<
-src/compiler.o: src/compiler.c src/compiler.h src/gc.h src/ast.h
+tmp/compiler.o: src/compiler.c src/compiler.h src/gc.h src/ast.h
 	$(CC) $(CFLAGS) -c -o $@ $<
-src/gc.o: src/gc.c src/gc.h src/vec.h src/std.h
+tmp/gc.o: src/gc.c src/gc.h src/vec.h src/std.h
 	$(CC) $(CFLAGS) -c -o $@ $<
-src/std.o: src/std.c src/std.h src/gc.h src/term.h
+tmp/std.o: src/std.c src/std.h src/gc.h src/term.h
 	$(CC) $(CFLAGS) -c -o $@ $<
 
-src/gc-stand.o: src/gc.c src/gc.h src/vec.h src/std.h
+tmp/gc-stand.o: src/gc.c src/gc.h src/vec.h src/std.h
 	$(CC) $(CFLAGS) -DSTANDALONE_STD -c -o $@ $<
-src/std-stand.o: src/std.c src/std.h src/gc.h
+tmp/std-stand.o: src/std.c src/std.h src/gc.h
 	$(CC) $(CFLAGS) -DSTANDALONE_STD -c -o $@ $<
-src/scrap-runtime.o: src/scrap-runtime.c src/gc.h
+tmp/scrap-runtime.o: src/scrap-runtime.c src/gc.h
 	$(CC) $(CFLAGS) -DSTANDALONE_STD -c -o $@ $<
 
-src/filedialogs.o: external/tinyfiledialogs.c
+tmp/filedialogs.o: external/tinyfiledialogs.c
 	$(CC) $(CFLAGS) -c -o $@ $<
-src/cfgpath.o: external/cfgpath.c
+tmp/cfgpath.o: external/cfgpath.c
 	$(CC) $(CFLAGS) -c -o $@ $<
