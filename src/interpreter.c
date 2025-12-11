@@ -408,7 +408,14 @@ void variable_stack_cleanup(Exec* exec) {
 
 Variable* variable_stack_get_variable(Exec* exec, const char* name) {
     for (int i = exec->variable_stack_len - 1; i >= 0; i--) {
+        if (exec->variable_stack[i].chain_layer != exec->chain_stack_len - 1) break;
         if (!strcmp(exec->variable_stack[i].name, name)) return &exec->variable_stack[i];
+    }
+    if (exec->chain_stack_len > 0) {
+        for (size_t i = 0; i < exec->variable_stack_len; i++) {
+            if (exec->variable_stack[i].layer != 0 || exec->variable_stack[i].chain_layer != 0) break;
+            if (!strcmp(exec->variable_stack[i].name, name)) return &exec->variable_stack[i];
+        }
     }
     return NULL;
 }
