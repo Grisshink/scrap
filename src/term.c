@@ -193,13 +193,29 @@ void term_resize(float screen_w, float screen_h) {
     TermVec new_buffer_size = { term.size.x / term.char_size.x, term.size.y / term.char_size.y };
 
     if (term.char_w != (int)new_buffer_size.x || term.char_h != (int)new_buffer_size.y) {
+        int buf_size = (int)new_buffer_size.x * (int)new_buffer_size.y * sizeof(*term.buffer);
+        TerminalChar* new_buffer = malloc(buf_size);
+        if (term.buffer) {
+            for (int y = 0; y < (int)new_buffer_size.y; y++) {
+                for (int x = 0; x < (int)new_buffer_size.x; x++) {
+                    TerminalChar* ch = &new_buffer[x + y * (int)new_buffer_size.x];
+
+                    if (x >= term.char_w || y >= term.char_h) {
+                        strncpy(ch->ch, " ", ARRLEN(ch->ch));
+                        ch->fg_color = TERM_WHITE;
+                        ch->bg_color = term.clear_color;
+                        continue;
+                    }
+
+                    *ch = term.buffer[x + y * term.char_w];
+                }
+            }
+            free(term.buffer);
+        }
+
         term.char_w = new_buffer_size.x;
         term.char_h = new_buffer_size.y;
-
-        if (term.buffer) free(term.buffer);
-        int buf_size = term.char_w * term.char_h * sizeof(*term.buffer);
-        term.buffer = malloc(buf_size);
-        term_clear();
+        term.buffer = new_buffer;
     }
     pthread_mutex_unlock(&term.lock);
 }
