@@ -5,6 +5,7 @@
 - Fixed race condition with thread running state after calling `pthread_create`. This should theoretically fix code not stopping its execution on Windows
 - Fixed code area being able to scroll while window is open
 - Fixed memory leak when copying blockdef with instantiated blocks
+- Fixed block search menu being able to open when code is running
 
 # v0.4.2-beta *(12-02-2025)*
 
