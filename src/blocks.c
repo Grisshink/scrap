@@ -472,6 +472,7 @@ bool block_print(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* r
 bool block_println(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     if (!block_print(exec, block, argc, argv, return_val, control_state)) return false;
     term_print_str("\n");
+    return_val->data.integer_val++;
     return true;
 }
 
@@ -2409,6 +2410,7 @@ bool block_println(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* r
     MIN_ARG_COUNT(1);
     block_print(exec, block, argc, argv, return_val, control_state);
     build_call(exec, "std_term_print_str", CONST_STRING_LITERAL("\n"));
+    *return_val = DATA_INTEGER(LLVMBuildAdd(exec->builder, return_val->data.value, CONST_INTEGER(1), "add"));
     return true;
 }
 
