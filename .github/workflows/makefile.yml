@@ -16,7 +16,7 @@ jobs:
             - name: Install dependencies
               run: |
                 sudo apt-get update -y
-                sudo apt-get install -y --no-install-recommends libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev gettext libstdc++-10-dev
+                sudo apt-get install -y --no-install-recommends libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev gettext libstdc++-11-dev
 
             - name: Install LLVM
               run: |
