@@ -54,6 +54,17 @@ Block block_new_ms(Blockdef* blockdef) {
     return block;
 }
 
+static void switch_tab_to_panel(PanelType panel) {
+    for (size_t i = 0; i < vector_size(code_tabs); i++) {
+        if (find_panel(code_tabs[i].root_panel, panel)) {
+            if (current_tab != (int)i) shader_time = 0.0;
+            current_tab = i;
+            render_surface_needs_redraw = true;
+            return;
+        }
+    }
+}
+
 // Removes a block and all blocks within it if it matches the specified blockdef
 static void block_delete_blockdef(Block* block, Blockdef* blockdef) {
     for (size_t i = 0; i < vector_size(block->arguments); i++) {
@@ -273,6 +284,7 @@ bool handle_file_menu_click(void) {
     case FILE_MENU_NEW_PROJECT:
         for (size_t i = 0; i < vector_size(editor_code); i++) blockchain_free(&editor_code[i]);
         vector_clear(editor_code);
+        switch_tab_to_panel(PANEL_CODE);
         break;
     case FILE_MENU_SAVE_PROJECT:
         path = tinyfd_saveFileDialog(NULL, project_name, ARRLEN(filters), filters, "Scrap project files (.scrp)");
@@ -289,6 +301,7 @@ bool handle_file_menu_click(void) {
 
         ProjectConfig new_config;
         BlockChain* chain = load_code(path, &new_config);
+        switch_tab_to_panel(PANEL_CODE);
         if (!chain) {
             actionbar_show(gettext("File load failed :("));
             break;
