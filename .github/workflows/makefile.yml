@@ -1,0 +1,41 @@
+name: Makefile CI
+
+on:
+    push:
+        branches: [ "main" ]
+    pull_request:
+        branches: [ "main" ]
+
+jobs:
+    build:
+        runs-on: ubuntu-22.04
+
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Install dependencies
+              run: |
+                sudo apt-get update -y
+                sudo apt-get install -y --no-install-recommends libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev gettext
+
+            - name: Install LLVM
+              run: |
+                wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
+                sudo add-apt-repository "deb http://apt.llvm.org/focal/ llvm-toolchain-focal-19 main"
+                sudo apt-get update -y
+                sudo apt-get install -y --no-install-recommends llvm-19-dev
+
+            - name: Update submodules
+              run: |
+                git submodule init
+                git submodule update
+
+            - name: Build project (With compiler)
+              run: |
+                make clean
+                make USE_COMPILER=TRUE LLVM_CONFIG=llvm-config-19
+
+            - name: Build project (With interpreter)
+              run: |
+                make clean
+                make

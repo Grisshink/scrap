@@ -1,6 +1,13 @@
 tags
 *.o
 scrap
+scrap.exe
 profile.json
 coredump
 config.txt
+scrap.res
+private/
+locale/
+a.out
+libscrapstd.a
+libscrapstd-win.a

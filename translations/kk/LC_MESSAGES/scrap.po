@@ -1,0 +1,448 @@
+msgid ""
+msgstr ""
+"Language: kz\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+
+#: blocks.c
+msgid "Hello, scrap!"
+msgstr "Сәлем, scrap!"
+
+#: blocks.c
+msgid "Control"
+msgstr "Бақылау"
+
+#: blocks.c
+msgid "Terminal"
+msgstr "Терминал"
+
+#: blocks.c
+msgid "Math"
+msgstr "Математика"
+
+#: blocks.c
+msgid "Logic"
+msgstr "Логика"
+
+#: blocks.c
+msgid "Strings"
+msgstr "Жолдар"
+
+#: blocks.c
+msgid "Misc."
+msgstr "Әртүрлі."
+
+#: blocks.c
+msgid "Data"
+msgstr "Данные"
+
+#: blocks.c
+msgid "When"
+msgstr "Қашан"
+
+#: blocks.c
+msgid "clicked"
+msgstr "басылды"
+
+#: blocks.c
+msgid "Loop"
+msgstr "Цикл"
+
+#: blocks.c
+msgid "Repeat"
+msgstr "Қайталау"
+
+#: blocks.c
+msgid "times"
+msgstr "рет"
+
+#: blocks.c
+msgid "While"
+msgstr "Әзірге"
+
+#: blocks.c
+msgid "If"
+msgstr "Егер"
+
+#: blocks.c
+msgid ", then"
+msgstr ", содан кейін"
+
+#: blocks.c
+msgid "Else if"
+msgstr "Әйтпесе, егер"
+
+#: blocks.c
+msgid "Else"
+msgstr "Басқа"
+
+#: blocks.c
+msgid "Do nothing"
+msgstr "Ештеңе жасама"
+
+#: blocks.c
+msgid "Sleep"
+msgstr "Ұйқы"
+
+#: blocks.c
+msgid "μs"
+msgstr "мкс"
+
+#: blocks.c
+msgid "Define"
+msgstr "Анықтаңыз"
+
+#: blocks.c
+msgid "Return"
+msgstr "Қайту"
+
+#: blocks.c
+msgid "Get input"
+msgstr "Кіріс алыңыз"
+
+#: blocks.c
+msgid "Get char"
+msgstr "Шарды алыңыз"
+
+#: blocks.c
+msgid "Print"
+msgstr "Басып шығару"
+
+#: blocks.c
+msgid "Print line"
+msgstr "Басып шығару сызығы"
+
+#: blocks.c
+msgid "Cursor X"
+msgstr "Меңзер X"
+
+#: blocks.c
+msgid "Cursor Y"
+msgstr "Меңзер Y"
+
+#: blocks.c
+msgid "Terminal width"
+msgstr "Терминал ені"
+
+#: blocks.c
+msgid "Terminal height"
+msgstr "Терминал биіктігі"
+
+#: blocks.c
+msgid "Set cursor X:"
+msgstr "курсорын орнату X:"
+
+#: blocks.c
+msgid "Y:"
+msgstr "Y:"
+
+#: blocks.c
+msgid "Set text color"
+msgstr "Мәтін түсін орнату"
+
+#: blocks.c
+msgid "Set background color"
+msgstr "Фон түсін орнату"
+
+#: blocks.c
+msgid "Reset color"
+msgstr "Түсті қалпына келтіру"
+
+#: blocks.c
+msgid "Clear terminal"
+msgstr "Терминалды тазалау"
+
+#: blocks.c
+msgid "Set clear color"
+msgstr "Ашық түсті орнатыңыз"
+
+#: blocks.c
+msgid "Pow"
+msgstr "Дәреже"
+
+#: blocks.c
+msgid "Pi"
+msgstr "Пи"
+
+#: blocks.c
+msgid "Not"
+msgstr "Жоқ"
+
+#: blocks.c
+msgid "and"
+msgstr "және"
+
+#: blocks.c
+msgid "or"
+msgstr "немесе"
+
+#: blocks.c
+msgid "True"
+msgstr "Рас"
+
+#: blocks.c
+msgid "False"
+msgstr "Жалған"
+
+#: blocks.c
+msgid "Random"
+msgstr "Кездейсоқ"
+
+#: blocks.c
+msgid "to"
+msgstr "дейін"
+
+#: blocks.c
+msgid "Join"
+msgstr "Қосылыңыз"
+
+#: blocks.c
+msgid "left and "
+msgstr "солға және "
+
+#: blocks.c
+msgid "right"
+msgstr "дұрыс"
+
+#: blocks.c
+msgid "Ord"
+msgstr "Оrd"
+
+#: blocks.c
+msgid "Chr"
+msgstr "Chr"
+
+#: blocks.c
+msgid "Letter"
+msgstr "Хат"
+
+#: blocks.c
+msgid "in"
+msgstr "жылы"
+
+#: blocks.c
+msgid "Substring"
+msgstr "Ішкі жол"
+
+#: blocks.c
+msgid "Length"
+msgstr "Ұзындығы"
+
+#: blocks.c
+msgid "string"
+msgstr "жол"
+
+#: blocks.c
+msgid "Time since 1970"
+msgstr "1970 жылдан бері уақыт"
+
+#: blocks.c
+msgid "Int"
+msgstr "Бүтін сан"
+
+#: blocks.c
+msgid "Float"
+msgstr "Қалқымалы"
+
+#: blocks.c
+msgid "Str"
+msgstr "Кіші әріп"
+
+#: blocks.c
+msgid "Bool"
+msgstr "Булевое"
+
+#: blocks.c
+msgid "Nothing"
+msgstr "Ештеңе"
+
+#: blocks.c
+msgid "Declare"
+msgstr "Мәлімдеу"
+
+#: blocks.c
+msgid "my variable"
+msgstr "менің айнымалым"
+
+#: blocks.c
+msgid "Get"
+msgstr "Алу"
+
+#: blocks.c
+msgid "Set"
+msgstr "Орнату"
+
+#: blocks.c
+msgid "Empty list"
+msgstr "Бос тізім"
+
+#: blocks.c
+msgid "Add"
+msgstr "Қосу"
+
+#: blocks.c
+msgid "value"
+msgstr "мән"
+
+#: blocks.c
+msgid "get at"
+msgstr "жету"
+
+#: blocks.c
+msgid "set at"
+msgstr "орнатыңыз"
+
+#: blocks.c
+msgid "My block"
+msgstr "Менің блогым"
+
+#: render.c
+msgid "Scrap"
+msgstr "Scrap"
+
+#: input.c
+msgid "Code"
+msgstr "Код"
+
+#: input.c
+msgid "Output"
+msgstr "Шығару"
+
+#: input.c
+msgid "Block categories"
+msgstr "Код сәтті орындалды"
+
+#: input.c
+msgid "Block palette"
+msgstr "Блок палитрасы"
+
+#: render.c
+msgid "File"
+msgstr "Файл"
+
+#: render.c
+msgid "Settings"
+msgstr "Параметрлер"
+
+#: render.c
+msgid "About"
+msgstr "Туралы"
+
+#: scrap.c
+msgid "Vm executed successfully"
+msgstr "Код сәтті орындалды"
+
+#: scrap.c
+msgid "Vm stopped >:("
+msgstr "Код тоқтатылды >:("
+
+#: scrap.c
+msgid "Vm shitted and died :("
+msgstr "Код бұзылды және өлді :("
+
+#: input.c
+msgid "File load failed :("
+msgstr "Файл жүктелмеді :("
+
+#: input.c
+msgid "File load succeeded!"
+msgstr "Файл жүктелді!"
+
+#: input.c
+msgid "Jump to chain (%d/%d)"
+msgstr "Переход на цепочку (%d/%d)"
+
+#: render.c
+msgid "Start failed!"
+msgstr "Кодты бастау сәтсіз аяқталды!"
+
+#: render.c
+msgid "Started successfully!"
+msgstr "Код сәтті басталды!"
+
+#: render.c
+msgid "New project"
+msgstr "Жаңа жоба"
+
+#: render.c
+msgid "Save project"
+msgstr "Жобаны сақтау"
+
+#: render.c
+msgid "Load project"
+msgstr "Жобаны жүктеңіз"
+
+#: window.c
+msgid "UI size"
+msgstr "Пайдаланушы интерфейсінің өлшемі"
+
+#: window.c
+msgid "FPS limit"
+msgstr "FPS шегі"
+
+#: window.c
+msgid "Font path"
+msgstr "Қаріп жолы"
+
+#: window.c
+msgid "Bold font path"
+msgstr "Қалың шрифт жолы"
+
+#: window.c
+msgid "Monospaced font path"
+msgstr "Бір кеңістікті қаріп жолы"
+
+#: window.c
+msgid "Panel editor"
+msgstr "Панель редакторы"
+
+#: window.c
+msgid "Open"
+msgstr "Ашық"
+
+#: window.c
+msgid "Reset panels"
+msgstr "Панельдерді қалпына келтіру"
+
+#: window.c
+msgid "Reset"
+msgstr "Қалпына келтіру"
+
+#: window.c
+msgid "Apply"
+msgstr "Қолдану"
+
+#: window.c
+msgid "Needs restart for changes to take effect"
+msgstr "Өзгерістер күшіне енуі үшін қайта іске қосу қажет"
+
+#: window.c
+msgid "Scrap is a project that allows anyone to build"
+msgstr "Scrap - бұл кез келген адамға салуға мүмкіндік беретін жоба"
+
+#: window.c
+msgid "software using simple, block based interface."
+msgstr "қарапайым, блок негізіндегі интерфейсті пайдаланатын бағдарламалық қамтамасыз ету."
+
+#: window.c
+msgid "License"
+msgstr "Лицензия"
+
+#: render.c
+msgid "Panel edit mode"
+msgstr "Панельді өңдеу режимі"
+
+#: render.c
+msgid "Click on panels to reposition them"
+msgstr "Олардың орнын өзгерту үшін панельдерді басыңыз"
+
+#: render.c
+msgid "Drag panel edges to resize them"
+msgstr "Өлшемдерін өзгерту үшін панель жиектерін сүйреңіз"
+
+#: render.c
+msgid "Done"
+msgstr "Дайын"
+
+#: render.c
+msgid "Save"
+msgstr "Сақтау"
