@@ -36,11 +36,17 @@ endif
 ifeq ($(BUILD_MODE), RELEASE)
 	CFLAGS += -s -O3
 else
-	CFLAGS += -g -O1 -DDEBUG -fsanitize=address -fsanitize=undefined -fno-omit-frame-pointer
+	CFLAGS += -g -O1 -DDEBUG
 	LDFLAGS += -fsanitize=address -fsanitize=undefined -fno-omit-frame-pointer
 endif
 
-STD_OBJFILES := $(addprefix src/,vec.o gc-stand.o std-stand.o scrap-runtime.o)
+STD_CFLAGS := $(CFLAGS)
+
+ifeq ($(BUILD_MODE), DEBUG)
+	CFLAGS += -fsanitize=address -fsanitize=undefined -fno-omit-frame-pointer
+endif
+
+STD_OBJFILES := $(addprefix src/,vec-stand.o gc-stand.o std-stand.o scrap-runtime.o)
 OBJFILES := $(addprefix src/,filedialogs.o render.o save.o term.o blocks.o scrap.o vec.o util.o input.o scrap_gui.o window.o cfgpath.o platform.o ast.o gc.o std.o)
 BUNDLE_FILES := data examples extras locale LICENSE README.md CHANGELOG.md
 SCRAP_HEADERS := src/scrap.h src/ast.h src/config.h src/scrap_gui.h
@@ -171,7 +177,7 @@ src/ast.o: src/ast.c src/ast.h
 	$(CC) $(CFLAGS) -c -o $@ $<
 src/interpreter.o: src/interpreter.c $(SCRAP_HEADERS)
 	$(CC) $(CFLAGS) -c -o $@ $<
-src/compiler.o: src/compiler.c src/compiler.h src/gc.h src/ast.h
+src/compiler.o: src/compiler.c src/compiler.h src/gc.h src/ast.h $(SCRAP_HEADERS)
 	$(CC) $(CFLAGS) -c -o $@ $<
 src/gc.o: src/gc.c src/gc.h src/vec.h src/std.h
 	$(CC) $(CFLAGS) -c -o $@ $<
@@ -179,11 +185,13 @@ src/std.o: src/std.c src/std.h src/gc.h src/term.h
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 src/gc-stand.o: src/gc.c src/gc.h src/vec.h src/std.h
-	$(CC) $(CFLAGS) -DSTANDALONE_STD -c -o $@ $<
+	$(CC) $(STD_CFLAGS) -DSTANDALONE_STD -c -o $@ $<
 src/std-stand.o: src/std.c src/std.h src/gc.h
-	$(CC) $(CFLAGS) -DSTANDALONE_STD -c -o $@ $<
+	$(CC) $(STD_CFLAGS) -DSTANDALONE_STD -c -o $@ $<
 src/scrap-runtime.o: src/scrap-runtime.c src/gc.h
-	$(CC) $(CFLAGS) -DSTANDALONE_STD -c -o $@ $<
+	$(CC) $(STD_CFLAGS) -DSTANDALONE_STD -c -o $@ $<
+src/vec-stand.o: src/vec.c
+	$(CC) $(STD_CFLAGS) -DSTANDALONE_STD -c -o $@ $<
 
 src/filedialogs.o: external/tinyfiledialogs.c
 	$(CC) $(CFLAGS) -c -o $@ $<
