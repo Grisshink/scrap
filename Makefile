@@ -4,6 +4,7 @@ MAKE ?= make
 TARGET ?= LINUX
 BUILD_MODE ?= RELEASE
 USE_COMPILER ?= FALSE
+BUILD_FOLDER := build/
 
 CFLAGS := -Wall -Wextra -std=c11 -D_GNU_SOURCE -DSCRAP_VERSION=\"$(SCRAP_VERSION)\" -I./raylib/src
 
@@ -46,8 +47,8 @@ ifeq ($(BUILD_MODE), DEBUG)
 	CFLAGS += -fsanitize=address -fsanitize=undefined -fno-omit-frame-pointer
 endif
 
-STD_OBJFILES := $(addprefix src/,vec-stand.o gc-stand.o std-stand.o scrap-runtime.o)
-OBJFILES := $(addprefix src/,filedialogs.o render.o save.o term.o blocks.o scrap.o vec.o util.o input.o scrap_gui.o window.o cfgpath.o platform.o ast.o gc.o std.o)
+STD_OBJFILES := $(addprefix $(BUILD_FOLDER),vec-stand.o gc-stand.o std-stand.o scrap-runtime.o)
+OBJFILES := $(addprefix $(BUILD_FOLDER),filedialogs.o render.o save.o term.o blocks.o scrap.o vec.o util.o input.o scrap_gui.o window.o cfgpath.o platform.o ast.o gc.o std.o)
 BUNDLE_FILES := data examples extras locale LICENSE README.md CHANGELOG.md
 SCRAP_HEADERS := src/scrap.h src/ast.h src/config.h src/scrap_gui.h
 EXE_NAME := scrap
@@ -59,12 +60,12 @@ else
 endif
 
 ifeq ($(USE_COMPILER), FALSE)
-	OBJFILES += src/interpreter.o
+	OBJFILES += $(addprefix $(BUILD_FOLDER),interpreter.o)
 	SCRAP_HEADERS += src/interpreter.h
 	CFLAGS += -DUSE_INTERPRETER
 else
 	LLVM_CONFIG ?= llvm-config
-	OBJFILES += $(addprefix src/,compiler.o)
+	OBJFILES += $(addprefix $(BUILD_FOLDER),compiler.o)
 	SCRAP_HEADERS += src/compiler.h
 
 	ifeq ($(TARGET), WINDOWS)
@@ -91,10 +92,13 @@ WINDOWS_DIR := $(EXE_NAME)-v$(SCRAP_VERSION)-windows64
 
 all: target std translations
 
+mkbuild:
+	mkdir -p $(BUILD_FOLDER)
+
 clean:
 	$(MAKE) -C raylib/src clean
-	rm -f src/*.o $(EXE_NAME) $(EXE_NAME).exe Scrap-x86_64.AppImage $(LINUX_DIR).tar.gz $(WINDOWS_DIR).zip $(MACOS_DIR).zip scrap.res $(STD_NAME)
-	rm -rf locale
+	rm -f scrap.res $(EXE_NAME) $(EXE_NAME).exe $(STD_NAME)
+	rm -rf locale $(BUILD_FOLDER)
 
 translations:
 	@echo === Generating locales... ===
@@ -112,31 +116,27 @@ windows-build: translations target
 	cp -r $(BUNDLE_FILES) $(EXE_NAME).exe $(WINDOWS_DIR)
 	cp libzstd.dll $(WINDOWS_DIR)
 	zip -r $(WINDOWS_DIR).zip $(WINDOWS_DIR)
-	rm -r $(WINDOWS_DIR)
 
 linux-build: translations target
 	mkdir -p $(LINUX_DIR)
 	cp -r $(BUNDLE_FILES) $(EXE_NAME) $(LINUX_DIR)
 	tar czvf $(LINUX_DIR).tar.gz $(LINUX_DIR)
-	rm -r $(LINUX_DIR)
 
 macos-build: translations target
 	mkdir -p $(MACOS_DIR)
 	cp -r $(BUNDLE_FILES) $(EXE_NAME) $(MACOS_DIR)
 	zip -r $(MACOS_DIR).zip $(MACOS_DIR)
-	rm -r $(MACOS_DIR)
 
 appimage: translations target
-	mkdir -p scrap.AppDir
-	cp $(EXE_NAME) scrap.AppDir/AppRun
-	cp -r data locale scrap.desktop extras/scrap.png scrap.AppDir
-	./appimagetool-x86_64.AppImage --appimage-extract-and-run scrap.AppDir
-	rm -r scrap.AppDir
+	mkdir -p $(BUILD_FOLDER)scrap.AppDir
+	cp $(EXE_NAME) $(BUILD_FOLDER)scrap.AppDir/AppRun
+	cp -r data locale scrap.desktop extras/scrap.png $(BUILD_FOLDER)scrap.AppDir
+	./appimagetool-x86_64.AppImage --appimage-extract-and-run $(BUILD_FOLDER)scrap.AppDir $(BUILD_FOLDER)
 
 ifeq ($(TARGET), WINDOWS)
-target: $(EXE_NAME).exe
+target: mkbuild $(EXE_NAME).exe
 else
-target: $(EXE_NAME)
+target: mkbuild $(EXE_NAME)
 endif
 
 $(EXE_NAME).exe: $(OBJFILES)
@@ -148,52 +148,52 @@ $(EXE_NAME): $(OBJFILES)
 	$(MAKE) -C raylib/src CC=$(CC) CUSTOM_CFLAGS=-DSUPPORT_FILEFORMAT_SVG PLATFORM_OS=$(TARGET)
 	$(CC) -o $@ $^ raylib/src/libraylib.a $(LDFLAGS)
 
-std: $(STD_OBJFILES)
-	ar rcs $(STD_NAME) $^
+std: mkbuild $(STD_OBJFILES)
+	ar rcs $(STD_NAME) $(STD_OBJFILES)
 
-src/scrap.o: src/scrap.c $(SCRAP_HEADERS)
+$(BUILD_FOLDER)scrap.o: src/scrap.c $(SCRAP_HEADERS)
 	$(CC) $(CFLAGS) -c -o $@ $<
-src/window.o: src/window.c $(SCRAP_HEADERS) external/tinyfiledialogs.h
+$(BUILD_FOLDER)window.o: src/window.c $(SCRAP_HEADERS) external/tinyfiledialogs.h
 	$(CC) $(CFLAGS) -c -o $@ $<
-src/scrap_gui.o: src/scrap_gui.c src/scrap_gui.h
+$(BUILD_FOLDER)scrap_gui.o: src/scrap_gui.c src/scrap_gui.h
 	$(CC) $(CFLAGS) -c -o $@ $<
-src/render.o: src/render.c $(SCRAP_HEADERS)
+$(BUILD_FOLDER)render.o: src/render.c $(SCRAP_HEADERS)
 	$(CC) $(CFLAGS) -c -o $@ $<
-src/save.o: src/save.c $(SCRAP_HEADERS) external/cfgpath.h
+$(BUILD_FOLDER)save.o: src/save.c $(SCRAP_HEADERS) external/cfgpath.h
 	$(CC) $(CFLAGS) -c -o $@ $<
-src/term.o: src/term.c src/term.h $(SCRAP_HEADERS)
+$(BUILD_FOLDER)term.o: src/term.c src/term.h $(SCRAP_HEADERS)
 	$(CC) $(CFLAGS) -c -o $@ $<
-src/blocks.o: src/blocks.c $(SCRAP_HEADERS)
+$(BUILD_FOLDER)blocks.o: src/blocks.c $(SCRAP_HEADERS)
 	$(CC) $(CFLAGS) -c -o $@ $<
-src/vec.o: src/vec.c
+$(BUILD_FOLDER)vec.o: src/vec.c
 	$(CC) $(CFLAGS) -c -o $@ $<
-src/util.o: src/util.c $(SCRAP_HEADERS)
+$(BUILD_FOLDER)util.o: src/util.c $(SCRAP_HEADERS)
 	$(CC) $(CFLAGS) -c -o $@ $<
-src/input.o: src/input.c $(SCRAP_HEADERS)
+$(BUILD_FOLDER)input.o: src/input.c $(SCRAP_HEADERS)
 	$(CC) $(CFLAGS) -c -o $@ $<
-src/platform.o: src/platform.c
+$(BUILD_FOLDER)platform.o: src/platform.c
 	$(CC) $(CFLAGS) -c -o $@ $<
-src/ast.o: src/ast.c src/ast.h
+$(BUILD_FOLDER)ast.o: src/ast.c src/ast.h
 	$(CC) $(CFLAGS) -c -o $@ $<
-src/interpreter.o: src/interpreter.c $(SCRAP_HEADERS)
+$(BUILD_FOLDER)interpreter.o: src/interpreter.c $(SCRAP_HEADERS)
 	$(CC) $(CFLAGS) -c -o $@ $<
-src/compiler.o: src/compiler.c src/compiler.h src/gc.h src/ast.h $(SCRAP_HEADERS)
+$(BUILD_FOLDER)compiler.o: src/compiler.c src/compiler.h src/gc.h src/ast.h $(SCRAP_HEADERS)
 	$(CC) $(CFLAGS) -c -o $@ $<
-src/gc.o: src/gc.c src/gc.h src/vec.h src/std.h
+$(BUILD_FOLDER)gc.o: src/gc.c src/gc.h src/vec.h src/std.h
 	$(CC) $(CFLAGS) -c -o $@ $<
-src/std.o: src/std.c src/std.h src/gc.h src/term.h
+$(BUILD_FOLDER)std.o: src/std.c src/std.h src/gc.h src/term.h
 	$(CC) $(CFLAGS) -c -o $@ $<
 
-src/gc-stand.o: src/gc.c src/gc.h src/vec.h src/std.h
-	$(CC) $(STD_CFLAGS) -DSTANDALONE_STD -c -o $@ $<
-src/std-stand.o: src/std.c src/std.h src/gc.h
-	$(CC) $(STD_CFLAGS) -DSTANDALONE_STD -c -o $@ $<
-src/scrap-runtime.o: src/scrap-runtime.c src/gc.h
-	$(CC) $(STD_CFLAGS) -DSTANDALONE_STD -c -o $@ $<
-src/vec-stand.o: src/vec.c
+$(BUILD_FOLDER)gc-stand.o: src/gc.c src/gc.h src/vec.h src/std.h
+	$(CC) $(CFLAGS) -DSTANDALONE_STD -c -o $@ $<
+$(BUILD_FOLDER)std-stand.o: src/std.c src/std.h src/gc.h
+	$(CC) $(CFLAGS) -DSTANDALONE_STD -c -o $@ $<
+$(BUILD_FOLDER)scrap-runtime.o: src/scrap-runtime.c src/gc.h
+	$(CC) $(CFLAGS) -DSTANDALONE_STD -c -o $@ $<
+$(BUILD_FOLDER)vec-stand.o: src/vec.c
 	$(CC) $(STD_CFLAGS) -DSTANDALONE_STD -c -o $@ $<
 
-src/filedialogs.o: external/tinyfiledialogs.c
+$(BUILD_FOLDER)filedialogs.o: external/tinyfiledialogs.c
 	$(CC) $(CFLAGS) -c -o $@ $<
-src/cfgpath.o: external/cfgpath.c
+$(BUILD_FOLDER)cfgpath.o: external/cfgpath.c
 	$(CC) $(CFLAGS) -c -o $@ $<
