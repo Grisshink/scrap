@@ -811,6 +811,12 @@ static bool compile_program(Exec* exec) {
     return true;
 }
 
+static void vector_append(char** vec, char* str) {
+    if (vector_size(*vec) > 0 && (*vec)[vector_size(*vec) - 1] == 0) vector_pop(*vec);
+    for (char* s = str; *s; s++) vector_add(vec, *s);
+    vector_add(vec, 0);
+}
+
 static bool build_program(Exec* exec) {
     exec->current_state = STATE_PRE_EXEC;
 
@@ -859,13 +865,15 @@ static bool build_program(Exec* exec) {
     TraceLog(LOG_INFO, "Built object file successfully");
 
     char link_error[1024];
-
+    char* command = vector_create();
 #ifdef _WIN32
-    bool res = spawn_process(project_conf.linker_command_windows, link_error, 1024);
+    // Command for linking on Windows. This thing requires gcc, which is not ideal :/
+    vector_append(&command, "x86_64-w64-mingw32-gcc.exe -static -o a.exe output.o -L. -lscrapstd-win -lm");
 #else
-    bool res = spawn_process(project_conf.linker_command, link_error, 1024);
+    vector_append(&command, "ld -dynamic-linker /lib/ld-linux-x86-64.so.2 -o a.out /lib/crt1.o output.o -L. -lscrapstd -lm -lc");
 #endif
-
+    
+    bool res = spawn_process(command, link_error, 1024);
     if (res) {
         TraceLog(LOG_INFO, "Linked successfully");
     } else {

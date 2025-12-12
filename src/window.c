@@ -463,14 +463,6 @@ void draw_window(void) {
         break;
     case GUI_TYPE_PROJECT_SETTINGS:
         begin_window(gettext("Build settings"), 0.6 * gui->win_w, 0.8 * gui->win_h, animation_ease);
-            begin_setting(gettext("Linker command"), false);
-                draw_text_input(&project_conf.linker_command, gettext("command"), &linker_command_scroll);
-            end_setting();
-
-            begin_setting(gettext("Linker command (Windows)"), false);
-                draw_text_input(&project_conf.linker_command_windows, gettext("command"), &linker_command_windows_scroll);
-            end_setting();
-
             gui_grow(gui, DIRECTION_VERTICAL);
 
             gui_element_begin(gui);

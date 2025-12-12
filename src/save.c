@@ -130,19 +130,18 @@ void set_default_config(Config* config) {
 }
 
 void project_config_new(ProjectConfig* config) {
-    config->linker_command = vector_create();
-    config->linker_command_windows = vector_create();
+    // TODO: Add more project settings XD
+    (void) config;
 }
 
 void project_config_free(ProjectConfig* config) {
-    vector_free(config->linker_command);
-    vector_free(config->linker_command_windows);
+    // TODO: Add more project settings XD
+    (void) config;
 }
 
 void project_config_set_default(ProjectConfig* config) {
-    vector_set_string(&config->linker_command, "ld -dynamic-linker /lib/ld-linux-x86-64.so.2 -o a.out /lib/crt1.o output.o -L. -lscrapstd -lm -lc");
-    // Command for linking on Windows. This thing requires gcc, which is not ideal :/
-    vector_set_string(&config->linker_command_windows, "x86_64-w64-mingw32-gcc.exe -static -o a.exe output.o -L. -lscrapstd-win -lm");
+    // TODO: Add more project settings XD
+    (void) config;
 }
 
 void apply_config(Config* dst, Config* src) {
@@ -575,6 +574,7 @@ void collect_all_code_ids(BlockChain* code) {
 }
 
 void save_code(const char* file_path, ProjectConfig* config, BlockChain* code) {
+    (void) config;
     SaveArena save = new_save(32768);
     ver = 3;
     int chains_count = vector_size(code);
@@ -607,9 +607,6 @@ void save_code(const char* file_path, ProjectConfig* config, BlockChain* code) {
 
     save_add_varint(&save, chains_count);
     for (int i = 0; i < chains_count; i++) save_blockchain(&save, &code[i]);
-
-    save_add_array(&save, config->linker_command, vector_size(config->linker_command), sizeof(config->linker_command[0]));
-    save_add_array(&save, config->linker_command_windows, vector_size(config->linker_command_windows), sizeof(config->linker_command_windows[0]));
 
     SaveFileData(file_path, save.ptr, save.used_size);
 
@@ -892,13 +889,6 @@ BlockChain* load_code(const char* file_path, ProjectConfig* out_config) {
         if (!load_blockchain(&save, &chain)) goto load_fail;
         vector_add(&code, chain);
     }
-
-    unsigned int len;
-    char* linker_command = save_read_array(&save, sizeof(char), &len);
-    if (linker_command) vector_set_string(&config.linker_command, linker_command);
-
-    char* linker_command_windows = save_read_array(&save, sizeof(char), &len);
-    if (linker_command_windows) vector_set_string(&config.linker_command_windows, linker_command_windows);
 
     *out_config = config;
 
