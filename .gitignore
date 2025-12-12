@@ -9,7 +9,7 @@ scrap.res
 private/
 locale/
 scrap.AppDir/
-tmp/
+build/
 a.out
 libscrapstd.a
 libscrapstd-win.a
