@@ -34,6 +34,7 @@
 #define CONVERT_COLOR(color, type) (type) { color.r, color.g, color.b, color.a }
 
 static void draw_code(void);
+static void draw_blockchain(BlockChain* chain, bool ghost);
 
 bool rl_vec_equal(Color lhs, Color rhs) {
     return lhs.r == rhs.r && lhs.g == rhs.g && lhs.b == rhs.b && lhs.a == rhs.a;
@@ -326,7 +327,7 @@ static void block_on_hover(GuiElement* el) {
     if (gui_window_is_shown()) return;
     hover_info.block = el->custom_data;
     hover_info.blockchain = hover_info.prev_blockchain;
-    if (!hover_info.block->parent) hover_info.prev_argument = NULL;
+    if (!hover_info.block->parent) hover_info.parent_argument = NULL;
 }
 
 static void argument_on_render(GuiElement* el) {
@@ -341,7 +342,7 @@ static void block_on_render(GuiElement* el) {
 static void block_argument_on_hover(GuiElement* el) {
     if (hover_info.top_bars.handler) return;
     if (hover_info.is_panel_edit_mode) return;
-    hover_info.prev_argument = el->custom_data;
+    hover_info.parent_argument = el->custom_data;
     hover_info.blockchain = hover_info.prev_blockchain;
 }
 
@@ -358,13 +359,14 @@ static void argument_on_hover(GuiElement* el) {
     el->data.border.type = BORDER_NORMAL;
 }
 
-static void draw_block(Block* block, bool highlight, bool can_hover) {
+static void draw_block(Block* block, bool highlight, bool can_hover, bool ghost) {
     bool collision = hover_info.prev_block == block || highlight;
     Color color = CONVERT_COLOR(block->blockdef->color, Color);
     if (!vm.is_running && block == exec_compile_error_block) {
         double animation = fmod(-GetTime(), 1.0) * 0.5 + 1.0;
         color = (Color) { 0xff * animation, 0x20 * animation, 0x20 * animation, 0xff };
     }
+    if (ghost) color.a = BLOCK_GHOST_OPACITY;
 
     Color block_color = collision ? ColorBrightness(color, 0.3) : color;
     Color dropdown_color = collision ? color : ColorBrightness(color, -0.3);
@@ -409,10 +411,12 @@ static void draw_block(Block* block, bool highlight, bool can_hover) {
 
         switch (input->type) {
         case INPUT_TEXT_DISPLAY:
-            gui_text(gui, &font_cond_shadow, input->data.text, BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+            gui_text(gui, &font_cond_shadow, input->data.text, BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0xff, 0xff, ghost ? BLOCK_GHOST_OPACITY : 0xff });
             break;
         case INPUT_IMAGE_DISPLAY:
-            gui_image(gui, input->data.image.image_ptr, BLOCK_IMAGE_SIZE, CONVERT_COLOR(input->data.image.image_color, GuiColor));
+            GuiColor img_color = CONVERT_COLOR(input->data.image.image_color, GuiColor);
+            if (ghost) img_color.a = BLOCK_GHOST_OPACITY;
+            gui_image(gui, input->data.image.image_ptr, BLOCK_IMAGE_SIZE, img_color);
             break;
         case INPUT_ARGUMENT:
             switch (arg->type) {
@@ -420,7 +424,7 @@ static void draw_block(Block* block, bool highlight, bool can_hover) {
             case ARGUMENT_TEXT:
                 gui_element_begin(gui);
                     if (arg->type == ARGUMENT_TEXT) {
-                        gui_set_rect(gui, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+                        gui_set_rect(gui, (GuiColor) { 0xff, 0xff, 0xff, ghost ? BLOCK_GHOST_OPACITY : 0xff });
                     } else {
                         gui_set_rect(gui, CONVERT_COLOR(dropdown_color, GuiColor));
                     }
@@ -437,9 +441,9 @@ static void draw_block(Block* block, bool highlight, bool can_hover) {
                         if (can_hover) gui_on_hover(gui, argument_on_hover);
 
                         if (arg->type == ARGUMENT_TEXT) {
-                            if (can_hover) draw_input(&font_cond, &arg->data.text, input->data.arg.hint_text, BLOCK_TEXT_SIZE, (GuiColor) { 0x00, 0x00, 0x00, 0xff });
+                            if (can_hover) draw_input(&font_cond, &arg->data.text, input->data.arg.hint_text, BLOCK_TEXT_SIZE, (GuiColor) { 0x00, 0x00, 0x00, ghost ? BLOCK_GHOST_OPACITY : 0xff });
                         } else {
-                            if (can_hover) draw_input(&font_cond_shadow, &arg->data.text, input->data.arg.hint_text, BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+                            if (can_hover) draw_input(&font_cond_shadow, &arg->data.text, input->data.arg.hint_text, BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0xff, 0xff, ghost ? BLOCK_GHOST_OPACITY : 0xff });
                         }
                     gui_element_end(gui);
                 gui_element_end(gui);
@@ -449,7 +453,7 @@ static void draw_block(Block* block, bool highlight, bool can_hover) {
                     if (can_hover) gui_on_hover(gui, block_argument_on_hover);
                     gui_set_custom_data(gui, arg);
 
-                    draw_block(&arg->data.block, highlight, can_hover);
+                    draw_block(&arg->data.block, highlight, can_hover, ghost);
                 gui_element_end(gui);
                 break;
             default:
@@ -673,13 +677,21 @@ static void blockchain_on_hover(GuiElement* el) {
     hover_info.prev_blockchain = el->custom_data;
 }
 
-static void draw_blockchain(BlockChain* chain) {
+static void draw_block_preview(BlockChain* chain) {
+    if (chain == &mouse_blockchain) return;
+    if (vector_size(mouse_blockchain.blocks) == 0) return;
+    if (hover_info.prev_argument != NULL) return;
+    if (mouse_blockchain.blocks[0].blockdef->type == BLOCKTYPE_HAT) return;
+
+    draw_blockchain(&mouse_blockchain, true);
+}
+
+static void draw_blockchain(BlockChain* chain, bool ghost) {
     int layer = 0;
     bool highlight = hover_info.exec_chain == chain;
 
     gui_element_begin(gui);
         gui_set_direction(gui, DIRECTION_VERTICAL);
-        //gui_set_border(gui, CONVERT_COLOR(YELLOW, GuiColor), BLOCK_OUTLINE_SIZE);
         gui_on_hover(gui, blockchain_on_hover);
         gui_set_custom_data(gui, chain);
         gui_set_padding(gui, 5, 5);
@@ -698,6 +710,7 @@ static void draw_blockchain(BlockChain* chain) {
 
             bool collision = hover_info.prev_block == &chain->blocks[i] || (highlight && block_highlight);
             Color color = CONVERT_COLOR(block->blockdef->color, Color);
+            if (ghost) color.a = BLOCK_GHOST_OPACITY;
             Color block_color = ColorBrightness(color, collision ? 0.3 : 0.0);
             Color outline_color;
             if (highlight && block_highlight) {
@@ -735,15 +748,14 @@ static void draw_blockchain(BlockChain* chain) {
             gui_element_begin(gui);
                 gui_set_direction(gui, DIRECTION_VERTICAL);
                 gui_set_custom_data(gui, &chain->blocks[i]);
+        } else if (blockdef->type == BLOCKTYPE_CONTROL) {
+            gui_element_begin(gui);
+                gui_set_direction(gui, DIRECTION_VERTICAL);
+                gui_set_custom_data(gui, &chain->blocks[i]);
+        }
 
-                draw_block(&chain->blocks[i], highlight && block_highlight, true);
-        } else {
-            if (blockdef->type == BLOCKTYPE_CONTROL) {
-                gui_element_begin(gui);
-                    gui_set_direction(gui, DIRECTION_VERTICAL);
-                    gui_set_custom_data(gui, &chain->blocks[i]);
-            }
-            draw_block(&chain->blocks[i], highlight && block_highlight, true);
+        if (blockdef->type != BLOCKTYPE_END) {
+            draw_block(&chain->blocks[i], highlight && block_highlight, true, ghost);
         }
 
         if (blockdef->type == BLOCKTYPE_CONTROL || blockdef->type == BLOCKTYPE_CONTROLEND) {
@@ -754,6 +766,7 @@ static void draw_blockchain(BlockChain* chain) {
 
             bool collision = hover_info.prev_block == &chain->blocks[i] || (highlight && block_highlight);
             Color color = CONVERT_COLOR(blockdef->color, Color);
+            if (ghost) color.a = BLOCK_GHOST_OPACITY;
             Color block_color = ColorBrightness(color, collision ? 0.3 : 0.0);
             Color outline_color;
             if (highlight && block_highlight) {
@@ -784,6 +797,10 @@ static void draw_blockchain(BlockChain* chain) {
 
                 gui_element_begin(gui);
                     gui_set_direction(gui, DIRECTION_VERTICAL);
+
+                    if (hover_info.prev_block == &chain->blocks[i]) draw_block_preview(chain);
+        } else {
+            if (hover_info.prev_block == &chain->blocks[i]) draw_block_preview(chain);
         }
     }
 
@@ -876,7 +893,7 @@ static void draw_block_palette(void) {
         gui_set_scissor(gui);
 
         for (size_t i = 0; i < vector_size(palette.categories[palette.current_category].blocks); i++) {
-            draw_block(&palette.categories[palette.current_category].blocks[i], false, true);
+            draw_block(&palette.categories[palette.current_category].blocks[i], false, true, false);
         }
     gui_element_end(gui);
 }
@@ -1167,7 +1184,7 @@ static void draw_code(void) {
             gui_set_floating(gui);
             gui_set_position(gui, chain_pos.x, chain_pos.y);
 
-            draw_blockchain(&editor_code[i]);
+            draw_blockchain(&editor_code[i], false);
         gui_element_end(gui);
         GuiElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len];
         editor_code[i].width = el->w;
@@ -1266,7 +1283,7 @@ static void draw_search_list(void) {
                     gui_on_hover(gui, search_on_hover);
                     gui_set_custom_data(gui, search_list[i]);
 
-                    draw_block(search_list[i], false, false);
+                    draw_block(search_list[i], false, false, false);
                 gui_element_end(gui);
             }
 
@@ -1299,7 +1316,7 @@ void scrap_gui_process(void) {
             gui_set_floating(gui);
             gui_set_position(gui, gui->mouse_x, gui->mouse_y);
 
-            draw_blockchain(&mouse_blockchain);
+            draw_blockchain(&mouse_blockchain, false);
         gui_element_end(gui);
 
         if (hover_info.select_input == &search_list_search) {
@@ -1610,10 +1627,9 @@ static void print_debug(int* num, char* fmt, ...) {
 static void write_debug_buffer(void) {
     int i = 0;
 #ifdef DEBUG
-    print_debug(&i, "Block: %p, Parent: %p", hover_info.block, hover_info.block ? hover_info.block->parent : NULL);
+    print_debug(&i, "Block: %p, Parent: %p, Parent Arg: %p", hover_info.block, hover_info.block ? hover_info.block->parent : NULL, hover_info.parent_argument);
     print_debug(&i, "Argument: %p", hover_info.argument);
     print_debug(&i, "BlockChain: %p", hover_info.blockchain);
-    print_debug(&i, "Prev argument: %p", hover_info.prev_argument);
     print_debug(&i, "Select block: %p, arg: %p, chain: %p", hover_info.select_block, hover_info.select_argument, hover_info.select_blockchain);
     print_debug(&i, "Select block pos: (%.3f, %.3f)", hover_info.select_block_pos.x, hover_info.select_block_pos.y);
     print_debug(&i, "Select block bounds Pos: (%.3f, %.3f), Size: (%.3f, %.3f)", hover_info.code_panel_bounds.x, hover_info.code_panel_bounds.y, hover_info.code_panel_bounds.width, hover_info.code_panel_bounds.height);

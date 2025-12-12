@@ -28,6 +28,7 @@
 #define BLOCK_STRING_PADDING (10.0 * (float)conf.font_size / 32.0)
 #define BLOCK_CONTROL_INDENT (16.0 * (float)conf.font_size / 32.0)
 #define SIDE_BAR_PADDING (10.0 * (float)conf.font_size / 32.0)
+#define BLOCK_GHOST_OPACITY 0x99
 
 #define WINDOW_ELEMENT_PADDING (10.0 * (float)conf.font_size / 32.0)
 

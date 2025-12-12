@@ -652,7 +652,7 @@ static bool handle_code_editor_click(bool mouse_empty) {
     if (!mouse_empty) {
         mouse_blockchain.x = gui->mouse_x;
         mouse_blockchain.y = gui->mouse_y;
-        if (hover_info.argument || hover_info.prev_argument) {
+        if (hover_info.argument || hover_info.parent_argument) {
             if (vector_size(mouse_blockchain.blocks) > 1) return true;
             if (mouse_blockchain.blocks[0].blockdef->type == BLOCKTYPE_CONTROLEND) return true;
             if (mouse_blockchain.blocks[0].blockdef->type == BLOCKTYPE_HAT) return true;
@@ -667,17 +667,17 @@ static bool handle_code_editor_click(bool mouse_empty) {
                 hover_info.select_blockchain = hover_info.blockchain;
                 hover_info.select_block = &hover_info.argument->data.block;
                 hover_info.select_input = NULL;
-            } else if (hover_info.prev_argument) {
+            } else if (hover_info.parent_argument) {
                 // Swap argument
                 TraceLog(LOG_INFO, "Swap argument");
-                if (hover_info.prev_argument->type != ARGUMENT_BLOCK) return true;
+                if (hover_info.parent_argument->type != ARGUMENT_BLOCK) return true;
                 mouse_blockchain.blocks[0].parent = hover_info.block->parent;
                 Block temp = mouse_blockchain.blocks[0];
                 mouse_blockchain.blocks[0] = *hover_info.block;
                 mouse_blockchain.blocks[0].parent = NULL;
                 block_update_parent_links(&mouse_blockchain.blocks[0]);
-                argument_set_block(hover_info.prev_argument, temp);
-                hover_info.select_block = &hover_info.prev_argument->data.block;
+                argument_set_block(hover_info.parent_argument, temp);
+                hover_info.select_block = &hover_info.parent_argument->data.block;
                 hover_info.select_blockchain = hover_info.blockchain;
             }
         } else if (
@@ -715,12 +715,12 @@ static bool handle_code_editor_click(bool mouse_empty) {
             } else {
                 // Detach argument
                 TraceLog(LOG_INFO, "Detach argument");
-                assert(hover_info.prev_argument != NULL);
+                assert(hover_info.parent_argument != NULL);
 
                 blockchain_add_block(&mouse_blockchain, *hover_info.block);
                 mouse_blockchain.blocks[0].parent = NULL;
 
-                argument_set_text(hover_info.prev_argument, "");
+                argument_set_text(hover_info.parent_argument, "");
                 hover_info.select_blockchain = NULL;
                 hover_info.select_block = NULL;
             }
@@ -1306,7 +1306,7 @@ void scrap_gui_process_input(void) {
         hover_info.argument = NULL;
         hover_info.input_info.input = NULL;
         hover_info.category = NULL;
-        hover_info.prev_argument = NULL;
+        hover_info.parent_argument = NULL;
         hover_info.prev_blockchain = NULL;
         hover_info.blockchain = NULL;
         hover_info.editor.part = EDITOR_NONE;
@@ -1342,6 +1342,7 @@ void scrap_gui_process_input(void) {
     }
 
     hover_info.prev_block = hover_info.block;
+    hover_info.prev_argument = hover_info.argument;
     hover_info.prev_panel = hover_info.panel;
     hover_info.editor.prev_blockdef = hover_info.editor.blockdef;
 }
