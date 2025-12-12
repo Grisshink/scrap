@@ -185,11 +185,11 @@ $(BUILD_FOLDER)std.o: src/std.c src/std.h src/gc.h src/term.h
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 $(BUILD_FOLDER)gc-stand.o: src/gc.c src/gc.h src/vec.h src/std.h
-	$(CC) $(CFLAGS) -DSTANDALONE_STD -c -o $@ $<
+	$(CC) $(STD_CFLAGS) -DSTANDALONE_STD -c -o $@ $<
 $(BUILD_FOLDER)std-stand.o: src/std.c src/std.h src/gc.h
-	$(CC) $(CFLAGS) -DSTANDALONE_STD -c -o $@ $<
+	$(CC) $(STD_CFLAGS) -DSTANDALONE_STD -c -o $@ $<
 $(BUILD_FOLDER)scrap-runtime.o: src/scrap-runtime.c src/gc.h
-	$(CC) $(CFLAGS) -DSTANDALONE_STD -c -o $@ $<
+	$(CC) $(STD_CFLAGS) -DSTANDALONE_STD -c -o $@ $<
 $(BUILD_FOLDER)vec-stand.o: src/vec.c
 	$(CC) $(STD_CFLAGS) -DSTANDALONE_STD -c -o $@ $<
 
