@@ -27,6 +27,8 @@
 
 #define SIZING_X(el) (GuiElementSizing)(el->sizing & 0x0f)
 #define SIZING_Y(el) (GuiElementSizing)((el->sizing >> 4) & 0x0f)
+#define ANCHOR_X(el) (GuiAlignmentType)(el->anchor & 0x0f)
+#define ANCHOR_Y(el) (GuiAlignmentType)((el->anchor >> 4) & 0x0f)
 #define NEED_RESIZE(el) ((el->flags >> 5) & 1)
 #define SCISSOR(el) ((el->flags >> 4) & 1)
 #define FLOATING(el) ((el->flags >> 3) & 1)
@@ -40,8 +42,9 @@
 #define SET_FLOATING(el, floating) (el->flags = (el->flags & ~(1 << 3)) | ((floating & 1) << 3))
 #define SET_ALIGN(el, ali) (el->flags = (el->flags & 0xf9) | (ali << 1))
 #define SET_DIRECTION(el, dir) (el->flags = (el->flags & 0xfe) | dir)
+#define SET_ANCHOR(el, x, y) (el->anchor = x | (y << 4))
 
-static void gui_render(Gui* gui, GuiElement* el, float pos_x, float pos_y);
+static void gui_render(Gui* gui, GuiElement* el, float pos_x, float pos_y, float parent_scaling);
 static void flush_aux_buffers(Gui* gui);
 
 static bool inside_window(Gui* gui, GuiDrawCommand* command) {
@@ -84,7 +87,7 @@ void gui_begin(Gui* gui) {
 
 void gui_end(Gui* gui) {
     gui_element_end(gui);
-    gui_render(gui, &gui->element_stack[0], 0, 0);
+    gui_render(gui, &gui->element_stack[0], 0, 0, 1.0);
     flush_aux_buffers(gui);
 }
 
@@ -193,7 +196,7 @@ static GuiBounds scissor_rect(GuiBounds rect, GuiBounds scissor) {
     return rect;
 }
 
-static void gui_render(Gui* gui, GuiElement* el, float pos_x, float pos_y) {
+static void gui_render(Gui* gui, GuiElement* el, float pos_x, float pos_y, float parent_scaling) {
     GuiBounds scissor = gui->scissor_stack_len > 0 ? gui->scissor_stack[gui->scissor_stack_len - 1] : (GuiBounds) { 0, 0, gui->win_w, gui->win_h };
     bool hover = false;
 
@@ -202,12 +205,26 @@ static void gui_render(Gui* gui, GuiElement* el, float pos_x, float pos_y) {
         pos_y = el->parent_anchor->abs_y;
     }
 
-    el->abs_x = el->x * el->scaling + pos_x;
-    el->abs_y = el->y * el->scaling + pos_y;
+    float anchor_x = 0, 
+          anchor_y = 0;
+
+    switch (ANCHOR_X(el)) {
+    case ALIGN_CENTER: anchor_x = el->w * el->scaling / 2; break;
+    case ALIGN_RIGHT: anchor_x = el->w * el->scaling; break;
+    default: break;
+    }
+    switch (ANCHOR_Y(el)) {
+    case ALIGN_CENTER: anchor_y = el->h * el->scaling / 2; break;
+    case ALIGN_RIGHT: anchor_y = el->h * el->scaling; break;
+    default: break;
+    }
+
+    el->abs_x = (el->x - anchor_x) * parent_scaling + pos_x;
+    el->abs_y = (el->y - anchor_y) * parent_scaling + pos_y;
 
     if (mouse_inside(gui, scissor_rect((GuiBounds) {
-        el->x * el->scaling + pos_x,
-        el->y * el->scaling + pos_y,
+        (el->x - anchor_x) * parent_scaling + pos_x,
+        (el->y - anchor_y) * parent_scaling + pos_y,
         el->w * el->scaling,
         el->h * el->scaling }, scissor)))
     {
@@ -217,8 +234,8 @@ static void gui_render(Gui* gui, GuiElement* el, float pos_x, float pos_y) {
     if (el->handle_pre_render) el->handle_pre_render(el);
 
     GuiDrawBounds el_bounds = (GuiDrawBounds) {
-        pos_x + (float)el->x * el->scaling,
-        pos_y + (float)el->y * el->scaling,
+        pos_x + ((float)el->x - anchor_x) * parent_scaling,
+        pos_y + ((float)el->y - anchor_y) * parent_scaling,
         (float)el->w * el->scaling,
         (float)el->h * el->scaling,
     };
@@ -269,7 +286,7 @@ static void gui_render(Gui* gui, GuiElement* el, float pos_x, float pos_y) {
 
     GuiElement* iter = el + 1;
     for (int i = 0; i < el->element_count; i++) {
-        gui_render(gui, iter, pos_x + (float)el->x * el->scaling, pos_y + (float)el->y * el->scaling);
+        gui_render(gui, iter, pos_x + ((float)el->x - anchor_x) * parent_scaling, pos_y + ((float)el->y - anchor_y) * parent_scaling, el->scaling);
         iter = iter->next;
     }
 
@@ -290,13 +307,13 @@ static void gui_render(Gui* gui, GuiElement* el, float pos_x, float pos_y) {
             if (DIRECTION(el) == DIRECTION_HORIZONTAL) {
                 command->width = scroll_size * el->scaling;
                 command->height = 5 * el->scaling;
-                command->pos_x = el_bounds.x + scroll_pos * el->scaling;
+                command->pos_x = el_bounds.x + scroll_pos * parent_scaling;
                 command->pos_y = el_bounds.y + el_bounds.h - command->height;
             } else {
                 command->width = 5 * el->scaling;
                 command->height = scroll_size * el->scaling;
                 command->pos_x = el_bounds.x + el_bounds.w - command->width;
-                command->pos_y = el_bounds.y + scroll_pos * el->scaling;
+                command->pos_y = el_bounds.y + scroll_pos * parent_scaling;
             }
         }
 
@@ -337,6 +354,7 @@ GuiElement* gui_element_begin(Gui* gui) {
     el->w = 0;
     el->h = 0;
     el->flags = 0; // direction = DIRECTION_VERTICAL, align = ALIGN_TOP | ALIGN_LEFT, is_floating = false, needs_resize = false
+    el->anchor = 0; // Top left anchor
     el->next = NULL;
     el->parent_anchor = NULL;
     el->handle_hover = NULL;
@@ -485,7 +503,7 @@ void gui_element_end(Gui* gui) {
         prev->element_count++;
     }
 
-    gui_element_advance(prev, (GuiMeasurement) { el->w, el->h });
+    if (!FLOATING(el)) gui_element_advance(prev, (GuiMeasurement) { el->w, el->h });
     GuiElementSizing sizing_x = SIZING_X(el);
     GuiElementSizing sizing_y = SIZING_Y(el);
     bool has_defined_size = sizing_x != SIZING_GROW && sizing_x != SIZING_PERCENT &&
@@ -521,7 +539,12 @@ void gui_on_render(Gui* gui, GuiHandler handler) {
     el->handle_pre_render = handler;
 }
 
-void gui_set_anchor(Gui* gui, GuiElement* anchor) {
+void gui_set_anchor(Gui* gui, GuiAlignmentType anchor_x, GuiAlignmentType anchor_y) {
+    GuiElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
+    SET_ANCHOR(el, anchor_x, anchor_y);
+}
+
+void gui_set_parent_anchor(Gui* gui, GuiElement* anchor) {
     GuiElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
     el->parent_anchor = anchor;
 }

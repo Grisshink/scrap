@@ -111,8 +111,11 @@ static void begin_window(const char* title, int w, int h, float scaling) {
     gui_element_begin(gui);
         gui_scale_element(gui, scaling);
         gui_set_floating(gui);
-        gui_set_position(gui, (gui->win_w / 2) / scaling - w / 2, (gui->win_h / 2) / scaling - h / 2);
+        gui_set_position(gui, gui->win_w / 2, gui->win_h / 2);
+        gui_set_anchor(gui, ALIGN_CENTER, ALIGN_CENTER);
         gui_set_fixed(gui, w, h);
+        if (w == 0) gui_set_fit(gui, DIRECTION_HORIZONTAL);
+        if (h == 0) gui_set_fit(gui, DIRECTION_VERTICAL);
         gui_set_rect(gui, (GuiColor) { 0x20, 0x20, 0x20, 0xff });
         gui_set_direction(gui, DIRECTION_VERTICAL);
         gui_on_hover(gui, window_on_hover);
@@ -130,16 +133,29 @@ static void begin_window(const char* title, int w, int h, float scaling) {
         gui_element_end(gui);
 
         gui_element_begin(gui);
+            gui_set_direction(gui, DIRECTION_VERTICAL);
+            gui_set_padding(gui, conf.font_size * 0.5, conf.font_size * 0.5);
+            gui_set_grow(gui, DIRECTION_HORIZONTAL);
+            gui_set_grow(gui, DIRECTION_VERTICAL);
+            gui_set_gap(gui, WINDOW_ELEMENT_PADDING);
+}
+
+static void end_window(void) {
+        gui_element_end(gui);
+
+        GuiElement* el = gui_get_element(gui);
+
+        gui_element_begin(gui);
             gui_set_floating(gui);
             gui_set_border(gui, (GuiColor) { 0x60, 0x60, 0x60, 0xff }, 2);
             gui_set_position(gui, 0, 0);
-            gui_set_fixed(gui, w, h);
+            gui_set_fixed(gui, el->w, el->h);
             gui_set_shader(gui, &line_shader);
         gui_element_end(gui);
 
         gui_element_begin(gui);
             gui_set_floating(gui);
-            gui_set_position(gui, w - conf.font_size * 1.2, 0);
+            gui_set_position(gui, el->w - conf.font_size * 1.2, 0);
             gui_set_fixed(gui, conf.font_size * 1.2, conf.font_size * 1.2);
             gui_set_align(gui, ALIGN_CENTER);
             gui_on_hover(gui, close_button_on_hover);
@@ -152,17 +168,6 @@ static void begin_window(const char* title, int w, int h, float scaling) {
                 gui_text(gui, &font_cond, "X", conf.font_size * 0.8, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
             gui_element_end(gui);
         gui_element_end(gui);
-
-        gui_element_begin(gui);
-            gui_set_direction(gui, DIRECTION_VERTICAL);
-            gui_set_padding(gui, conf.font_size * 0.5, conf.font_size * 0.5);
-            gui_set_grow(gui, DIRECTION_HORIZONTAL);
-            gui_set_grow(gui, DIRECTION_VERTICAL);
-            gui_set_gap(gui, WINDOW_ELEMENT_PADDING);
-}
-
-static void end_window(void) {
-    gui_element_end(gui);
     gui_element_end(gui);
 }
 
@@ -412,7 +417,7 @@ void draw_window(void) {
 
     switch (window.type) {
     case GUI_TYPE_SETTINGS:
-        begin_window(gettext("Settings"), 0.6 * gui->win_w, 0.8 * gui->win_h, animation_ease);
+        begin_window(gettext("Settings"), 0.6 * gui->win_w, 0, animation_ease);
             begin_setting(gettext("Language"), true);
                 draw_dropdown_input((int*)&window_conf.language, language_list, ARRLEN(language_list));
             end_setting();
@@ -462,7 +467,7 @@ void draw_window(void) {
         end_window();
         break;
     case GUI_TYPE_PROJECT_SETTINGS:
-        begin_window(gettext("Build settings"), 0.6 * gui->win_w, 0.8 * gui->win_h, animation_ease);
+        begin_window(gettext("Build settings"), 0.6 * gui->win_w, 0, animation_ease);
             begin_setting(gettext("Executable name"), false);
                 draw_text_input(&project_conf.executable_name, gettext("name"), &executable_name_scroll);
             end_setting();
@@ -485,7 +490,7 @@ void draw_window(void) {
         end_window();
         break;
     case GUI_TYPE_ABOUT:
-        begin_window(gettext("About"), 500 * conf.font_size / 32.0, 220 * conf.font_size / 32.0, animation_ease);
+        begin_window(gettext("About"), 500 * conf.font_size / 32.0, 0, animation_ease);
             gui_element_begin(gui);
                 gui_set_direction(gui, DIRECTION_HORIZONTAL);
                 gui_set_align(gui, ALIGN_CENTER);

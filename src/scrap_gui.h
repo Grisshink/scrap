@@ -139,6 +139,12 @@ struct GuiElement {
     //   X - ElementSizing for element width
     //   Y - ElementSizing for element height
     unsigned char sizing;
+    // Anchor layout:
+    // YYYYXXXX
+    // Where:
+    //   X - GuiAlignmentType for horizontal alignment
+    //   Y - GuiAlignmentType for vertical alignment
+    unsigned char anchor;
     // Flags layout:
     // 00GSFAAD
     // Where:
@@ -238,7 +244,8 @@ void gui_set_custom_data(Gui* gui, void* custom_data);
 void gui_set_floating(Gui* gui);
 void gui_set_scissor(Gui* gui);
 void gui_set_position(Gui* gui, int x, int y);
-void gui_set_anchor(Gui* gui, GuiElement* anchor);
+void gui_set_anchor(Gui* gui, GuiAlignmentType anchor_x, GuiAlignmentType anchor_y);
+void gui_set_parent_anchor(Gui* gui, GuiElement* anchor);
 void gui_set_scroll(Gui* gui, int* scroll_value);
 void gui_set_scroll_scaling(Gui* gui, int scroll_scaling);
 void gui_set_shader(Gui* gui, void* shader);

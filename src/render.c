@@ -1217,7 +1217,7 @@ static void draw_dropdown(void) {
         gui_set_rect(gui, (GuiColor) { 0x40, 0x40, 0x40, 0xff });
         gui_set_gap(gui, 2);
         gui_set_padding(gui, 2, 2);
-        gui_set_anchor(gui, hover_info.dropdown.element);
+        gui_set_parent_anchor(gui, hover_info.dropdown.element);
         gui_set_position(gui, 0, hover_info.dropdown.element->h);
         if (hover_info.dropdown.list_len > max_list_size) {
             gui_set_scissor(gui);
@@ -1351,7 +1351,7 @@ void scrap_gui_process(void) {
                 gui_set_floating(gui);
                 gui_set_grow(gui, DIRECTION_HORIZONTAL);
                 gui_set_position(gui, 0, 0);
-                gui_set_anchor(gui, tab_bar_anchor);
+                gui_set_parent_anchor(gui, tab_bar_anchor);
                 gui_set_align(gui, ALIGN_CENTER);
                 gui_set_padding(gui, 0, conf.font_size);
 
