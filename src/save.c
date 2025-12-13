@@ -130,18 +130,18 @@ void set_default_config(Config* config) {
 }
 
 void project_config_new(ProjectConfig* config) {
-    // TODO: Add more project settings XD
-    (void) config;
+    config->executable_name = vector_create();
+    config->linker_name = vector_create();
 }
 
 void project_config_free(ProjectConfig* config) {
-    // TODO: Add more project settings XD
-    (void) config;
+    vector_free(config->executable_name);
+    vector_free(config->linker_name);
 }
 
 void project_config_set_default(ProjectConfig* config) {
-    // TODO: Add more project settings XD
-    (void) config;
+    vector_set_string(&config->executable_name, "project");
+    vector_set_string(&config->linker_name, "ld");
 }
 
 void apply_config(Config* dst, Config* src) {
@@ -889,6 +889,13 @@ BlockChain* load_code(const char* file_path, ProjectConfig* out_config) {
         if (!load_blockchain(&save, &chain)) goto load_fail;
         vector_add(&code, chain);
     }
+
+    unsigned int len;
+    char* executable_name = save_read_array(&save, sizeof(char), &len);
+    if (executable_name) vector_set_string(&config.executable_name, executable_name);
+
+    char* linker_name = save_read_array(&save, sizeof(char), &len);
+    if (linker_name) vector_set_string(&config.linker_name, linker_name);
 
     *out_config = config;
 

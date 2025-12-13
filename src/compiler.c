@@ -829,9 +829,9 @@ static bool compile_program(Exec* exec) {
     return true;
 }
 
-static void vector_append(char** vec, char* str) {
+static void vector_append(char** vec, const char* str) {
     if (vector_size(*vec) > 0 && (*vec)[vector_size(*vec) - 1] == 0) vector_pop(*vec);
-    for (char* s = str; *s; s++) vector_add(vec, *s);
+    for (size_t i = 0; str[i]; i++) vector_add(vec, str[i]);
     vector_add(vec, 0);
 }
 
@@ -935,7 +935,7 @@ static bool build_program(Exec* exec) {
     char* command = vector_create();
 #ifdef _WIN32
     // Command for linking on Windows. This thing requires gcc, which is not ideal :/
-    vector_append(&command, "x86_64-w64-mingw32-gcc.exe -static -o a.exe output.o -L. -lscrapstd-win -lm");
+    vector_append(&command, TextFormat("x86_64-w64-mingw32-gcc.exe -static -o %s.exe output.o -L. -lscrapstd-win -lm", project_conf.executable_name));
 #else
     char* crt_dir = find_crt();
     if (!crt_dir) {
@@ -953,13 +953,13 @@ static bool build_program(Exec* exec) {
         TraceLog(LOG_WARNING, "Crtbegin dir is not found!");
     }
 
-    vector_append(&command, "ld ");
+    vector_append(&command, TextFormat("%s ", project_conf.linker_name));
     vector_append(&command, "-dynamic-linker /lib64/ld-linux-x86-64.so.2 ");
     vector_append(&command, "-pie ");
-    vector_append(&command, "-o a.out ");
+    vector_append(&command, TextFormat("-o %s ", project_conf.executable_name));
 
-    vector_append(&command, (char*)TextFormat("%scrti.o %sScrt1.o %scrtn.o ", crt_dir, crt_dir, crt_dir));
-    if (crt_begin_dir) vector_append(&command, (char*)TextFormat("%scrtbeginS.o %scrtendS.o ", crt_begin_dir, crt_begin_dir));
+    vector_append(&command, TextFormat("%scrti.o %sScrt1.o %scrtn.o ", crt_dir, crt_dir, crt_dir));
+    if (crt_begin_dir) vector_append(&command, TextFormat("%scrtbeginS.o %scrtendS.o ", crt_begin_dir, crt_begin_dir));
 
     vector_append(&command, "output.o ");
     vector_append(&command, "-L. -lscrapstd -L/usr/lib -L/lib -lm -lc");

@@ -61,8 +61,8 @@ typedef struct {
 } Config;
 
 typedef struct {
-    //char* linker_command;
-    //char* linker_command_windows;
+    char* executable_name;
+    char* linker_name;
 } ProjectConfig;
 
 typedef bool (*ButtonClickHandler)(void);

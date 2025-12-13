@@ -407,8 +407,8 @@ void draw_window(void) {
     static int font_path_scroll = 0;
     static int font_bold_path_scroll = 0;
     static int font_mono_path_scroll = 0;
-    static int linker_command_scroll = 0;
-    static int linker_command_windows_scroll = 0;
+    static int executable_name_scroll = 0;
+    static int linker_name_scroll = 0;
 
     switch (window.type) {
     case GUI_TYPE_SETTINGS:
@@ -463,6 +463,14 @@ void draw_window(void) {
         break;
     case GUI_TYPE_PROJECT_SETTINGS:
         begin_window(gettext("Build settings"), 0.6 * gui->win_w, 0.8 * gui->win_h, animation_ease);
+            begin_setting(gettext("Executable name"), false);
+                draw_text_input(&project_conf.executable_name, gettext("name"), &executable_name_scroll);
+            end_setting();
+
+            begin_setting(gettext("Linker name (Linux only)"), false);
+                draw_text_input(&project_conf.linker_name, gettext("name"), &linker_name_scroll);
+            end_setting();
+
             gui_grow(gui, DIRECTION_VERTICAL);
 
             gui_element_begin(gui);
