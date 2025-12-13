@@ -20,6 +20,7 @@
 #include "vec.h"
 #include "std.h"
 
+#include <sys/stat.h>
 #include <llvm-c/Analysis.h>
 #include <assert.h>
 #include <string.h>
@@ -28,6 +29,10 @@
 #include <math.h>
 #include <unistd.h>
 #include <errno.h>
+
+#ifndef _WIN32
+#include <glob.h>
+#endif
 
 #define ARRLEN(arr) (sizeof(arr) / sizeof(arr[0]))
 #define MAX(x, y) ((x) > (y) ? (x) : (y))
@@ -817,6 +822,45 @@ static void vector_append(char** vec, char* str) {
     vector_add(vec, 0);
 }
 
+static bool file_exists(char* path) {
+    struct stat s;
+    if (stat(path, &s)) return false;
+    return S_ISREG(s.st_mode);
+}
+
+static char* find_path_glob(char* search_path, int file_len) {
+#ifdef _WIN32
+	return NULL;
+#else
+	glob_t glob_buf;
+	if (glob(search_path, 0, NULL, &glob_buf)) return NULL;
+
+    char* path = glob_buf.gl_pathv[0];
+    size_t len = strlen(path);
+
+    path[len - file_len] = 0;
+
+    char* out = vector_create();
+    vector_append(&out, path);
+    globfree(&glob_buf);
+    return out;
+#endif
+}
+
+static char* find_crt(void) {
+    if (file_exists("/usr/lib/crt1.o")) {
+        char* out = vector_create();
+        vector_append(&out, "/usr/lib/");
+        return out;
+    }
+
+    return find_path_glob("/usr/lib/x86_64*linux*/crt1.o", sizeof("crt1.o") - 1);
+}
+
+static char* find_crt_begin(void) {
+    return find_path_glob("/usr/lib/gcc/x86_64*linux*/*/crtbegin.o", sizeof("crtbegin.o") - 1);
+}
+
 static bool build_program(Exec* exec) {
     exec->current_state = STATE_PRE_EXEC;
 
@@ -870,7 +914,34 @@ static bool build_program(Exec* exec) {
     // Command for linking on Windows. This thing requires gcc, which is not ideal :/
     vector_append(&command, "x86_64-w64-mingw32-gcc.exe -static -o a.exe output.o -L. -lscrapstd-win -lm");
 #else
-    vector_append(&command, "ld -dynamic-linker /lib/ld-linux-x86-64.so.2 -o a.out /lib/crt1.o output.o -L. -lscrapstd -lm -lc");
+    char* crt_dir = find_crt();
+    if (!crt_dir) {
+        exec_set_error(exec, NULL, "Could not find crt files for linking");
+        vector_free(command);
+        return false;
+    }
+
+    char* crt_begin_dir = find_crt_begin();
+
+    TraceLog(LOG_INFO, "Crt dir: %s", crt_dir);
+    if (crt_begin_dir) {
+        TraceLog(LOG_INFO, "Crtbegin dir: %s", crt_begin_dir);
+    } else {
+        TraceLog(LOG_WARNING, "Crtbegin dir is not found!");
+    }
+
+    vector_append(&command, "ld ");
+    vector_append(&command, "-dynamic-linker /lib/ld-linux-x86-64.so.2 ");
+    vector_append(&command, "-pie ");
+    vector_append(&command, "-o a.out ");
+
+    vector_append(&command, (char*)TextFormat("%scrti.o %sScrt1.o %scrtn.o ", crt_dir, crt_dir, crt_dir));
+    if (crt_begin_dir) vector_append(&command, (char*)TextFormat("%scrtbeginS.o %scrtendS.o ", crt_begin_dir, crt_begin_dir));
+
+    vector_append(&command, "output.o ");
+    vector_append(&command, "-L. -lscrapstd -L/usr/lib -L/lib -lm -lc");
+
+    TraceLog(LOG_INFO, "Full command: \"%s\"", command);
 #endif
     
     bool res = spawn_process(command, link_error, 1024);
@@ -880,6 +951,7 @@ static bool build_program(Exec* exec) {
         exec_set_error(exec, NULL, link_error);
     }
 
+    vector_free(command);
     return res;
 }
 

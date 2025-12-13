@@ -365,7 +365,12 @@ bool handle_run_button_click(void) {
 
 bool handle_build_button_click(void) {
     if (vm.is_running) return true;
-    gui_window_show(GUI_TYPE_PROJECT_SETTINGS);
+#ifdef USE_INTERPRETER
+    start_vm();
+#else
+    start_vm(COMPILER_MODE_BUILD);
+#endif
+    // gui_window_show(GUI_TYPE_PROJECT_SETTINGS);
     return true;
 }
 
