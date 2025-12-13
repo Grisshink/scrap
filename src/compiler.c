@@ -941,7 +941,7 @@ static bool build_program(Exec* exec) {
     }
 
     vector_append(&command, "ld ");
-    vector_append(&command, "-dynamic-linker /lib/ld-linux-x86-64.so.2 ");
+    vector_append(&command, "-dynamic-linker /lib64/ld-linux-x86-64.so.2 ");
     vector_append(&command, "-pie ");
     vector_append(&command, "-o a.out ");
 

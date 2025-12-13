@@ -41,7 +41,7 @@ else
 	LDFLAGS += -fsanitize=address -fsanitize=undefined -fno-omit-frame-pointer
 endif
 
-STD_CFLAGS := $(CFLAGS)
+STD_CFLAGS := $(CFLAGS) -fPIC
 
 ifeq ($(BUILD_MODE), DEBUG)
 	CFLAGS += -fsanitize=address -fsanitize=undefined -fno-omit-frame-pointer
