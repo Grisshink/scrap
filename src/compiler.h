@@ -144,6 +144,8 @@ typedef struct {
     char current_error[MAX_ERROR_LEN];
     Block* current_error_block;
 
+    bool build_random;
+
     // Needed for compiler to determine if some block uses gc_malloc so we could call gc_flush afterwards
     bool gc_dirty;
     LLVMValueRef* gc_dirty_funcs;

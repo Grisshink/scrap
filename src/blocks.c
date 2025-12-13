@@ -2142,6 +2142,9 @@ bool block_random(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* re
     (void) control_state;
     (void) block;
     MIN_ARG_COUNT(2);
+
+    exec->build_random = true;
+
     LLVMValueRef min = arg_to_integer(exec, block, argv[0]);
     if (!min) return false;
     LLVMValueRef max = arg_to_integer(exec, block, argv[1]);

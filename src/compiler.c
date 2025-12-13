@@ -620,6 +620,9 @@ static LLVMValueRef register_globals(Exec* exec) {
     LLVMTypeRef random_func_params[] = { LLVMInt32Type(), LLVMInt32Type() };
     add_function(exec, "std_get_random", LLVMInt32Type(), random_func_params, ARRLEN(random_func_params), std_get_random, false, false);
 
+    LLVMTypeRef set_seed_func_params[] = { LLVMInt32Type() };
+    add_function(exec, "std_set_random_seed", LLVMVoidType(), set_seed_func_params, ARRLEN(set_seed_func_params), std_set_random_seed, false, false);
+
     LLVMTypeRef atoi_func_params[] = { LLVMPointerType(LLVMInt8Type(), 0) };
     add_function(exec, "atoi", LLVMInt32Type(), atoi_func_params, ARRLEN(atoi_func_params), atoi, false, false);
 
@@ -758,6 +761,7 @@ static bool compile_program(Exec* exec) {
     exec->control_data_stack_len = 0;
     exec->variable_stack_len = 0;
     exec->variable_stack_frames_len = 0;
+    exec->build_random = false;
     exec->gc_dirty = false;
     exec->gc_dirty_funcs = vector_create();
     exec->defined_functions = vector_create();
@@ -798,6 +802,14 @@ static bool compile_program(Exec* exec) {
             LLVMValueRef val = build_call_count(exec, "std_any_from_value", 2, CONST_GC, CONST_INTEGER(DATA_TYPE_NOTHING));
             LLVMBuildRet(exec->builder, val);
         }
+    }
+
+    if (exec->build_random) {
+        LLVMBasicBlockRef random_block = LLVMInsertBasicBlock(entry, "rand_init");
+        LLVMPositionBuilderAtEnd(exec->builder, random_block);
+        LLVMValueRef time_val = build_call(exec, "time", LLVMConstPointerNull(LLVMPointerType(LLVMVoidType(), 0)));
+        build_call(exec, "std_set_random_seed", time_val);
+        LLVMBuildBr(exec->builder, entry);
     }
 
     char *error = NULL;

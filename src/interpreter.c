@@ -290,6 +290,8 @@ void* exec_thread_entry(void* thread_exec) {
     exec->defined_functions = vector_create();
     exec->gc = gc_new(MEMORY_LIMIT);
 
+    SetRandomSeed(time(NULL));
+
     pthread_cleanup_push(exec_thread_exit, thread_exec);
 
     for (size_t i = 0; i < vector_size(exec->code); i++) {

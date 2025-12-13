@@ -577,6 +577,10 @@ int std_sleep(int usecs) {
     return usecs;
 }
 
+void std_set_random_seed(int seed) {
+    rprand_set_seed(seed);
+}
+
 int std_get_random(int min, int max) {
     if (min > max) {
         return rprand_get_value(max, min);
