@@ -823,6 +823,7 @@ static bool compile_program(Exec* exec) {
 
     LLVMDisposeBuilder(exec->builder);
     vector_free(exec->gc_dirty_funcs);
+    vector_free(exec->global_variables);
     free_defined_functions(exec);
 
     return true;
@@ -974,6 +975,8 @@ static bool build_program(Exec* exec) {
     }
 
     vector_free(command);
+    vector_free(crt_dir);
+    if (crt_begin_dir) vector_free(crt_begin_dir);
     return res;
 }
 
