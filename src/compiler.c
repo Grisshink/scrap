@@ -854,6 +854,11 @@ static char* find_crt(void) {
         vector_append(&out, "/usr/lib/");
         return out;
     }
+    if (file_exists("/usr/lib64/crt1.o")) {
+        out = vector_create();
+        vector_append(&out, "/usr/lib64/");
+        return out;
+    }
 
     out = find_path_glob("/usr/lib/x86_64*linux*/crt1.o", sizeof("crt1.o") - 1);
     if (out) return out;
