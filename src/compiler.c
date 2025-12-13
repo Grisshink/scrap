@@ -848,17 +848,22 @@ static char* find_path_glob(char* search_path, int file_len) {
 }
 
 static char* find_crt(void) {
+    char* out;
     if (file_exists("/usr/lib/crt1.o")) {
-        char* out = vector_create();
+        out = vector_create();
         vector_append(&out, "/usr/lib/");
         return out;
     }
 
-    return find_path_glob("/usr/lib/x86_64*linux*/crt1.o", sizeof("crt1.o") - 1);
+    out = find_path_glob("/usr/lib/x86_64*linux*/crt1.o", sizeof("crt1.o") - 1);
+    if (out) return out;
+    return find_path_glob("/usr/lib64/x86_64*linux*/crt1.o", sizeof("crt1.o") - 1);
 }
 
 static char* find_crt_begin(void) {
-    return find_path_glob("/usr/lib/gcc/x86_64*linux*/*/crtbegin.o", sizeof("crtbegin.o") - 1);
+    char* out = find_path_glob("/usr/lib/gcc/x86_64*linux*/*/crtbegin.o", sizeof("crtbegin.o") - 1);
+    if (out) return out;
+    return find_path_glob("/usr/lib64/gcc/x86_64*linux*/*/crtbegin.o", sizeof("crtbegin.o") - 1);
 }
 
 static bool build_program(Exec* exec) {
