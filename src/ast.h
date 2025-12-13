@@ -105,6 +105,7 @@ enum InputType {
 struct Input {
     InputType type;
     InputData data;
+    bool hideable;
 };
 
 enum BlockdefType {
@@ -163,6 +164,7 @@ void blockdef_add_argument(Blockdef* blockdef, char* defualt_data, const char* h
 void blockdef_add_dropdown(Blockdef* blockdef, InputDropdownSource dropdown_source, ListAccessor accessor);
 void blockdef_add_image(Blockdef* blockdef, BlockdefImage image);
 void blockdef_add_blockdef_editor(Blockdef* blockdef);
+void blockdef_set_hideable(Blockdef* blockdef, bool hideable);
 void blockdef_delete_input(Blockdef* blockdef, size_t input);
 void blockdef_set_id(Blockdef* blockdef, const char* new_id);
 void blockdef_free(Blockdef* blockdef);

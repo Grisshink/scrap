@@ -411,6 +411,7 @@ static void draw_block(Block* block, bool highlight, bool can_hover, bool ghost)
 
         switch (input->type) {
         case INPUT_TEXT_DISPLAY:
+            if (input->hideable && !collision) break;
             gui_text(gui, &font_cond_shadow, input->data.text, BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0xff, 0xff, ghost ? BLOCK_GHOST_OPACITY : 0xff });
             break;
         case INPUT_IMAGE_DISPLAY:
@@ -422,6 +423,10 @@ static void draw_block(Block* block, bool highlight, bool can_hover, bool ghost)
             switch (arg->type) {
             case ARGUMENT_CONST_STRING:
             case ARGUMENT_TEXT:
+                if (input->hideable && !collision && hover_info.select_input != &arg->data.text) {
+                    gui_text(gui, &font_cond_shadow, arg->data.text, BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0xff, 0xff, ghost ? BLOCK_GHOST_OPACITY : 0xff });
+                    break;
+                }
                 gui_element_begin(gui);
                     if (arg->type == ARGUMENT_TEXT) {
                         gui_set_rect(gui, (GuiColor) { 0xff, 0xff, 0xff, ghost ? BLOCK_GHOST_OPACITY : 0xff });

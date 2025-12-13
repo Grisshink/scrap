@@ -3471,7 +3471,9 @@ void register_blocks(Vm* vm) {
 
     Blockdef* sc_get_var = blockdef_new("get_var", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_DATA_COLOR, block_get_var);
     blockdef_add_text(sc_get_var, gettext("Get"));
+    blockdef_set_hideable(sc_get_var, true);
     blockdef_add_argument(sc_get_var, gettext("my variable"), gettext("Abc"), BLOCKCONSTR_STRING);
+    blockdef_set_hideable(sc_get_var, true);
     blockdef_register(vm, sc_get_var);
     add_to_category(sc_get_var, cat_data);
 
