@@ -863,7 +863,7 @@ static void draw_block_categories(void) {
     gui_element_begin(gui);
         gui_set_grow(gui, DIRECTION_VERTICAL);
         gui_set_grow(gui, DIRECTION_HORIZONTAL);
-        gui_set_rect(gui, (GuiColor) { 0x00, 0x00, 0x00, 0x80 });
+        gui_set_rect(gui, (GuiColor) PANEL_BACKGROUND_COLOR);
         gui_set_padding(gui, SIDE_BAR_PADDING, SIDE_BAR_PADDING);
         gui_set_gap(gui, SIDE_BAR_PADDING);
         gui_set_scroll(gui, &categories_scroll);
@@ -890,7 +890,7 @@ static void draw_block_palette(void) {
     gui_element_begin(gui);
         gui_set_grow(gui, DIRECTION_VERTICAL);
         gui_set_grow(gui, DIRECTION_HORIZONTAL);
-        gui_set_rect(gui, (GuiColor) { 0x00, 0x00, 0x00, 0x80 });
+        gui_set_rect(gui, (GuiColor) PANEL_BACKGROUND_COLOR);
         gui_set_padding(gui, SIDE_BAR_PADDING, SIDE_BAR_PADDING);
         gui_set_gap(gui, SIDE_BAR_PADDING);
         gui_set_scroll(gui, &palette.scroll_amount);
@@ -1055,7 +1055,7 @@ static void draw_term_panel(void) {
         gui_set_grow(gui, DIRECTION_HORIZONTAL);
         gui_set_grow(gui, DIRECTION_VERTICAL);
         gui_set_padding(gui, conf.font_size * 0.5, conf.font_size * 0.5);
-        gui_set_rect(gui, (GuiColor) { 0x00, 0x00, 0x00, 0x80 });
+        gui_set_rect(gui, (GuiColor) PANEL_BACKGROUND_COLOR);
 
         gui_element_begin(gui);
             gui_set_grow(gui, DIRECTION_HORIZONTAL);

@@ -30,6 +30,8 @@
 #define SIDE_BAR_PADDING (10.0 * (float)conf.font_size / 32.0)
 #define BLOCK_GHOST_OPACITY 0x99
 
+#define PANEL_BACKGROUND_COLOR { 0x10, 0x10, 0x10, 0xff }
+
 #define WINDOW_ELEMENT_PADDING (10.0 * (float)conf.font_size / 32.0)
 
 #define DATA_PATH "data/"
