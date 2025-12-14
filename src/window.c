@@ -417,7 +417,7 @@ void draw_window(void) {
 
     switch (window.type) {
     case GUI_TYPE_SETTINGS:
-        begin_window(gettext("Settings"), 0.6 * gui->win_w, 0, animation_ease);
+        begin_window(gettext("Settings"), MIN(600, gui->win_w - conf.font_size), 0, animation_ease);
             begin_setting(gettext("Language"), true);
                 draw_dropdown_input((int*)&window_conf.language, language_list, ARRLEN(language_list));
             end_setting();
@@ -467,7 +467,7 @@ void draw_window(void) {
         end_window();
         break;
     case GUI_TYPE_PROJECT_SETTINGS:
-        begin_window(gettext("Build settings"), 0.6 * gui->win_w, 0, animation_ease);
+        begin_window(gettext("Build settings"), MIN(600, gui->win_w - conf.font_size), 0, animation_ease);
             begin_setting(gettext("Executable name"), false);
                 draw_text_input(&project_conf.executable_name, gettext("name"), &executable_name_scroll);
             end_setting();
