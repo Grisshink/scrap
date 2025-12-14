@@ -469,7 +469,7 @@ Blockdef* blockdef_copy(Blockdef* blockdef) {
     return new;
 }
 
-void blockdef_add_text(Blockdef* blockdef, char* text) {
+void blockdef_add_text(Blockdef* blockdef, const char* text) {
     Input* input = vector_add_dst(&blockdef->inputs);
     input->type = INPUT_TEXT_DISPLAY;
     input->data = (InputData) {
@@ -477,7 +477,7 @@ void blockdef_add_text(Blockdef* blockdef, char* text) {
     };
     input->hideable = false;
 
-    for (char* str = text; *str; str++) vector_add(&input->data.text, *str);
+    for (size_t i = 0; text[i]; i++) vector_add(&input->data.text, text[i]);
     vector_add(&input->data.text, 0);
 }
 

@@ -758,13 +758,17 @@ bool load_block(SaveArena* save, Block* block) {
     unsigned int block_id;
     if (!save_read_varint(save, &block_id)) return false;
 
+    bool unknown_blockdef = false;
     Blockdef* blockdef = NULL;
     blockdef = find_blockdef(save_blockdefs, save_block_ids[block_id]);
     if (!blockdef) {
         blockdef = find_blockdef(vm.blockdefs, save_block_ids[block_id]);
         if (!blockdef) {
-            TraceLog(LOG_ERROR, "[LOAD] No blockdef matched id: %s", save_block_ids[block_id]);
-            return false;
+            TraceLog(LOG_WARNING, "[LOAD] No blockdef matched id: %s", save_block_ids[block_id]);
+            unknown_blockdef = true;
+
+            blockdef = blockdef_new(save_block_ids[block_id], BLOCKTYPE_NORMAL, (BlockdefColor) { 0x66, 0x66, 0x66, 0xff }, NULL);
+            blockdef_add_text(blockdef, TextFormat(gettext("UNKNOWN %s"), save_block_ids[block_id]));
         }
     }
 
@@ -784,6 +788,9 @@ bool load_block(SaveArena* save, Block* block) {
             return false;
         }
         vector_add(&block->arguments, arg);
+        if (unknown_blockdef) {
+            blockdef_add_argument(blockdef, "", "", BLOCKCONSTR_UNLIMITED);
+        }
     }
 
     return true;

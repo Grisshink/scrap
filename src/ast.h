@@ -159,7 +159,7 @@ struct BlockChain {
 
 Blockdef* blockdef_new(const char* id, BlockdefType type, BlockdefColor color, void* func);
 Blockdef* blockdef_copy(Blockdef* blockdef);
-void blockdef_add_text(Blockdef* blockdef, char* text);
+void blockdef_add_text(Blockdef* blockdef, const char* text);
 void blockdef_add_argument(Blockdef* blockdef, char* defualt_data, const char* hint_text, InputArgumentConstraint constraint);
 void blockdef_add_dropdown(Blockdef* blockdef, InputDropdownSource dropdown_source, ListAccessor accessor);
 void blockdef_add_image(Blockdef* blockdef, BlockdefImage image);

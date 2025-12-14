@@ -94,19 +94,6 @@ static void blockchain_delete_blockdef(BlockChain* chain, Blockdef* blockdef) {
     blockchain_update_parent_links(chain);
 }
 
-// Removes blocks associated with blockdef, freeing memory
-static void editor_code_remove_blockdef(Blockdef* blockdef) {
-    for (size_t i = 0; i < vector_size(editor_code); i++) {
-        if (blockdef->ref_count <= 1) break;
-        blockchain_delete_blockdef(&editor_code[i], blockdef);
-        if (vector_size(editor_code[i].blocks) == 0) {
-            blockchain_free(&editor_code[i]);
-            vector_remove(editor_code, i);
-            i--;
-        }
-    }
-}
-
 static bool edit_text(char** text) {
     if (!text) return false;
 
@@ -603,6 +590,23 @@ bool handle_editor_close_button(void) {
     return true;
 }
 
+static void remove_blockdef(void) {
+    for (size_t i = 0; i < vector_size(mouse_blockchain.blocks); i++) {
+        for (size_t j = 0; j < vector_size(mouse_blockchain.blocks[i].arguments); j++) {
+            Argument* arg = &mouse_blockchain.blocks[i].arguments[j];
+            if (arg->type != ARGUMENT_BLOCKDEF) continue;
+            arg->data.blockdef->func = NULL;
+            arg->data.blockdef->color = (BlockdefColor) { 0x66, 0x66, 0x66, 0xff };
+            for (size_t k = 0; k < vector_size(arg->data.blockdef->inputs); k++) {
+                Input* input = &arg->data.blockdef->inputs[k];
+                if (input->type != INPUT_ARGUMENT) continue;
+                input->data.arg.blockdef->func = NULL;
+                input->data.arg.blockdef->color = (BlockdefColor) { 0x66, 0x66, 0x66, 0xff };
+            }
+        }
+    }
+}
+
 static bool handle_block_palette_click(bool mouse_empty) {
     if (hover_info.select_argument) {
         deselect_all();
@@ -622,18 +626,7 @@ static bool handle_block_palette_click(bool mouse_empty) {
     } else if (!mouse_empty) {
         // Drop block
         TraceLog(LOG_INFO, "Drop block");
-        for (size_t i = 0; i < vector_size(mouse_blockchain.blocks); i++) {
-            for (size_t j = 0; j < vector_size(mouse_blockchain.blocks[i].arguments); j++) {
-                Argument* arg = &mouse_blockchain.blocks[i].arguments[j];
-                if (arg->type != ARGUMENT_BLOCKDEF) continue;
-                if (arg->data.blockdef->ref_count > 1) editor_code_remove_blockdef(arg->data.blockdef);
-                for (size_t k = 0; k < vector_size(arg->data.blockdef->inputs); k++) {
-                    Input* input = &arg->data.blockdef->inputs[k];
-                    if (input->type != INPUT_ARGUMENT) continue;
-                    if (input->data.arg.blockdef->ref_count > 1) editor_code_remove_blockdef(input->data.arg.blockdef);
-                }
-            }
-        }
+        remove_blockdef();
         blockchain_clear_blocks(&mouse_blockchain);
         return true;
     }
