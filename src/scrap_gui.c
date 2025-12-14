@@ -429,6 +429,9 @@ static void gui_element_resize(Gui* gui, GuiElement* el, unsigned short new_w, u
         iter = iter->next;
     }
 
+    if (left_w < 0) left_w = 0;
+    if (left_h < 0) left_h = 0;
+
     el->cursor_x = el->pad_w;
     el->cursor_y = el->pad_h;
 
