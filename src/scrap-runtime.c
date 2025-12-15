@@ -16,15 +16,14 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "gc.h"
-
-#define DEFAULT_MEMORY_LIMIT 4194304 // 4 MB
+#include "config.h"
 
 Gc* gc;
 
 void llvm_main(void);
 
 int main(void) {
-    Gc _gc = gc_new(DEFAULT_MEMORY_LIMIT);
+    Gc _gc = gc_new(MIN_MEMORY_LIMIT, MAX_MEMORY_LIMIT);
     gc = &_gc;
     llvm_main();
     gc_free(gc);

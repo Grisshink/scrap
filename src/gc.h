@@ -48,10 +48,11 @@ typedef struct {
     GcChunkData*** root_chunks;
     GcChunkData** root_temp_chunks;
     size_t memory_used;
+    size_t memory_allocated;
     size_t memory_max;
 } Gc;
 
-Gc gc_new(size_t memory_max);
+Gc gc_new(size_t memory_min, size_t memory_max);
 void gc_free(Gc* gc);
 
 void gc_root_begin(Gc* gc);

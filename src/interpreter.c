@@ -288,7 +288,7 @@ void* exec_thread_entry(void* thread_exec) {
     exec->chain_stack_len = 0;
     exec->running_chain = NULL;
     exec->defined_functions = vector_create();
-    exec->gc = gc_new(MEMORY_LIMIT);
+    exec->gc = gc_new(MIN_MEMORY_LIMIT, MAX_MEMORY_LIMIT);
 
     SetRandomSeed(time(NULL));
 

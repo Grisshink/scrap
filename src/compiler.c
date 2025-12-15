@@ -1012,7 +1012,7 @@ static bool run_program(Exec* exec) {
 
     vector_free(exec->compile_func_list);
 
-    exec->gc = gc_new(MEMORY_LIMIT);
+    exec->gc = gc_new(MIN_MEMORY_LIMIT, MAX_MEMORY_LIMIT);
     Gc* gc_ref = &exec->gc;
     LLVMAddGlobalMapping(exec->engine, LLVMGetNamedGlobal(exec->module, "gc"), &gc_ref);
 

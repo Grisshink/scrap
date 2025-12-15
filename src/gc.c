@@ -41,9 +41,10 @@
 
 #endif // STANDALONE_STD
 
-static void gc_mark_refs(Gc* gc, GcChunkData* chunk);
-
+#define MIN(x, y) ((x) < (y) ? (x) : (y))
 #define MAX_TEXT_BUFFER_LENGTH 512
+
+static void gc_mark_refs(Gc* gc, GcChunkData* chunk);
 
 static const char *text_format(const char *text, ...) {
     static char buffer[MAX_TEXT_BUFFER_LENGTH] = {0};
@@ -64,7 +65,7 @@ static const char *text_format(const char *text, ...) {
     return buffer;
 }
 
-Gc gc_new(size_t memory_max) {
+Gc gc_new(size_t memory_min, size_t memory_max) {
     return (Gc) {
         .chunks = vector_create(),
         .roots_stack = vector_create(),
@@ -72,6 +73,7 @@ Gc gc_new(size_t memory_max) {
         .root_chunks = vector_create(),
         .root_temp_chunks = vector_create(),
         .memory_used = 0,
+        .memory_allocated = memory_min,
         .memory_max = memory_max,
     };
 }
@@ -89,6 +91,7 @@ void gc_free(Gc* gc) {
     vector_free(gc->roots_stack);
     vector_free(gc->chunks);
     gc->memory_max = 0;
+    gc->memory_allocated = 0;
     gc->memory_used = 0;
 }
 
@@ -201,8 +204,14 @@ void* gc_malloc(Gc* gc, size_t size, DataType data_type) {
         EXIT;
     }
 
-    if (gc->memory_used + size > gc->memory_max) gc_collect(gc);
-    if (gc->memory_used + size > gc->memory_max) {
+    if (gc->memory_used + size > gc->memory_allocated) gc_collect(gc);
+    if (gc->memory_used + size > gc->memory_allocated) {
+        gc->memory_allocated = MIN(gc->memory_allocated * 2, gc->memory_max);
+#ifdef DEBUG
+        TRACE_LOG(LOG_WARNING, "[GC] gc_malloc: raising memory limit to %zu bytes", gc->memory_allocated);
+#endif
+    }
+    if (gc->memory_used + size > gc->memory_allocated) {
         std_term_print_str(text_format("*[GC] Memory limit exeeded! Tried to allocate %zu bytes in gc with %zu bytes free*", size, gc->memory_max - gc->memory_used));
         EXIT;
     }

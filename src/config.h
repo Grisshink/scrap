@@ -56,5 +56,5 @@
 
 #define MAX_ERROR_LEN 512
 
-// Should be enough memory for now
-#define MEMORY_LIMIT 4194304 // 4 MB
+#define MIN_MEMORY_LIMIT 4194304 // 4 MB
+#define MAX_MEMORY_LIMIT 4294967296 // 4 GB
