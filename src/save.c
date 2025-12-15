@@ -406,8 +406,7 @@ void save_add_item(SaveData* save, const void* data, size_t data_size) {
     }
 
     memcpy(save->ptr + save->size, data, data_size);
-    save->size += size;
-    return pos;
+    save->size += data_size;
 }
 
 void save_add_varint(SaveData* save, unsigned int data) {
