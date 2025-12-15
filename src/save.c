@@ -33,10 +33,9 @@
 
 typedef struct {
     void* ptr;
-    void* next;
-    size_t used_size;
-    size_t max_size;
-} SaveArena;
+    size_t size;
+    size_t capacity;
+} SaveData;
 
 const int codepoint_regions[CODEPOINT_REGION_COUNT][2] = {
     { 0x20, 0x7e }, // All printable ASCII chars
@@ -61,10 +60,10 @@ static unsigned int ver = 0;
 int save_find_id(const char* id);
 void save_code(const char* file_path, ProjectConfig* config, BlockChain* code);
 BlockChain* load_code(const char* file_path, ProjectConfig* out_config);
-void save_block(SaveArena* save, Block* block);
-bool load_block(SaveArena* save, Block* block);
-void save_blockdef(SaveArena* save, Blockdef* blockdef);
-Blockdef* load_blockdef(SaveArena* save);
+void save_block(SaveData* save, Block* block);
+bool load_block(SaveData* save, Block* block);
+void save_blockdef(SaveData* save, Blockdef* blockdef);
+Blockdef* load_blockdef(SaveData* save);
 
 const char* language_to_code(Language lang) {
     switch (lang) {
@@ -370,40 +369,19 @@ void load_config(Config* config) {
     UnloadFileText(file);
 }
 
-SaveArena new_save(size_t size) {
-    void* ptr = malloc(size);
-    return (SaveArena) {
-        .ptr = ptr,
-        .next = ptr,
-        .used_size = 0,
-        .max_size = size,
-    };
-}
-
 #define save_add(save, data) save_add_item(save, &data, sizeof(data))
 
-void* save_alloc(SaveArena* save, size_t size) {
-    assert(save->ptr != NULL);
-    assert(save->next != NULL);
-    assert((size_t)((save->next + size) - save->ptr) <= save->max_size);
-    void* ptr = save->next;
-    save->next += size;
-    save->used_size += size;
-    return ptr;
-}
-
-void* save_read_item(SaveArena* save, size_t data_size) {
-    if ((size_t)(save->next + data_size - save->ptr) > save->max_size) {
+void* save_read_item(SaveData* save, size_t data_size) {
+    if (save->size + data_size > save->capacity) {
         TraceLog(LOG_ERROR, "[LOAD] Unexpected EOF reading data");
         return NULL;
     }
-    void* ptr = save->next;
-    save->next += data_size;
-    save->used_size += data_size;
+    void* ptr = save->ptr + save->size;
+    save->size += data_size;
     return ptr;
 }
 
-bool save_read_varint(SaveArena* save, unsigned int* out) {
+bool save_read_varint(SaveData* save, unsigned int* out) {
     *out = 0;
     int pos = 0;
     unsigned char* chunk = NULL;
@@ -416,17 +394,23 @@ bool save_read_varint(SaveArena* save, unsigned int* out) {
     return true;
 }
 
-void* save_read_array(SaveArena* save, size_t data_size, unsigned int* array_len) {
+void* save_read_array(SaveData* save, size_t data_size, unsigned int* array_len) {
     if (!save_read_varint(save, array_len)) return NULL;
     return save_read_item(save, data_size * *array_len);
 }
 
-void save_add_item(SaveArena* save, const void* data, size_t data_size) {
-    void* ptr = save_alloc(save, data_size);
-    memcpy(ptr, data, data_size);
+void save_add_item(SaveData* save, const void* data, size_t data_size) {
+    if (save->size + data_size > save->capacity) {
+        save->capacity = save->capacity > 0 ? save->capacity * 2 : 256;
+        save->ptr = realloc(save->ptr, save->capacity);
+    }
+
+    memcpy(save->ptr + save->size, data, data_size);
+    save->size += size;
+    return pos;
 }
 
-void save_add_varint(SaveArena* save, unsigned int data) {
+void save_add_varint(SaveData* save, unsigned int data) {
     unsigned char varint = 0;
     do {
         varint = data & 0x7f;
@@ -436,20 +420,18 @@ void save_add_varint(SaveArena* save, unsigned int data) {
     } while (data);
 }
 
-void save_add_array(SaveArena* save, const void* array, int array_size, size_t data_size) {
+void save_add_array(SaveData* save, const void* array, int array_size, size_t data_size) {
     save_add_varint(save, array_size);
     for (int i = 0; i < array_size; i++) save_add_item(save, array + data_size * i, data_size);
 }
 
-void free_save(SaveArena* save) {
+void free_save(SaveData* save) {
     free(save->ptr);
-    save->ptr = NULL;
-    save->next = NULL;
-    save->used_size = 0;
-    save->max_size = 0;
+    save->size = 0;
+    save->capacity = 0;
 }
 
-void save_blockdef_input(SaveArena* save, Input* input) {
+void save_blockdef_input(SaveData* save, Input* input) {
     save_add_varint(save, input->type);
     switch (input->type) {
     case INPUT_TEXT_DISPLAY:
@@ -465,7 +447,7 @@ void save_blockdef_input(SaveArena* save, Input* input) {
     }
 }
 
-void save_blockdef(SaveArena* save, Blockdef* blockdef) {
+void save_blockdef(SaveData* save, Blockdef* blockdef) {
     save_add_array(save, blockdef->id, strlen(blockdef->id) + 1, sizeof(blockdef->id[0]));
     save_add(save, blockdef->color);
     save_add_varint(save, blockdef->type);
@@ -475,7 +457,7 @@ void save_blockdef(SaveArena* save, Blockdef* blockdef) {
     for (int i = 0; i < input_count; i++) save_blockdef_input(save, &blockdef->inputs[i]);
 }
 
-void save_block_arguments(SaveArena* save, Argument* arg) {
+void save_block_arguments(SaveData* save, Argument* arg) {
     save_add_varint(save, arg->input_id);
     save_add_varint(save, arg->type);
 
@@ -501,7 +483,7 @@ void save_block_arguments(SaveArena* save, Argument* arg) {
     }
 }
 
-void save_block(SaveArena* save, Block* block) {
+void save_block(SaveData* save, Block* block) {
     assert(block->blockdef->id != NULL);
 
     int arg_count = vector_size(block->arguments);
@@ -513,7 +495,7 @@ void save_block(SaveArena* save, Block* block) {
     for (int i = 0; i < arg_count; i++) save_block_arguments(save, &block->arguments[i]);
 }
 
-void save_blockchain(SaveArena* save, BlockChain* chain) {
+void save_blockchain(SaveData* save, BlockChain* chain) {
     int blocks_count = vector_size(chain->blocks);
 
     save_add(save, chain->x);
@@ -575,7 +557,7 @@ void collect_all_code_ids(BlockChain* code) {
 
 void save_code(const char* file_path, ProjectConfig* config, BlockChain* code) {
     (void) config;
-    SaveArena save = new_save(32768);
+    SaveData save = {0};
     ver = 3;
     int chains_count = vector_size(code);
 
@@ -608,7 +590,8 @@ void save_code(const char* file_path, ProjectConfig* config, BlockChain* code) {
     save_add_varint(&save, chains_count);
     for (int i = 0; i < chains_count; i++) save_blockchain(&save, &code[i]);
 
-    SaveFileData(file_path, save.ptr, save.used_size);
+    SaveFileData(file_path, save.ptr, save.size);
+    TraceLog(LOG_INFO, "%zu bytes written into %s", save.size, file_path);
 
     vector_free(save_block_ids);
     vector_free(blockdefs);
@@ -622,7 +605,7 @@ Blockdef* find_blockdef(Blockdef** blockdefs, const char* id) {
     return NULL;
 }
 
-bool load_blockdef_input(SaveArena* save, Input* input) {
+bool load_blockdef_input(SaveData* save, Input* input) {
     InputType type;
     if (!save_read_varint(save, (unsigned int*)&type)) return false;
     input->type = type;
@@ -664,7 +647,7 @@ bool load_blockdef_input(SaveArena* save, Input* input) {
     return true;
 }
 
-Blockdef* load_blockdef(SaveArena* save) {
+Blockdef* load_blockdef(SaveData* save) {
     unsigned int id_len;
     char* id = save_read_array(save, sizeof(char), &id_len);
     if (!id) return NULL;
@@ -706,7 +689,7 @@ Blockdef* load_blockdef(SaveArena* save) {
     return blockdef;
 }
 
-bool load_block_argument(SaveArena* save, Argument* arg) {
+bool load_block_argument(SaveData* save, Argument* arg) {
     unsigned int input_id;
     if (!save_read_varint(save, &input_id)) return false;
 
@@ -754,7 +737,7 @@ bool load_block_argument(SaveArena* save, Argument* arg) {
     return true;
 }
 
-bool load_block(SaveArena* save, Block* block) {
+bool load_block(SaveData* save, Block* block) {
     unsigned int block_id;
     if (!save_read_varint(save, &block_id)) return false;
 
@@ -796,7 +779,7 @@ bool load_block(SaveArena* save, Block* block) {
     return true;
 }
 
-bool load_blockchain(SaveArena* save, BlockChain* chain) {
+bool load_blockchain(SaveData* save, BlockChain* chain) {
     int pos_x, pos_y;
     if (ver == 1) {
         struct { float x; float y; }* pos = save_read_item(save, sizeof(struct { float x; float y; }));
@@ -845,12 +828,12 @@ BlockChain* load_code(const char* file_path, ProjectConfig* out_config) {
     int save_size;
     void* file_data = LoadFileData(file_path, &save_size);
     if (!file_data) goto load_fail;
+    TraceLog(LOG_INFO, "%zu bytes read from %s", save_size, file_path);
 
-    SaveArena save;
+    SaveData save;
     save.ptr = file_data;
-    save.next = file_data;
-    save.max_size = save_size;
-    save.used_size = 0;
+    save.size = 0;
+    save.capacity = save_size;
 
     if (!save_read_varint(&save, &ver)) goto load_fail;
     if (ver < 1 && ver > 3) {
