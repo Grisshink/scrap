@@ -65,35 +65,6 @@ static void switch_tab_to_panel(PanelType panel) {
     }
 }
 
-// Removes a block and all blocks within it if it matches the specified blockdef
-static void block_delete_blockdef(Block* block, Blockdef* blockdef) {
-    for (size_t i = 0; i < vector_size(block->arguments); i++) {
-        if (blockdef->ref_count <= 1) break;
-        if (block->arguments[i].type != ARGUMENT_BLOCK) continue;
-        if (block->arguments[i].data.block.blockdef == blockdef) {
-            block_free(&block->arguments[i].data.block);
-            argument_set_text(&block->arguments[i], "");
-            continue;
-        }
-        block_delete_blockdef(&block->arguments[i].data.block, blockdef);
-    }
-}
-
-// Deletes blocks in the chain that have a reference to the specified blockdef
-static void blockchain_delete_blockdef(BlockChain* chain, Blockdef* blockdef) {
-    for (size_t i = 0; i < vector_size(chain->blocks); i++) {
-        if (blockdef->ref_count <= 1) break;
-        if (chain->blocks[i].blockdef == blockdef) {
-            block_free(&chain->blocks[i]);
-            vector_remove(chain->blocks, i);
-            i--;
-            continue;
-        }
-        block_delete_blockdef(&chain->blocks[i], blockdef);
-    }
-    blockchain_update_parent_links(chain);
-}
-
 static bool edit_text(char** text) {
     if (!text) return false;
 

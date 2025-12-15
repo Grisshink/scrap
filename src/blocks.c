@@ -2229,8 +2229,9 @@ bool block_reset_color(Exec* exec, Block* block, int argc, FuncArg* argv, FuncAr
     (void) block;
     (void) argc;
     (void) argv;
-    build_call(exec, "std_term_set_fg_color", CONST_INTEGER(*(int*)&WHITE));
-    build_call(exec, "std_term_set_bg_color", CONST_INTEGER(*(int*)&BLACK));
+    // For some reason gcc throws a warning in release mode with constant color struct so it is passed as integer
+    build_call(exec, "std_term_set_fg_color", CONST_INTEGER(0xffffffff));
+    build_call(exec, "std_term_set_bg_color", CONST_INTEGER(*(int*)&(BLACK)));
     *return_val = DATA_NOTHING;
     return true;
 }
@@ -2401,6 +2402,10 @@ bool block_print(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* ret
     case DATA_TYPE_ANY:
         *return_val = DATA_INTEGER(build_call(exec, "std_term_print_any", argv[0].data.value));
         return true;
+    case DATA_TYPE_UNKNOWN:
+    case DATA_TYPE_BLOCKDEF:
+        exec_set_error(exec, block, "Invalid type %s in print function", type_to_str(argv[0].type));
+        return false;
     }
 
     exec_set_error(exec, block, "Unhandled type %s in print function", type_to_str(argv[0].type));
