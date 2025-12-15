@@ -4,7 +4,7 @@
 - Added new experimental LLVM compiler backend. It will be available as a separate download option in the releases
 - Terminal contents are now cropped when the terminal is resized
 - Added block previews when trying to attach blockchains together
-- Variable blocks not hide their inputs when not hovered on
+- Variable blocks now hide their inputs when not hovered on
 
 ## Fixes
 - Fixed numpad Enter key not working in certain scenarios
