@@ -13,6 +13,7 @@
 - Fixed code area being able to scroll while window is open
 - Fixed memory leak when copying blockdef with instantiated blocks
 - Fixed block search menu being able to open when code is running
+- Control blocks (like while, if) now render correctly in the block palette
 
 # v0.4.2-beta *(12-02-2025)*
 
