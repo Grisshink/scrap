@@ -23,6 +23,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <libintl.h>
 
 void arg_stack_push_arg(Exec* exec, AnyValue data);
 void arg_stack_undo_args(Exec* exec, size_t count);
@@ -136,8 +137,16 @@ bool evaluate_argument(Exec* exec, Argument* arg, AnyValue* return_val) {
 }
 
 bool exec_block(Exec* exec, Block* block, AnyValue* block_return, ControlState control_state, AnyValue control_arg) {
+    if (!block->blockdef) {
+        exec_set_error(exec, block, gettext("Tried to execute block without definition"));
+        return false;
+    }
+    if (!block->blockdef->func) {
+        exec_set_error(exec, block, gettext("Tried to execute block \"%s\" without implementation"), block->blockdef->id);
+        return false;
+    }
+
     BlockFunc execute_block = block->blockdef->func;
-    if (!execute_block) return false;
 
     int stack_begin = exec->arg_stack_len;
 

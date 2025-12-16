@@ -299,17 +299,17 @@ bool block_declare_var(Exec* exec, Block* block, int argc, AnyValue* argv, AnyVa
     (void) argc;
 
     if (argv[0].type != DATA_TYPE_LITERAL) {
-        exec_set_error(exec, block, "Invalid data type %s, expected %s", type_to_str(argv[0].type), type_to_str(DATA_TYPE_LITERAL));
+        exec_set_error(exec, block, gettext("Invalid data type %s, expected %s"), type_to_str(argv[0].type), type_to_str(DATA_TYPE_LITERAL));
         return false;
     }
     if (block->parent) {
-        exec_set_error(exec, block, "Variable declarations are not allowed inside an expression");
+        exec_set_error(exec, block, gettext("Variable declarations are not allowed inside an expression"));
         return false;
     }
 
     Variable* var = variable_stack_push_var(exec, argv[0].data.literal_val, argv[1]);
     if (!var) {
-        exec_set_error(exec, block, "Cannot declare variable with empty name");
+        exec_set_error(exec, block, gettext("Cannot declare variable with empty name"));
         return false;
     }
 
@@ -329,7 +329,7 @@ bool block_get_var(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue*
     char* var_name = data_to_any_string(exec, argv[0]);
     Variable* var = variable_stack_get_variable(exec, var_name);
     if (!var) {
-        exec_set_error(exec, block, "Variable with name \"%s\" does not exist in the current scope", var_name);
+        exec_set_error(exec, block, gettext("Variable with name \"%s\" does not exist in the current scope"), var_name);
         return false;
     }
     *return_val = var->value;
@@ -344,7 +344,7 @@ bool block_set_var(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue*
     char* var_name = data_to_any_string(exec, argv[0]);
     Variable* var = variable_stack_get_variable(exec, var_name);
     if (!var) {
-        exec_set_error(exec, block, "Variable with name \"%s\" does not exist in the current scope", var_name);
+        exec_set_error(exec, block, gettext("Variable with name \"%s\" does not exist in the current scope"), var_name);
         return false;
     }
 
@@ -369,7 +369,7 @@ bool block_list_add(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue
     (void) control_state;
     (void) argc;
     if (argv[0].type != DATA_TYPE_LIST) {
-        exec_set_error(exec, block, "Invalid data type %s, expected %s", type_to_str(argv[0].type), type_to_str(DATA_TYPE_LIST));
+        exec_set_error(exec, block, gettext("Invalid data type %s, expected %s"), type_to_str(argv[0].type), type_to_str(DATA_TYPE_LIST));
         return false;
     }
 
@@ -383,7 +383,7 @@ bool block_list_get(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue
     (void) block;
     (void) argc;
     if (argv[0].type != DATA_TYPE_LIST) {
-        exec_set_error(exec, block, "Invalid data type %s, expected %s", type_to_str(argv[0].type), type_to_str(DATA_TYPE_LIST));
+        exec_set_error(exec, block, gettext("Invalid data type %s, expected %s"), type_to_str(argv[0].type), type_to_str(DATA_TYPE_LIST));
         return false;
     }
 
@@ -405,7 +405,7 @@ bool block_list_length(Exec* exec, Block* block, int argc, AnyValue* argv, AnyVa
     (void) exec;
     (void) argc;
     if (argv[0].type != DATA_TYPE_LIST) {
-        exec_set_error(exec, block, "Invalid data type %s, expected %s", type_to_str(argv[0].type), type_to_str(DATA_TYPE_LIST));
+        exec_set_error(exec, block, gettext("Invalid data type %s, expected %s"), type_to_str(argv[0].type), type_to_str(DATA_TYPE_LIST));
         return false;
     }
 
@@ -419,13 +419,13 @@ bool block_list_set(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue
     (void) exec;
     (void) argc;
     if (argv[0].type != DATA_TYPE_LIST) {
-        exec_set_error(exec, block, "Invalid data type %s, expected %s", type_to_str(argv[0].type), type_to_str(DATA_TYPE_LIST));
+        exec_set_error(exec, block, gettext("Invalid data type %s, expected %s"), type_to_str(argv[0].type), type_to_str(DATA_TYPE_LIST));
         return false;
     }
 
     int index = data_to_integer(argv[1]);
     if (index >= argv[0].data.list_val->size || index < 0) {
-        exec_set_error(exec, block, "Tried to access index %d for list of length %d", index, argv[0].data.list_val->size);
+        exec_set_error(exec, block, gettext("Tried to access index %d for list of length %d"), index, argv[0].data.list_val->size);
         return false;
     }
 
@@ -559,7 +559,7 @@ bool block_set_fg_color(Exec* exec, Block* block, int argc, AnyValue* argv, AnyV
     (void) exec;
     (void) argc;
     if (argv[0].type != DATA_TYPE_LITERAL) {
-        exec_set_error(exec, block, "Invalid data type %s, expected %s", type_to_str(argv[0].type), type_to_str(DATA_TYPE_LITERAL));
+        exec_set_error(exec, block, gettext("Invalid data type %s, expected %s"), type_to_str(argv[0].type), type_to_str(DATA_TYPE_LITERAL));
         return false;
     }
 
@@ -591,7 +591,7 @@ bool block_set_bg_color(Exec* exec, Block* block, int argc, AnyValue* argv, AnyV
     (void) exec;
     (void) argc;
     if (argv[0].type != DATA_TYPE_LITERAL) {
-        exec_set_error(exec, block, "Invalid data type %s, expected %s", type_to_str(argv[0].type), type_to_str(DATA_TYPE_LITERAL));
+        exec_set_error(exec, block, gettext("Invalid data type %s, expected %s"), type_to_str(argv[0].type), type_to_str(DATA_TYPE_LITERAL));
         return false;
     }
 
@@ -648,7 +648,7 @@ bool block_term_set_clear(Exec* exec, Block* block, int argc, AnyValue* argv, An
     (void) exec;
     (void) argc;
     if (argv[0].type != DATA_TYPE_LITERAL) {
-        exec_set_error(exec, block, "Invalid data type %s, expected %s", type_to_str(argv[0].type), type_to_str(DATA_TYPE_LITERAL));
+        exec_set_error(exec, block, gettext("Invalid data type %s, expected %s"), type_to_str(argv[0].type), type_to_str(DATA_TYPE_LITERAL));
         return false;
     }
 
@@ -869,7 +869,7 @@ bool block_div(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* ret
     } else {
         int divisor = data_to_integer(argv[1]);
         if (divisor == 0) {
-            exec_set_error(exec, block, "Division by zero");
+            exec_set_error(exec, block, gettext("Division by zero"));
             return false;
         }
         *return_val = DATA_INTEGER(data_to_integer(argv[0]) / divisor);
@@ -910,7 +910,7 @@ bool block_math(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* re
     (void) exec;
     (void) argc;
     if (argv[0].type != DATA_TYPE_LITERAL) {
-        exec_set_error(exec, block, "Invalid data type %s, expected %s", type_to_str(argv[0].type), type_to_str(DATA_TYPE_LITERAL));
+        exec_set_error(exec, block, gettext("Invalid data type %s, expected %s"), type_to_str(argv[0].type), type_to_str(DATA_TYPE_LITERAL));
         return false;
     }
 
@@ -935,7 +935,7 @@ bool block_math(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* re
     } else if (!strcmp(argv[0].data.literal_val, "ceil")) {
         *return_val = DATA_FLOAT(ceil(data_to_float(argv[1])));
     } else {
-        exec_set_error(exec, block, "Invalid input item %s", argv[0].data.literal_val);
+        exec_set_error(exec, block, gettext("Invalid argument %s"), argv[0].data.literal_val);
         return false;
     }
     return true;
@@ -1156,7 +1156,7 @@ bool block_exec_custom(Exec* exec, Block* block, int argc, AnyValue* argv, AnyVa
         }
     }
 
-    exec_set_error(exec, block, "Unknown function id \"%s\"", block->blockdef->id);
+    exec_set_error(exec, block, gettext("Unknown function id \"%s\""), block->blockdef->id);
     return false;
 }
 
@@ -1175,7 +1175,7 @@ bool block_custom_arg(Exec* exec, Block* block, int argc, AnyValue* argv, AnyVal
         }
     }
 
-    exec_set_error(exec, block, "Unknown argument id \"%s\"", block->blockdef->id);
+    exec_set_error(exec, block, gettext("Unknown argument id \"%s\""), block->blockdef->id);
     return false;
 }
 
@@ -1222,7 +1222,7 @@ LLVMValueRef arg_to_value(Exec* exec, Block* block, FuncArg arg) {
         return arg.data.value;
     case DATA_TYPE_BLOCKDEF:
     case DATA_TYPE_UNKNOWN:
-        exec_set_error(exec, block, "Cannot represent %s as LLVM value", type_to_str(arg.type));
+        exec_set_error(exec, block, gettext("Cannot represent %s as LLVM value"), type_to_str(arg.type));
         return NULL;
     }
     assert(false && "Unhandled arg_to_value");
@@ -1248,7 +1248,7 @@ LLVMValueRef arg_to_bool(Exec* exec, Block* block, FuncArg arg) {
         return build_call(exec, "std_bool_from_any", arg.data.value);
     case DATA_TYPE_BLOCKDEF:
     case DATA_TYPE_UNKNOWN:
-        exec_set_error(exec, block, "Cannot cast type %s into %s", type_to_str(arg.type), type_to_str(DATA_TYPE_BOOL));
+        exec_set_error(exec, block, gettext("Cannot cast type %s into %s"), type_to_str(arg.type), type_to_str(DATA_TYPE_BOOL));
         return NULL;
     }
     assert(false && "Unhandled cast to bool");
@@ -1273,7 +1273,7 @@ LLVMValueRef arg_to_integer(Exec* exec, Block* block, FuncArg arg) {
         return build_call(exec, "std_integer_from_any", arg.data.value);
     case DATA_TYPE_BLOCKDEF:
     case DATA_TYPE_UNKNOWN:
-        exec_set_error(exec, block, "Cannot cast type %s into %s", type_to_str(arg.type), type_to_str(DATA_TYPE_INTEGER));
+        exec_set_error(exec, block, gettext("Cannot cast type %s into %s"), type_to_str(arg.type), type_to_str(DATA_TYPE_INTEGER));
         return NULL;
     }
     assert(false && "Unhandled cast to integer");
@@ -1298,7 +1298,7 @@ LLVMValueRef arg_to_float(Exec* exec, Block* block, FuncArg arg) {
         return build_call(exec, "std_float_from_any", arg.data.value);
     case DATA_TYPE_BLOCKDEF:
     case DATA_TYPE_UNKNOWN:
-        exec_set_error(exec, block, "Cannot cast type %s into %s", type_to_str(arg.type), type_to_str(DATA_TYPE_FLOAT));
+        exec_set_error(exec, block, gettext("Cannot cast type %s into %s"), type_to_str(arg.type), type_to_str(DATA_TYPE_FLOAT));
         return NULL;
     }
     assert(false && "Unhandled cast to float");
@@ -1324,7 +1324,7 @@ LLVMValueRef arg_to_any_string(Exec* exec, Block* block, FuncArg arg) {
         return build_call(exec, "std_string_from_literal", CONST_GC, CONST_STRING_LITERAL(""), CONST_INTEGER(0));
     case DATA_TYPE_BLOCKDEF:
     case DATA_TYPE_UNKNOWN:
-        exec_set_error(exec, block, "Cannot cast type %s into any string", type_to_str(arg.type));
+        exec_set_error(exec, block, gettext("Cannot cast type %s into any string"), type_to_str(arg.type));
         return NULL;
     }
     assert(false && "Unhandled cast to any string");
@@ -1350,7 +1350,7 @@ LLVMValueRef arg_to_string_ref(Exec* exec, Block* block, FuncArg arg) {
         return build_call(exec, "std_string_from_any", CONST_GC, arg.data.value);
     case DATA_TYPE_UNKNOWN:
     case DATA_TYPE_BLOCKDEF:
-        exec_set_error(exec, block, "Cannot cast type %s into %s", type_to_str(arg.type), type_to_str(DATA_TYPE_STRING));
+        exec_set_error(exec, block, gettext("Cannot cast type %s into %s"), type_to_str(arg.type), type_to_str(DATA_TYPE_STRING));
         return NULL;
     }
     assert(false && "Unhandled cast to string ref");
@@ -1364,16 +1364,14 @@ LLVMValueRef arg_to_list(Exec* exec, Block* block, FuncArg arg) {
     case DATA_TYPE_STRING:
     case DATA_TYPE_FLOAT:
     case DATA_TYPE_LITERAL:
-        exec_set_error(exec, block, "Cannot cast type %s into list type", type_to_str(arg.type));
+    case DATA_TYPE_UNKNOWN:
+    case DATA_TYPE_BLOCKDEF:
+        exec_set_error(exec, block, gettext("Cannot cast type %s into %s"), type_to_str(arg.type), type_to_str(DATA_TYPE_LIST));
         return NULL;
     case DATA_TYPE_LIST:
         return arg.data.value;
     case DATA_TYPE_ANY:
         return build_call(exec, "std_list_from_any", CONST_GC, arg.data.value);
-    case DATA_TYPE_UNKNOWN:
-    case DATA_TYPE_BLOCKDEF:
-        exec_set_error(exec, block, "Cannot cast type %s into %s", type_to_str(arg.type), type_to_str(DATA_TYPE_LIST));
-        return NULL;
     }
     assert(false && "Unhandled cast to string ref");
 }
@@ -1393,7 +1391,7 @@ LLVMValueRef arg_to_any(Exec* exec, Block* block, FuncArg arg) {
         return arg.data.value;
     case DATA_TYPE_UNKNOWN:
     case DATA_TYPE_BLOCKDEF:
-        exec_set_error(exec, block, "Cannot cast type %s into %s", type_to_str(arg.type), type_to_str(DATA_TYPE_ANY));
+        exec_set_error(exec, block, gettext("Cannot cast type %s into %s"), type_to_str(arg.type), type_to_str(DATA_TYPE_ANY));
         return NULL;
     }
     assert(false && "Unhandled cast to string ref");
@@ -1419,7 +1417,7 @@ FuncArg arg_cast(Exec* exec, Block* block, FuncArg arg, DataType cast_to_type) {
     case DATA_TYPE_NOTHING:
     case DATA_TYPE_UNKNOWN:
     case DATA_TYPE_BLOCKDEF:
-        exec_set_error(exec, block, "Cannot cast type %s into %s", type_to_str(arg.type), type_to_str(cast_to_type));
+        exec_set_error(exec, block, gettext("Cannot cast type %s into %s"), type_to_str(arg.type), type_to_str(cast_to_type));
         return DATA_UNKNOWN;
     }
     assert(false && "Unhandled cast to value typed");
@@ -1467,12 +1465,12 @@ bool block_custom_arg(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg
     DefineFunction* func;
     DefineArgument* arg = get_custom_argument(exec, block->blockdef, &func);
     if (!arg) {
-        exec_set_error(exec, block, "[LLVM] Could not find function definition for argument");
+        exec_set_error(exec, block, gettext("Could not find function definition for argument"));
         return false;
     }
     
     if (LLVMGetBasicBlockParent(LLVMGetInsertBlock(exec->builder)) != func->func) {
-        exec_set_error(exec, block, "Function argument block used outside of function");
+        exec_set_error(exec, block, gettext("Function argument block used outside of function"));
         return false;
     }
 
@@ -1483,7 +1481,7 @@ bool block_custom_arg(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg
 bool block_exec_custom(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
     (void) control_state;
     if (argc > 32) {
-        exec_set_error(exec, block, "Too many parameters passed into function. Got %d/32", argc);
+        exec_set_error(exec, block, gettext("Too many parameters passed into function. Got %d/32"), argc);
         return false;
     }
     
@@ -1883,8 +1881,7 @@ bool block_rem(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* retur
     }
 
     if (LLVMIsPoison(return_val->data.value)) {
-        // TODO: Uncorporate runtime checks for division by zero
-        exec_set_error(exec, block, "Division by zero");
+        exec_set_error(exec, block, gettext("Division by zero"));
         return false;
     }
     return true;
@@ -1937,7 +1934,7 @@ bool block_div(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* retur
     }
 
     if (LLVMIsPoison(return_val->data.value)) {
-        exec_set_error(exec, block, "Division by zero");
+        exec_set_error(exec, block, gettext("Division by zero"));
         return false;
     }
     return true;
@@ -2404,11 +2401,11 @@ bool block_print(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* ret
         return true;
     case DATA_TYPE_UNKNOWN:
     case DATA_TYPE_BLOCKDEF:
-        exec_set_error(exec, block, "Invalid type %s in print function", type_to_str(argv[0].type));
+        exec_set_error(exec, block, gettext("Invalid type %s in print function"), type_to_str(argv[0].type));
         return false;
     }
 
-    exec_set_error(exec, block, "Unhandled type %s in print function", type_to_str(argv[0].type));
+    exec_set_error(exec, block, gettext("Unhandled type %s in print function"), type_to_str(argv[0].type));
     return false;
 }
 
@@ -2506,18 +2503,18 @@ bool block_set_var(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* r
     (void) block;
     MIN_ARG_COUNT(2);
     if (argv[0].type != DATA_TYPE_LITERAL) {
-        exec_set_error(exec, block, "Invalid data type %s, expected %s", type_to_str(argv[0].type), type_to_str(DATA_TYPE_LITERAL));
+        exec_set_error(exec, block, gettext("Invalid data type %s, expected %s"), type_to_str(argv[0].type), type_to_str(DATA_TYPE_LITERAL));
         return false;
     }
 
     Variable* var = variable_get(exec, argv[0].data.str);
     if (!var) {
-        exec_set_error(exec, block, "Variable with name \"%s\" does not exist in the current scope", argv[0].data.str);
+        exec_set_error(exec, block, gettext("Variable with name \"%s\" does not exist in the current scope"), argv[0].data.str);
         return false;
     }
 
     if (argv[1].type != var->value.type) {
-        exec_set_error(exec, block, "Assign to variable \"%s\" of type %s with type %s", argv[0].data.str, type_to_str(var->value.type), type_to_str(argv[1].type));
+        exec_set_error(exec, block, gettext("Assign to variable \"%s\" of type %s with incompatible type %s"), argv[0].data.str, type_to_str(var->value.type), type_to_str(argv[1].type));
         return false;
     }
 
@@ -2537,13 +2534,13 @@ bool block_get_var(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* r
     (void) block;
     MIN_ARG_COUNT(1);
     if (argv[0].type != DATA_TYPE_LITERAL) {
-        exec_set_error(exec, block, "Invalid data type %s, expected %s", type_to_str(argv[0].type), type_to_str(DATA_TYPE_LITERAL));
+        exec_set_error(exec, block, gettext("Invalid data type %s, expected %s"), type_to_str(argv[0].type), type_to_str(DATA_TYPE_LITERAL));
         return false;
     }
 
     Variable* var = variable_get(exec, argv[0].data.str);
     if (!var) {
-        exec_set_error(exec, block, "Variable with name \"%s\" does not exist in the current scope", argv[0].data.str);
+        exec_set_error(exec, block, gettext("Variable with name \"%s\" does not exist in the current scope"), argv[0].data.str);
         return false;
     }
 
@@ -2567,22 +2564,22 @@ bool block_declare_var(Exec* exec, Block* block, int argc, FuncArg* argv, FuncAr
     MIN_ARG_COUNT(2);
 
     if (block->parent) {
-        exec_set_error(exec, block, "Variable declarations are not allowed inside an expression");
+        exec_set_error(exec, block, gettext("Variable declarations are not allowed inside an argument"));
         return false;
     }
     
     if (argv[0].type != DATA_TYPE_LITERAL) {
-        exec_set_error(exec, block, "Invalid data type %s, expected %s", type_to_str(argv[0].type), type_to_str(DATA_TYPE_LITERAL));
+        exec_set_error(exec, block, gettext("Invalid data type %s, expected %s"), type_to_str(argv[0].type), type_to_str(DATA_TYPE_LITERAL));
         return false;
     }
 
     if (*argv[0].data.str == 0) {
-        exec_set_error(exec, block, "Cannot declare variable with empty name");
+        exec_set_error(exec, block, gettext("Cannot declare variable with empty name"));
         return false;
     }
 
     if (argv[1].type == DATA_TYPE_NOTHING) {
-        exec_set_error(exec, block, "Cannot declare a variable with zero sized type (i.e. Nothing)");
+        exec_set_error(exec, block, gettext("Cannot declare a variable with zero sized type (i.e. Nothing)"));
         return false;
     }
 
@@ -2974,7 +2971,7 @@ bool block_define_block(Exec* exec, Block* block, int argc, FuncArg* argv, FuncA
     MIN_ARG_COUNT(1);
 
     if (argv[0].type != DATA_TYPE_BLOCKDEF) {
-        exec_set_error(exec, block, "Non blockdef argument passed into block_define_block");
+        exec_set_error(exec, block, gettext("Invalid data type %s, expected %s"), type_to_str(argv[0].type), type_to_str(DATA_TYPE_BLOCKDEF));
         return false;
     }
 

@@ -29,6 +29,7 @@
 #include <math.h>
 #include <unistd.h>
 #include <errno.h>
+#include <libintl.h>
 
 #ifndef _WIN32
 #include <glob.h>
@@ -177,7 +178,7 @@ void exec_set_error(Exec* exec, Block* block, const char* fmt, ...) {
 
 static bool control_stack_push(Exec* exec, Block* block) {
     if (exec->control_stack_len >= VM_CONTROL_STACK_SIZE) {
-        exec_set_error(exec, block, "Chain stack overflow");
+        exec_set_error(exec, block, gettext("Control stack overflow"));
         return false;
     }
     exec->control_stack[exec->control_stack_len++] = block;
@@ -186,7 +187,7 @@ static bool control_stack_push(Exec* exec, Block* block) {
 
 static Block* control_stack_pop(Exec* exec) {
     if (exec->control_stack_len == 0) {
-        exec_set_error(exec, NULL, "Chain stack underflow");
+        exec_set_error(exec, NULL, gettext("Control stack underflow"));
         return NULL;
     }
     return exec->control_stack[--exec->control_stack_len];
@@ -198,7 +199,7 @@ void global_variable_add(Exec* exec, Variable variable) {
 
 bool variable_stack_push(Exec* exec, Block* block, Variable variable) {
     if (exec->variable_stack_len >= VM_CONTROL_STACK_SIZE) {
-        exec_set_error(exec, block, "Variable stack overflow");
+        exec_set_error(exec, block, gettext("Variable stack overflow"));
         return false;
     }
     exec->variable_stack[exec->variable_stack_len++] = variable;
@@ -217,7 +218,7 @@ Variable* variable_get(Exec* exec, const char* var_name) {
 
 static bool variable_stack_frame_push(Exec* exec) {
     if (exec->variable_stack_frames_len >= VM_CONTROL_STACK_SIZE) {
-        exec_set_error(exec, NULL, "Variable stack overflow");
+        exec_set_error(exec, NULL, gettext("Variable stack overflow"));
         return false;
     }
     VariableStackFrame frame;
@@ -231,7 +232,7 @@ static bool variable_stack_frame_push(Exec* exec) {
 
 static bool variable_stack_frame_pop(Exec* exec) {
     if (exec->variable_stack_frames_len == 0) {
-        exec_set_error(exec, NULL, "Variable stack underflow");
+        exec_set_error(exec, NULL, gettext("Variable stack underflow"));
         return false;
     }
     VariableStackFrame frame = exec->variable_stack_frames[--exec->variable_stack_frames_len];
@@ -244,11 +245,11 @@ static bool variable_stack_frame_pop(Exec* exec) {
 
 static bool evaluate_block(Exec* exec, Block* block, FuncArg* return_val, ControlState control_state, FuncArg input_val) {
     if (!block->blockdef) {
-        exec_set_error(exec, block, "Tried to compile block without definition");
+        exec_set_error(exec, block, gettext("Tried to compile block without definition"));
         return false;
     }
     if (!block->blockdef->func) {
-        exec_set_error(exec, block, "Tried to compile block \"%s\" without implementation", block->blockdef->id);
+        exec_set_error(exec, block, gettext("Tried to compile block \"%s\" without implementation"), block->blockdef->id);
         return false;
     }
 
@@ -474,7 +475,7 @@ static LLVMValueRef get_function(Exec* exec, const char* func_name) {
             return func;
         }
     }
-    exec_set_error(exec, NULL, "[LLVM] Function with name \"%s\" does not exist", func_name);
+    exec_set_error(exec, NULL, gettext("Function with name \"%s\" does not exist"), func_name);
     return NULL;
 }
 
@@ -814,7 +815,7 @@ static bool compile_program(Exec* exec) {
 
     char *error = NULL;
     if (LLVMVerifyModule(exec->module, LLVMReturnStatusAction , &error)) {
-        exec_set_error(exec, NULL, "Failed to build module: %s", error);
+        exec_set_error(exec, NULL, gettext("Failed to build module: %s"), error);
         return false;
     }
     LLVMDisposeMessage(error);

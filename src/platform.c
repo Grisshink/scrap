@@ -9,6 +9,7 @@
 #include <stdbool.h>
 #include <string.h>
 #include <errno.h>
+#include <libintl.h>
 
 #include "term.h"
 
@@ -82,7 +83,7 @@ bool spawn_process(char* command, char* error, size_t error_len) {
     pipe_attrs.bInheritHandle = TRUE;
 
     if (!CreatePipe(&read_pipe, &write_pipe, &pipe_attrs, 0)) {
-        snprintf(error, error_len, "[LLVM] Failed to create a pipe. Error code: %ld", GetLastError());
+        snprintf(error, error_len, gettext("Failed to create a pipe. Error code: %ld"), GetLastError());
         return false;
     }
 
@@ -100,7 +101,7 @@ bool spawn_process(char* command, char* error, size_t error_len) {
         &start_info, // Give STARTUPINFO
         &proc_info) // Get PROCESS_INFORMATION
     ) {
-        snprintf(error, error_len, "[LLVM] Failed to create a process. Error code: %ld", GetLastError());
+        snprintf(error, error_len, gettext("Failed to create a process. Error code: %ld"), GetLastError());
         CloseHandle(write_pipe);
         CloseHandle(read_pipe);
         return false;
@@ -116,7 +117,7 @@ bool spawn_process(char* command, char* error, size_t error_len) {
             long last_error = GetLastError();
             if (last_error == ERROR_BROKEN_PIPE) break;
 
-            snprintf(error, error_len, "[LLVM] Failed to read from pipe. Error code: %ld", last_error);
+            snprintf(error, error_len, gettext("Failed to read from pipe. Error code: %ld"), last_error);
             CloseHandle(proc_info.hProcess);
             CloseHandle(proc_info.hThread);
             return false;
@@ -129,7 +130,7 @@ bool spawn_process(char* command, char* error, size_t error_len) {
 
     long exit_code;
     if (!GetExitCodeProcess(proc_info.hProcess, &exit_code)) {
-        snprintf(error, error_len, "[LLVM] Failed to get exit code. Error code: %ld", GetLastError());
+        snprintf(error, error_len, gettext("Failed to get exit code. Error code: %ld"), GetLastError());
         CloseHandle(proc_info.hProcess);
         CloseHandle(proc_info.hThread);
         CloseHandle(read_pipe);
@@ -137,7 +138,7 @@ bool spawn_process(char* command, char* error, size_t error_len) {
     }
 
     if (exit_code) {
-        snprintf(error, error_len, "Linker exited with exit code: %ld", exit_code);
+        snprintf(error, error_len, gettext("Linker exited with exit code: %ld"), exit_code);
         CloseHandle(proc_info.hProcess);
         CloseHandle(proc_info.hThread);
         CloseHandle(read_pipe);
@@ -151,13 +152,13 @@ bool spawn_process(char* command, char* error, size_t error_len) {
     int pipefd[2];
 
     if (pipe(pipefd) == -1) {
-        snprintf(error, error_len, "[LLVM] Failed to create a pipe: %s", strerror(errno));
+        snprintf(error, error_len, gettext("Failed to create a pipe: %s"), strerror(errno));
         return false;
     }
 
     pid_t pid = fork();
     if (pid == -1) {
-        snprintf(error, error_len, "[LLVM] Failed to fork a process: %s", strerror(errno));
+        snprintf(error, error_len, gettext("Failed to fork a process: %s"), strerror(errno));
         return false;
     }
 
@@ -240,14 +241,14 @@ bool spawn_process(char* command, char* error, size_t error_len) {
             if (exit_code == 0) {
                 return true;
             } else {
-                snprintf(error, error_len, "Linker exited with exit code: %d", exit_code);
+                snprintf(error, error_len, gettext("Linker exited with exit code: %d"), exit_code);
                 return false;
             }
         } else if (WIFSIGNALED(status)) {
-            snprintf(error, error_len, "Linker signaled with signal number: %d", WTERMSIG(status));
+            snprintf(error, error_len, gettext("Linker signaled with signal number: %d"), WTERMSIG(status));
             return false;
         } else {
-            snprintf(error, error_len, "Received unknown child status :/");
+            snprintf(error, error_len, gettext("Received unknown child status :/"));
             return false;
         }
     }
