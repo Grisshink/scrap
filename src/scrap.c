@@ -583,14 +583,14 @@ int main(void) {
                 actionbar_show(gettext("Vm shitted and died :("));
             }
 
-            // TODO: Add unicode support here
             size_t i = 0;
             while (exec.current_error[i]) {
                 vector_add(&exec_compile_error, vector_create());
                 size_t line_len = 0;
                 while (line_len < 50 && exec.current_error[i]) {
+                    if (((unsigned char)exec.current_error[i] >> 6) != 2) line_len++;
+                    if (line_len >= 50) break;
                     vector_add(&exec_compile_error[vector_size(exec_compile_error) - 1], exec.current_error[i++]);
-                    line_len++;
                 }
                 vector_add(&exec_compile_error[vector_size(exec_compile_error) - 1], 0);
             }
