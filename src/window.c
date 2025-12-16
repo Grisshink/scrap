@@ -24,6 +24,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include <libintl.h>
+#include <string.h>
 
 #define ARRLEN(x) (sizeof(x)/sizeof(x[0]))
 #define MIN(x, y) ((x) < (y) ? (x) : (y))
@@ -41,6 +42,7 @@ typedef struct {
 Config window_conf;
 static WindowGui window = {0};
 static bool settings_tooltip = false;
+static char** about_text_split = NULL;
 
 // https://easings.net/#easeOutExpo
 float ease_out_expo(float x) {
@@ -66,6 +68,23 @@ void gui_window_show(WindowGuiType type) {
     window.type = type;
     window.pos = hover_info.top_bars.pos;
     shader_time = -0.2;
+    if (window.type == GUI_TYPE_ABOUT && !about_text_split) {
+        about_text_split = vector_create();
+        const char* about_text = gettext("Scrap is a project that allows anyone to build\n"
+                                         "software using simple, block based interface.");
+        size_t about_text_len = strlen(about_text);
+
+        char* current_text = vector_create();
+        for (size_t i = 0; i < about_text_len; i++) {
+            if (about_text[i] == '\n') {
+                vector_add(&about_text_split, current_text);
+                current_text = vector_create();
+                continue;
+            }
+            vector_add(&current_text, about_text[i]);
+        }
+        vector_add(&about_text_split, current_text);
+    }
 }
 
 void gui_window_hide(void) {
@@ -74,8 +93,7 @@ void gui_window_hide(void) {
 }
 
 void gui_window_hide_immediate(void) {
-    hover_info.select_input = NULL;
-    window.is_fading = true;
+    gui_window_hide();
     window.is_hiding = true;
 }
 
@@ -390,6 +408,13 @@ void handle_window(void) {
             window.animation_time = 0.0;
             if (window.shown) render_surface_needs_redraw = true;
             window.shown = false;
+            if (about_text_split) {
+                for (size_t i = 0; i < vector_size(about_text_split); i++) {
+                    vector_free(about_text_split[i]);
+                }
+                vector_free(about_text_split);
+                about_text_split = NULL;
+            }
         } else {
             render_surface_needs_redraw = true;
         }
@@ -501,8 +526,13 @@ void draw_window(void) {
             gui_element_end(gui);
 
             gui_element_begin(gui);
-                gui_text(gui, &font_cond, gettext("Scrap is a project that allows anyone to build"), conf.font_size * 0.6, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
-                gui_text(gui, &font_cond, gettext("software using simple, block based interface."), conf.font_size * 0.6, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+                if (about_text_split) {
+                    for (size_t i = 0; i < vector_size(about_text_split); i++) {
+                        gui_text_slice(gui, &font_cond, about_text_split[i], vector_size(about_text_split[i]), conf.font_size * 0.6, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+                    }
+                } else {
+                    gui_text(gui, &font_cond, "ERROR", conf.font_size * 0.6, (GuiColor) { 0xff, 0x20, 0x20, 0xff });
+                }
             gui_element_end(gui);
 
             gui_grow(gui, DIRECTION_VERTICAL);

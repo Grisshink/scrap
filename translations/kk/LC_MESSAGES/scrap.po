@@ -416,12 +416,11 @@ msgid "Needs restart for changes to take effect"
 msgstr "Өзгерістер күшіне енуі үшін қайта іске қосу қажет"
 
 #: window.c
-msgid "Scrap is a project that allows anyone to build"
-msgstr "Scrap - бұл кез келген адамға салуға мүмкіндік беретін жоба"
-
-#: window.c
-msgid "software using simple, block based interface."
-msgstr "қарапайым, блок негізіндегі интерфейсті пайдаланатын бағдарламалық қамтамасыз ету."
+msgid "Scrap is a project that allows anyone to build\n"
+      "software using simple, block based interface."
+msgstr "Scrap - бұл кез келген адамға салуға мүмкіндік беретін\n"
+       "жоба қарапайым, блок негізіндегі интерфейсті\n"
+       "пайдаланатын бағдарламалық қамтамасыз ету."
 
 #: window.c
 msgid "License"

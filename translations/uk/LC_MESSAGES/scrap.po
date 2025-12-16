@@ -412,12 +412,11 @@ msgid "Needs restart for changes to take effect"
 msgstr "Потрібне перезавантаження, щоб зміни вступили у силу"
 
 #: window.c
-msgid "Scrap is a project that allows anyone to build"
-msgstr "Scrap - це проект, який надає можливість кожному"
-
-#: window.c
-msgid "software using simple, block based interface."
-msgstr "створювати програми, використовуючи легкий, блоковий інтерфейс"
+msgid "Scrap is a project that allows anyone to build\n"
+      "software using simple, block based interface."
+msgstr "Scrap - це проект, який надає можливість кожному\n"
+       "створювати програми, використовуючи легкий,\n"
+       "блоковий інтерфейс"
 
 #: window.c
 msgid "License"
