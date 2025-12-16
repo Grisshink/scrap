@@ -567,12 +567,10 @@ static void remove_blockdef(void) {
             Argument* arg = &mouse_blockchain.blocks[i].arguments[j];
             if (arg->type != ARGUMENT_BLOCKDEF) continue;
             arg->data.blockdef->func = NULL;
-            arg->data.blockdef->color = (BlockdefColor) { 0x66, 0x66, 0x66, 0xff };
             for (size_t k = 0; k < vector_size(arg->data.blockdef->inputs); k++) {
                 Input* input = &arg->data.blockdef->inputs[k];
                 if (input->type != INPUT_ARGUMENT) continue;
                 input->data.arg.blockdef->func = NULL;
-                input->data.arg.blockdef->color = (BlockdefColor) { 0x66, 0x66, 0x66, 0xff };
             }
         }
     }
@@ -586,13 +584,11 @@ static bool handle_block_palette_click(bool mouse_empty) {
     if (mouse_empty && hover_info.block) {
         // Pickup block
         TraceLog(LOG_INFO, "Pickup block");
-        int ind = hover_info.block - palette.categories[palette.current_category].blocks;
-        if (ind < 0 || ind > (int)vector_size(palette.categories[palette.current_category].blocks)) return true;
+        int ind = hover_info.blockchain - palette.categories[palette.current_category].chains;
+        if (ind < 0 || ind > (int)vector_size(palette.categories[palette.current_category].chains)) return true;
 
-        blockchain_add_block(&mouse_blockchain, block_new_ms(hover_info.block->blockdef));
-        if (hover_info.block->blockdef->type == BLOCKTYPE_CONTROL && vm.end_blockdef) {
-            blockchain_add_block(&mouse_blockchain, block_new_ms(vm.blockdefs[vm.end_blockdef]));
-        }
+        blockchain_free(&mouse_blockchain);
+        mouse_blockchain = blockchain_copy(&palette.categories[palette.current_category].chains[ind], 0);
         return true;
     } else if (!mouse_empty) {
         // Drop block
@@ -1074,8 +1070,8 @@ static bool search_blockdef(Blockdef* blockdef) {
 void update_search(void) {
     vector_clear(search_list);
     for (size_t i = 0; i < vector_size(palette.categories); i++) {
-        for (size_t j = 0; j < vector_size(palette.categories[i].blocks); j++) {
-            if (search_blockdef(palette.categories[i].blocks[j].blockdef)) vector_add(&search_list, &palette.categories[i].blocks[j]);
+        for (size_t j = 0; j < vector_size(palette.categories[i].chains); j++) {
+            if (search_blockdef(palette.categories[i].chains[j].blocks[0].blockdef)) vector_add(&search_list, &palette.categories[i].chains[j].blocks[0]);
         }
     }
 }

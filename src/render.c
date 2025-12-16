@@ -34,7 +34,7 @@
 #define CONVERT_COLOR(color, type) (type) { color.r, color.g, color.b, color.a }
 
 static void draw_code(void);
-static void draw_blockchain(BlockChain* chain, bool ghost);
+static void draw_blockchain(BlockChain* chain, bool ghost, bool show_previews);
 
 bool rl_vec_equal(Color lhs, Color rhs) {
     return lhs.r == rhs.r && lhs.g == rhs.g && lhs.b == rhs.b && lhs.a == rhs.a;
@@ -362,6 +362,7 @@ static void argument_on_hover(GuiElement* el) {
 static void draw_block(Block* block, bool highlight, bool can_hover, bool ghost) {
     bool collision = hover_info.prev_block == block || highlight;
     Color color = CONVERT_COLOR(block->blockdef->color, Color);
+    if (!block->blockdef->func) color = (Color) UNIMPLEMENTED_BLOCK_COLOR;
     if (!vm.is_running && block == exec_compile_error_block) {
         double animation = fmod(-GetTime(), 1.0) * 0.5 + 1.0;
         color = (Color) { 0xff * animation, 0x20 * animation, 0x20 * animation, 0xff };
@@ -688,10 +689,10 @@ static void draw_block_preview(BlockChain* chain) {
     if (hover_info.prev_argument != NULL) return;
     if (mouse_blockchain.blocks[0].blockdef->type == BLOCKTYPE_HAT) return;
 
-    draw_blockchain(&mouse_blockchain, true);
+    draw_blockchain(&mouse_blockchain, true, false);
 }
 
-static void draw_blockchain(BlockChain* chain, bool ghost) {
+static void draw_blockchain(BlockChain* chain, bool ghost, bool show_previews) {
     int layer = 0;
     bool highlight = hover_info.exec_chain == chain;
 
@@ -699,7 +700,6 @@ static void draw_blockchain(BlockChain* chain, bool ghost) {
         gui_set_direction(gui, DIRECTION_VERTICAL);
         gui_on_hover(gui, blockchain_on_hover);
         gui_set_custom_data(gui, chain);
-        gui_set_padding(gui, 5, 5);
 
     for (size_t i = 0; i < vector_size(chain->blocks); i++) {
         Blockdef* blockdef = chain->blocks[i].blockdef;
@@ -803,9 +803,13 @@ static void draw_blockchain(BlockChain* chain, bool ghost) {
                 gui_element_begin(gui);
                     gui_set_direction(gui, DIRECTION_VERTICAL);
 
-                    if (hover_info.prev_block == &chain->blocks[i]) draw_block_preview(chain);
+                    if (hover_info.prev_block == &chain->blocks[i] && show_previews) {
+                        draw_block_preview(chain);
+                    }
         } else {
-            if (hover_info.prev_block == &chain->blocks[i]) draw_block_preview(chain);
+            if (hover_info.prev_block == &chain->blocks[i] && show_previews) {
+                draw_block_preview(chain);
+            }
         }
     }
 
@@ -897,8 +901,8 @@ static void draw_block_palette(void) {
         gui_set_scroll_scaling(gui, conf.font_size * 4);
         gui_set_scissor(gui);
 
-        for (size_t i = 0; i < vector_size(palette.categories[palette.current_category].blocks); i++) {
-            draw_block(&palette.categories[palette.current_category].blocks[i], false, true, false);
+        for (size_t i = 0; i < vector_size(palette.categories[palette.current_category].chains); i++) {
+            draw_blockchain(&palette.categories[palette.current_category].chains[i], false, false);
         }
     gui_element_end(gui);
 }
@@ -1189,7 +1193,7 @@ static void draw_code(void) {
             gui_set_floating(gui);
             gui_set_position(gui, chain_pos.x, chain_pos.y);
 
-            draw_blockchain(&editor_code[i], false);
+            draw_blockchain(&editor_code[i], false, true);
         gui_element_end(gui);
         GuiElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len];
         editor_code[i].width = el->w;
@@ -1319,9 +1323,9 @@ void scrap_gui_process(void) {
 
         gui_element_begin(gui);
             gui_set_floating(gui);
-            gui_set_position(gui, gui->mouse_x, gui->mouse_y);
+            gui_set_position(gui, gui->mouse_x + 5, gui->mouse_y + 5);
 
-            draw_blockchain(&mouse_blockchain, false);
+            draw_blockchain(&mouse_blockchain, false, false);
         gui_element_end(gui);
 
         if (hover_info.select_input == &search_list_search) {

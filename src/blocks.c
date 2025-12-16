@@ -3013,7 +3013,13 @@ BlockCategory* find_category(const char* name) {
 }
 
 void add_to_category(Blockdef* blockdef, BlockCategory* category) {
-    vector_add(&category->blocks, block_new(blockdef));
+    BlockChain chain = blockchain_new();
+    blockchain_add_block(&chain, block_new_ms(blockdef));
+    if (blockdef->type == BLOCKTYPE_CONTROL && vm.end_blockdef != (size_t)-1) {
+        blockchain_add_block(&chain, block_new(vm.blockdefs[vm.end_blockdef]));
+    }
+
+    vector_add(&category->chains, chain);
 }
 
 void register_categories(void) {
@@ -3059,6 +3065,10 @@ void register_blocks(Vm* vm) {
         .image_ptr = &list_tex,
         .image_color = (BlockdefColor) { 0xff, 0xff, 0xff, 0xff },
     };
+
+    Blockdef* sc_end = blockdef_new("end", BLOCKTYPE_END, (BlockdefColor) { 0x77, 0x77, 0x77, 0xff }, block_noop);
+    blockdef_add_text(sc_end, gettext("End"));
+    blockdef_register(vm, sc_end);
 
     Blockdef* on_start = blockdef_new("on_start", BLOCKTYPE_HAT, (BlockdefColor) { 0xff, 0x77, 0x00, 0xFF }, block_on_start);
     blockdef_add_text(on_start, gettext("When"));
@@ -3207,10 +3217,6 @@ void register_blocks(Vm* vm) {
     blockdef_add_text(sc_sleep, gettext("μs"));
     blockdef_register(vm, sc_sleep);
     add_to_category(sc_sleep, cat_control);
-
-    Blockdef* sc_end = blockdef_new("end", BLOCKTYPE_END, (BlockdefColor) { 0x77, 0x77, 0x77, 0xff }, block_noop);
-    blockdef_add_text(sc_end, gettext("End"));
-    blockdef_register(vm, sc_end);
 
     Blockdef* sc_plus = blockdef_new("plus", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_MATH_COLOR, block_plus);
     blockdef_add_argument(sc_plus, "9", "0", BLOCKCONSTR_UNLIMITED);

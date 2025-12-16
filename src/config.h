@@ -54,6 +54,8 @@
 #define CATEGORY_MISC_COLOR { 0x00, 0x99, 0xff, 0xff }
 #define CATEGORY_DATA_COLOR { 0xff, 0x77, 0x00, 0xff }
 
+#define UNIMPLEMENTED_BLOCK_COLOR { 0x66, 0x66, 0x66, 0xff }
+
 #define MAX_ERROR_LEN 512
 
 #define MIN_MEMORY_LIMIT 4194304 // 4 MB

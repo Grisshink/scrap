@@ -260,13 +260,13 @@ BlockCategory block_category_new(const char* name, Color color) {
     return (BlockCategory) {
         .name = name,
         .color = color,
-        .blocks = vector_create(),
+        .chains = vector_create(),
     };
 }
 
 void block_category_free(BlockCategory* category) {
-    for (size_t i = 0; i < vector_size(category->blocks); i++) block_free(&category->blocks[i]);
-    vector_free(category->blocks);
+    for (size_t i = 0; i < vector_size(category->chains); i++) blockchain_free(&category->chains[i]);
+    vector_free(category->chains);
 }
 
 // Divides the panel into two parts along the specified side with the specified split percentage

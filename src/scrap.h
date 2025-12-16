@@ -160,7 +160,7 @@ typedef struct {
 typedef struct {
     const char* name;
     Color color;
-    Block* blocks;
+    BlockChain* chains;
 } BlockCategory;
 
 typedef struct {
@@ -409,6 +409,7 @@ bool handle_jump_to_block_button_click(void);
 bool handle_error_window_close_button_click(void);
 PanelTree* find_panel(PanelTree* root, PanelType panel);
 void update_search(void);
+Block block_new_ms(Blockdef* blockdef);
 
 // save.c
 void config_new(Config* config);
