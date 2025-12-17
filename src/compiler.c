@@ -976,8 +976,10 @@ static bool build_program(Exec* exec) {
     }
 
     vector_free(command);
+#ifndef _WIN32
     vector_free(crt_dir);
     if (crt_begin_dir) vector_free(crt_begin_dir);
+#endif
     return res;
 }
 
