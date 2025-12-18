@@ -187,7 +187,8 @@ typedef struct {
 
     InputHoverInfo input_info;
     char** select_input;
-    int select_input_ind;
+    int select_input_cursor;
+    int select_input_mark;
 
     Vector2 mouse_click_pos;
     float time_at_last_pos;

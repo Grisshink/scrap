@@ -31,6 +31,7 @@
 #define ARRLEN(x) (sizeof(x)/sizeof(x[0]))
 #define MAX(x, y) ((x) > (y) ? (x) : (y))
 #define MIN(x, y) ((x) < (y) ? (x) : (y))
+#define ABS(x) ((x) < 0 ? -(x) : (x))
 #define CLAMP(x, min, max) (MIN(MAX(min, x), max))
 
 typedef enum {
@@ -65,49 +66,84 @@ static void switch_tab_to_panel(PanelType panel) {
     }
 }
 
+static void set_mark(void) {
+    if (IsKeyDown(KEY_LEFT_SHIFT) | IsKeyDown(KEY_RIGHT_SHIFT)) {
+        if (hover_info.select_input_mark == -1) hover_info.select_input_mark = hover_info.select_input_cursor;
+    } else {
+        hover_info.select_input_mark = -1;
+    }
+}
+
 static bool edit_text(char** text) {
     if (!text) return false;
 
     if (IsKeyPressed(KEY_HOME)) {
-        hover_info.select_input_ind = 0;
+        set_mark();
+        hover_info.select_input_cursor = 0;
         render_surface_needs_redraw = true;
         return false;
     }
 
     if (IsKeyPressed(KEY_END)) {
-        hover_info.select_input_ind = vector_size(*text) - 1;
+        set_mark();
+        hover_info.select_input_cursor = vector_size(*text) - 1;
+        render_surface_needs_redraw = true;
+        return false;
+    }
+
+    if ((IsKeyDown(KEY_LEFT_CONTROL) | IsKeyDown(KEY_RIGHT_CONTROL)) && IsKeyPressed(KEY_A)) {
+        hover_info.select_input_cursor = 0;
+        hover_info.select_input_mark = strlen(*text);
+        render_surface_needs_redraw = true;
+        return false;
+    }
+
+    if ((IsKeyDown(KEY_LEFT_CONTROL) | IsKeyDown(KEY_RIGHT_CONTROL)) && IsKeyPressed(KEY_U)) {
+        vector_clear(*text);
+        vector_add(text, 0);
+        hover_info.select_input_cursor = 0;
+        hover_info.select_input_mark = -1;
         render_surface_needs_redraw = true;
         return false;
     }
 
     if (IsKeyPressed(KEY_LEFT) || IsKeyPressedRepeat(KEY_LEFT)) {
-        hover_info.select_input_ind--;
-        if (hover_info.select_input_ind < 0) {
-            hover_info.select_input_ind = 0;
+        set_mark();
+        hover_info.select_input_cursor--;
+        if (hover_info.select_input_cursor < 0) {
+            hover_info.select_input_cursor = 0;
         } else {
-            while (((unsigned char)(*text)[hover_info.select_input_ind] >> 6) == 2) hover_info.select_input_ind--;
+            while (((unsigned char)(*text)[hover_info.select_input_cursor] >> 6) == 2) hover_info.select_input_cursor--;
         }
         render_surface_needs_redraw = true;
         return false;
     }
 
     if (IsKeyPressed(KEY_RIGHT) || IsKeyPressedRepeat(KEY_RIGHT)) {
-        hover_info.select_input_ind++;
-        if (hover_info.select_input_ind >= (int)vector_size(*text)) {
-            hover_info.select_input_ind = vector_size(*text) - 1;
+        set_mark();
+        hover_info.select_input_cursor++;
+        if (hover_info.select_input_cursor >= (int)vector_size(*text)) {
+            hover_info.select_input_cursor = vector_size(*text) - 1;
         } else {
-            while (((unsigned char)(*text)[hover_info.select_input_ind] >> 6) == 2) hover_info.select_input_ind++;
+            while (((unsigned char)(*text)[hover_info.select_input_cursor] >> 6) == 2) hover_info.select_input_cursor++;
         }
         render_surface_needs_redraw = true;
         return false;
     }
 
     if (IsKeyPressed(KEY_DELETE) || IsKeyPressedRepeat(KEY_DELETE)) {
-        if (vector_size(*text) <= 1 || hover_info.select_input_ind == (int)vector_size(*text) - 1) return false;
+        if (vector_size(*text) <= 1 || (hover_info.select_input_cursor == (int)vector_size(*text) - 1 && hover_info.select_input_mark == -1)) return false;
 
-        int remove_pos = hover_info.select_input_ind;
+        int remove_pos = hover_info.select_input_cursor;
         int remove_size;
-        GetCodepointNext(*text + remove_pos, &remove_size);
+        if (hover_info.select_input_mark != -1) {
+            remove_pos = MIN(hover_info.select_input_cursor, hover_info.select_input_mark);
+            remove_size = ABS(hover_info.select_input_cursor - hover_info.select_input_mark);
+            hover_info.select_input_mark = -1;
+            hover_info.select_input_cursor = remove_pos;
+        } else {
+            GetCodepointNext(*text + remove_pos, &remove_size);
+        }
 
         vector_erase(*text, remove_pos, remove_size);
         render_surface_needs_redraw = true;
@@ -115,28 +151,45 @@ static bool edit_text(char** text) {
     }
 
     if (IsKeyPressed(KEY_BACKSPACE) || IsKeyPressedRepeat(KEY_BACKSPACE)) {
-        if (vector_size(*text) <= 1 || hover_info.select_input_ind == 0) return false;
+        if (vector_size(*text) <= 1 || (hover_info.select_input_cursor == 0 && hover_info.select_input_mark == -1)) {
+            return false;
+        }
 
-        int remove_pos = hover_info.select_input_ind - 1;
+        int remove_pos = hover_info.select_input_cursor - 1;
         int remove_size = 1;
-        while (((unsigned char)(*text)[remove_pos] >> 6) == 2) { // This checks if we are in the middle of UTF-8 char
-            remove_pos--;
-            remove_size++;
+        if (hover_info.select_input_mark != -1) {
+            remove_pos = MIN(hover_info.select_input_cursor, hover_info.select_input_mark);
+            remove_size = ABS(hover_info.select_input_cursor - hover_info.select_input_mark);
+            hover_info.select_input_mark = -1;
+            hover_info.select_input_cursor = remove_pos;
+        } else {
+            while (((unsigned char)(*text)[remove_pos] >> 6) == 2) { // This checks if we are in the middle of UTF-8 char
+                remove_pos--;
+                remove_size++;
+            }
+            hover_info.select_input_cursor -= remove_size;
         }
 
         vector_erase(*text, remove_pos, remove_size);
         render_surface_needs_redraw = true;
-        hover_info.select_input_ind -= remove_size;
         return true;
     }
 
     bool input_changed = false;
     int char_val;
     while ((char_val = GetCharPressed())) {
+        if (hover_info.select_input_mark != -1) {
+            int remove_pos  = MIN(hover_info.select_input_cursor, hover_info.select_input_mark),
+                remove_size = ABS(hover_info.select_input_cursor - hover_info.select_input_mark);
+            vector_erase(*text, remove_pos, remove_size);
+            hover_info.select_input_mark = -1;
+            hover_info.select_input_cursor = remove_pos;
+        }
+
         int utf_size = 0;
         const char* utf_char = CodepointToUTF8(char_val, &utf_size);
         for (int i = 0; i < utf_size; i++) {
-            vector_insert(text, hover_info.select_input_ind++, utf_char[i]);
+            vector_insert(text, hover_info.select_input_cursor++, utf_char[i]);
         }
         input_changed = true;
         render_surface_needs_redraw = true;
@@ -807,10 +860,11 @@ static void get_input_ind(void) {
     width *= scale_factor;
 
     if (width - hover_info.input_info.rel_pos.x < hover_info.input_info.rel_pos.x - prev_width) { // Right side of char is closer
-        hover_info.select_input_ind = i;
+        hover_info.select_input_cursor = i;
     } else {
-        hover_info.select_input_ind = prev_i;
+        hover_info.select_input_cursor = prev_i;
     }
+    hover_info.select_input_mark = -1;
 }
 
 // Return value indicates if we should cancel dragging
@@ -953,7 +1007,8 @@ static bool handle_code_panel_key_press(void) {
     if (hover_info.select_argument && !hover_info.select_input) {
         if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_KP_ENTER)) {
             hover_info.select_input = &hover_info.select_argument->data.text;
-            hover_info.select_input_ind = strlen(*hover_info.select_input);
+            hover_info.select_input_mark = 0;
+            hover_info.select_input_cursor = strlen(*hover_info.select_input);
             render_surface_needs_redraw = true;
             return true;
         }
@@ -1102,7 +1157,8 @@ static void handle_key_press(void) {
         vector_clear(search_list_search);
         vector_add(&search_list_search, 0);
         hover_info.select_input = &search_list_search;
-        hover_info.select_input_ind = 0;
+        hover_info.select_input_cursor = 0;
+        hover_info.select_input_mark = -1;
         render_surface_needs_redraw = true;
         update_search();
         return;

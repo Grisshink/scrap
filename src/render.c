@@ -32,6 +32,8 @@
 #define LERP(min, max, t) (((max) - (min)) * (t) + (min))
 #define UNLERP(min, max, v) (((float)(v) - (float)(min)) / ((float)(max) - (float)(min)))
 #define CONVERT_COLOR(color, type) (type) { color.r, color.g, color.b, color.a }
+#define MAX(x, y) ((x) > (y) ? (x) : (y))
+#define MIN(x, y) ((x) < (y) ? (x) : (y))
 
 static void draw_code(void);
 static void draw_blockchain(BlockChain* chain, bool ghost, bool show_previews);
@@ -222,14 +224,28 @@ void draw_input(Font* font, char** input, const char* hint, unsigned short font_
             gui_set_grow(gui, DIRECTION_VERTICAL);
 
             if (hover_info.select_input == input) {
-                gui_text_slice(gui, font, *input, hover_info.select_input_ind, font_size, font_color);
+                if (hover_info.select_input_cursor == hover_info.select_input_mark) hover_info.select_input_mark = -1;
 
-                gui_element_begin(gui);
-                    gui_set_rect(gui, font_color);
-                    gui_set_min_size(gui, BLOCK_OUTLINE_SIZE, BLOCK_TEXT_SIZE);
-                gui_element_end(gui);
+                if (hover_info.select_input_mark == -1) {
+                    gui_text_slice(gui, font, *input, hover_info.select_input_cursor, font_size, font_color);
+                    gui_element_begin(gui);
+                        gui_set_rect(gui, font_color);
+                        gui_set_min_size(gui, BLOCK_OUTLINE_SIZE, BLOCK_TEXT_SIZE);
+                    gui_element_end(gui);
 
-                gui_text(gui, font, *input + hover_info.select_input_ind, font_size, font_color);
+                    gui_text(gui, font, *input + hover_info.select_input_cursor, font_size, font_color);
+                } else {
+                    int select_start = MIN(hover_info.select_input_cursor, hover_info.select_input_mark),
+                        select_end   = MAX(hover_info.select_input_cursor, hover_info.select_input_mark);
+                    gui_text_slice(gui, font, *input, select_start, font_size, font_color);
+
+                    gui_element_begin(gui);
+                        gui_set_rect(gui, (GuiColor) TEXT_SELECTION_COLOR);
+                        gui_text_slice(gui, font, *input + select_start, select_end - select_start, font_size, font_color);
+                    gui_element_end(gui);
+
+                    gui_text(gui, font, *input + select_end, font_size, font_color);
+                }
             } else {
                 if (**input == 0) {
                     gui_text(gui, font, hint, font_size, (GuiColor) { font_color.r, font_color.g, font_color.b, font_color.a * 0.3 });
@@ -1652,7 +1668,7 @@ static void write_debug_buffer(void) {
     print_debug(&i, "Editor: %d, Editing: %p, Blockdef: %p, input: %zu", hover_info.editor.part, hover_info.editor.edit_blockdef, hover_info.editor.blockdef, hover_info.editor.blockdef_input);
     print_debug(&i, "Elements: %zu/%zu, Draw: %zu/%zu", gui->element_stack_len, ELEMENT_STACK_SIZE, gui->command_stack_len, COMMAND_STACK_SIZE);
     print_debug(&i, "Slider: %p, min: %d, max: %d", hover_info.hover_slider.value, hover_info.hover_slider.min, hover_info.hover_slider.max);
-    print_debug(&i, "Input: %p, Select: %p, Pos: (%.3f, %.3f), ind: %d", hover_info.input_info.input, hover_info.select_input, hover_info.input_info.rel_pos.x, hover_info.input_info.rel_pos.y, hover_info.select_input_ind);
+    print_debug(&i, "Input: %p, Select: %p, Pos: (%.3f, %.3f), ind: (%d, %d)", hover_info.input_info.input, hover_info.select_input, hover_info.input_info.rel_pos.x, hover_info.input_info.rel_pos.y, hover_info.select_input_cursor, hover_info.select_input_mark);
     print_debug(&i, "Exec chain: %p, ind: %zu", hover_info.exec_chain, hover_info.exec_ind);
     print_debug(&i, "UI time: %.3f", ui_time);
     print_debug(&i, "FPS: %d, Frame time: %.3f", GetFPS(), GetFrameTime());

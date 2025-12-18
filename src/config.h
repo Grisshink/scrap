@@ -32,6 +32,8 @@
 
 #define PANEL_BACKGROUND_COLOR { 0x10, 0x10, 0x10, 0xff }
 
+#define TEXT_SELECTION_COLOR { 0x00, 0x60, 0xff, 0x80 }
+
 #define WINDOW_ELEMENT_PADDING (10.0 * (float)conf.font_size / 32.0)
 
 #define DATA_PATH "data/"
