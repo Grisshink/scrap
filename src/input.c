@@ -846,7 +846,7 @@ static bool handle_mouse_click(void) {
     if (!hover_info.panel) return true;
     if (hover_info.is_panel_edit_mode) return handle_editor_panel_click();
     if (hover_info.panel->type == PANEL_TERM) return true;
-    if (vm.is_running) return false;
+    if (vm.is_running) return hover_info.panel->type != PANEL_CODE;
 
     if (hover_info.input_info.input) get_input_ind();
     if (hover_info.input_info.input != hover_info.select_input) hover_info.select_input = hover_info.input_info.input;
