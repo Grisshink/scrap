@@ -379,6 +379,10 @@ msgstr "Необработанный тип %s в функции печати"
 msgid "Cannot declare a variable with zero sized type (i.e. Nothing)"
 msgstr "Невозможно объявить переменную с типом нулевого размера (т.е. Ничего)"
 
+#: blocks.c
+msgid "at"
+msgstr "в"
+
 #: input.c
 msgid "Code"
 msgstr "Код"

@@ -70,6 +70,7 @@ Texture2D list_tex;
 Texture2D arrow_left_tex;
 Texture2D arrow_right_tex;
 Texture2D pi_symbol_tex;
+Texture2D variable_symbol_tex;
 Texture2D build_tex;
 
 Vm vm;
@@ -477,6 +478,7 @@ void setup(void) {
     arrow_left_tex = load_svg(into_data_path(DATA_PATH "arrow_left.svg"));
     arrow_right_tex = load_svg(into_data_path(DATA_PATH "arrow_right.svg"));
     pi_symbol_tex = load_svg(into_data_path(DATA_PATH "pi_symbol.svg"));
+    variable_symbol_tex = load_svg(into_data_path(DATA_PATH "variable_symbol.svg"));
     build_tex = load_svg(into_data_path(DATA_PATH "build.svg"));
 
     int* codepoints = vector_create();

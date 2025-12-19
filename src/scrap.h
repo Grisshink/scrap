@@ -289,6 +289,7 @@ extern Texture2D list_tex;
 extern Texture2D arrow_left_tex;
 extern Texture2D arrow_right_tex;
 extern Texture2D pi_symbol_tex;
+extern Texture2D variable_symbol_tex;
 extern Texture2D build_tex;
 
 extern Exec exec;

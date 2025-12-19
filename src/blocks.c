@@ -3473,6 +3473,7 @@ void register_blocks(Vm* vm) {
     add_to_category(sc_gc_collect, cat_misc);
 
     Blockdef* sc_decl_var = blockdef_new("decl_var", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_DATA_COLOR, block_declare_var);
+    blockdef_add_image(sc_decl_var, (BlockdefImage) { .image_ptr = &variable_symbol_tex, .image_color = (BlockdefColor) { 0xff, 0xff, 0xff, 0xff } });
     blockdef_add_text(sc_decl_var, gettext("Declare"));
     blockdef_add_argument(sc_decl_var, gettext("my variable"), gettext("Abc"), BLOCKCONSTR_STRING);
     blockdef_add_text(sc_decl_var, "=");
@@ -3481,12 +3482,13 @@ void register_blocks(Vm* vm) {
     add_to_category(sc_decl_var, cat_data);
 
     Blockdef* sc_get_var = blockdef_new("get_var", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_DATA_COLOR, block_get_var);
-    blockdef_add_text(sc_get_var, gettext("Get"));
+    blockdef_add_image(sc_get_var, (BlockdefImage) { .image_ptr = &variable_symbol_tex, .image_color = (BlockdefColor) { 0xff, 0xff, 0xff, 0xff } });
     blockdef_add_argument(sc_get_var, gettext("my variable"), gettext("Abc"), BLOCKCONSTR_STRING);
     blockdef_register(vm, sc_get_var);
     add_to_category(sc_get_var, cat_data);
 
     Blockdef* sc_set_var = blockdef_new("set_var", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_DATA_COLOR, block_set_var);
+    blockdef_add_image(sc_set_var, (BlockdefImage) { .image_ptr = &variable_symbol_tex, .image_color = (BlockdefColor) { 0xff, 0xff, 0xff, 0xff } });
     blockdef_add_text(sc_set_var, gettext("Set"));
     blockdef_add_argument(sc_set_var, gettext("my variable"), gettext("Abc"), BLOCKCONSTR_STRING);
     blockdef_add_text(sc_set_var, "=");
@@ -3503,11 +3505,7 @@ void register_blocks(Vm* vm) {
     Blockdef* sc_list_add = blockdef_new("list_add", BLOCKTYPE_NORMAL, (BlockdefColor) { 0xff, 0x44, 0x00, 0xff }, block_list_add);
     blockdef_add_image(sc_list_add, list_img);
     blockdef_add_text(sc_list_add, gettext("Add"));
-#ifdef USE_INTERPRETER
-    blockdef_add_argument(sc_list_add, gettext("my variable"), gettext("Abc"), BLOCKCONSTR_UNLIMITED);
-#else
     blockdef_add_argument(sc_list_add, "", gettext("list"), BLOCKCONSTR_UNLIMITED);
-#endif
     blockdef_add_text(sc_list_add, gettext("value"));
     blockdef_add_argument(sc_list_add, "", gettext("any"), BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_list_add);
@@ -3515,24 +3513,17 @@ void register_blocks(Vm* vm) {
 
     Blockdef* sc_list_get = blockdef_new("list_get", BLOCKTYPE_NORMAL, (BlockdefColor) { 0xff, 0x44, 0x00, 0xff }, block_list_get);
     blockdef_add_image(sc_list_get, list_img);
-#ifdef USE_INTERPRETER
-    blockdef_add_argument(sc_list_get, gettext("my variable"), gettext("Abc"), BLOCKCONSTR_UNLIMITED);
-#else
     blockdef_add_argument(sc_list_get, "", gettext("list"), BLOCKCONSTR_UNLIMITED);
-#endif
-    blockdef_add_text(sc_list_get, gettext("get at"));
+    blockdef_add_text(sc_list_get, gettext("at"));
     blockdef_add_argument(sc_list_get, "0", "0", BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_list_get);
     add_to_category(sc_list_get, cat_data);
 
     Blockdef* sc_list_set = blockdef_new("list_set", BLOCKTYPE_NORMAL, (BlockdefColor) { 0xff, 0x44, 0x00, 0xff }, block_list_set);
     blockdef_add_image(sc_list_set, list_img);
-#ifdef USE_INTERPRETER
-    blockdef_add_argument(sc_list_set, gettext("my variable"), gettext("Abc"), BLOCKCONSTR_UNLIMITED);
-#else
+    blockdef_add_text(sc_list_set, gettext("Set"));
     blockdef_add_argument(sc_list_set, "", gettext("list"), BLOCKCONSTR_UNLIMITED);
-#endif
-    blockdef_add_text(sc_list_set, gettext("set at"));
+    blockdef_add_text(sc_list_set, gettext("at"));
     blockdef_add_argument(sc_list_set, "0", "0", BLOCKCONSTR_UNLIMITED);
     blockdef_add_text(sc_list_set, "=");
     blockdef_add_argument(sc_list_set, "", gettext("any"), BLOCKCONSTR_UNLIMITED);
@@ -3541,12 +3532,8 @@ void register_blocks(Vm* vm) {
 
     Blockdef* sc_list_len = blockdef_new("list_length", BLOCKTYPE_NORMAL, (BlockdefColor) { 0xff, 0x44, 0x00, 0xff }, block_list_length);
     blockdef_add_image(sc_list_len, list_img);
-    blockdef_add_text(sc_list_len, gettext("length"));
-#ifdef USE_INTERPRETER
-    blockdef_add_argument(sc_list_len, gettext("my variable"), gettext("Abc"), BLOCKCONSTR_UNLIMITED);
-#else
+    blockdef_add_text(sc_list_len, gettext("Length"));
     blockdef_add_argument(sc_list_len, "", gettext("list"), BLOCKCONSTR_UNLIMITED);
-#endif
     blockdef_register(vm, sc_list_len);
     add_to_category(sc_list_len, cat_data);
 
