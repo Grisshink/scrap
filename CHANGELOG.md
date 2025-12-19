@@ -5,7 +5,6 @@
 - Implemented text selection to all text inputs
 - Terminal contents are now cropped when the terminal is resized
 - Added block previews when trying to attach blockchains together
-- Variable blocks now hide their inputs when not hovered on
 - Save files are no longer limited to 32 KB
 
 ## Fixes
