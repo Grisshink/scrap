@@ -1,8 +1,12 @@
 # v0.5-beta *(Upcoming)*
 
 ## What's new?
-- Added new experimental LLVM compiler backend. It will be available as a separate download option in the releases
-- Implemented text selection to all text inputs
+- Added new experimental LLVM compiler backend. It is available as a separate download option in the releases (tagged with `-llvm`)
+- (LLVM only) Added option to build scrap project into executable. Windows users are expected to have gcc (Specifically `x86_64-w64-mingw32-gcc`) installed and added to PATH, Linux users only need a linker to build, such as `ld` (Configurable in build options)
+- All variables declared under `When |> clicked` are now considered global and can be accessed anywhere in the code. The rest of the variables are considered local and only visible in the scope they are declared
+- Added a lot of runtime/compile time errors, such as out of scope variable access, mismatched types and etc.
+- Shortened list and variable blocks to make code a bit more concise
+- Implemented text selection to all text inputs, as well as more useful shortcuts such as Shift selection (Shift-<arrows>), copy (Ctrl-C), paste (Ctrl-V), cut (Ctrl-X), delete all (Ctrl-U) and select all (Ctrl-A)
 - Terminal contents are now cropped when the terminal is resized
 - Added block previews when trying to attach blockchains together
 - Save files are no longer limited to 32 KB
@@ -14,6 +18,7 @@
 - Fixed memory leak when copying blockdef with instantiated blocks
 - Fixed block search menu being able to open when code is running
 - Control blocks (like while, if) now render correctly in the block palette
+- Fixed code area being able to be dragged outside the code panel when code is running
 
 # v0.4.2-beta *(12-02-2025)*
 
