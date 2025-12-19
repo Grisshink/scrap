@@ -16,17 +16,17 @@ its forks such as [Turbowarp](https://turbowarp.org).
 
 ## Notable advantages from scratch
 
-- Faster runtime. The speed is achieved using compilation through LLVM *(WIP)*
+- *(LLVM only)* Faster runtime. The speed is achieved using compilation through LLVM
 - The addition of separate else if, else blocks (C-end blocks as i call them), which eliminates a lot of nested checks with if-else blocks (i.e. more flexible variant of if-else block in Snap!)
 - Variables can have a lifetime, which avoids variable name conflicts and allows to make temporary variables
 - Custom blocks can return values and can be used as an argument for other block
 - Various string manipulation blocks and bitwise operator blocks
 - Data type conversion functions
 - More strict checks for [[] = []] and [[] != []] blocks. Now they are case sensitive and will check data type for equality
-- Lists are now a data type instead of a different type of variable, this allows nesting lists inside a list (although it's not very convenient as of right now)
+- Lists are now a data type instead of a different type of variable, this allows nesting lists inside a list
 - The code runs in a separate thread. This solves some performance issues compared to Scratch
 - Modularized interface. Most of the interface can be rearranged or moved to another tab
-- *(WIP)* Standalone builds. Scrap projects can be built and run as native executables without significant runtime overhead
+- *(LLVM only)* Standalone builds. Scrap projects can be built and run as native executables without significant runtime overhead
 
 ## Controls
 
@@ -55,7 +55,7 @@ Scrap requires these dependencies to run:
 - [tinyfiledialogs](https://sourceforge.net/projects/tinyfiledialogs/) *(Built in)*
 - [cfgpath](https://github.com/Malvineous/cfgpath) *(Built in)* (Heavily modified to workaround `windows.h` conflicts)
 - [gettext](https://www.gnu.org/software/gettext/)
-- [LLVM](https://llvm.org/) *(WIP, only required if building with `USE_COMPILER=TRUE` flag)*
+- [LLVM](https://llvm.org/) *(Only required if building with `USE_COMPILER=TRUE` flag)*
 
 Currently Scrap can be built for *Windows*, *Linux*, *MacOS* and *FreeBSD*. 
 
