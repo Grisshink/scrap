@@ -428,7 +428,6 @@ Blockdef* blockdef_copy(Blockdef* blockdef) {
     for (size_t i = 0; i < vector_size(blockdef->inputs); i++) {
         Input* input = vector_add_dst(&new->inputs);
         input->type = blockdef->inputs[i].type;
-        input->hideable = blockdef->inputs[i].hideable;
         switch (blockdef->inputs[i].type) {
         case INPUT_TEXT_DISPLAY:
             input->data = (InputData) {
@@ -475,7 +474,6 @@ void blockdef_add_text(Blockdef* blockdef, const char* text) {
     input->data = (InputData) {
         .text = vector_create(),
     };
-    input->hideable = false;
 
     for (size_t i = 0; text[i]; i++) vector_add(&input->data.text, text[i]);
     vector_add(&input->data.text, 0);
@@ -492,7 +490,6 @@ void blockdef_add_argument(Blockdef* blockdef, char* defualt_data, const char* h
             .hint_text = hint_text,
         },
     };
-    input->hideable = false;
     input->data.arg.blockdef->ref_count++;
 }
 
@@ -500,7 +497,6 @@ void blockdef_add_blockdef_editor(Blockdef* blockdef) {
     Input* input = vector_add_dst(&blockdef->inputs);
     input->type = INPUT_BLOCKDEF_EDITOR;
     input->data = (InputData) {0};
-    input->hideable = false;
 }
 
 void blockdef_add_dropdown(Blockdef* blockdef, InputDropdownSource dropdown_source, ListAccessor accessor) {
@@ -512,7 +508,6 @@ void blockdef_add_dropdown(Blockdef* blockdef, InputDropdownSource dropdown_sour
             .list = accessor,
         },
     };
-    input->hideable = false;
 }
 
 void blockdef_add_image(Blockdef* blockdef, BlockdefImage image) {
@@ -521,12 +516,6 @@ void blockdef_add_image(Blockdef* blockdef, BlockdefImage image) {
     input->data = (InputData) {
         .image = image,
     };
-    input->hideable = false;
-}
-
-void blockdef_set_hideable(Blockdef* blockdef, bool hideable) {
-    if (vector_size(blockdef->inputs) == 0) return;
-    blockdef->inputs[vector_size(blockdef->inputs) - 1].hideable = hideable;
 }
 
 void blockdef_set_id(Blockdef* blockdef, const char* new_id) {
