@@ -74,6 +74,26 @@ static void set_mark(void) {
     }
 }
 
+static void copy_text(char* text, int start, int end) {
+    char* clipboard = vector_create();
+    for (int i = start; i < end; i++) vector_add(&clipboard, text[i]);
+    vector_add(&clipboard, 0);
+
+    SetClipboardText(clipboard);
+    vector_free(clipboard);
+}
+
+static void delete_region(char** text) {
+    if (hover_info.select_input_mark == -1) return;
+
+    int remove_pos  = MIN(hover_info.select_input_cursor, hover_info.select_input_mark),
+        remove_size = ABS(hover_info.select_input_cursor - hover_info.select_input_mark);
+    hover_info.select_input_mark = -1;
+    hover_info.select_input_cursor = remove_pos;
+    vector_erase(*text, remove_pos, remove_size);
+    render_surface_needs_redraw = true;
+}
+
 static bool edit_text(char** text) {
     if (!text) return false;
 
@@ -104,6 +124,41 @@ static bool edit_text(char** text) {
         hover_info.select_input_cursor = 0;
         hover_info.select_input_mark = -1;
         render_surface_needs_redraw = true;
+        return true;
+    }
+
+    if ((IsKeyDown(KEY_LEFT_CONTROL) | IsKeyDown(KEY_RIGHT_CONTROL)) && IsKeyPressed(KEY_C)) {
+        if (hover_info.select_input_mark != -1) {
+            copy_text(*text, MIN(hover_info.select_input_cursor, hover_info.select_input_mark),
+                             MAX(hover_info.select_input_cursor, hover_info.select_input_mark));
+        }
+        return false;
+    }
+
+    if ((IsKeyDown(KEY_LEFT_CONTROL) | IsKeyDown(KEY_RIGHT_CONTROL)) && IsKeyPressed(KEY_V)) {
+        const char* clipboard = GetClipboardText();
+        if (clipboard) {
+            delete_region(text);
+
+            for (int i = 0; clipboard[i]; i++) {
+                if (clipboard[i] == '\n' || clipboard[i] == '\r') continue;
+                vector_insert(text, hover_info.select_input_cursor++, clipboard[i]);
+            }
+            render_surface_needs_redraw = true;
+            return true;
+        }
+        return false;
+    }
+
+    if ((IsKeyDown(KEY_LEFT_CONTROL) | IsKeyDown(KEY_RIGHT_CONTROL)) && IsKeyPressed(KEY_X)) {
+        if (hover_info.select_input_mark != -1) {
+            int sel_start = MIN(hover_info.select_input_cursor, hover_info.select_input_mark),
+                sel_end   = MAX(hover_info.select_input_cursor, hover_info.select_input_mark);
+
+            copy_text(*text, sel_start, sel_end);
+            delete_region(text);
+            return true;
+        }
         return false;
     }
 
@@ -134,19 +189,15 @@ static bool edit_text(char** text) {
     if (IsKeyPressed(KEY_DELETE) || IsKeyPressedRepeat(KEY_DELETE)) {
         if (vector_size(*text) <= 1 || (hover_info.select_input_cursor == (int)vector_size(*text) - 1 && hover_info.select_input_mark == -1)) return false;
 
-        int remove_pos = hover_info.select_input_cursor;
-        int remove_size;
         if (hover_info.select_input_mark != -1) {
-            remove_pos = MIN(hover_info.select_input_cursor, hover_info.select_input_mark);
-            remove_size = ABS(hover_info.select_input_cursor - hover_info.select_input_mark);
-            hover_info.select_input_mark = -1;
-            hover_info.select_input_cursor = remove_pos;
+            delete_region(text);
         } else {
+            int remove_pos = hover_info.select_input_cursor;
+            int remove_size;
             GetCodepointNext(*text + remove_pos, &remove_size);
+            vector_erase(*text, remove_pos, remove_size);
+            render_surface_needs_redraw = true;
         }
-
-        vector_erase(*text, remove_pos, remove_size);
-        render_surface_needs_redraw = true;
         return true;
     }
 
@@ -155,37 +206,27 @@ static bool edit_text(char** text) {
             return false;
         }
 
-        int remove_pos = hover_info.select_input_cursor - 1;
-        int remove_size = 1;
         if (hover_info.select_input_mark != -1) {
-            remove_pos = MIN(hover_info.select_input_cursor, hover_info.select_input_mark);
-            remove_size = ABS(hover_info.select_input_cursor - hover_info.select_input_mark);
-            hover_info.select_input_mark = -1;
-            hover_info.select_input_cursor = remove_pos;
+            delete_region(text);
         } else {
+            int remove_pos = hover_info.select_input_cursor - 1;
+            int remove_size = 1;
             while (((unsigned char)(*text)[remove_pos] >> 6) == 2) { // This checks if we are in the middle of UTF-8 char
                 remove_pos--;
                 remove_size++;
             }
             hover_info.select_input_cursor -= remove_size;
+            vector_erase(*text, remove_pos, remove_size);
+            render_surface_needs_redraw = true;
         }
 
-        vector_erase(*text, remove_pos, remove_size);
-        render_surface_needs_redraw = true;
         return true;
     }
 
     bool input_changed = false;
     int char_val;
     while ((char_val = GetCharPressed())) {
-        if (hover_info.select_input_mark != -1) {
-            int remove_pos  = MIN(hover_info.select_input_cursor, hover_info.select_input_mark),
-                remove_size = ABS(hover_info.select_input_cursor - hover_info.select_input_mark);
-            vector_erase(*text, remove_pos, remove_size);
-            hover_info.select_input_mark = -1;
-            hover_info.select_input_cursor = remove_pos;
-        }
-
+        delete_region(text);
         int utf_size = 0;
         const char* utf_char = CodepointToUTF8(char_val, &utf_size);
         for (int i = 0; i < utf_size; i++) {
