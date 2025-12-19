@@ -6,6 +6,11 @@ BUILD_MODE ?= RELEASE
 USE_COMPILER ?= FALSE
 BUILD_FOLDER := build/
 
+ifeq ($(USE_COMPILER), TRUE)
+	SCRAP_VERSION := $(SCRAP_VERSION)-llvm
+endif
+
+
 CFLAGS := -Wall -Wextra -std=c11 -D_GNU_SOURCE -DSCRAP_VERSION=\"$(SCRAP_VERSION)\" -I./raylib/src
 
 ifeq ($(TARGET), LINUX)
