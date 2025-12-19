@@ -3467,10 +3467,12 @@ void register_blocks(Vm* vm) {
     blockdef_register(vm, sc_comment);
     add_to_category(sc_comment, cat_misc);
 
+#ifdef DEBUG
     Blockdef* sc_gc_collect = blockdef_new("gc_collect", BLOCKTYPE_NORMAL, (BlockdefColor) { 0xa0, 0x70, 0x00, 0xff }, block_gc_collect);
     blockdef_add_text(sc_gc_collect, gettext("Collect garbage"));
     blockdef_register(vm, sc_gc_collect);
     add_to_category(sc_gc_collect, cat_misc);
+#endif
 
     Blockdef* sc_decl_var = blockdef_new("decl_var", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_DATA_COLOR, block_declare_var);
     blockdef_add_image(sc_decl_var, (BlockdefImage) { .image_ptr = &variable_symbol_tex, .image_color = (BlockdefColor) { 0xff, 0xff, 0xff, 0xff } });
