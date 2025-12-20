@@ -101,7 +101,15 @@ bool spawn_process(char* command, char* error, size_t error_len) {
         &start_info, // Give STARTUPINFO
         &proc_info) // Get PROCESS_INFORMATION
     ) {
-        snprintf(error, error_len, gettext("Failed to create a process. Error code: %ld"), GetLastError());
+        long last_error = GetLastError();
+        snprintf(error, error_len, gettext("Failed to create a process. Error code: %ld"), last_error);
+        if (last_error == 2) { // File not found
+            size_t i = 0;
+            while (command[i] != 0 && command[i] != ' ') i++;
+            command[i] = 0;
+            term_print_str(command);
+            term_print_str(gettext(" is not installed on your system or not installed correctly. Please install it and add it to your PATH environment variable to be able to build executables"));
+        }
         CloseHandle(write_pipe);
         CloseHandle(read_pipe);
         return false;

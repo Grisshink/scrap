@@ -664,3 +664,7 @@ msgstr "Линковщик завершился с кодом сигнала: %d
 #: platform.c
 msgid "Received unknown child status :/"
 msgstr "Получен неизвестный статус от дочернего процесса :/"
+
+#: platform.c
+msgid " is not installed on your system or not installed correctly. Please install it and add it to your PATH environment variable to be able to build executables"
+msgstr " не установлен в системе или установлен неправильно. Пожалуйста, установите его и убедитесь что путь до него добавлен в переменную среды PATH, чтобы можно было собирать проекты"
