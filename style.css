@@ -172,6 +172,11 @@ nav a:hover {
     border: 2px solid #444;
 }
 
+.other-downloads {
+    background-color: #666;
+    border: 2px solid #3a3a3a;
+}
+
 .download-button {
     font-size: 20px;
     color: black;
