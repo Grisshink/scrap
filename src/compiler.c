@@ -936,7 +936,7 @@ static bool build_program(Exec* exec) {
     char* command = vector_create();
 #ifdef _WIN32
     // Command for linking on Windows. This thing requires gcc, which is not ideal :/
-    vector_append(&command, TextFormat("x86_64-w64-mingw32-gcc.exe -static -o %s.exe output.o -L. -lscrapstd-win -lm", project_conf.executable_name));
+    vector_append(&command, TextFormat("x86_64-w64-mingw32-gcc.exe -static -o %s.exe output.o -L. -L%s -lscrapstd-win -lm", project_conf.executable_name, GetApplicationDirectory()));
 #else
     char* crt_dir = find_crt();
     if (!crt_dir) {
@@ -963,7 +963,7 @@ static bool build_program(Exec* exec) {
     if (crt_begin_dir) vector_append(&command, TextFormat("%scrtbeginS.o %scrtendS.o ", crt_begin_dir, crt_begin_dir));
 
     vector_append(&command, "output.o ");
-    vector_append(&command, "-L. -lscrapstd -L/usr/lib -L/lib -lm -lc");
+    vector_append(&command, TextFormat("-L. -L%s -lscrapstd -L/usr/lib -L/lib -lm -lc", GetApplicationDirectory()));
 
     TraceLog(LOG_INFO, "Full command: \"%s\"", command);
 #endif
