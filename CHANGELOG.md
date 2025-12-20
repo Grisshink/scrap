@@ -1,4 +1,4 @@
-# v0.5-beta *(Upcoming)*
+# v0.5-beta *(20-02-2025)*
 
 ## What's new?
 - Added new experimental LLVM compiler backend. It is available as a separate download option in the releases (tagged with `-llvm`)
