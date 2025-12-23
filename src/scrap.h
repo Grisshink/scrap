@@ -98,11 +98,6 @@ struct PanelTree {
     struct PanelTree* right; // Becomes bottom when direction is DIRECTION_VERTICAL
 };
 
-typedef struct {
-    ButtonClickHandler handler;
-    Vector2 pos;
-} TopBars;
-
 typedef enum {
     EDITOR_NONE,
     EDITOR_BLOCKDEF,
@@ -120,6 +115,21 @@ typedef enum {
 } DropdownLocations;
 
 typedef struct {
+    BlockChain* prev_blockchain;
+    BlockChain* blockchain;
+
+    Block* prev_block;
+    Block* block;
+    Argument* argument;
+    Argument* prev_argument;
+    Argument* parent_argument;
+
+    Block* select_block;
+    Argument* select_argument;
+    BlockChain* select_blockchain;
+    Vector2 select_block_pos;
+    bool select_valid;
+
     EditorHoverPart part;
     Blockdef* edit_blockdef;
     Block* edit_block;
@@ -165,26 +175,29 @@ typedef struct {
 } BlockCategory;
 
 typedef struct {
+    PanelTree* panel;
+    Rectangle panel_size;
+
+    PanelTree* drag_panel;
+    Rectangle drag_panel_size;
+
+    PanelType mouse_panel;
+    PanelTree* prev_panel;
+    SplitSide panel_side;
+
+    Rectangle code_panel_bounds;
+} PanelHoverInfo;
+
+typedef struct {
+    ButtonClickHandler handler;
+    void* data;
+} ButtonHoverInfo;
+
+typedef struct {
     bool is_panel_edit_mode;
     bool drag_cancelled;
 
     BlockCategory* category;
-
-    BlockChain* prev_blockchain;
-    BlockChain* blockchain;
-
-    Block* prev_block;
-    Block* block;
-    Argument* argument;
-    Argument* prev_argument;
-    Argument* parent_argument;
-
-    Block* select_block;
-    Argument* select_argument;
-    BlockChain* select_blockchain;
-    Vector2 select_block_pos;
-    Rectangle code_panel_bounds;
-    bool select_valid;
 
     InputHoverInfo input_info;
     char** select_input;
@@ -194,28 +207,14 @@ typedef struct {
     Vector2 mouse_click_pos;
     float time_at_last_pos;
 
-    BlockChain* exec_chain;
-    size_t exec_ind;
-    BlockChain* prev_exec_chain;
-    size_t prev_exec_ind;
-
-    TopBars top_bars;
     EditorHoverInfo editor;
-
-    int tab;
+    PanelHoverInfo panels;
+    ButtonHoverInfo button;
 
     DropdownHoverInfo dropdown;
     SliderHoverInfo hover_slider;
     SliderHoverInfo dragged_slider;
     int slider_last_val;
-
-    PanelTree* panel;
-    Rectangle panel_size;
-    PanelTree* drag_panel;
-    Rectangle drag_panel_size;
-    PanelType mouse_panel;
-    PanelTree* prev_panel;
-    SplitSide panel_side;
 
     DropdownData settings_dropdown_data;
     int* select_settings_dropdown_value;
@@ -279,12 +278,17 @@ struct Vm {
     // TODO: Maybe remove end_blockdef from here
     size_t end_blockdef;
     bool is_running;
+
+    BlockChain* exec_chain;
+    size_t exec_ind;
+    BlockChain* prev_exec_chain;
+    size_t prev_exec_ind;
 };
 
 extern Config conf;
 extern Config window_conf;
 extern ProjectConfig project_conf;
-extern HoverInfo hover_info;
+extern HoverInfo hover;
 extern Shader line_shader;
 extern RenderTexture2D render_surface;
 extern bool render_surface_needs_redraw;

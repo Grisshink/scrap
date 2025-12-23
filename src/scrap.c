@@ -44,7 +44,7 @@ Vector2 camera_click_pos = {0};
 
 Config conf;
 ProjectConfig project_conf;
-HoverInfo hover_info = {0};
+HoverInfo hover = {0};
 Shader line_shader;
 
 Font font_cond;
@@ -401,6 +401,10 @@ Vm vm_new(void) {
         .blockdefs = vector_create(),
         .end_blockdef = -1,
         .is_running = false,
+        .exec_chain = NULL,
+        .exec_ind = 0,
+        .prev_exec_chain = NULL,
+        .prev_exec_ind = 0,
     };
     return vm;
 }
@@ -560,8 +564,8 @@ int main(void) {
     SetWindowIcon(icon);
 
     while (!WindowShouldClose()) {
-        hover_info.exec_ind = -1;
-        hover_info.exec_chain = NULL;
+        vm.exec_ind = -1;
+        vm.exec_chain = NULL;
 
         size_t vm_return = -1;
         if (exec_try_join(&vm, &exec, &vm_return)) {
@@ -590,17 +594,17 @@ int main(void) {
             render_surface_needs_redraw = true;
         } else if (vm.is_running) {
 #ifdef USE_INTERPRETER
-            hover_info.exec_chain = exec.running_chain;
-            hover_info.exec_ind = exec.chain_stack[exec.chain_stack_len - 1].running_ind;
+            vm.exec_chain = exec.running_chain;
+            vm.exec_ind = exec.chain_stack[exec.chain_stack_len - 1].running_ind;
 #else
-            hover_info.exec_chain = NULL;
-            hover_info.exec_ind = 0;
+            vm.exec_chain = NULL;
+            vm.exec_ind = 0;
 #endif
-            if (hover_info.prev_exec_chain != hover_info.exec_chain) render_surface_needs_redraw = true;
-            if (hover_info.prev_exec_ind != hover_info.exec_ind) render_surface_needs_redraw = true;
+            if (vm.prev_exec_chain != vm.exec_chain) render_surface_needs_redraw = true;
+            if (vm.prev_exec_ind != vm.exec_ind) render_surface_needs_redraw = true;
 
-            hover_info.prev_exec_chain = hover_info.exec_chain;
-            hover_info.prev_exec_ind = hover_info.exec_ind;
+            vm.prev_exec_chain = vm.exec_chain;
+            vm.prev_exec_ind = vm.exec_ind;
 
             pthread_mutex_lock(&term.lock);
             if (find_panel(code_tabs[current_tab].root_panel, PANEL_TERM) && term.is_buffer_dirty) {

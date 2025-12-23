@@ -31,7 +31,6 @@ typedef struct {
     float animation_time;
     bool is_fading;
     bool is_hiding;
-    Vector2 pos;
     WindowGuiType type;
 } WindowGui;
 
@@ -62,7 +61,6 @@ void gui_window_show(WindowGuiType type) {
     config_copy(&window_conf, &conf);
     window.is_fading = false;
     window.type = type;
-    window.pos = hover_info.top_bars.pos;
     shader_time = -0.2;
     if (window.type == GUI_TYPE_ABOUT && !about_text_split) {
         about_text_split = vector_create();
@@ -84,7 +82,7 @@ void gui_window_show(WindowGuiType type) {
 }
 
 void gui_window_hide(void) {
-    hover_info.select_input = NULL;
+    hover.select_input = NULL;
     window.is_fading = true;
 }
 
@@ -94,27 +92,27 @@ void gui_window_hide_immediate(void) {
 }
 
 static void settings_button_on_hover(GuiElement* el) {
-    if (hover_info.top_bars.handler) return;
+    if (hover.button.handler) return;
     el->color = (GuiColor) { 0x40, 0x40, 0x40, 0xff };
-    hover_info.top_bars.handler = el->custom_data;
+    hover.button.handler = el->custom_data;
 }
 
 static void close_button_on_hover(GuiElement* el) {
-    if (hover_info.top_bars.handler) return;
+    if (hover.button.handler) return;
     if (el->draw_type == DRAWTYPE_RECT) return;
     el->draw_type = DRAWTYPE_RECT;
     el->data.rect_type = RECT_NORMAL;
     el->color = (GuiColor) { 0x40, 0x40, 0x40, 0xff };
-    hover_info.top_bars.handler = handle_window_gui_close_button_click;
+    hover.button.handler = handle_window_gui_close_button_click;
 }
 
 static void window_on_hover(GuiElement* el) {
     (void) el;
-    if (!hover_info.dropdown.location) hover_info.top_bars.handler = NULL;
+    if (!hover.dropdown.location) hover.button.handler = NULL;
 }
 
 static void begin_window(const char* title, int w, int h, float scaling) {
-    hover_info.top_bars.handler = handle_window_gui_close_button_click;
+    hover.button.handler = handle_window_gui_close_button_click;
     gui_element_begin(gui);
         gui_set_floating(gui);
         gui_set_rect(gui, (GuiColor) { 0x00, 0x00, 0x00, 0x40 * scaling });
@@ -186,7 +184,7 @@ static void end_window(void) {
 }
 
 static void warning_on_hover(GuiElement* el) {
-    if (hover_info.top_bars.handler) return;
+    if (hover.button.handler) return;
     (void) el;
     settings_tooltip = true;
 }
@@ -220,18 +218,18 @@ static void begin_setting(const char* name, bool warning) {
 }
 
 static void slider_on_hover(GuiElement* el) {
-    if (hover_info.top_bars.handler) return;
+    if (hover.button.handler) return;
     unsigned short len;
-    hover_info.hover_slider = *(SliderHoverInfo*)gui_get_state(el, &len);
-    el->color = hover_info.hover_slider.value == hover_info.dragged_slider.value ? (GuiColor) { 0x2b, 0x2b, 0x2b, 0xff } : (GuiColor) { 0x40, 0x40, 0x40, 0xff };
+    hover.hover_slider = *(SliderHoverInfo*)gui_get_state(el, &len);
+    el->color = hover.hover_slider.value == hover.dragged_slider.value ? (GuiColor) { 0x2b, 0x2b, 0x2b, 0xff } : (GuiColor) { 0x40, 0x40, 0x40, 0xff };
 }
 
 static void slider_button_on_hover(GuiElement* el) {
-    if (hover_info.top_bars.handler) return;
+    if (hover.button.handler) return;
     el->draw_type = DRAWTYPE_RECT;
     el->color = (GuiColor) { 0x60, 0x60, 0x60, 0xff };
     el->data.rect_type = RECT_NORMAL;
-    hover_info.top_bars.handler = el->custom_data;
+    hover.button.handler = el->custom_data;
 }
 
 static void draw_slider(int min, int max, int* value) {
@@ -293,15 +291,15 @@ static void end_setting(void) {
 }
 
 static void text_input_on_hover(GuiElement* el) {
-    if (hover_info.top_bars.handler) return;
+    if (hover.button.handler) return;
     el->color = (GuiColor) { 0x40, 0x40, 0x40, 0xff };
 }
 
 static void dropdown_input_on_hover(GuiElement* el) {
-    if (hover_info.top_bars.handler) return;
+    if (hover.button.handler) return;
     unsigned short len;
-    hover_info.settings_dropdown_data = *(DropdownData*)gui_get_state(el, &len);
-    hover_info.top_bars.handler = handle_settings_dropdown_click;
+    hover.settings_dropdown_data = *(DropdownData*)gui_get_state(el, &len);
+    hover.button.handler = handle_settings_dropdown_click;
     if (el->color.r == 0x30) el->color = (GuiColor) { 0x40, 0x40, 0x40, 0xff };
 }
 
@@ -320,8 +318,8 @@ static void draw_dropdown_input(int* value, char** list, int list_len) {
         };
         gui_set_state(gui, &data, sizeof(data));
 
-        if (hover_info.select_settings_dropdown_value == value && hover_info.dropdown.location == LOCATION_SETTINGS) {
-            hover_info.dropdown.element = gui_get_element(gui);
+        if (hover.select_settings_dropdown_value == value && hover.dropdown.location == LOCATION_SETTINGS) {
+            hover.dropdown.element = gui_get_element(gui);
             gui_set_rect(gui, (GuiColor) { 0x2b, 0x2b, 0x2b, 0xff });
         }
 
@@ -352,7 +350,7 @@ static void draw_text_input(char** input, const char* hint, int* scroll) {
         gui_on_hover(gui, text_input_on_hover);
         gui_set_custom_data(gui, input);
 
-        if (input == hover_info.select_input) gui_set_rect(gui, (GuiColor) { 0x2b, 0x2b, 0x2b, 0xff });
+        if (input == hover.select_input) gui_set_rect(gui, (GuiColor) { 0x2b, 0x2b, 0x2b, 0xff });
 
         gui_element_begin(gui);
             gui_set_grow(gui, DIRECTION_HORIZONTAL);
