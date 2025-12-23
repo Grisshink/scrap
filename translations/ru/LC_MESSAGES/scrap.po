@@ -557,6 +557,10 @@ msgstr "Готово"
 msgid "Save"
 msgstr "Сохранить"
 
+#: render.c
+msgid "Got compiler error!"
+msgstr "Ошибка компиляции!"
+
 #: blocks.c
 msgid "any"
 msgstr "любое"

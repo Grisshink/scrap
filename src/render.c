@@ -971,7 +971,7 @@ static void draw_code_area(void) {
                 gui_element_begin(gui);
                     gui_set_direction(gui, DIRECTION_VERTICAL);
 
-                    gui_text(gui, &font_cond, "Got compiler error!", conf.font_size * 0.6, (GuiColor) { 0xff, 0x33, 0x33, 0xff });
+                    gui_text(gui, &font_cond, gettext("Got compiler error!"), conf.font_size * 0.6, (GuiColor) { 0xff, 0x33, 0x33, 0xff });
                     for (size_t i = 0; i < vector_size(exec_compile_error); i++) {
                         gui_text(gui, &font_cond, exec_compile_error[i], conf.font_size * 0.6, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
                     }
