@@ -474,11 +474,6 @@ bool handle_add_tab_button(void) {
     return true;
 }
 
-bool handle_about_license_button_click(void) {
-    OpenURL(LICENSE_URL);
-    return true;
-}
-
 bool handle_panel_editor_save_button(void) {
     hover.is_panel_edit_mode = false;
     save_config(&conf);
