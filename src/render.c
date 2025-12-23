@@ -422,7 +422,7 @@ static void draw_block(Block* block, bool highlight, bool can_hover, bool ghost)
         case INPUT_TEXT_DISPLAY:
             gui_text(gui, &font_cond_shadow, input->data.text, BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0xff, 0xff, ghost ? BLOCK_GHOST_OPACITY : 0xff });
             break;
-        case INPUT_IMAGE_DISPLAY:
+        case INPUT_IMAGE_DISPLAY: ;
             GuiColor img_color = CONVERT_COLOR(input->data.image.image_color, GuiColor);
             if (ghost) img_color.a = BLOCK_GHOST_OPACITY;
             gui_image(gui, input->data.image.image_ptr, BLOCK_IMAGE_SIZE, img_color);

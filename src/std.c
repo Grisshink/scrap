@@ -249,6 +249,7 @@ static AnyValue std_get_any(DataType data_type, va_list va) {
     case DATA_TYPE_ANY:
         return *va_arg(va, AnyValue*);
     default:
+        data = (AnyValueData) {0};
         break;
     }
 
@@ -464,7 +465,7 @@ StringHeader* std_string_from_any(Gc* gc, AnyValue* value) {
         return value->data.str_val;
     case DATA_TYPE_BOOL:
         return std_string_from_bool(gc, value->data.integer_val);
-    case DATA_TYPE_LIST:
+    case DATA_TYPE_LIST: ;
         char str[32];
         int size = snprintf(str, 32, "*LIST (%lu)*", value->data.list_val->size);
         return std_string_from_literal(gc, str, size);

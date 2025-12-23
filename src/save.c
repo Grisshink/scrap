@@ -830,7 +830,7 @@ BlockChain* load_code(const char* file_path, ProjectConfig* out_config) {
     save.capacity = save_size;
 
     if (!save_read_varint(&save, &ver)) goto load_fail;
-    if (ver < 1 && ver > 3) {
+    if (ver < 1 || ver > 3) {
         TraceLog(LOG_ERROR, "[LOAD] Unsupported version %d. Current scrap build expects save versions from 1 to 3", ver);
         goto load_fail;
     }

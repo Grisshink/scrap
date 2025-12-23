@@ -112,7 +112,7 @@ static void gc_mark_any(Gc* gc, AnyValue* any) {
 
 static void gc_mark_refs(Gc* gc, GcChunkData* chunk) {
     switch (chunk->data_type) {
-    case DATA_TYPE_LIST:
+    case DATA_TYPE_LIST: ;
         List* list = (List*)chunk->data;
         if (!list->values) break;
 

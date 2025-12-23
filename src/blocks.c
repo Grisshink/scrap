@@ -1226,7 +1226,7 @@ LLVMValueRef arg_to_bool(Exec* exec, Block* block, FuncArg arg) {
     switch (arg.type) {
     case DATA_TYPE_LITERAL:
         return CONST_BOOLEAN(*arg.data.str != 0);
-    case DATA_TYPE_STRING:
+    case DATA_TYPE_STRING: ;
         LLVMValueRef first_char = LLVMBuildLoad2(exec->builder, LLVMInt8Type(), build_call(exec, "std_string_get_data", arg.data.value), "bool_cast");
         return LLVMBuildICmp(exec->builder, LLVMIntNE, first_char, LLVMConstInt(LLVMInt8Type(), 0, true), "bool_cast");
     case DATA_TYPE_LIST:
@@ -1529,7 +1529,7 @@ bool block_not_eq(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* re
     case DATA_TYPE_NOTHING:
         *return_val = DATA_BOOLEAN(CONST_BOOLEAN(0));
         break;
-    case DATA_TYPE_STRING:
+    case DATA_TYPE_STRING: ;
         LLVMValueRef eq_return = build_call(exec, "std_string_is_eq", left.data.value, right.data.value);
         *return_val = DATA_BOOLEAN(LLVMBuildXor(exec->builder, eq_return, CONST_BOOLEAN(1), "string_neq"));
         break;
@@ -1546,7 +1546,7 @@ bool block_not_eq(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* re
         // Compare list pointers
         *return_val = DATA_BOOLEAN(LLVMBuildICmp(exec->builder, LLVMIntNE, left.data.value, right.data.value, "list_neq"));
         break;
-    case DATA_TYPE_ANY:
+    case DATA_TYPE_ANY: ;
         LLVMValueRef eq_any_return = build_call(exec, "std_any_is_eq", left.data.value, right.data.value);
         *return_val = DATA_BOOLEAN(LLVMBuildXor(exec->builder, eq_any_return, CONST_BOOLEAN(1), "any_neq"));
         break;

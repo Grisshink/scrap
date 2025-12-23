@@ -61,7 +61,7 @@ static void switch_tab_to_panel(PanelType panel) {
 }
 
 static void set_mark(void) {
-    if (IsKeyDown(KEY_LEFT_SHIFT) | IsKeyDown(KEY_RIGHT_SHIFT)) {
+    if (IsKeyDown(KEY_LEFT_SHIFT) || IsKeyDown(KEY_RIGHT_SHIFT)) {
         if (hover.select_input_mark == -1) hover.select_input_mark = hover.select_input_cursor;
     } else {
         hover.select_input_mark = -1;
@@ -105,14 +105,14 @@ static bool edit_text(char** text) {
         return false;
     }
 
-    if ((IsKeyDown(KEY_LEFT_CONTROL) | IsKeyDown(KEY_RIGHT_CONTROL)) && IsKeyPressed(KEY_A)) {
+    if ((IsKeyDown(KEY_LEFT_CONTROL) || IsKeyDown(KEY_RIGHT_CONTROL)) && IsKeyPressed(KEY_A)) {
         hover.select_input_cursor = 0;
         hover.select_input_mark = strlen(*text);
         render_surface_needs_redraw = true;
         return false;
     }
 
-    if ((IsKeyDown(KEY_LEFT_CONTROL) | IsKeyDown(KEY_RIGHT_CONTROL)) && IsKeyPressed(KEY_U)) {
+    if ((IsKeyDown(KEY_LEFT_CONTROL) || IsKeyDown(KEY_RIGHT_CONTROL)) && IsKeyPressed(KEY_U)) {
         vector_clear(*text);
         vector_add(text, 0);
         hover.select_input_cursor = 0;
@@ -121,7 +121,7 @@ static bool edit_text(char** text) {
         return true;
     }
 
-    if ((IsKeyDown(KEY_LEFT_CONTROL) | IsKeyDown(KEY_RIGHT_CONTROL)) && IsKeyPressed(KEY_C)) {
+    if ((IsKeyDown(KEY_LEFT_CONTROL) || IsKeyDown(KEY_RIGHT_CONTROL)) && IsKeyPressed(KEY_C)) {
         if (hover.select_input_mark != -1) {
             copy_text(*text, MIN(hover.select_input_cursor, hover.select_input_mark),
                              MAX(hover.select_input_cursor, hover.select_input_mark));
@@ -129,7 +129,7 @@ static bool edit_text(char** text) {
         return false;
     }
 
-    if ((IsKeyDown(KEY_LEFT_CONTROL) | IsKeyDown(KEY_RIGHT_CONTROL)) && IsKeyPressed(KEY_V)) {
+    if ((IsKeyDown(KEY_LEFT_CONTROL) || IsKeyDown(KEY_RIGHT_CONTROL)) && IsKeyPressed(KEY_V)) {
         const char* clipboard = GetClipboardText();
         if (clipboard) {
             delete_region(text);
@@ -144,7 +144,7 @@ static bool edit_text(char** text) {
         return false;
     }
 
-    if ((IsKeyDown(KEY_LEFT_CONTROL) | IsKeyDown(KEY_RIGHT_CONTROL)) && IsKeyPressed(KEY_X)) {
+    if ((IsKeyDown(KEY_LEFT_CONTROL) || IsKeyDown(KEY_RIGHT_CONTROL)) && IsKeyPressed(KEY_X)) {
         if (hover.select_input_mark != -1) {
             int sel_start = MIN(hover.select_input_cursor, hover.select_input_mark),
                 sel_end   = MAX(hover.select_input_cursor, hover.select_input_mark);
@@ -509,11 +509,6 @@ bool handle_editor_add_arg_button(void) {
     Blockdef* arg_blockdef = blockdef->inputs[last_input].data.arg.blockdef;
     blockdef_add_text(arg_blockdef, str);
     arg_blockdef->func = block_custom_arg;
-
-    int arg_count = 0;
-    for (size_t i = 0; i < vector_size(blockdef->inputs); i++) {
-        if (blockdef->inputs[i].type == INPUT_ARGUMENT) arg_count++;
-    }
 
     deselect_all();
     return true;
