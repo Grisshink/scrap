@@ -411,7 +411,11 @@ PanelTree* find_panel(PanelTree* root, PanelType panel);
 void update_search(void);
 Block block_new_ms(Blockdef* blockdef);
 void show_dropdown(DropdownLocations location, char** list, int list_len, ButtonClickHandler handler);
+#ifdef USE_INTERPRETER
 bool start_vm(void);
+#else
+bool start_vm(CompilerMode mode);
+#endif
 
 // save.c
 void config_new(Config* config);
