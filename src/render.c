@@ -27,14 +27,6 @@
 #include <libintl.h>
 #include <stdio.h>
 
-#define ARRLEN(x) (sizeof(x)/sizeof(x[0]))
-#define MOD(x, y) (((x) % (y) + (y)) % (y))
-#define LERP(min, max, t) (((max) - (min)) * (t) + (min))
-#define UNLERP(min, max, v) (((float)(v) - (float)(min)) / ((float)(max) - (float)(min)))
-#define CONVERT_COLOR(color, type) (type) { color.r, color.g, color.b, color.a }
-#define MAX(x, y) ((x) > (y) ? (x) : (y))
-#define MIN(x, y) ((x) < (y) ? (x) : (y))
-
 static void draw_code(void);
 static void draw_blockchain(BlockChain* chain, bool ghost, bool show_previews);
 

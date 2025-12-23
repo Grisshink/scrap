@@ -23,12 +23,19 @@
 #include <assert.h>
 #include <stdio.h>
 
-#define ARRLEN(x) (sizeof(x)/sizeof(x[0]))
-
 #define TERM_WHITE (TermColor) { 0xff, 0xff, 0xff, 0xff }
 #define TERM_BLACK (TermColor) { 0x00, 0x00, 0x00, 0xff }
 
 Terminal term = {0};
+
+int leading_ones(unsigned char byte) {
+    int out = 0;
+    while (byte & 0x80) {
+        out++;
+        byte <<= 1;
+    }
+    return out;
+}
 
 void term_init(MeasureTextSliceFunc measure_text, void* font, unsigned short font_size) {
     sem_init(&term.input_sem, 0, 0);

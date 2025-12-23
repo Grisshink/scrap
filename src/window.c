@@ -26,10 +26,6 @@
 #include <libintl.h>
 #include <string.h>
 
-#define ARRLEN(x) (sizeof(x)/sizeof(x[0]))
-#define MIN(x, y) ((x) < (y) ? (x) : (y))
-#define MAX(x, y) ((x) > (y) ? (x) : (y))
-
 typedef struct {
     bool shown;
     float animation_time;

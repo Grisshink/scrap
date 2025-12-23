@@ -27,12 +27,6 @@
 #include <assert.h>
 #include <libintl.h>
 
-#define MIN(x, y) ((x) < (y) ? (x) : (y))
-#define MAX(x, y) ((x) > (y) ? (x) : (y))
-#define CLAMP(x, min, max) (MIN(MAX(min, x), max))
-#define ARRLEN(arr) (sizeof(arr) / sizeof(arr[0]))
-#define CONVERT_COLOR(color, type) (type) { color.r, color.g, color.b, color.a }
-
 #define MATH_LIST_LEN 10
 #define TERM_COLOR_LIST_LEN 8
 

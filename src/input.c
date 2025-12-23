@@ -28,12 +28,6 @@
 #include <stdio.h>
 #include <string.h>
 
-#define ARRLEN(x) (sizeof(x)/sizeof(x[0]))
-#define MAX(x, y) ((x) > (y) ? (x) : (y))
-#define MIN(x, y) ((x) < (y) ? (x) : (y))
-#define ABS(x) ((x) < 0 ? -(x) : (x))
-#define CLAMP(x, min, max) (MIN(MAX(min, x), max))
-
 typedef enum {
     FILE_MENU_NEW_PROJECT = 0,
     FILE_MENU_SAVE_PROJECT,

@@ -24,6 +24,7 @@
 #include "raylib.h"
 #include "config.h"
 #include "scrap_gui.h"
+#include "util.h"
 
 typedef struct Vm Vm;
 

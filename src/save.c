@@ -24,11 +24,6 @@
 #include <stdio.h>
 #include <libintl.h>
 
-#define ARRLEN(x) (sizeof(x)/sizeof(x[0]))
-#define MAX(x, y) ((x) > (y) ? (x) : (y))
-#define MIN(x, y) ((x) < (y) ? (x) : (y))
-#define CLAMP(x, min, max) (MIN(MAX(min, x), max))
-
 #include "../external/cfgpath.h"
 
 typedef struct {

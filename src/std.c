@@ -21,6 +21,7 @@
 #include <time.h>
 
 #include "std.h"
+#include "util.h"
 
 #ifdef _WIN32
 #include <windows.h>
@@ -34,10 +35,6 @@
 #define RPRAND_IMPLEMENTATION
 #define RPRANDAPI static __attribute__ ((unused))
 #include "../external/rprand.h"
-
-#define MAX(x, y) ((x) > (y) ? (x) : (y))
-#define MIN(x, y) ((x) < (y) ? (x) : (y))
-#define CLAMP(x, min, max) (MIN(MAX(min, x), max))
 
 // NOTE: Shamelessly stolen from raylib codebase ;)
 // Get next codepoint in a UTF-8 encoded text, scanning until '\0' is found

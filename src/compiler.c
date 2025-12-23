@@ -35,11 +35,6 @@
 #include <glob.h>
 #endif
 
-#define ARRLEN(arr) (sizeof(arr) / sizeof(arr[0]))
-#define MAX(x, y) ((x) > (y) ? (x) : (y))
-#define MIN(x, y) ((x) < (y) ? (x) : (y))
-#define CLAMP(x, min, max) (MIN(MAX(min, x), max))
-
 #ifdef _WIN32
 #define THREAD_EXIT(exec) do { exec_thread_exit(exec); pthread_exit((void*)0); } while(0)
 #define TARGET_TRIPLE "x86_64-w64-windows-gnu"

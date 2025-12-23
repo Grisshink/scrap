@@ -46,15 +46,6 @@ double end_timer(Timer timer) {
     return time_taken;
 }
 
-int leading_ones(unsigned char byte) {
-    int out = 0;
-    while (byte & 0x80) {
-        out++;
-        byte <<= 1;
-    }
-    return out;
-}
-
 #define CSI_DARK_GRAY "\e[90m"
 #define CSI_YELLOW "\e[93m"
 #define CSI_RED "\e[91m"
