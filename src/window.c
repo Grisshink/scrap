@@ -210,7 +210,7 @@ static void begin_setting(const char* name, bool warning) {
 
         if (warning) {
             gui_element_begin(gui);
-                gui_set_image(gui, &warn_tex, conf.font_size, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+                gui_set_image(gui, &textures.icon_warning, conf.font_size, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
                 gui_on_hover(gui, warning_on_hover);
             gui_element_end(gui);
         } else {
@@ -266,7 +266,7 @@ static void draw_slider(int min, int max, int* value) {
                 gui_set_direction(gui, DIRECTION_HORIZONTAL);
                 gui_set_align(gui, ALIGN_CENTER);
 
-                gui_image(gui, &arrow_left_tex, BLOCK_IMAGE_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+                gui_image(gui, &textures.button_arrow_left, BLOCK_IMAGE_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
             gui_element_end(gui);
 
             gui_grow(gui, DIRECTION_HORIZONTAL);
@@ -282,7 +282,7 @@ static void draw_slider(int min, int max, int* value) {
                 gui_set_direction(gui, DIRECTION_HORIZONTAL);
                 gui_set_align(gui, ALIGN_CENTER);
 
-                gui_image(gui, &arrow_right_tex, BLOCK_IMAGE_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+                gui_image(gui, &textures.button_arrow_right, BLOCK_IMAGE_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
             gui_element_end(gui);
         gui_element_end(gui);
     gui_element_end(gui);
@@ -338,7 +338,7 @@ static void draw_dropdown_input(int* value, char** list, int list_len) {
             gui_grow(gui, DIRECTION_HORIZONTAL);
             gui_text(gui, &font_cond, gettext(list[*value]), conf.font_size * 0.6, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
             gui_grow(gui, DIRECTION_HORIZONTAL);
-            gui_image(gui, &drop_tex, BLOCK_IMAGE_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+            gui_image(gui, &textures.dropdown, BLOCK_IMAGE_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
         gui_element_end(gui);
     gui_element_end(gui);
 }
@@ -517,7 +517,7 @@ void draw_window(void) {
                 gui_set_align(gui, ALIGN_CENTER);
                 gui_set_gap(gui, WINDOW_ELEMENT_PADDING);
 
-                gui_image(gui, &logo_tex, conf.font_size, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+                gui_image(gui, &textures.icon_logo, conf.font_size, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
                 gui_text(gui, &font_eb, "Scrap v" SCRAP_VERSION, conf.font_size * 0.8, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
             gui_element_end(gui);
 

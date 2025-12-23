@@ -28,7 +28,6 @@
 #include <string.h>
 
 // Global Variables
-Image logo_img;
 
 Shader line_shader;
 RenderTexture2D render_surface;
@@ -53,25 +52,7 @@ Font font_cond_shadow;
 Font font_eb;
 Font font_mono;
 
-Texture2D run_tex;
-Texture2D stop_tex;
-Texture2D drop_tex;
-Texture2D close_tex;
-Texture2D logo_tex;
-Texture2D warn_tex;
-Texture2D edit_tex;
-Texture2D close_tex;
-Texture2D term_tex;
-Texture2D add_arg_tex;
-Texture2D del_arg_tex;
-Texture2D add_text_tex;
-Texture2D special_tex;
-Texture2D list_tex;
-Texture2D arrow_left_tex;
-Texture2D arrow_right_tex;
-Texture2D pi_symbol_tex;
-Texture2D variable_symbol_tex;
-Texture2D build_tex;
+TextureList textures;
 
 Vm vm;
 int start_vm_timeout = -1;
@@ -450,36 +431,41 @@ void clear_compile_error(void) {
 }
 
 // Initializes resources and settings by loading textures, fonts, and configurations, and sets up GUI and panel interface
-void setup(void) {
+Image setup(void) {
     SetExitKey(KEY_NULL);
     render_surface = LoadRenderTexture(GetScreenWidth(), GetScreenHeight());
     SetTextureWrap(render_surface.texture, TEXTURE_WRAP_MIRROR_REPEAT);
 
-    drop_tex = LoadTexture(into_data_path(DATA_PATH "drop.png"));
-    SetTextureFilter(drop_tex, TEXTURE_FILTER_BILINEAR);
-    close_tex = LoadTexture(into_data_path(DATA_PATH "close.png"));
-    SetTextureFilter(close_tex, TEXTURE_FILTER_BILINEAR);
+    textures.dropdown = LoadTexture(into_data_path(DATA_PATH "drop.png"));
+    SetTextureFilter(textures.dropdown, TEXTURE_FILTER_BILINEAR);
 
-    logo_img = LoadImageSvg(into_data_path(DATA_PATH "logo.svg"), conf.font_size, conf.font_size);
-    logo_tex = LoadTextureFromImage(logo_img);
-    SetTextureFilter(logo_tex, TEXTURE_FILTER_BILINEAR);
+    Image window_icon = LoadImageSvg(into_data_path(DATA_PATH "logo.svg"), conf.font_size, conf.font_size);
+    textures.icon_logo = LoadTextureFromImage(window_icon);
+    SetTextureFilter(textures.icon_logo, TEXTURE_FILTER_BILINEAR);
 
-    run_tex = load_svg(into_data_path(DATA_PATH "run.svg"));
-    warn_tex = load_svg(into_data_path(DATA_PATH "warning.svg"));
-    stop_tex = load_svg(into_data_path(DATA_PATH "stop.svg"));
-    edit_tex = load_svg(into_data_path(DATA_PATH "edit.svg"));
-    close_tex = load_svg(into_data_path(DATA_PATH "close.svg"));
-    term_tex = load_svg(into_data_path(DATA_PATH "term.svg"));
-    add_arg_tex = load_svg(into_data_path(DATA_PATH "add_arg.svg"));
-    del_arg_tex = load_svg(into_data_path(DATA_PATH "del_arg.svg"));
-    add_text_tex = load_svg(into_data_path(DATA_PATH "add_text.svg"));
-    special_tex = load_svg(into_data_path(DATA_PATH "special.svg"));
-    list_tex = load_svg(into_data_path(DATA_PATH "list.svg"));
-    arrow_left_tex = load_svg(into_data_path(DATA_PATH "arrow_left.svg"));
-    arrow_right_tex = load_svg(into_data_path(DATA_PATH "arrow_right.svg"));
-    pi_symbol_tex = load_svg(into_data_path(DATA_PATH "pi_symbol.svg"));
-    variable_symbol_tex = load_svg(into_data_path(DATA_PATH "variable_symbol.svg"));
-    build_tex = load_svg(into_data_path(DATA_PATH "build.svg"));
+    void* image_load_paths[] = {
+        &textures.button_add_arg,     "add_arg.svg",
+        &textures.button_add_text,    "add_text.svg",
+        &textures.button_arrow_left,  "arrow_left.svg",
+        &textures.button_arrow_right, "arrow_right.svg",
+        &textures.button_build,       "build.svg",
+        &textures.button_close,       "close.svg",
+        &textures.button_del_arg,     "del_arg.svg",
+        &textures.button_edit,        "edit.svg",
+        &textures.button_run,         "run.svg",
+        &textures.button_stop,        "stop.svg",
+        &textures.icon_list,          "list.svg",
+        &textures.icon_pi,            "pi_symbol.svg",
+        &textures.icon_special,       "special.svg",
+        &textures.icon_term,          "term.svg",
+        &textures.icon_variable,      "variable_symbol.svg",
+        &textures.icon_warning,       "warning.svg",
+        NULL,
+    };
+
+    for (int i = 0; image_load_paths[i]; i += 2) {
+        *(Texture2D*)image_load_paths[i] = load_svg(TextFormat("%s" DATA_PATH "%s", GetApplicationDirectory(), image_load_paths[i + 1]));
+    }
 
     int* codepoints = vector_create();
     for (int i = 0; i < CODEPOINT_REGION_COUNT; i++) {
@@ -535,6 +521,8 @@ void setup(void) {
     gui_update_window_size(gui, GetScreenWidth(), GetScreenHeight());
     TraceLog(LOG_INFO, "Allocated %.2f KiB for gui", (float)sizeof(Gui) / 1024.0f);
     init_gui_window();
+
+    return window_icon;
 }
 
 // Main function: Initializes configurations, sets up window, processes input, renders GUI, and cleans up resources on exit
@@ -568,8 +556,8 @@ int main(void) {
     //SetWindowState(FLAG_VSYNC_HINT);
     SetTargetFPS(conf.fps_limit);
 
-    setup();
-    SetWindowIcon(logo_img);
+    Image icon = setup();
+    SetWindowIcon(icon);
 
     while (!WindowShouldClose()) {
         hover_info.exec_ind = -1;

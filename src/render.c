@@ -319,7 +319,7 @@ static void draw_blockdef(Blockdef* blockdef, bool editing) {
                     gui_on_hover(gui, editor_del_button_on_hover);
                     gui_set_custom_data(gui, (void*)i);
 
-                    gui_image(gui, &del_arg_tex, BLOCK_IMAGE_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+                    gui_image(gui, &textures.button_del_arg, BLOCK_IMAGE_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
                 gui_element_end(gui);
             gui_element_end(gui);
         }
@@ -490,7 +490,7 @@ static void draw_block(Block* block, bool highlight, bool can_hover, bool ghost)
                     gui_set_custom_data(gui, arg);
 
                     gui_text(gui, &font_cond_shadow, arg->data.text, BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
-                    gui_image(gui, &drop_tex, BLOCK_IMAGE_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+                    gui_image(gui, &textures.dropdown, BLOCK_IMAGE_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
                 gui_element_end(gui);
             gui_element_end(gui);
             arg_id++;
@@ -508,11 +508,11 @@ static void draw_block(Block* block, bool highlight, bool can_hover, bool ghost)
                 draw_blockdef(arg->data.blockdef, hover_info.editor.edit_blockdef == arg->data.blockdef);
 
                 if (hover_info.editor.edit_blockdef == arg->data.blockdef) {
-                    draw_editor_button(&add_arg_tex, handle_editor_add_arg_button);
-                    draw_editor_button(&add_text_tex, handle_editor_add_text_button);
-                    draw_editor_button(&close_tex, handle_editor_close_button);
+                    draw_editor_button(&textures.button_add_arg, handle_editor_add_arg_button);
+                    draw_editor_button(&textures.button_add_text, handle_editor_add_text_button);
+                    draw_editor_button(&textures.button_close, handle_editor_close_button);
                 } else {
-                    draw_editor_button(&edit_tex, handle_editor_edit_button);
+                    draw_editor_button(&textures.button_edit, handle_editor_edit_button);
                 }
 
                 gui_spacer(gui, 0, 0);
@@ -612,7 +612,7 @@ static void draw_top_bar(void) {
         gui_set_align(gui, ALIGN_CENTER);
 
         gui_spacer(gui, 5, 0);
-        gui_image(gui, &logo_tex, conf.font_size, CONVERT_COLOR(WHITE, GuiColor));
+        gui_image(gui, &textures.icon_logo, conf.font_size, CONVERT_COLOR(WHITE, GuiColor));
         gui_spacer(gui, 10, 0);
         gui_text(gui, &font_eb, gettext("Scrap"), conf.font_size * 0.8, CONVERT_COLOR(WHITE, GuiColor));
         gui_spacer(gui, 10, 0);
@@ -652,7 +652,7 @@ static void draw_tab_bar(void) {
             gui_on_hover(gui, button_on_hover);
             gui_set_custom_data(gui, handle_build_button_click);
 
-            gui_image(gui, &build_tex, tab_bar_size, (GuiColor) { 0xff, 0x99, 0x00, 0xff });
+            gui_image(gui, &textures.button_build, tab_bar_size, (GuiColor) { 0xff, 0x99, 0x00, 0xff });
         gui_element_end(gui);
 
         gui_spacer(gui, conf.font_size * 0.2, 0);
@@ -662,7 +662,7 @@ static void draw_tab_bar(void) {
             gui_on_hover(gui, button_on_hover);
             gui_set_custom_data(gui, handle_stop_button_click);
 
-            gui_image(gui, &stop_tex, tab_bar_size, (GuiColor) { 0xff, 0x40, 0x30, 0xff });
+            gui_image(gui, &textures.button_stop, tab_bar_size, (GuiColor) { 0xff, 0x40, 0x30, 0xff });
         gui_element_end(gui);
 
         gui_spacer(gui, conf.font_size * 0.2, 0);
@@ -673,9 +673,9 @@ static void draw_tab_bar(void) {
 
             if (vm.is_running) {
                 gui_set_rect(gui, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
-                gui_image(gui, &run_tex, tab_bar_size, (GuiColor) { 0x00, 0x00, 0x00, 0xff });
+                gui_image(gui, &textures.button_run, tab_bar_size, (GuiColor) { 0x00, 0x00, 0x00, 0xff });
             } else {
-                gui_image(gui, &run_tex, tab_bar_size, (GuiColor) { 0x60, 0xff, 0x00, 0xff });
+                gui_image(gui, &textures.button_run, tab_bar_size, (GuiColor) { 0x60, 0xff, 0x00, 0xff });
             }
         gui_element_end(gui);
     gui_element_end(gui);

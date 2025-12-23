@@ -222,6 +222,27 @@ typedef struct {
 } HoverInfo;
 
 typedef struct {
+    Texture2D button_add_arg;
+    Texture2D button_add_text;
+    Texture2D button_arrow_left;
+    Texture2D button_arrow_right;
+    Texture2D button_build;
+    Texture2D button_close;
+    Texture2D button_del_arg;
+    Texture2D button_edit;
+    Texture2D button_run;
+    Texture2D button_stop;
+    Texture2D dropdown;
+    Texture2D icon_list;
+    Texture2D icon_logo;
+    Texture2D icon_pi;
+    Texture2D icon_special;
+    Texture2D icon_term;
+    Texture2D icon_variable;
+    Texture2D icon_warning;
+} TextureList;
+
+typedef struct {
     int scroll_amount;
 } Dropdown;
 
@@ -273,25 +294,7 @@ extern Font font_cond_shadow;
 extern Font font_eb;
 extern Font font_mono;
 
-extern Texture2D run_tex;
-extern Texture2D stop_tex;
-extern Texture2D drop_tex;
-extern Texture2D close_tex;
-extern Texture2D logo_tex;
-extern Texture2D warn_tex;
-extern Texture2D edit_tex;
-extern Texture2D close_tex;
-extern Texture2D term_tex;
-extern Texture2D add_arg_tex;
-extern Texture2D del_arg_tex;
-extern Texture2D add_text_tex;
-extern Texture2D special_tex;
-extern Texture2D list_tex;
-extern Texture2D arrow_left_tex;
-extern Texture2D arrow_right_tex;
-extern Texture2D pi_symbol_tex;
-extern Texture2D variable_symbol_tex;
-extern Texture2D build_tex;
+extern TextureList textures;
 
 extern Exec exec;
 extern char** exec_compile_error;
