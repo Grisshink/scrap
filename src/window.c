@@ -37,11 +37,87 @@ typedef struct {
 Config window_conf;
 static WindowGui window = {0};
 static bool settings_tooltip = false;
+static bool settings_applied = false;
 static char** about_text_split = NULL;
 
 // https://easings.net/#easeOutExpo
 float ease_out_expo(float x) {
     return x == 1.0 ? 1.0 : 1 - powf(2.0, -10.0 * x);
+}
+
+static bool about_on_license_button_click(void) {
+    OpenURL(LICENSE_URL);
+    return true;
+}
+
+static bool window_on_close_button_click(void) {
+    gui_window_hide();
+    return true;
+}
+
+static bool settings_on_left_slider_button_click(void) {
+    settings_applied = false;
+    *hover.hover_slider.value = MAX(*hover.hover_slider.value - 1, hover.hover_slider.min);
+    return true;
+}
+
+static bool settings_on_right_slider_button_click(void) {
+    settings_applied = false;
+    *hover.hover_slider.value = MIN(*hover.hover_slider.value + 1, hover.hover_slider.max);
+    return true;
+}
+
+static bool settings_on_dropdown_button_click(void) {
+    settings_applied = false;
+    *hover.select_settings_dropdown_value = hover.dropdown.select_ind;
+    return handle_dropdown_close();
+}
+
+static bool settings_on_dropdown_click(void) {
+    hover.select_settings_dropdown_value = hover.settings_dropdown_data.value;
+    show_dropdown(LOCATION_SETTINGS, hover.settings_dropdown_data.list, hover.settings_dropdown_data.list_len, settings_on_dropdown_button_click);
+    return true;
+}
+
+static bool settings_on_panel_editor_button_click(void) {
+    gui_window_hide();
+    hover.is_panel_edit_mode = true;
+    hover.select_input = NULL;
+    hover.editor.select_argument = NULL;
+    hover.editor.select_block = NULL;
+    hover.editor.select_blockchain = NULL;
+    return true;
+}
+
+static bool settings_on_reset_button_click(void) {
+    set_default_config(&window_conf);
+    settings_applied = false;
+    return true;
+}
+
+static bool settings_on_reset_panels_button_click(void) {
+    delete_all_tabs();
+    init_panels();
+    current_tab = 0;
+    settings_applied = false;
+    return true;
+}
+
+static bool settings_on_apply_button_click(void) {
+    apply_config(&conf, &window_conf);
+    save_config(&window_conf);
+    settings_applied = true;
+    return true;
+}
+
+static bool project_settings_on_build_button_click(void) {
+#ifdef USE_INTERPRETER
+    start_vm();
+#else
+    start_vm(COMPILER_MODE_BUILD);
+#endif
+    gui_window_hide();
+    return true;
 }
 
 void init_gui_window(void) {
@@ -62,6 +138,8 @@ void gui_window_show(WindowGuiType type) {
     window.is_fading = false;
     window.type = type;
     shader_time = -0.2;
+    settings_applied = false;
+
     if (window.type == GUI_TYPE_ABOUT && !about_text_split) {
         about_text_split = vector_create();
         const char* about_text = gettext("Scrap is a project that allows anyone to build\n"
@@ -103,7 +181,7 @@ static void close_button_on_hover(GuiElement* el) {
     el->draw_type = DRAWTYPE_RECT;
     el->data.rect_type = RECT_NORMAL;
     el->color = (GuiColor) { 0x40, 0x40, 0x40, 0xff };
-    hover.button.handler = handle_window_gui_close_button_click;
+    hover.button.handler = window_on_close_button_click;
 }
 
 static void window_on_hover(GuiElement* el) {
@@ -112,7 +190,7 @@ static void window_on_hover(GuiElement* el) {
 }
 
 static void begin_window(const char* title, int w, int h, float scaling) {
-    hover.button.handler = handle_window_gui_close_button_click;
+    hover.button.handler = window_on_close_button_click;
     gui_element_begin(gui);
         gui_set_floating(gui);
         gui_set_rect(gui, (GuiColor) { 0x00, 0x00, 0x00, 0x40 * scaling });
@@ -221,7 +299,12 @@ static void slider_on_hover(GuiElement* el) {
     if (hover.button.handler) return;
     unsigned short len;
     hover.hover_slider = *(SliderHoverInfo*)gui_get_state(el, &len);
-    el->color = hover.hover_slider.value == hover.dragged_slider.value ? (GuiColor) { 0x2b, 0x2b, 0x2b, 0xff } : (GuiColor) { 0x40, 0x40, 0x40, 0xff };
+    if (hover.hover_slider.value == hover.dragged_slider.value) {
+        el->color = (GuiColor) { 0x2b, 0x2b, 0x2b, 0xff };
+        settings_applied = false;
+    } else {
+        el->color = (GuiColor) { 0x40, 0x40, 0x40, 0xff };
+    }
 }
 
 static void slider_button_on_hover(GuiElement* el) {
@@ -259,7 +342,7 @@ static void draw_slider(int min, int max, int* value) {
 
             gui_element_begin(gui);
                 gui_on_hover(gui, slider_button_on_hover);
-                gui_set_custom_data(gui, handle_left_slider_button_click);
+                gui_set_custom_data(gui, settings_on_left_slider_button_click);
                 gui_set_grow(gui, DIRECTION_VERTICAL);
                 gui_set_direction(gui, DIRECTION_HORIZONTAL);
                 gui_set_align(gui, ALIGN_CENTER);
@@ -275,7 +358,7 @@ static void draw_slider(int min, int max, int* value) {
 
             gui_element_begin(gui);
                 gui_on_hover(gui, slider_button_on_hover);
-                gui_set_custom_data(gui, handle_right_slider_button_click);
+                gui_set_custom_data(gui, settings_on_right_slider_button_click);
                 gui_set_grow(gui, DIRECTION_VERTICAL);
                 gui_set_direction(gui, DIRECTION_HORIZONTAL);
                 gui_set_align(gui, ALIGN_CENTER);
@@ -299,7 +382,7 @@ static void dropdown_input_on_hover(GuiElement* el) {
     if (hover.button.handler) return;
     unsigned short len;
     hover.settings_dropdown_data = *(DropdownData*)gui_get_state(el, &len);
-    hover.button.handler = handle_settings_dropdown_click;
+    hover.button.handler = settings_on_dropdown_click;
     if (el->color.r == 0x30) el->color = (GuiColor) { 0x40, 0x40, 0x40, 0xff };
 }
 
@@ -467,7 +550,7 @@ void draw_window(void) {
                     gui_set_grow(gui, DIRECTION_VERTICAL);
                     gui_set_direction(gui, DIRECTION_HORIZONTAL);
 
-                    draw_button(gettext("Open"), handle_settings_panel_editor_button_click);
+                    draw_button(gettext("Open"), settings_on_panel_editor_button_click);
                 gui_element_end(gui);
             end_setting();
 
@@ -476,12 +559,21 @@ void draw_window(void) {
             gui_element_begin(gui);
                 gui_set_grow(gui, DIRECTION_HORIZONTAL);
                 gui_set_direction(gui, DIRECTION_HORIZONTAL);
+                gui_set_min_size(gui, 0, conf.font_size * 0.6);
+
+                gui_grow(gui, DIRECTION_HORIZONTAL);
+                if (settings_applied) gui_text(gui, &font_cond, "Settings applied", conf.font_size * 0.6, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+            gui_element_end(gui);
+
+            gui_element_begin(gui);
+                gui_set_grow(gui, DIRECTION_HORIZONTAL);
+                gui_set_direction(gui, DIRECTION_HORIZONTAL);
                 gui_set_gap(gui, WINDOW_ELEMENT_PADDING);
 
                 gui_grow(gui, DIRECTION_HORIZONTAL);
-                draw_button(gettext("Reset panels"), handle_settings_reset_panels_button_click);
-                draw_button(gettext("Reset"), handle_settings_reset_button_click);
-                draw_button(gettext("Apply"), handle_settings_apply_button_click);
+                draw_button(gettext("Reset panels"), settings_on_reset_panels_button_click);
+                draw_button(gettext("Reset"), settings_on_reset_button_click);
+                draw_button(gettext("Apply"), settings_on_apply_button_click);
             gui_element_end(gui);
         end_window();
         break;
@@ -504,7 +596,7 @@ void draw_window(void) {
 
                 gui_grow(gui, DIRECTION_HORIZONTAL);
 
-                draw_button(gettext("Build!"), handle_project_settings_build_button_click);
+                draw_button(gettext("Build!"), project_settings_on_build_button_click);
             gui_element_end(gui);
         end_window();
         break;
@@ -537,7 +629,7 @@ void draw_window(void) {
                 gui_set_gap(gui, WINDOW_ELEMENT_PADDING);
 
                 gui_grow(gui, DIRECTION_HORIZONTAL);
-                draw_button(gettext("License"), handle_about_license_button_click);
+                draw_button(gettext("License"), about_on_license_button_click);
             gui_element_end(gui);
         end_window();
         break;

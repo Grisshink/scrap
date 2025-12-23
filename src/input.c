@@ -246,9 +246,9 @@ PanelTree* find_panel(PanelTree* root, PanelType panel) {
 }
 
 #ifdef USE_INTERPRETER
-static bool start_vm(void) {
+bool start_vm(void) {
 #else
-static bool start_vm(CompilerMode mode) {
+bool start_vm(CompilerMode mode) {
 #endif
     if (vm.is_running) return false;
 
@@ -288,7 +288,7 @@ static void deselect_all(void) {
     dropdown.scroll_amount = 0;
 }
 
-static void show_dropdown(DropdownLocations location, char** list, int list_len, ButtonClickHandler handler) {
+void show_dropdown(DropdownLocations location, char** list, int list_len, ButtonClickHandler handler) {
     hover.dropdown.location = location;
     hover.dropdown.list = list;
     hover.dropdown.list_len = list_len;
@@ -420,16 +420,6 @@ bool handle_stop_button_click(void) {
     return true;
 }
 
-bool handle_project_settings_build_button_click(void) {
-#ifdef USE_INTERPRETER
-    start_vm();
-#else
-    start_vm(COMPILER_MODE_BUILD);
-#endif
-    gui_window_hide();
-    return true;
-}
-
 bool handle_category_click(void) {
     palette.current_category = hover.category - palette.categories;
     assert(palette.current_category >= 0 && palette.current_category < (int)vector_size(palette.categories));
@@ -481,60 +471,6 @@ bool handle_add_tab_button(void) {
     hover.panels.mouse_panel = PANEL_NONE;
     current_tab = (int)(size_t)hover.button.data;
     shader_time = 0.0;
-    return true;
-}
-
-bool handle_window_gui_close_button_click(void) {
-    gui_window_hide();
-    return true;
-}
-
-bool handle_settings_panel_editor_button_click(void) {
-    gui_window_hide();
-    hover.is_panel_edit_mode = true;
-    hover.select_input = NULL;
-    hover.editor.select_argument = NULL;
-    hover.editor.select_block = NULL;
-    hover.editor.select_blockchain = NULL;
-    return true;
-}
-
-bool handle_settings_reset_button_click(void) {
-    set_default_config(&window_conf);
-    return true;
-}
-
-bool handle_settings_reset_panels_button_click(void) {
-    delete_all_tabs();
-    init_panels();
-    current_tab = 0;
-    return true;
-}
-
-bool handle_settings_apply_button_click(void) {
-    apply_config(&conf, &window_conf);
-    save_config(&window_conf);
-    return true;
-}
-
-bool handle_left_slider_button_click(void) {
-    *hover.hover_slider.value = MAX(*hover.hover_slider.value - 1, hover.hover_slider.min);
-    return true;
-}
-
-bool handle_right_slider_button_click(void) {
-    *hover.hover_slider.value = MIN(*hover.hover_slider.value + 1, hover.hover_slider.max);
-    return true;
-}
-
-bool handle_settings_dropdown_button_click(void) {
-    *hover.select_settings_dropdown_value = hover.dropdown.select_ind;
-    return handle_dropdown_close();
-}
-
-bool handle_settings_dropdown_click(void) {
-    hover.select_settings_dropdown_value = hover.settings_dropdown_data.value;
-    show_dropdown(LOCATION_SETTINGS, hover.settings_dropdown_data.list, hover.settings_dropdown_data.list_len, handle_settings_dropdown_button_click);
     return true;
 }
 
