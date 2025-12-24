@@ -175,14 +175,6 @@ void* overload_thread_entry(void* thread_val) {
 }
 #endif
 
-Texture2D load_svg(const char* path) {
-    Image svg_img = LoadImageSvg(path, conf.font_size, conf.font_size);
-    Texture2D texture = LoadTextureFromImage(svg_img);
-    SetTextureFilter(texture, TEXTURE_FILTER_BILINEAR);
-    UnloadImage(svg_img);
-    return texture;
-}
-
 // Returns the absolute path to the font, converting the relative path to a path inside the data directory
 const char* get_font_path(char* font_path) {
     return font_path[0] != '/' && font_path[1] != ':' ? into_data_path(font_path) : font_path;
@@ -443,7 +435,8 @@ Image setup(void) {
     textures.dropdown = LoadTexture(into_data_path(DATA_PATH "drop.png"));
     SetTextureFilter(textures.dropdown, TEXTURE_FILTER_BILINEAR);
 
-    Image window_icon = LoadImageSvg(into_data_path(DATA_PATH "logo.svg"), conf.font_size, conf.font_size);
+    Image window_icon;
+    svg_load(into_data_path(DATA_PATH "logo.svg"), conf.font_size, conf.font_size, &window_icon);
     textures.icon_logo = LoadTextureFromImage(window_icon);
     SetTextureFilter(textures.icon_logo, TEXTURE_FILTER_BILINEAR);
 
@@ -468,7 +461,15 @@ Image setup(void) {
     };
 
     for (int i = 0; image_load_paths[i]; i += 2) {
-        *(Texture2D*)image_load_paths[i] = load_svg(TextFormat("%s" DATA_PATH "%s", GetApplicationDirectory(), image_load_paths[i + 1]));
+        Image svg_img;
+        if (!svg_load(TextFormat("%s" DATA_PATH "%s", GetApplicationDirectory(), image_load_paths[i + 1]), conf.font_size, conf.font_size, &svg_img)) {
+            continue;
+        }
+
+        Texture2D* texture = image_load_paths[i];
+        *texture = LoadTextureFromImage(svg_img);
+        SetTextureFilter(*texture, TEXTURE_FILTER_BILINEAR);
+        UnloadImage(svg_img);
     }
 
     int* codepoints = vector_create();

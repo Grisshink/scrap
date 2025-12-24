@@ -20,6 +20,12 @@
 #include "vec.h"
 #include "term.h"
 
+#define NANOSVG_IMPLEMENTATION
+#include "../external/nanosvg.h"
+
+#define NANOSVGRAST_IMPLEMENTATION
+#include "../external/nanosvgrast.h"
+
 #include <assert.h>
 #include <math.h>
 #include <stdarg.h>
@@ -1392,6 +1398,46 @@ void scrap_gui_process(void) {
     gui_end(gui);
 }
 
+// Adopted from Raylib 5.0
+bool svg_load(const char* file_name, size_t width, size_t height, Image* out_image) {
+    if (!file_name) return false;
+
+    // Bug in Raylib 5.0:
+    // LoadFileData() does not return null-terminated string which nsvgParse expects, so
+    // i am using nsvgParseFromFile() here instead
+    NSVGimage* svg = nsvgParseFromFile(file_name, "px", 96.0);
+    if (!svg) {
+        TraceLog(LOG_WARNING, "[SVG] Could not load \"%s\". File does not exist", file_name);
+        return false;
+    }
+    unsigned char* image_data = malloc(width * height * 4);
+
+    float scaleWidth  = width  / svg->width,
+          scaleHeight = height / svg->height,
+          scale       = MAX(scaleWidth, scaleHeight);
+
+    int offsetX = 0,
+        offsetY = 0;
+
+    if (scaleHeight > scaleWidth) {
+        offsetY = (height - svg->height * scale) / 2;
+    } else {
+        offsetX = (width - svg->width * scale) / 2;
+    }
+
+    NSVGrasterizer *rast = nsvgCreateRasterizer();
+    nsvgRasterize(rast, svg, offsetX, offsetY, scale, image_data, width, height, width*4);
+
+    out_image->data    = image_data;
+    out_image->width   = width;
+    out_image->height  = height;
+    out_image->mipmaps = 1;
+    out_image->format  = PIXELFORMAT_UNCOMPRESSED_R8G8B8A8;
+
+    nsvgDeleteRasterizer(rast);
+    nsvgDelete(svg);
+    return true;
+}
 
 // Draw order for render_border_control()
 //
