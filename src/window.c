@@ -424,7 +424,7 @@ static void draw_dropdown_input(int* value, char** list, int list_len) {
     gui_element_end(gui);
 }
 
-static void draw_text_input(char** input, const char* hint, int* scroll) {
+static void draw_text_input(char** input, const char* hint, int* scroll, bool editable) {
     gui_element_begin(gui);
         gui_set_grow(gui, DIRECTION_HORIZONTAL);
         gui_set_grow(gui, DIRECTION_VERTICAL);
@@ -447,7 +447,7 @@ static void draw_text_input(char** input, const char* hint, int* scroll) {
             gui_set_scissor(gui);
 
             gui_element_begin(gui);
-                draw_input(&font_cond, input, hint, conf.font_size * 0.6, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+                draw_input(&font_cond, input, hint, conf.font_size * 0.6, (GuiColor) { 0xff, 0xff, 0xff, 0xff }, editable);
             gui_element_end(gui);
         gui_element_end(gui);
     gui_element_end(gui);
@@ -533,15 +533,15 @@ void draw_window(void) {
             end_setting();
 
             begin_setting(gettext("Font path"), true);
-                draw_text_input(&window_conf.font_path, gettext("path"), &font_path_scroll);
+                draw_text_input(&window_conf.font_path, gettext("path"), &font_path_scroll, true);
             end_setting();
 
             begin_setting(gettext("Bold font path"), true);
-                draw_text_input(&window_conf.font_bold_path, gettext("path"), &font_bold_path_scroll);
+                draw_text_input(&window_conf.font_bold_path, gettext("path"), &font_bold_path_scroll, true);
             end_setting();
 
             begin_setting(gettext("Monospaced font path"), true);
-                draw_text_input(&window_conf.font_mono_path, gettext("path"), &font_mono_path_scroll);
+                draw_text_input(&window_conf.font_mono_path, gettext("path"), &font_mono_path_scroll, true);
             end_setting();
 
             begin_setting(gettext("Panel editor"), false);
@@ -580,11 +580,11 @@ void draw_window(void) {
     case GUI_TYPE_PROJECT_SETTINGS:
         begin_window(gettext("Build settings"), MIN(600, gui->win_w - conf.font_size), 0, animation_ease);
             begin_setting(gettext("Executable name"), false);
-                draw_text_input(&project_conf.executable_name, gettext("name"), &executable_name_scroll);
+                draw_text_input(&project_conf.executable_name, gettext("name"), &executable_name_scroll, true);
             end_setting();
 
             begin_setting(gettext("Linker name (Linux only)"), false);
-                draw_text_input(&project_conf.linker_name, gettext("name"), &linker_name_scroll);
+                draw_text_input(&project_conf.linker_name, gettext("name"), &linker_name_scroll, true);
             end_setting();
 
             gui_grow(gui, DIRECTION_VERTICAL);

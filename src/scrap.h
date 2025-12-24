@@ -380,7 +380,7 @@ void process_render(void);
 void prerender_font_shadow(Font* font);
 void scrap_gui_process_render(void);
 void scrap_gui_process(void);
-void draw_input(Font* font, char** input, const char* hint, unsigned short font_size, GuiColor font_color);
+void draw_input(Font* font, char** input, const char* hint, unsigned short font_size, GuiColor font_color, bool editable);
 bool svg_load(const char* file_name, size_t width, size_t height, Image* out_image);
 
 // input.c
