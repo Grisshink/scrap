@@ -3,9 +3,11 @@
 ## What's new?
 - Updated Raylib version to latest commit (fc843dc557 as of time writing)
 - Added visual feedback when settings are applied
+- Text inputs in blocks are now rendered as slightly tinted to block color
 
 ## Fixes
-- Fix search menu spawning incomplete control blocks
+- Fixed search menu spawning incomplete control blocks
+- Fixed text inputs being editable in block palette
 
 # v0.5-beta *(20-12-2025)*
 
