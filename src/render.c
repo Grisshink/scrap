@@ -441,7 +441,7 @@ static void draw_block(Block* block, bool highlight, bool can_hover, bool ghost,
             case ARGUMENT_TEXT:
                 gui_element_begin(gui);
                     if (arg->type == ARGUMENT_TEXT) {
-                        gui_set_rect(gui, (GuiColor) { 0xff, 0xff, 0xff, ghost ? BLOCK_GHOST_OPACITY : 0xff });
+                        gui_set_rect(gui, (GuiColor) { 0xff, 0xff, 0xff, ghost ? BLOCK_GHOST_OPACITY : BLOCK_ARG_OPACITY });
                     } else {
                         gui_set_rect(gui, CONVERT_COLOR(dropdown_color, GuiColor));
                     }
