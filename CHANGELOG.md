@@ -1,3 +1,12 @@
+# v0.5.1-beta *(Upcoming)*
+
+## What's new?
+- Updated Raylib version to latest commit (fc843dc557 as of time writing)
+- Added visual feedback when settings are applied
+
+## Fixes
+- Fix search menu spawning incomplete control blocks
+
 # v0.5-beta *(20-12-2025)*
 
 ## What's new?
