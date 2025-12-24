@@ -837,7 +837,7 @@ static bool handle_mouse_click(void) {
     if (hover.select_input == &search_list_search) {
         if (hover.editor.block) {
             blockchain_add_block(&mouse_blockchain, block_new_ms(hover.editor.block->blockdef));
-            if (hover.editor.block->blockdef->type == BLOCKTYPE_CONTROL && vm.end_blockdef) {
+            if (hover.editor.block->blockdef->type == BLOCKTYPE_CONTROL && vm.end_blockdef != (size_t)-1) {
                 blockchain_add_block(&mouse_blockchain, block_new_ms(vm.blockdefs[vm.end_blockdef]));
             }
         }
