@@ -145,12 +145,12 @@ target: mkbuild $(EXE_NAME)
 endif
 
 $(EXE_NAME).exe: $(OBJFILES)
-	$(MAKE) -C raylib/src CC=$(CC) CUSTOM_CFLAGS=-DSUPPORT_FILEFORMAT_SVG PLATFORM_OS=$(TARGET)
+	$(MAKE) -C raylib/src CC=$(CC) PLATFORM_OS=$(TARGET)
 	x86_64-w64-mingw32-windres scrap.rc -O coff -o scrap.res
 	$(CC) -o $@ $^ raylib/src/libraylib.a scrap.res $(LDFLAGS)
 
 $(EXE_NAME): $(OBJFILES)
-	$(MAKE) -C raylib/src CC=$(CC) CUSTOM_CFLAGS=-DSUPPORT_FILEFORMAT_SVG PLATFORM_OS=$(TARGET)
+	$(MAKE) -C raylib/src CC=$(CC) PLATFORM_OS=$(TARGET)
 	$(CC) -o $@ $^ raylib/src/libraylib.a $(LDFLAGS)
 
 std: mkbuild $(STD_OBJFILES)
