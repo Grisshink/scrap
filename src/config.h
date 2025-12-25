@@ -45,7 +45,7 @@
 #define CONFIG_PATH "config.txt"
 #define CONFIG_FOLDER_NAME "scrap"
 
-#define LICENSE_URL "https://www.gnu.org/licenses/gpl-3.0.html"
+#define LICENSE_URL "https://github.com/Grisshink/scrap/blob/main/LICENSE"
 
 #define CODEPOINT_REGION_COUNT 3
 
