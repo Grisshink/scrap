@@ -170,4 +170,4 @@ the wallpaper was made by [@Grisshink](https://github.com/Grisshink)
 
 ## License
 
-All scrap code is licensed under the terms of [GPLv3 license](/LICENSE) *(Subject to change in near future)*.
+All scrap code is licensed under the terms of [zlib license](/LICENSE).
