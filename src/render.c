@@ -1434,26 +1434,26 @@ bool svg_load(const char* file_name, size_t width, size_t height, Image* out_ima
     // i am using nsvgParseFromFile() here instead
     NSVGimage* svg = nsvgParseFromFile(file_name, "px", 96.0);
     if (!svg) {
-        TraceLog(LOG_WARNING, "[SVG] Could not load \"%s\". File does not exist", file_name);
+        TraceLog(LOG_WARNING, "[SVG] Could not load \"%s\"", file_name);
         return false;
     }
     unsigned char* image_data = malloc(width * height * 4);
 
-    float scaleWidth  = width  / svg->width,
-          scaleHeight = height / svg->height,
-          scale       = MAX(scaleWidth, scaleHeight);
+    float scale_width  = width  / svg->width,
+          scale_height = height / svg->height,
+          scale        = MAX(scale_width, scale_height);
 
-    int offsetX = 0,
-        offsetY = 0;
+    int offset_x = 0,
+        offset_y = 0;
 
-    if (scaleHeight > scaleWidth) {
-        offsetY = (height - svg->height * scale) / 2;
+    if (scale_height > scale_width) {
+        offset_y = (height - svg->height * scale) / 2;
     } else {
-        offsetX = (width - svg->width * scale) / 2;
+        offset_x = (width - svg->width * scale) / 2;
     }
 
     NSVGrasterizer *rast = nsvgCreateRasterizer();
-    nsvgRasterize(rast, svg, offsetX, offsetY, scale, image_data, width, height, width*4);
+    nsvgRasterize(rast, svg, offset_x, offset_y, scale, image_data, width, height, width*4);
 
     out_image->data    = image_data;
     out_image->width   = width;
