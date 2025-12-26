@@ -566,6 +566,8 @@ int main(void) {
 
     Image icon = setup();
     SetWindowIcon(icon);
+    // SetWindowIcon() copies the icon so we can safely unload it
+    UnloadImage(icon);
 
     while (!WindowShouldClose()) {
         vm.exec_ind = -1;
