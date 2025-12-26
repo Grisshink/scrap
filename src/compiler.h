@@ -23,11 +23,11 @@
 
 #include "gc.h"
 #include "ast.h"
+#include "thread.h"
 
 #include <llvm-c/Core.h>
 #include <llvm-c/ExecutionEngine.h>
-#include <stdatomic.h>
-#include <pthread.h>
+#include <setjmp.h>
 
 #define VM_ARG_STACK_SIZE 1024
 #define VM_CONTROL_STACK_SIZE 1024
@@ -153,9 +153,10 @@ typedef struct {
     bool gc_dirty;
     LLVMValueRef* gc_dirty_funcs;
 
-    pthread_t thread;
+    jmp_buf run_jump_buf;
+
+    Thread* thread;
     CompilerMode current_mode;
-    atomic_int running_state;
 } Exec;
 
 #define MAIN_NAME "llvm_main"
@@ -186,15 +187,10 @@ typedef struct {
 
 typedef bool (*BlockCompileFunc)(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state);
 
-Exec exec_new(CompilerMode mode);
+Exec exec_new(Thread* thread, CompilerMode mode);
+bool exec_run(void* e);
+void exec_cleanup(void* e);
 void exec_free(Exec* exec);
-void exec_copy_code(Vm* vm, Exec* exec, BlockChain* code);
-//bool exec_run_chain(Exec* exec, BlockChain* chain, int argc, Data* argv, Data* return_val);
-bool exec_start(Vm* vm, Exec* exec);
-bool exec_stop(Vm* vm, Exec* exec);
-bool exec_join(Vm* vm, Exec* exec, size_t* return_code);
-bool exec_try_join(Vm* vm, Exec* exec, size_t* return_code);
-void exec_thread_exit(void* thread_exec);
 void exec_set_error(Exec* exec, Block* block, const char* fmt, ...);
 
 bool variable_stack_push(Exec* exec, Block* block, Variable variable);

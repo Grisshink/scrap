@@ -76,11 +76,6 @@ int categories_scroll = 0;
 int search_list_scroll = 0;
 Vector2 search_list_pos = {0};
 
-#ifdef RAM_OVERLOAD
-int* overload;
-pthread_t overload_thread;
-#endif
-
 SplitPreview split_preview = {0};
 Tab* code_tabs = NULL;
 int current_tab = 0;
@@ -166,17 +161,6 @@ void sanitize_links(void) {
         sanitize_block(&mouse_blockchain.blocks[i]);
     }
 }
-
-#ifdef RAM_OVERLOAD
-void* overload_thread_entry(void* thread_val) {
-    (void) thread_val;
-    overload = vector_create();
-
-    volatile int val = 0;
-    while (1) vector_add(&overload, val++);
-    return NULL;
-}
-#endif
 
 // Returns the absolute path to the font, converting the relative path to a path inside the data directory
 const char* get_font_path(char* font_path) {
@@ -395,7 +379,7 @@ Vm vm_new(void) {
     Vm vm = (Vm) {
         .blockdefs = vector_create(),
         .end_blockdef = -1,
-        .is_running = false,
+        .thread = thread_new(exec_run, exec_cleanup),
         .exec_chain = NULL,
         .exec_ind = 0,
         .prev_exec_chain = NULL,
@@ -516,12 +500,6 @@ Image setup(void) {
 
     term_init(term_measure_text, &font_mono, conf.font_size * 0.6);
 
-#if defined(RAM_OVERLOAD) && defined(_WIN32)
-    if (should_do_ram_overload()) {
-        pthread_create(&overload_thread, NULL, overload_thread_entry, NULL);
-    }
-#endif
-
     gui = malloc(sizeof(Gui));
     gui_init(gui);
     gui_set_measure_text_func(gui, scrap_gui_measure_text);
@@ -573,14 +551,20 @@ int main(void) {
         vm.exec_ind = -1;
         vm.exec_chain = NULL;
 
-        size_t vm_return = -1;
-        if (exec_try_join(&vm, &exec, &vm_return)) {
-            if (vm_return == 1) {
+        ThreadReturnCode thread_return = thread_try_join(&vm.thread);
+        if (thread_return != THREAD_RETURN_RUNNING) {
+            switch (thread_return) {
+            case THREAD_RETURN_SUCCESS:
                 actionbar_show(gettext("Vm executed successfully"));
-            } else if (vm_return == (size_t)PTHREAD_CANCELED) {
-                actionbar_show(gettext("Vm stopped >:("));
-            } else {
+                break;
+            case THREAD_RETURN_FAILURE:
                 actionbar_show(gettext("Vm shitted and died :("));
+                break;
+            case THREAD_RETURN_STOPPED:
+                actionbar_show(gettext("Vm stopped >:("));
+                break;
+            default:
+                break;
             }
 
             size_t i = 0;
@@ -598,7 +582,7 @@ int main(void) {
             exec_compile_error_blockchain = find_blockchain(exec_compile_error_block);
             exec_free(&exec);
             render_surface_needs_redraw = true;
-        } else if (vm.is_running) {
+        } else if (thread_is_running(&vm.thread)) {
 #ifdef USE_INTERPRETER
             vm.exec_chain = exec.running_chain;
             vm.exec_ind = exec.chain_stack[exec.chain_stack_len - 1].running_ind;
@@ -612,12 +596,12 @@ int main(void) {
             vm.prev_exec_chain = vm.exec_chain;
             vm.prev_exec_ind = vm.exec_ind;
 
-            pthread_mutex_lock(&term.lock);
+            mutex_lock(&term.lock);
             if (find_panel(code_tabs[current_tab].root_panel, PANEL_TERM) && term.is_buffer_dirty) {
                 render_surface_needs_redraw = true;
                 term.is_buffer_dirty = false;
             }
-            pthread_mutex_unlock(&term.lock);
+            mutex_unlock(&term.lock);
        } else {
             if (vector_size(exec_compile_error) > 0) render_surface_needs_redraw = true;
        }
@@ -662,10 +646,9 @@ int main(void) {
         EndDrawing();
     }
 
-    if (vm.is_running) {
-        exec_stop(&vm, &exec);
-        size_t bin;
-        exec_join(&vm, &exec, &bin);
+    if (thread_is_running(&vm.thread)) {
+        thread_stop(&vm.thread);
+        thread_join(&vm.thread);
         exec_free(&exec);
     }
     term_free();

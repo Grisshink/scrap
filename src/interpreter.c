@@ -90,13 +90,28 @@ char* data_to_any_string(Exec* exec, AnyValue arg) {
     return std_string_from_any(&exec->gc, &arg)->str;
 }
 
-Exec exec_new(void) {
+void define_function(Exec* exec, Blockdef* blockdef, BlockChain* chain) {
+    DefineFunction* func = vector_add_dst(&exec->defined_functions);
+    func->blockdef = blockdef;
+    func->run_chain = chain;
+    func->args = vector_create();
+
+    int arg_ind = 0;
+    for (size_t i = 0; i < vector_size(blockdef->inputs); i++) {
+        if (blockdef->inputs[i].type != INPUT_ARGUMENT) continue;
+
+        DefineArgument* arg = vector_add_dst(&func->args);
+        arg->blockdef = blockdef->inputs[i].data.arg.blockdef;
+        arg->arg_ind = arg_ind++;
+    }
+}
+
+Exec exec_new(Thread* thread) {
     Exec exec = (Exec) {
         .code = NULL,
         .arg_stack_len = 0,
         .control_stack_len = 0,
-        .thread = (pthread_t) {0},
-        .running_state = EXEC_STATE_NOT_RUNNING,
+        .thread = thread,
         .current_error_block = NULL,
     };
     exec.current_error[0] = 0;
@@ -107,9 +122,58 @@ void exec_free(Exec* exec) {
     (void) exec;
 }
 
-void exec_copy_code(Vm* vm, Exec* exec, BlockChain* code) {
-    if (vm->is_running) return;
-    exec->code = code;
+bool exec_run(void* e) {
+    Exec* exec = e;
+    exec->arg_stack_len = 0;
+    exec->control_stack_len = 0;
+    exec->chain_stack_len = 0;
+    exec->running_chain = NULL;
+    exec->defined_functions = vector_create();
+    exec->gc = gc_new(MIN_MEMORY_LIMIT, MAX_MEMORY_LIMIT);
+
+    SetRandomSeed(time(NULL));
+
+    for (size_t i = 0; i < vector_size(exec->code); i++) {
+        Block* block = &exec->code[i].blocks[0];
+        if (strcmp(block->blockdef->id, "define_block")) continue;
+
+        for (size_t j = 0; j < vector_size(block->arguments); j++) {
+            if (block->arguments[j].type != ARGUMENT_BLOCKDEF) continue;
+            define_function(exec, block->arguments[j].data.blockdef, &exec->code[i]);
+        }
+    }
+
+    for (size_t i = 0; i < vector_size(exec->code); i++) {
+        Block* block = &exec->code[i].blocks[0];
+        if (block->blockdef->type != BLOCKTYPE_HAT) continue;
+        bool cont = false;
+        for (size_t j = 0; j < vector_size(block->arguments); j++) {
+            if (block->arguments[j].type == ARGUMENT_BLOCKDEF) {
+                cont = true;
+                break;
+            }
+        }
+        if (cont) continue;
+        AnyValue bin;
+        if (!exec_run_chain(exec, &exec->code[i], -1, NULL, &bin)) {
+            exec->running_chain = NULL;
+            return false;
+        }
+        exec->running_chain = NULL;
+    }
+
+    return true;
+}
+
+void exec_cleanup(void* e) {
+    Exec* exec = e;
+    for (size_t i = 0; i < vector_size(exec->defined_functions); i++) {
+        vector_free(exec->defined_functions[i].args);
+    }
+    vector_free(exec->defined_functions);
+    variable_stack_cleanup(exec);
+    arg_stack_undo_args(exec, exec->arg_stack_len);
+    gc_free(&exec->gc);
 }
 
 void exec_set_error(Exec* exec, Block* block, const char* fmt, ...) {
@@ -201,7 +265,7 @@ bool exec_run_chain(Exec* exec, BlockChain* chain, int argc, AnyValue* argv, Any
     exec->running_chain = chain;
     AnyValue block_return;
     for (size_t i = 0; i < vector_size(chain->blocks); i++) {
-        pthread_testcancel();
+        thread_handle_stopping_state(exec->thread);
 
         size_t block_ind = i;
         ChainStackData* chain_data = &exec->chain_stack[exec->chain_stack_len - 1];
@@ -263,134 +327,14 @@ bool exec_run_chain(Exec* exec, BlockChain* chain, int argc, AnyValue* argv, Any
 }
 #undef BLOCKDEF
 
-void exec_thread_exit(void* thread_exec) {
-    Exec* exec = thread_exec;
-    for (size_t i = 0; i < vector_size(exec->defined_functions); i++) {
-        vector_free(exec->defined_functions[i].args);
-    }
-    vector_free(exec->defined_functions);
-    variable_stack_cleanup(exec);
-    arg_stack_undo_args(exec, exec->arg_stack_len);
-    exec->running_state = EXEC_STATE_DONE;
-    gc_free(&exec->gc);
-}
-
-void define_function(Exec* exec, Blockdef* blockdef, BlockChain* chain) {
-    DefineFunction* func = vector_add_dst(&exec->defined_functions);
-    func->blockdef = blockdef;
-    func->run_chain = chain;
-    func->args = vector_create();
-
-    int arg_ind = 0;
-    for (size_t i = 0; i < vector_size(blockdef->inputs); i++) {
-        if (blockdef->inputs[i].type != INPUT_ARGUMENT) continue;
-
-        DefineArgument* arg = vector_add_dst(&func->args);
-        arg->blockdef = blockdef->inputs[i].data.arg.blockdef;
-        arg->arg_ind = arg_ind++;
-    }
-}
-
-void* exec_thread_entry(void* thread_exec) {
-    Exec* exec = thread_exec;
-    exec->running_state = EXEC_STATE_RUNNING;
-    exec->arg_stack_len = 0;
-    exec->control_stack_len = 0;
-    exec->chain_stack_len = 0;
-    exec->running_chain = NULL;
-    exec->defined_functions = vector_create();
-    exec->gc = gc_new(MIN_MEMORY_LIMIT, MAX_MEMORY_LIMIT);
-
-    SetRandomSeed(time(NULL));
-
-    pthread_cleanup_push(exec_thread_exit, thread_exec);
-
-    for (size_t i = 0; i < vector_size(exec->code); i++) {
-        Block* block = &exec->code[i].blocks[0];
-        if (strcmp(block->blockdef->id, "define_block")) continue;
-
-        for (size_t j = 0; j < vector_size(block->arguments); j++) {
-            if (block->arguments[j].type != ARGUMENT_BLOCKDEF) continue;
-            define_function(exec, block->arguments[j].data.blockdef, &exec->code[i]);
-        }
-    }
-
-    for (size_t i = 0; i < vector_size(exec->code); i++) {
-        Block* block = &exec->code[i].blocks[0];
-        if (block->blockdef->type != BLOCKTYPE_HAT) continue;
-        bool cont = false;
-        for (size_t j = 0; j < vector_size(block->arguments); j++) {
-            if (block->arguments[j].type == ARGUMENT_BLOCKDEF) {
-                cont = true;
-                break;
-            }
-        }
-        if (cont) continue;
-        AnyValue bin;
-        if (!exec_run_chain(exec, &exec->code[i], -1, NULL, &bin)) {
-            exec->running_chain = NULL;
-            pthread_exit((void*)0);
-        }
-        exec->running_chain = NULL;
-    }
-
-    pthread_cleanup_pop(1);
-    pthread_exit((void*)1);
-}
-
-bool exec_start(Vm* vm, Exec* exec) {
-    if (vm->is_running) return false;
-    if (exec->running_state != EXEC_STATE_NOT_RUNNING) return false;
-    vm->is_running = true;
-
-    exec->running_state = EXEC_STATE_STARTING;
-    if (pthread_create(&exec->thread, NULL, exec_thread_entry, exec)) {
-        exec->running_state = EXEC_STATE_NOT_RUNNING;
-        return false;
-    }
-
-    return true;
-}
-
-bool exec_stop(Vm* vm, Exec* exec) {
-    if (!vm->is_running) return false;
-    if (exec->running_state != EXEC_STATE_RUNNING) return false;
-    if (pthread_cancel(exec->thread)) return false;
-    return true;
-}
-
-bool exec_join(Vm* vm, Exec* exec, size_t* return_code) {
-    if (!vm->is_running) return false;
-    if (exec->running_state == EXEC_STATE_NOT_RUNNING) return false;
-
-    void* return_val;
-    if (pthread_join(exec->thread, &return_val)) return false;
-    vm->is_running = false;
-    exec->running_state = EXEC_STATE_NOT_RUNNING;
-    *return_code = (size_t)return_val;
-    return true;
-}
-
 void exec_set_skip_block(Exec* exec) {
     exec->chain_stack[exec->chain_stack_len - 1].skip_block = true;
-}
-
-bool exec_try_join(Vm* vm, Exec* exec, size_t* return_code) {
-    if (!vm->is_running) return false;
-    if (exec->running_state != EXEC_STATE_DONE) return false;
-
-    void* return_val;
-    if (pthread_join(exec->thread, &return_val)) return false;
-    vm->is_running = false;
-    exec->running_state = EXEC_STATE_NOT_RUNNING;
-    *return_code = (size_t)return_val;
-    return true;
 }
 
 Variable* variable_stack_push_var(Exec* exec, const char* name, AnyValue arg) {
     if (exec->variable_stack_len >= VM_VARIABLE_STACK_SIZE) {
         TraceLog(LOG_ERROR, "[VM] Variable stack overflow");
-        PTHREAD_FAIL(exec);
+        thread_exit(exec->thread, false);
     }
     if (*name == 0) return NULL;
     Variable var;
@@ -436,7 +380,7 @@ Variable* variable_stack_get_variable(Exec* exec, const char* name) {
 void chain_stack_push(Exec* exec, ChainStackData data) {
     if (exec->chain_stack_len >= VM_CHAIN_STACK_SIZE) {
         TraceLog(LOG_ERROR, "[VM] Chain stack overflow");
-        PTHREAD_FAIL(exec);
+        thread_exit(exec->thread, false);
     }
     exec->chain_stack[exec->chain_stack_len++] = data;
 }
@@ -444,7 +388,7 @@ void chain_stack_push(Exec* exec, ChainStackData data) {
 void chain_stack_pop(Exec* exec) {
     if (exec->chain_stack_len == 0) {
         TraceLog(LOG_ERROR, "[VM] Chain stack underflow");
-        PTHREAD_FAIL(exec);
+        thread_exit(exec->thread, false);
     }
     exec->chain_stack_len--;
 }
@@ -452,7 +396,7 @@ void chain_stack_pop(Exec* exec) {
 void arg_stack_push_arg(Exec* exec, AnyValue arg) {
     if (exec->arg_stack_len >= VM_ARG_STACK_SIZE) {
         TraceLog(LOG_ERROR, "[VM] Arg stack overflow");
-        PTHREAD_FAIL(exec);
+        thread_exit(exec->thread, false);
     }
     exec->arg_stack[exec->arg_stack_len++] = arg;
 }
@@ -460,7 +404,7 @@ void arg_stack_push_arg(Exec* exec, AnyValue arg) {
 void arg_stack_undo_args(Exec* exec, size_t count) {
     if (count > exec->arg_stack_len) {
         TraceLog(LOG_ERROR, "[VM] Arg stack underflow");
-        PTHREAD_FAIL(exec);
+        thread_exit(exec->thread, false);
     }
     exec->arg_stack_len -= count;
 }

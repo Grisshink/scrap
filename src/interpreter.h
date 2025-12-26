@@ -24,9 +24,7 @@
 #include "raylib.h"
 #include "ast.h"
 #include "std.h"
-
-#include <pthread.h>
-#include <stdatomic.h>
+#include "thread.h"
 
 #define VM_ARG_STACK_SIZE 1024
 #define VM_CONTROL_STACK_SIZE 32768
@@ -101,26 +99,16 @@ struct Exec {
     char current_error[MAX_ERROR_LEN];
     Block* current_error_block;
 
-    pthread_t thread;
-    atomic_int running_state;
+    Thread* thread;
     BlockChain* running_chain;
 
     Gc gc;
 };
 
-#ifdef _WIN32
-// Winpthreads for some reason does not trigger cleanup functions, so we are explicitly doing cleanup here
-#define PTHREAD_FAIL(exec) \
-    exec_thread_exit(exec); \
-    pthread_exit((void*)0);
-#else
-#define PTHREAD_FAIL(exec) pthread_exit((void*)0);
-#endif
-
 #define control_stack_push_data(data, type) \
     if (exec->control_stack_len + sizeof(type) > VM_CONTROL_STACK_SIZE) { \
         TraceLog(LOG_ERROR, "[VM] Control stack overflow"); \
-        PTHREAD_FAIL(exec); \
+        thread_exit(exec->thread, false); \
     } \
     *(type *)(exec->control_stack + exec->control_stack_len) = (data); \
     exec->control_stack_len += sizeof(type);
@@ -128,7 +116,7 @@ struct Exec {
 #define control_stack_pop_data(data, type) \
     if (sizeof(type) > exec->control_stack_len) { \
         TraceLog(LOG_ERROR, "[VM] Control stack underflow"); \
-        PTHREAD_FAIL(exec); \
+        thread_exit(exec->thread, false); \
     } \
     exec->control_stack_len -= sizeof(type); \
     data = *(type*)(exec->control_stack + exec->control_stack_len);
@@ -168,16 +156,12 @@ struct Exec {
     .data = (AnyValueData) { .list_val = (val) }, \
 }
 
-Exec exec_new(void);
+Exec exec_new(Thread* thread);
+bool exec_run(void* e);
+void exec_cleanup(void* e);
 void exec_free(Exec* exec);
-void exec_copy_code(Vm* vm, Exec* exec, BlockChain* code);
 bool exec_run_chain(Exec* exec, BlockChain* chain, int argc, AnyValue* argv, AnyValue* return_val);
-bool exec_start(Vm* vm, Exec* exec);
-bool exec_stop(Vm* vm, Exec* exec);
-bool exec_join(Vm* vm, Exec* exec, size_t* return_code);
-bool exec_try_join(Vm* vm, Exec* exec, size_t* return_code);
 void exec_set_skip_block(Exec* exec);
-void exec_thread_exit(void* thread_exec);
 void exec_set_error(Exec* exec, Block* block, const char* fmt, ...);
 
 bool evaluate_argument(Exec* exec, Argument* arg, AnyValue* return_val);

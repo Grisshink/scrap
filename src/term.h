@@ -21,8 +21,9 @@
 #ifndef TERM_H
 #define TERM_H
 
+#include "thread.h"
+
 #include <semaphore.h>
-#include <pthread.h>
 #include <stdbool.h>
 
 #define TERM_INPUT_BUF_SIZE 256
@@ -48,7 +49,7 @@ typedef struct {
     void* font;
     unsigned short font_size;
 
-    pthread_mutex_t lock;
+    Mutex lock;
     TermVec size;
     int char_w, char_h;
     int cursor_pos;

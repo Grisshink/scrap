@@ -71,7 +71,7 @@ static void draw_dots(void) {
 }
 
 static void draw_term(int x, int y) {
-    pthread_mutex_lock(&term.lock);
+    mutex_lock(&term.lock);
 
     if (term.char_w == 0 || term.char_h == 0) goto unlock_term;
     if (!term.buffer) goto unlock_term;
@@ -116,7 +116,7 @@ static void draw_term(int x, int y) {
     }
 
 unlock_term:
-    pthread_mutex_unlock(&term.lock);
+    mutex_unlock(&term.lock);
 }
 
 void prerender_font_shadow(Font* font) {
@@ -382,7 +382,7 @@ static void draw_block(Block* block, bool highlight, bool can_hover, bool ghost,
     bool collision = hover.editor.prev_block == block || highlight;
     Color color = CONVERT_COLOR(block->blockdef->color, Color);
     if (!block->blockdef->func) color = (Color) UNIMPLEMENTED_BLOCK_COLOR;
-    if (!vm.is_running && block == exec_compile_error_block) {
+    if (!thread_is_running(&vm.thread) && block == exec_compile_error_block) {
         double animation = fmod(-GetTime(), 1.0) * 0.5 + 1.0;
         color = (Color) { 0xff * animation, 0x20 * animation, 0x20 * animation, 0xff };
     }
@@ -695,7 +695,12 @@ static void draw_tab_bar(void) {
             gui_on_hover(gui, button_on_hover);
             gui_set_custom_data(gui, handle_stop_button_click);
 
-            gui_image(gui, &textures.button_stop, tab_bar_size, (GuiColor) { 0xff, 0x40, 0x30, 0xff });
+            if (vm.thread.state == THREAD_STATE_STOPPING) {
+                gui_set_rect(gui, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+                gui_image(gui, &textures.button_stop, tab_bar_size, (GuiColor) { 0x00, 0x00, 0x00, 0xff });
+            } else {
+                gui_image(gui, &textures.button_stop, tab_bar_size, (GuiColor) { 0xff, 0x40, 0x30, 0xff });
+            }
         gui_element_end(gui);
 
         gui_spacer(gui, conf.font_size * 0.2, 0);
@@ -704,7 +709,7 @@ static void draw_tab_bar(void) {
             gui_on_hover(gui, button_on_hover);
             gui_set_custom_data(gui, handle_run_button_click);
 
-            if (vm.is_running) {
+            if (thread_is_running(&vm.thread)) {
                 gui_set_rect(gui, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
                 gui_image(gui, &textures.button_run, tab_bar_size, (GuiColor) { 0x00, 0x00, 0x00, 0xff });
             } else {
@@ -963,19 +968,12 @@ static void draw_code_area(void) {
             gui_set_floating(gui);
             gui_set_position(gui, 0, 0);
             gui_set_padding(gui, conf.font_size * 0.2, conf.font_size * 0.2);
-#if defined(RAM_OVERLOAD) && defined(_WIN32)
-            if (should_do_ram_overload()) {
-                gui_text(gui, &font_cond, "Notice: you have installed Scratch on your computer.", conf.font_size * 0.5, (GuiColor) { 0xff, 0xff, 0xff, 0x60 });
-                gui_text(gui, &font_cond, "Please consider deleting it and embrace more superior programming", conf.font_size * 0.5, (GuiColor) { 0xff, 0xff, 0xff, 0x60 });
-                gui_text(gui, &font_cond, "language, such as Scrap. Adios", conf.font_size * 0.5, (GuiColor) { 0xff, 0xff, 0xff, 0x60 });
-            }
-#endif
             for (int i = 0; i < DEBUG_BUFFER_LINES; i++) {
                 if (*debug_buffer[i]) gui_text(gui, &font_cond, debug_buffer[i], conf.font_size * 0.5, (GuiColor) { 0xff, 0xff, 0xff, 0x60 });
             }
         gui_element_end(gui);
 
-        if (!vm.is_running && vector_size(exec_compile_error) > 0) {
+        if (!thread_is_running(&vm.thread) && vector_size(exec_compile_error) > 0) {
             gui_element_begin(gui);
                 gui_set_direction(gui, DIRECTION_HORIZONTAL);
                 gui_set_align(gui, ALIGN_CENTER);
@@ -1750,12 +1748,12 @@ void scrap_gui_process_render(void) {
         term_restart();
         clear_compile_error();
 #ifdef USE_INTERPRETER
-        exec = exec_new();
+        exec = exec_new(&vm.thread);
 #else
-        exec = exec_new(start_vm_mode);
+        exec = exec_new(&vm.thread, start_vm_mode);
 #endif
-        exec_copy_code(&vm, &exec, editor_code);
-        if (!exec_start(&vm, &exec)) {
+        exec.code = editor_code;
+        if (!thread_start(exec.thread, &exec)) {
             actionbar_show(gettext("Start failed!"));
         } else {
             actionbar_show(gettext("Started successfully!"));

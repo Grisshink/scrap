@@ -37,9 +37,8 @@
 
 #else
 
-#include <pthread.h>
 #include "raylib.h"
-#define EXIT pthread_exit((void*)0)
+#define EXIT longjmp(gc->run_jump_buf, 1)
 #define TRACE_LOG(loglevel, ...) TraceLog(loglevel, __VA_ARGS__)
 
 #endif // STANDALONE_STD

@@ -1,3 +1,23 @@
+// Scrap is a project that allows anyone to build software using simple, block based interface.
+//
+// Copyright (C) 2024-2025 Grisshink
+// 
+// This software is provided 'as-is', without any express or implied
+// warranty.  In no event will the authors be held liable for any damages
+// arising from the use of this software.
+// 
+// Permission is granted to anyone to use this software for any purpose,
+// including commercial applications, and to alter it and redistribute it
+// freely, subject to the following restrictions:
+// 
+// 1. The origin of this software must not be misrepresented; you must not
+//    claim that you wrote the original software. If you use this software
+//    in a product, an acknowledgment in the product documentation would be
+//    appreciated but is not required.
+// 2. Altered source versions must be plainly marked as such, and must not be
+//    misrepresented as being the original software.
+// 3. This notice may not be removed or altered from any source distribution.
+
 #ifdef _WIN32
 #include <windows.h>
 #else
@@ -23,30 +43,6 @@ void scrap_set_env(const char* name, const char* value) {
     setenv(name, value, false);
 #endif // _WIN32
 }
-
-#if defined(RAM_OVERLOAD) && defined(_WIN32)
-#include <shlobj.h>
-#include <shlwapi.h>
-
-#define SCRATCH_PATH "\\Programs\\Scratch 3\\Scratch 3.exe"
-
-bool should_do_ram_overload(void) {
-    char out[512];
-	if (!SUCCEEDED(SHGetFolderPath(NULL, CSIDL_LOCAL_APPDATA, NULL, 0, out))) {
-		out[0] = 0;
-		return false;
-	}
-    int len = strlen(out);
-    if (len + strlen(SCRATCH_PATH) + 1 > 512) {
-        out[0] = 0;
-        return false;
-    }
-
-    strcat(out, SCRATCH_PATH);
-
-    return PathFileExistsA(out);
-}
-#endif // defined(RAM_OVERLOAD) && defined(_WIN32)
 
 #ifndef USE_INTERPRETER
 static size_t next_arg(char* cmd, size_t i, char** out_arg) {

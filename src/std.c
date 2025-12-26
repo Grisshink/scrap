@@ -802,40 +802,40 @@ StringHeader* std_term_get_char(Gc* gc) {
 }
 
 void std_term_set_cursor(int x, int y) {
-    pthread_mutex_lock(&term.lock);
+    mutex_lock(&term.lock);
     x = CLAMP(x, 0, term.char_w - 1);
     y = CLAMP(y, 0, term.char_h - 1);
     term.cursor_pos = x + y * term.char_w;
-    pthread_mutex_unlock(&term.lock);
+    mutex_unlock(&term.lock);
 }
 
 int std_term_cursor_x(void) {
-    pthread_mutex_lock(&term.lock);
+    mutex_lock(&term.lock);
     int cur_x = 0;
     if (term.char_w != 0) cur_x = term.cursor_pos % term.char_w;
-    pthread_mutex_unlock(&term.lock);
+    mutex_unlock(&term.lock);
     return cur_x;
 }
 
 int std_term_cursor_y(void) {
-    pthread_mutex_lock(&term.lock);
+    mutex_lock(&term.lock);
     int cur_y = 0;
     if (term.char_w != 0) cur_y = term.cursor_pos / term.char_w;
-    pthread_mutex_unlock(&term.lock);
+    mutex_unlock(&term.lock);
     return cur_y;
 }
 
 int std_term_cursor_max_x(void) {
-    pthread_mutex_lock(&term.lock);
+    mutex_lock(&term.lock);
     int cur_max_x = term.char_w;
-    pthread_mutex_unlock(&term.lock);
+    mutex_unlock(&term.lock);
     return cur_max_x;
 }
 
 int std_term_cursor_max_y(void) {
-    pthread_mutex_lock(&term.lock);
+    mutex_lock(&term.lock);
     int cur_max_y = term.char_h;
-    pthread_mutex_unlock(&term.lock);
+    mutex_unlock(&term.lock);
     return cur_max_y;
 }
 

@@ -31,13 +31,6 @@
 
 typedef struct Vm Vm;
 
-typedef enum {
-    EXEC_STATE_NOT_RUNNING = 0,
-    EXEC_STATE_STARTING,
-    EXEC_STATE_RUNNING,
-    EXEC_STATE_DONE,
-} ExecState;
-
 #ifdef USE_INTERPRETER
 #include "interpreter.h"
 #else
@@ -280,7 +273,8 @@ struct Vm {
     Blockdef** blockdefs;
     // TODO: Maybe remove end_blockdef from here
     size_t end_blockdef;
-    bool is_running;
+
+    Thread thread;
 
     BlockChain* exec_chain;
     size_t exec_ind;
@@ -326,11 +320,6 @@ extern char* search_list_search;
 extern int categories_scroll;
 extern int search_list_scroll;
 extern Vector2 search_list_pos;
-
-#ifdef RAM_OVERLOAD
-extern int* overload;
-extern pthread_t overload_thread;
-#endif
 
 extern SplitPreview split_preview;
 extern Tab* code_tabs;
@@ -465,10 +454,6 @@ bool block_exec_custom(Exec* exec, Block* block, int argc, FuncArg* argv, FuncAr
 
 // platform.c
 void scrap_set_env(const char* name, const char* value);
-
-#if defined(RAM_OVERLOAD) && defined(_WIN32)
-bool should_do_ram_overload(void);
-#endif
 
 #ifndef USE_INTERPRETER
 bool spawn_process(char* command, char* error, size_t error_len);

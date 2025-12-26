@@ -253,7 +253,7 @@ bool start_vm(void) {
 #else
 bool start_vm(CompilerMode mode) {
 #endif
-    if (vm.is_running) return false;
+    if (thread_is_running(&vm.thread)) return false;
 
     for (size_t i = 0; i < vector_size(code_tabs); i++) {
         if (find_panel(code_tabs[i].root_panel, PANEL_TERM)) {
@@ -278,9 +278,9 @@ bool start_vm(CompilerMode mode) {
 }
 
 static bool stop_vm(void) {
-    if (!vm.is_running) return false;
+    if (!thread_is_running(&vm.thread)) return false;
     TraceLog(LOG_INFO, "STOP");
-    exec_stop(&vm, &exec);
+    thread_stop(&vm.thread);
     render_surface_needs_redraw = true;
     return true;
 }
@@ -388,7 +388,7 @@ bool handle_block_dropdown_click(void) {
 }
 
 bool handle_file_button_click(void) {
-    if (vm.is_running) return true;
+    if (thread_is_running(&vm.thread)) return true;
     show_dropdown(LOCATION_FILE_MENU, file_menu_list, ARRLEN(file_menu_list), handle_file_menu_click);
     return true;
 }
@@ -413,7 +413,7 @@ bool handle_run_button_click(void) {
 }
 
 bool handle_build_button_click(void) {
-    if (vm.is_running) return true;
+    if (thread_is_running(&vm.thread)) return true;
     gui_window_show(GUI_TYPE_PROJECT_SETTINGS);
     return true;
 }
@@ -864,7 +864,7 @@ static bool handle_mouse_click(void) {
     if (!hover.panels.panel) return true;
     if (hover.is_panel_edit_mode) return handle_editor_panel_click();
     if (hover.panels.panel->type == PANEL_TERM) return true;
-    if (vm.is_running) return hover.panels.panel->type != PANEL_CODE;
+    if (thread_is_running(&vm.thread)) return hover.panels.panel->type != PANEL_CODE;
 
     if (hover.input_info.input) get_input_ind();
     if (hover.input_info.input != hover.select_input) hover.select_input = hover.input_info.input;
@@ -1114,7 +1114,7 @@ static void handle_key_press(void) {
         !hover.is_panel_edit_mode &&
         hover.panels.panel &&
         hover.panels.panel->type == PANEL_CODE &&
-        !vm.is_running &&
+        !thread_is_running(&vm.thread) &&
         !gui_window_is_shown() &&
         !hover.select_input)
     {
@@ -1130,7 +1130,7 @@ static void handle_key_press(void) {
 
     if (hover.panels.panel) {
         if (hover.panels.panel->type == PANEL_TERM) {
-            if (!vm.is_running) return;
+            if (!thread_is_running(&vm.thread)) return;
             if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_KP_ENTER)) {
                 term_input_put_char('\n');
                 term_print_str("\n");

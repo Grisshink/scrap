@@ -42,11 +42,7 @@ int leading_ones(unsigned char byte) {
 
 void term_init(MeasureTextSliceFunc measure_text, void* font, unsigned short font_size) {
     sem_init(&term.input_sem, 0, 0);
-    pthread_mutexattr_t attr;
-    pthread_mutexattr_init(&attr);
-    pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
-    pthread_mutex_init(&term.lock, &attr);
-    pthread_mutexattr_destroy(&attr);
+    term.lock = mutex_new();
     term.is_buffer_dirty = true;
     term.cursor_fg_color = TERM_WHITE;
     term.cursor_bg_color = TERM_BLACK;
@@ -69,61 +65,61 @@ void term_restart(void) {
 }
 
 void term_free(void) {
-    pthread_mutex_destroy(&term.lock);
+    mutex_free(&term.lock);
     sem_destroy(&term.input_sem);
 }
 
 void term_input_put_char(char ch) {
-    pthread_mutex_lock(&term.lock);
+    mutex_lock(&term.lock);
     term.input_buf[term.buf_end] = ch;
     term.buf_end = (term.buf_end + 1) % TERM_INPUT_BUF_SIZE;
-    pthread_mutex_unlock(&term.lock);
+    mutex_unlock(&term.lock);
     sem_post(&term.input_sem);
 }
 
 char term_input_get_char(void) {
     sem_wait(&term.input_sem);
-    pthread_mutex_lock(&term.lock);
+    mutex_lock(&term.lock);
     int out = term.input_buf[term.buf_start];
     term.buf_start = (term.buf_start + 1) % TERM_INPUT_BUF_SIZE;
-    pthread_mutex_unlock(&term.lock);
+    mutex_unlock(&term.lock);
     return out;
 }
 
 void term_scroll_down(void) {
-    pthread_mutex_lock(&term.lock);
+    mutex_lock(&term.lock);
     memmove(term.buffer, term.buffer + term.char_w, term.char_w * (term.char_h - 1) * sizeof(*term.buffer));
     for (int i = term.char_w * (term.char_h - 1); i < term.char_w * term.char_h; i++) {
         strncpy(term.buffer[i].ch, " ", ARRLEN(term.buffer[i].ch));
         term.buffer[i].fg_color = TERM_WHITE;
         term.buffer[i].bg_color = term.clear_color;
     }
-    pthread_mutex_unlock(&term.lock);
+    mutex_unlock(&term.lock);
 }
 
 void term_set_fg_color(TermColor color) {
-    pthread_mutex_lock(&term.lock);
+    mutex_lock(&term.lock);
     term.cursor_fg_color = color;
-    pthread_mutex_unlock(&term.lock);
+    mutex_unlock(&term.lock);
 }
 
 void term_set_bg_color(TermColor color) {
-    pthread_mutex_lock(&term.lock);
+    mutex_lock(&term.lock);
     term.cursor_bg_color = color;
-    pthread_mutex_unlock(&term.lock);
+    mutex_unlock(&term.lock);
 }
 
 void term_set_clear_color(TermColor color) {
-    pthread_mutex_lock(&term.lock);
+    mutex_lock(&term.lock);
     term.clear_color = color;
-    pthread_mutex_unlock(&term.lock);
+    mutex_unlock(&term.lock);
 }
 
 int term_print_str(const char* str) {
     int len = 0;
     assert(term.buffer != NULL);
 
-    pthread_mutex_lock(&term.lock);
+    mutex_lock(&term.lock);
     if (*str) term.is_buffer_dirty = true;
     while (*str) {
         if (term.cursor_pos >= term.char_w * term.char_h) {
@@ -163,7 +159,7 @@ int term_print_str(const char* str) {
         term.cursor_pos++;
         len++;
     }
-    pthread_mutex_unlock(&term.lock);
+    mutex_unlock(&term.lock);
 
     return len;
 }
@@ -185,18 +181,18 @@ int term_print_bool(bool value) {
 }
 
 void term_clear(void) {
-    pthread_mutex_lock(&term.lock);
+    mutex_lock(&term.lock);
     for (int i = 0; i < term.char_w * term.char_h; i++) {
         strncpy(term.buffer[i].ch, " ", ARRLEN(term.buffer[i].ch));
         term.buffer[i].fg_color = TERM_WHITE;
         term.buffer[i].bg_color = term.clear_color;
     }
     term.cursor_pos = 0;
-    pthread_mutex_unlock(&term.lock);
+    mutex_unlock(&term.lock);
 }
 
 void term_resize(float screen_w, float screen_h) {
-    pthread_mutex_lock(&term.lock);
+    mutex_lock(&term.lock);
     term.size = (TermVec) { screen_w, screen_h };
 
     term.char_size = term.measure_text(term.font, "A", 1, term.font_size);
@@ -241,5 +237,5 @@ void term_resize(float screen_w, float screen_h) {
             term_clear();
         }
     }
-    pthread_mutex_unlock(&term.lock);
+    mutex_unlock(&term.lock);
 }

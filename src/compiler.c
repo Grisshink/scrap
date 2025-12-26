@@ -39,10 +39,8 @@
 #endif
 
 #ifdef _WIN32
-#define THREAD_EXIT(exec) do { exec_thread_exit(exec); pthread_exit((void*)0); } while(0)
 #define TARGET_TRIPLE "x86_64-w64-windows-gnu"
 #else
-#define THREAD_EXIT(exec) pthread_exit((void*)0)
 #define TARGET_TRIPLE "x86_64-pc-linux-gnu"
 #endif
 
@@ -51,11 +49,10 @@ static bool run_program(Exec* exec);
 static bool build_program(Exec* exec);
 static void free_defined_functions(Exec* exec);
 
-Exec exec_new(CompilerMode mode) {
+Exec exec_new(Thread* thread, CompilerMode mode) {
     Exec exec = (Exec) {
         .code = NULL,
-        .thread = (pthread_t) {0},
-        .running_state = EXEC_STATE_NOT_RUNNING,
+        .thread = thread,
         .current_error_block = NULL,
         .current_mode = mode,
     };
@@ -67,8 +64,8 @@ void exec_free(Exec* exec) {
     (void) exec;
 }
 
-void exec_thread_exit(void* thread_exec) {
-    Exec* exec = thread_exec;
+void exec_cleanup(void* e) {
+    Exec* exec = e;
     
     switch (exec->current_state) {
     case STATE_NONE:
@@ -90,79 +87,26 @@ void exec_thread_exit(void* thread_exec) {
         LLVMDisposeExecutionEngine(exec->engine);
         break;
     }
-
-    exec->running_state = EXEC_STATE_DONE;
 }
 
-void* exec_thread_entry(void* thread_exec) {
-    Exec* exec = thread_exec;
-    exec->running_state = EXEC_STATE_RUNNING;
+bool exec_run(void* e) {
+    Exec* exec = e;
     exec->current_state = STATE_NONE;
-    pthread_cleanup_push(exec_thread_exit, thread_exec);
 
-    if (!compile_program(exec)) THREAD_EXIT(exec);
+    if (!compile_program(exec)) return false;
 
     if (exec->current_mode == COMPILER_MODE_JIT) {
-        if (!run_program(exec)) THREAD_EXIT(exec);
+        if (!run_program(exec)) return false;
     } else {
-        if (!build_program(exec)) THREAD_EXIT(exec);
+        if (!build_program(exec)) return false;
     }
 
-    pthread_cleanup_pop(1);
-    return (void*)1;
-}
-
-bool exec_start(Vm* vm, Exec* exec) {
-    if (vm->is_running) return false;
-    if (exec->running_state != EXEC_STATE_NOT_RUNNING) return false;
-
-    exec->running_state = EXEC_STATE_STARTING;
-    if (pthread_create(&exec->thread, NULL, exec_thread_entry, exec)) {
-        exec->running_state = EXEC_STATE_NOT_RUNNING;
-        return false;
-    }
-    vm->is_running = true;
-
     return true;
 }
 
-bool exec_stop(Vm* vm, Exec* exec) {
-    if (!vm->is_running) return false;
-    if (exec->running_state != EXEC_STATE_RUNNING) return false;
-    if (pthread_cancel(exec->thread)) return false;
-    return true;
-}
-
-void exec_copy_code(Vm* vm, Exec* exec, BlockChain* code) {
-    if (vm->is_running) return;
-    if (exec->running_state != EXEC_STATE_NOT_RUNNING) return;
-    exec->code = code;
-}
-
-bool exec_join(Vm* vm, Exec* exec, size_t* return_code) {
-    (void) exec;
-    if (!vm->is_running) return false;
-    if (exec->running_state == EXEC_STATE_NOT_RUNNING) return false;
-
-    void* return_val;
-    if (pthread_join(exec->thread, &return_val)) return false;
-    vm->is_running = false;
-    exec->running_state = EXEC_STATE_NOT_RUNNING;
-    *return_code = (size_t)return_val;
-    return true;
-}
-
-bool exec_try_join(Vm* vm, Exec* exec, size_t* return_code) {
-    (void) exec;
-    if (!vm->is_running) return false;
-    if (exec->running_state != EXEC_STATE_DONE) return false;
-
-    void* return_val;
-    if (pthread_join(exec->thread, &return_val)) return false;
-    vm->is_running = false;
-    exec->running_state = EXEC_STATE_NOT_RUNNING;
-    *return_code = (size_t)return_val;
-    return true;
+static void exec_handle_running_state(Exec* exec) {
+    if (exec->thread->state != THREAD_STATE_STOPPING) return;
+    longjmp(exec->run_jump_buf, 1);
 }
 
 void exec_set_error(Exec* exec, Block* block, const char* fmt, ...) {
@@ -265,7 +209,7 @@ static bool evaluate_block(Exec* exec, Block* block, FuncArg* return_val, Contro
 
         variable_stack_frame_push(exec);
     } else if (control_state == CONTROL_STATE_END) {
-        if (exec->current_mode == COMPILER_MODE_JIT) build_call(exec, "test_cancel");
+        if (exec->current_mode == COMPILER_MODE_JIT) build_call(exec, "test_cancel", CONST_EXEC);
         variable_stack_frame_pop(exec);
     }
 
@@ -704,7 +648,8 @@ static LLVMValueRef register_globals(Exec* exec) {
     LLVMTypeRef ceil_func_params[] = { LLVMDoubleType() };
     add_function(exec, "ceil", LLVMDoubleType(), ceil_func_params, ARRLEN(ceil_func_params), ceil, false, false);
 
-    add_function(exec, "test_cancel", LLVMVoidType(), NULL, 0, pthread_testcancel, false, false);
+    LLVMTypeRef test_cancel_func_params[] = { LLVMInt64Type() };
+    add_function(exec, "test_cancel", LLVMVoidType(), test_cancel_func_params, ARRLEN(test_cancel_func_params), exec_handle_running_state, false, false);
 
     LLVMTypeRef stack_save_func_type = LLVMFunctionType(LLVMPointerType(LLVMVoidType(), 0), NULL, 0, false);
     LLVMAddFunction(exec->module, "llvm.stacksave.p0", stack_save_func_type);
@@ -1017,9 +962,16 @@ static bool run_program(Exec* exec) {
     Gc* gc_ref = &exec->gc;
     LLVMAddGlobalMapping(exec->engine, LLVMGetNamedGlobal(exec->module, "gc"), &gc_ref);
 
-    exec->current_state = STATE_EXEC;
-    LLVMGenericValueRef val = LLVMRunFunction(exec->engine, LLVMGetNamedFunction(exec->module, "llvm_main"), 0, NULL);
-    LLVMDisposeGenericValue(val);
+    // For some weird reason calling pthread_exit() inside LLVM results in segfault, so we avoid that by using setjmp. 
+    // This unfortunately leaks a little bit of memory inside LLVMRunFunction() though :P
+    if (setjmp(exec->run_jump_buf)) {
+        thread_exit(exec->thread, false);
+    } else {
+        memcpy(exec->gc.run_jump_buf, exec->run_jump_buf, sizeof(exec->gc.run_jump_buf));
+        exec->current_state = STATE_EXEC;
+        LLVMGenericValueRef val = LLVMRunFunction(exec->engine, LLVMGetNamedFunction(exec->module, "llvm_main"), 0, NULL);
+        LLVMDisposeGenericValue(val);
+    }
 
     return true;
 }

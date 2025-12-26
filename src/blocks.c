@@ -480,10 +480,10 @@ bool block_cursor_x(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue
     (void) argv;
     (void) argc;
 
-    pthread_mutex_lock(&term.lock);
+    mutex_lock(&term.lock);
     int cur_x = 0;
     if (term.char_w != 0) cur_x = term.cursor_pos % term.char_w;
-    pthread_mutex_unlock(&term.lock);
+    mutex_unlock(&term.lock);
     *return_val = DATA_INTEGER(cur_x);
     return true;
 }
@@ -495,10 +495,10 @@ bool block_cursor_y(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue
     (void) argv;
     (void) argc;
 
-    pthread_mutex_lock(&term.lock);
+    mutex_lock(&term.lock);
     int cur_y = 0;
     if (term.char_w != 0) cur_y = term.cursor_pos / term.char_w;
-    pthread_mutex_unlock(&term.lock);
+    mutex_unlock(&term.lock);
 
     *return_val = DATA_INTEGER(cur_y);
     return true;
@@ -511,9 +511,9 @@ bool block_cursor_max_x(Exec* exec, Block* block, int argc, AnyValue* argv, AnyV
     (void) argv;
     (void) argc;
 
-    pthread_mutex_lock(&term.lock);
+    mutex_lock(&term.lock);
     int cur_max_x = term.char_w;
-    pthread_mutex_unlock(&term.lock);
+    mutex_unlock(&term.lock);
 
     *return_val = DATA_INTEGER(cur_max_x);
     return true;
@@ -526,9 +526,9 @@ bool block_cursor_max_y(Exec* exec, Block* block, int argc, AnyValue* argv, AnyV
     (void) argv;
     (void) argc;
 
-    pthread_mutex_lock(&term.lock);
+    mutex_lock(&term.lock);
     int cur_max_y = term.char_h;
-    pthread_mutex_unlock(&term.lock);
+    mutex_unlock(&term.lock);
 
     *return_val = DATA_INTEGER(cur_max_y);
     return true;
@@ -540,11 +540,11 @@ bool block_set_cursor(Exec* exec, Block* block, int argc, AnyValue* argv, AnyVal
     (void) exec;
     (void) argc;
 
-    pthread_mutex_lock(&term.lock);
+    mutex_lock(&term.lock);
     int x = CLAMP(data_to_integer(argv[0]), 0, term.char_w - 1);
     int y = CLAMP(data_to_integer(argv[1]), 0, term.char_h - 1);
     term.cursor_pos = x + y * term.char_w;
-    pthread_mutex_unlock(&term.lock);
+    mutex_unlock(&term.lock);
 
     *return_val = DATA_NOTHING;
     return true;

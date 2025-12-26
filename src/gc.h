@@ -22,6 +22,9 @@
 #define SCRAP_GC_H
 
 #include <stddef.h>
+#ifndef STANDALONE_STD
+#include <setjmp.h>
+#endif
 
 #include "ast.h"
 #include "vec.h"
@@ -53,6 +56,9 @@ typedef struct {
     size_t memory_used;
     size_t memory_allocated;
     size_t memory_max;
+#ifndef STANDALONE_STD
+    jmp_buf run_jump_buf;
+#endif
 } Gc;
 
 Gc gc_new(size_t memory_min, size_t memory_max);
