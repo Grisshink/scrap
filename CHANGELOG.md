@@ -8,6 +8,7 @@
 ## Fixes
 - Fixed search menu spawning incomplete control blocks
 - Fixed text inputs being editable in block palette
+- Projects built with LLVM now switch to UTF-8 code page on windows. This fixes garbled output when printing characters outside ASCII range
 
 # v0.5-beta *(20-12-2025)*
 
