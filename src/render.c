@@ -60,6 +60,8 @@ static void draw_dots(void) {
     }
 
     if (shader_time == 1.0) return;
+    if (!IsShaderValid(line_shader)) return;
+
     BeginShaderMode(line_shader);
     for (int y = MOD(-(int)camera_pos.y, conf.font_size * 2); y < win_height; y += conf.font_size * 2) {
         DrawRectangle(0, y, win_width, 2, (Color) { 0x40, 0x40, 0x40, 0xff });
@@ -78,9 +80,12 @@ static void draw_term(int x, int y) {
 
     Rectangle final_pos = { x, y, term.size.x, term.size.y };
     DrawRectangleRec(final_pos, BLACK);
-    BeginShaderMode(line_shader);
-    DrawRectangleLinesEx(final_pos, 2.0, (Color) { 0x60, 0x60, 0x60, 0xff });
-    EndShaderMode();
+
+    if (IsShaderValid(line_shader)) {
+        BeginShaderMode(line_shader);
+        DrawRectangleLinesEx(final_pos, 2.0, (Color) { 0x60, 0x60, 0x60, 0xff });
+        EndShaderMode();
+    }
 
     Vector2 pos = (Vector2) { final_pos.x, final_pos.y };
     for (int y = 0; y < term.char_h; y++) {

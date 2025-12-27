@@ -240,10 +240,12 @@ static void end_window(void) {
 
         gui_element_begin(gui);
             gui_set_floating(gui);
-            gui_set_border(gui, (GuiColor) { 0x60, 0x60, 0x60, 0xff }, 2);
+            if (IsShaderValid(line_shader)) {
+                gui_set_border(gui, (GuiColor) { 0x60, 0x60, 0x60, 0xff }, 2);
+                gui_set_shader(gui, &line_shader);
+            }
             gui_set_position(gui, 0, 0);
             gui_set_fixed(gui, el->w, el->h);
-            gui_set_shader(gui, &line_shader);
         gui_element_end(gui);
 
         gui_element_begin(gui);
@@ -338,8 +340,10 @@ static void draw_slider(int min, int max, int* value) {
             gui_set_grow(gui, DIRECTION_VERTICAL);
             gui_set_direction(gui, DIRECTION_HORIZONTAL);
             gui_set_align(gui, ALIGN_CENTER);
-            gui_set_border(gui, (GuiColor) { 0x60, 0x60, 0x60, 0xff }, 2);
-            gui_set_shader(gui, &line_shader);
+            if (IsShaderValid(line_shader)) {
+                gui_set_border(gui, (GuiColor) { 0x60, 0x60, 0x60, 0xff }, 2);
+                gui_set_shader(gui, &line_shader);
+            }
 
             snprintf(state->value_str, 16, "%d", *state->value);
 
@@ -414,8 +418,10 @@ static void draw_dropdown_input(int* value, char** list, int list_len) {
             gui_set_grow(gui, DIRECTION_VERTICAL);
             gui_set_direction(gui, DIRECTION_HORIZONTAL);
             gui_set_align(gui, ALIGN_CENTER);
-            gui_set_border(gui, (GuiColor) { 0x60, 0x60, 0x60, 0xff }, 2);
-            gui_set_shader(gui, &line_shader);
+            if (IsShaderValid(line_shader)) {
+                gui_set_border(gui, (GuiColor) { 0x60, 0x60, 0x60, 0xff }, 2);
+                gui_set_shader(gui, &line_shader);
+            }
             gui_set_padding(gui, WINDOW_ELEMENT_PADDING, 0);
             gui_set_scissor(gui);
 
@@ -443,8 +449,10 @@ static void draw_text_input(char** input, const char* hint, int* scroll, bool ed
             gui_set_grow(gui, DIRECTION_VERTICAL);
             gui_set_direction(gui, DIRECTION_HORIZONTAL);
             gui_set_align(gui, ALIGN_CENTER);
-            gui_set_border(gui, (GuiColor) { 0x60, 0x60, 0x60, 0xff }, 2);
-            gui_set_shader(gui, &line_shader);
+            if (IsShaderValid(line_shader)) {
+                gui_set_border(gui, (GuiColor) { 0x60, 0x60, 0x60, 0xff }, 2);
+                gui_set_shader(gui, &line_shader);
+            }
             gui_set_padding(gui, WINDOW_ELEMENT_PADDING, 0);
             gui_set_scroll(gui, scroll);
             gui_set_scissor(gui);
@@ -467,10 +475,12 @@ static void draw_button(const char* label, ButtonClickHandler handler) {
             gui_set_grow(gui, DIRECTION_HORIZONTAL);
             gui_set_grow(gui, DIRECTION_VERTICAL);
             gui_set_padding(gui, WINDOW_ELEMENT_PADDING, 0);
-            gui_set_border(gui, (GuiColor) { 0x60, 0x60, 0x60, 0xff }, 2);
             gui_set_direction(gui, DIRECTION_HORIZONTAL);
             gui_set_align(gui, ALIGN_CENTER);
-            gui_set_shader(gui, &line_shader);
+            if (IsShaderValid(line_shader)) {
+                gui_set_border(gui, (GuiColor) { 0x60, 0x60, 0x60, 0xff }, 2);
+                gui_set_shader(gui, &line_shader);
+            }
 
             gui_text(gui, &font_cond, label, conf.font_size * 0.6, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
         gui_element_end(gui);
