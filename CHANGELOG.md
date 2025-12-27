@@ -1,4 +1,4 @@
-# v0.5.1-beta *(Upcoming)*
+# v0.5.1-beta *(27-12-2025)*
 
 ## What's new?
 - Updated Raylib version to latest commit (fc843dc557 as of time writing)
