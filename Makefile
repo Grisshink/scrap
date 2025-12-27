@@ -102,7 +102,7 @@ mkbuild:
 
 clean:
 	$(MAKE) -C raylib/src clean
-	rm -f scrap.res $(EXE_NAME) $(EXE_NAME).exe $(STD_NAME)
+	rm -f scrap.res $(EXE_NAME) $(EXE_NAME).exe libscrapstd.a libscrapstd-win.a
 	rm -rf locale $(BUILD_FOLDER)
 
 translations:
