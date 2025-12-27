@@ -105,21 +105,23 @@ struct Exec {
     Gc gc;
 };
 
-#define control_stack_push_data(data, type) \
+#define control_stack_push_data(data, type) do { \
     if (exec->control_stack_len + sizeof(type) > VM_CONTROL_STACK_SIZE) { \
         TraceLog(LOG_ERROR, "[VM] Control stack overflow"); \
         thread_exit(exec->thread, false); \
     } \
     *(type *)(exec->control_stack + exec->control_stack_len) = (data); \
-    exec->control_stack_len += sizeof(type);
+    exec->control_stack_len += sizeof(type); \
+} while (0)
 
-#define control_stack_pop_data(data, type) \
+#define control_stack_pop_data(data, type) do { \
     if (sizeof(type) > exec->control_stack_len) { \
         TraceLog(LOG_ERROR, "[VM] Control stack underflow"); \
         thread_exit(exec->thread, false); \
     } \
     exec->control_stack_len -= sizeof(type); \
-    data = *(type*)(exec->control_stack + exec->control_stack_len);
+    data = *(type*)(exec->control_stack + exec->control_stack_len); \
+} while (0)
 
 #define DATA_NOTHING (AnyValue) { \
     .type = DATA_TYPE_NOTHING, \

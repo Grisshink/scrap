@@ -111,10 +111,10 @@ bool block_loop(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* re
     (void) argv;
 
     if (control_state == CONTROL_STATE_BEGIN) {
-        control_stack_push_data(exec->chain_stack[exec->chain_stack_len - 1].running_ind, size_t)
+        control_stack_push_data(exec->chain_stack[exec->chain_stack_len - 1].running_ind, size_t);
     } else if (control_state == CONTROL_STATE_END) {
-        control_stack_pop_data(exec->chain_stack[exec->chain_stack_len - 1].running_ind, size_t)
-        control_stack_push_data(exec->chain_stack[exec->chain_stack_len - 1].running_ind, size_t)
+        control_stack_pop_data(exec->chain_stack[exec->chain_stack_len - 1].running_ind, size_t);
+        control_stack_push_data(exec->chain_stack[exec->chain_stack_len - 1].running_ind, size_t);
     }
 
     *return_val = DATA_BOOL(1);
@@ -127,14 +127,14 @@ bool block_if(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* retu
     if (control_state == CONTROL_STATE_BEGIN) {
         if (argc < 1 || !data_to_bool(argv[0])) {
             exec_set_skip_block(exec);
-            control_stack_push_data((int)0, int)
+            control_stack_push_data((int)0, int);
         } else {
-            control_stack_push_data((int)1, int)
+            control_stack_push_data((int)1, int);
         }
         *return_val = DATA_NOTHING;
     } else if (control_state == CONTROL_STATE_END) {
         int is_success = 0;
-        control_stack_pop_data(is_success, int)
+        control_stack_pop_data(is_success, int);
         *return_val = DATA_BOOL(is_success);
     } else {
         exec_set_error(exec, block, "Invalid control state");
@@ -150,16 +150,16 @@ bool block_else_if(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue*
     if (control_state == CONTROL_STATE_BEGIN) {
         if (argc < 2 || data_to_bool(argv[0])) {
             exec_set_skip_block(exec);
-            control_stack_push_data((int)1, int)
+            control_stack_push_data((int)1, int);
         } else {
             int condition = data_to_bool(argv[1]);
             if (!condition) exec_set_skip_block(exec);
-            control_stack_push_data(condition, int)
+            control_stack_push_data(condition, int);
         }
         *return_val = DATA_NOTHING;
     } else if (control_state == CONTROL_STATE_END) {
         int is_success = 0;
-        control_stack_pop_data(is_success, int)
+        control_stack_pop_data(is_success, int);
         *return_val = DATA_BOOL(is_success);
     } else {
         exec_set_error(exec, block, "Invalid control state");
@@ -200,35 +200,35 @@ bool block_repeat(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* 
         int cycles = argc < 1 ? 0 : data_to_integer(argv[0]);
         if (cycles <= 0) {
             exec_set_skip_block(exec);
-            control_stack_push_data((int)0, int) // This indicates the end block that it should NOT loop
+            control_stack_push_data((int)0, int); // This indicates the end block that it should NOT loop
             *return_val = DATA_NOTHING;
             return true;
         }
-        control_stack_push_data(exec->chain_stack[exec->chain_stack_len - 1].running_ind, size_t)
-        control_stack_push_data(cycles - 1, int)
-        control_stack_push_data((int)1, int) // This indicates the end block that it should loop
+        control_stack_push_data(exec->chain_stack[exec->chain_stack_len - 1].running_ind, size_t);
+        control_stack_push_data(cycles - 1, int);
+        control_stack_push_data((int)1, int); // This indicates the end block that it should loop
     } else if (control_state == CONTROL_STATE_END) {
         int should_loop = 0;
-        control_stack_pop_data(should_loop, int)
+        control_stack_pop_data(should_loop, int);
         if (!should_loop) {
             *return_val = DATA_BOOL(0);
             return true;
         }
 
         int left = -1;
-        control_stack_pop_data(left, int)
+        control_stack_pop_data(left, int);
         if (left <= 0) {
             size_t bin;
-            control_stack_pop_data(bin, size_t)
+            control_stack_pop_data(bin, size_t);
             (void) bin; // Cleanup stack
             *return_val = DATA_BOOL(1);
             return true;
         }
 
-        control_stack_pop_data(exec->chain_stack[exec->chain_stack_len - 1].running_ind, size_t)
-        control_stack_push_data(exec->chain_stack[exec->chain_stack_len - 1].running_ind, size_t)
-        control_stack_push_data(left - 1, int)
-        control_stack_push_data((int)1, int)
+        control_stack_pop_data(exec->chain_stack[exec->chain_stack_len - 1].running_ind, size_t);
+        control_stack_push_data(exec->chain_stack[exec->chain_stack_len - 1].running_ind, size_t);
+        control_stack_push_data(left - 1, int);
+        control_stack_push_data((int)1, int);
     } else {
         exec_set_error(exec, block, "Invalid control state");
         return false;
@@ -243,21 +243,21 @@ bool block_while(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* r
         if (argc < 1 || !data_to_bool(argv[0])) {
             exec_set_skip_block(exec);
         }
-        control_stack_push_data(exec->chain_stack[exec->chain_stack_len - 1].running_ind, size_t)
+        control_stack_push_data(exec->chain_stack[exec->chain_stack_len - 1].running_ind, size_t);
     } else if (control_state == CONTROL_STATE_END) {
         AnyValue out_val;
         if (!evaluate_argument(exec, &block->arguments[0], &out_val)) return false;
 
         if (vector_size(block->arguments) < 1 || !data_to_bool(out_val)) {
             size_t bin;
-            control_stack_pop_data(bin, size_t)
+            control_stack_pop_data(bin, size_t);
             (void) bin;
             *return_val = DATA_BOOL(1);
             return true;
         }
 
-        control_stack_pop_data(exec->chain_stack[exec->chain_stack_len - 1].running_ind, size_t)
-        control_stack_push_data(exec->chain_stack[exec->chain_stack_len - 1].running_ind, size_t)
+        control_stack_pop_data(exec->chain_stack[exec->chain_stack_len - 1].running_ind, size_t);
+        control_stack_push_data(exec->chain_stack[exec->chain_stack_len - 1].running_ind, size_t);
     } else {
         exec_set_error(exec, block, "Invalid control state");
         return false;
