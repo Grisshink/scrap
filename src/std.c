@@ -861,7 +861,7 @@ StringHeader* std_term_get_input(Gc* gc) {
 
 int std_term_print_list(List* list) {
     char converted[32];
-    snprintf(converted, 32, "*LIST (%zu)*", list->size);
+    snprintf(converted, 32, "*LIST (%lu)*", list->size);
     return term_print_str(converted);
 }
 

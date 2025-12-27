@@ -785,10 +785,8 @@ static bool file_exists(char* path) {
     return S_ISREG(s.st_mode);
 }
 
+#ifndef _WIN32
 static char* find_path_glob(char* search_path, int file_len) {
-#ifdef _WIN32
-	return NULL;
-#else
 	glob_t glob_buf;
 	if (glob(search_path, 0, NULL, &glob_buf)) return NULL;
 
@@ -801,7 +799,6 @@ static char* find_path_glob(char* search_path, int file_len) {
     vector_append(&out, path);
     globfree(&glob_buf);
     return out;
-#endif
 }
 
 static char* find_crt(void) {
@@ -827,6 +824,7 @@ static char* find_crt_begin(void) {
     if (out) return out;
     return find_path_glob("/usr/lib64/gcc/x86_64*linux*/*/crtbegin.o", sizeof("crtbegin.o") - 1);
 }
+#endif
 
 static bool build_program(Exec* exec) {
     exec->current_state = STATE_PRE_EXEC;

@@ -45,6 +45,8 @@ void scrap_set_env(const char* name, const char* value) {
 }
 
 #ifndef USE_INTERPRETER
+
+#ifndef _WIN32
 static size_t next_arg(char* cmd, size_t i, char** out_arg) {
     *out_arg = NULL;
 
@@ -67,6 +69,7 @@ static size_t next_arg(char* cmd, size_t i, char** out_arg) {
         return i + 1;
     }
 }
+#endif
 
 bool spawn_process(char* command, char* error, size_t error_len) {
 #ifdef _WIN32
@@ -113,7 +116,7 @@ bool spawn_process(char* command, char* error, size_t error_len) {
 
     CloseHandle(write_pipe);
 
-    long size = 0;
+    unsigned long size = 0;
     char buf[1024];
 
     for (;;) {
@@ -132,7 +135,7 @@ bool spawn_process(char* command, char* error, size_t error_len) {
 
     WaitForSingleObject(proc_info.hProcess, INFINITE);
 
-    long exit_code;
+    unsigned long exit_code;
     if (!GetExitCodeProcess(proc_info.hProcess, &exit_code)) {
         snprintf(error, error_len, gettext("Failed to get exit code. Error code: %ld"), GetLastError());
         CloseHandle(proc_info.hProcess);
