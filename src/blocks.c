@@ -1,6 +1,6 @@
 // Scrap is a project that allows anyone to build software using simple, block based interface.
 //
-// Copyright (C) 2024-2025 Grisshink
+// Copyright (C) 2024-202 Grisshink
 // 
 // This software is provided 'as-is', without any express or implied
 // warranty.  In no event will the authors be held liable for any damages
