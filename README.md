@@ -51,9 +51,6 @@ its forks such as [Turbowarp](https://turbowarp.org).
 ### Dependencies
 
 Scrap requires these dependencies to run:
-- [Raylib](https://github.com/raysan5/raylib) *(Built in)* (Patched to support SVGs) (Needs additional dependencies to build)
-- [tinyfiledialogs](https://sourceforge.net/projects/tinyfiledialogs/) *(Built in)*
-- [cfgpath](https://github.com/Malvineous/cfgpath) *(Built in)* (Heavily modified to workaround `windows.h` conflicts)
 - [gettext](https://www.gnu.org/software/gettext/)
 - [LLVM](https://llvm.org/) *(Only required if building with `USE_COMPILER=TRUE` flag)*
 
