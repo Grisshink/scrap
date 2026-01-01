@@ -904,7 +904,7 @@ static bool build_program(Exec* exec) {
     if (crt_begin_dir) vector_append(&command, TextFormat("%scrtbeginS.o %scrtendS.o ", crt_begin_dir, crt_begin_dir));
 
     vector_append(&command, "output.o ");
-    vector_append(&command, TextFormat("-L. -L%s -lscrapstd -L/usr/lib -L/lib -lm -lc", GetApplicationDirectory()));
+    vector_append(&command, TextFormat("-L. -L%s -lscrapstd -L/usr/lib -L/lib -L/usr/local/lib -lm -lc", GetApplicationDirectory()));
 
     TraceLog(LOG_INFO, "Full command: \"%s\"", command);
 #endif

@@ -29,6 +29,7 @@
 #include <locale.h>
 #include <assert.h>
 #include <string.h>
+#include <stdio.h>
 
 // Global Variables
 
@@ -131,8 +132,63 @@ char* tab_bar_buttons_text[2] = {
     "Output",
 };
 
-const char* into_data_path(const char* path) {
-    return TextFormat("%s%s", GetApplicationDirectory(), path);
+#define SHARED_DIR_BUF_LEN 512
+#define LOCALE_DIR_BUF_LEN 768
+
+const char* get_shared_dir_path(void) {
+    static char out_path[SHARED_DIR_BUF_LEN] = {0};
+    if (*out_path) return out_path;
+
+#ifndef _WIN32
+    snprintf(out_path, SHARED_DIR_BUF_LEN, "%sdata", GetApplicationDirectory());
+    if (DirectoryExists(out_path)) {
+		snprintf(out_path, SHARED_DIR_BUF_LEN, "%s", GetApplicationDirectory());
+		goto end;
+	}
+
+    snprintf(out_path, SHARED_DIR_BUF_LEN, "%s../share/scrap/", GetApplicationDirectory());
+    if (DirectoryExists(out_path)) goto end;
+
+    snprintf(out_path, SHARED_DIR_BUF_LEN, "/usr/share/scrap/");
+    if (DirectoryExists(out_path)) goto end;
+
+    snprintf(out_path, SHARED_DIR_BUF_LEN, "/usr/local/share/scrap/");
+    if (DirectoryExists(out_path)) goto end;
+#endif
+
+    snprintf(out_path, SHARED_DIR_BUF_LEN, "%s", GetApplicationDirectory());
+
+end:
+    TraceLog(LOG_INFO, "Using \"%s\" as shared directory path", out_path);
+    return out_path;
+}
+
+const char* get_locale_path(void) {
+    static char out_path[LOCALE_DIR_BUF_LEN] = {0};
+    if (*out_path) return out_path;
+
+#ifndef _WIN32
+    snprintf(out_path, LOCALE_DIR_BUF_LEN, "%slocale", GetApplicationDirectory());
+    if (DirectoryExists(out_path)) {
+		snprintf(out_path, LOCALE_DIR_BUF_LEN, "%s", GetApplicationDirectory());
+		goto end;
+	}
+#endif
+
+	const char* shared_path = get_shared_dir_path();
+	if (!strcmp(shared_path, GetApplicationDirectory())) {
+		snprintf(out_path, LOCALE_DIR_BUF_LEN, "%slocale", shared_path);
+	} else {
+		snprintf(out_path, LOCALE_DIR_BUF_LEN, "%s../locale", shared_path);
+	}
+
+end:
+    TraceLog(LOG_INFO, "Using \"%s\" as locale directory path", out_path);
+    return out_path;
+}
+
+const char* into_shared_dir_path(const char* path) {
+    return TextFormat("%s%s", get_shared_dir_path(), path);
 }
 
 // Recursively checks nested blocks for correct structure and connection with the parent block
@@ -164,7 +220,7 @@ void sanitize_links(void) {
 
 // Returns the absolute path to the font, converting the relative path to a path inside the data directory
 const char* get_font_path(char* font_path) {
-    return font_path[0] != '/' && font_path[1] != ':' ? into_data_path(font_path) : font_path;
+    return font_path[0] != '/' && font_path[1] != ':' ? into_shared_dir_path(font_path) : font_path;
 }
 
 GuiMeasurement scrap_gui_measure_image(void* image, unsigned short size) {
@@ -419,11 +475,11 @@ Image setup(void) {
     render_surface = LoadRenderTexture(GetScreenWidth(), GetScreenHeight());
     SetTextureWrap(render_surface.texture, TEXTURE_WRAP_MIRROR_REPEAT);
 
-    textures.dropdown = LoadTexture(into_data_path(DATA_PATH "drop.png"));
+    textures.dropdown = LoadTexture(into_shared_dir_path(DATA_PATH "drop.png"));
     SetTextureFilter(textures.dropdown, TEXTURE_FILTER_BILINEAR);
 
     Image window_icon;
-    svg_load(into_data_path(DATA_PATH "logo.svg"), conf.font_size, conf.font_size, &window_icon);
+    svg_load(into_shared_dir_path(DATA_PATH "logo.svg"), conf.font_size, conf.font_size, &window_icon);
     textures.icon_logo = LoadTextureFromImage(window_icon);
     SetTextureFilter(textures.icon_logo, TEXTURE_FILTER_BILINEAR);
 
@@ -449,7 +505,7 @@ Image setup(void) {
 
     for (int i = 0; image_load_paths[i]; i += 2) {
         Image svg_img;
-        if (!svg_load(TextFormat("%s" DATA_PATH "%s", GetApplicationDirectory(), image_load_paths[i + 1]), conf.font_size, conf.font_size, &svg_img)) {
+        if (!svg_load(TextFormat("%s" DATA_PATH "%s", get_shared_dir_path(), image_load_paths[i + 1]), conf.font_size, conf.font_size, &svg_img)) {
             continue;
         }
 
@@ -532,7 +588,7 @@ int main(void) {
     }
     setlocale(LC_MESSAGES, "");
     textdomain("scrap");
-    bindtextdomain("scrap", into_data_path(LOCALE_PATH));
+    bindtextdomain("scrap", get_locale_path());
 #ifdef _WIN32
     bind_textdomain_codeset("scrap", "UTF-8");
 #endif

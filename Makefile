@@ -5,11 +5,11 @@ TARGET ?= LINUX
 BUILD_MODE ?= RELEASE
 USE_COMPILER ?= FALSE
 BUILD_FOLDER := build/
+PREFIX ?= /usr/local
 
 ifeq ($(USE_COMPILER), TRUE)
 	SCRAP_VERSION := $(SCRAP_VERSION)-llvm
 endif
-
 
 CFLAGS := -Wall -Wextra -std=c11 -D_GNU_SOURCE -DSCRAP_VERSION=\"$(SCRAP_VERSION)\" -I./raylib/src
 
@@ -137,6 +137,23 @@ appimage: translations target std
 	cp $(EXE_NAME) $(BUILD_FOLDER)scrap.AppDir/AppRun
 	cp -r data locale scrap.desktop $(STD_NAME) extras/scrap.png $(BUILD_FOLDER)scrap.AppDir
 	./appimagetool-x86_64.AppImage --appimage-extract-and-run $(BUILD_FOLDER)scrap.AppDir $(BUILD_FOLDER)/Scrap-v$(SCRAP_VERSION).AppImage
+
+install: translations target std
+	mkdir -p $(PREFIX)/share/scrap
+	mkdir -p $(PREFIX)/share/doc/scrap
+	mkdir -p $(PREFIX)/bin
+	mkdir -p $(PREFIX)/lib
+	cp -r data $(PREFIX)/share/scrap
+	cp -r locale $(PREFIX)/share
+	cp -r examples $(PREFIX)/share/doc/scrap
+	cp $(EXE_NAME) $(PREFIX)/bin
+	cp $(STD_NAME) $(PREFIX)/lib
+
+uninstall:
+	rm -rf $(PREFIX)/share/scrap
+	rm -rf $(PREFIX)/share/doc/scrap
+	rm -f $(PREFIX)/bin/$(EXE_NAME)
+	rm -f $(PREFIX)/lib/$(STD_NAME)
 
 ifeq ($(TARGET), WINDOWS)
 target: mkbuild $(EXE_NAME).exe
