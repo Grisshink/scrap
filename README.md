@@ -46,6 +46,24 @@ its forks such as [Turbowarp](https://turbowarp.org).
 ![Screenshot2](/extras/scrap_screenshot2.png)
 ![Screenshot3](/extras/scrap_screenshot3.png)
 
+## Binary Installation
+
+### Github releases
+
+See [Releases](https://github.com/Grisshink/scrap/releases) page for all available download options for 
+Windows, Linux as well as their respective LLVM builds
+
+### AUR
+
+Scrap is now available for download from Arch User Repository (AUR) as [scrap-git](https://aur.archlinux.org/packages/scrap-git) package.
+This package will download and build latest Scrap commit from git (LLVM PKGBUILDs are coming soon)
+
+To install Scrap from AUR you can use your preferred AUR helper, for example with `yay`:
+
+```bash
+yay -S scrap-git
+```
+
 ## Building
 
 ### Dependencies
