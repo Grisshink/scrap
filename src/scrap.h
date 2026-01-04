@@ -353,7 +353,6 @@ extern const int codepoint_regions[CODEPOINT_REGION_COUNT][2];
 extern int codepoint_start_ranges[CODEPOINT_REGION_COUNT];
 
 // scrap.c
-void sanitize_links(void);
 GuiMeasurement measure_slice(Font font, const char *text, unsigned int text_size, float font_size);
 int search_glyph(int codepoint);
 void panel_split(PanelTree* panel, SplitSide side, PanelType new_panel_type, float split_percent);

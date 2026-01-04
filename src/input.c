@@ -43,6 +43,31 @@ char* file_menu_list[] = {
     "Load project",
 };
 
+static void sanitize_block(Block* block) {
+    for (vec_size_t i = 0; i < vector_size(block->arguments); i++) {
+        if (block->arguments[i].type != ARGUMENT_BLOCK) continue;
+        if (block->arguments[i].data.block.parent != block) {
+            TraceLog(LOG_ERROR, "Block %p detached from parent %p! (Got %p)", &block->arguments[i].data.block, block, block->arguments[i].data.block.parent);
+            assert(false);
+            return;
+        }
+        sanitize_block(&block->arguments[i].data.block);
+    }
+}
+
+static void sanitize_links(void) {
+    for (vec_size_t i = 0; i < vector_size(editor_code); i++) {
+        Block* blocks = editor_code[i].blocks;
+        for (vec_size_t j = 0; j < vector_size(blocks); j++) {
+            sanitize_block(&blocks[j]);
+        }
+    }
+
+    for (vec_size_t i = 0; i < vector_size(mouse_blockchain.blocks); i++) {
+        sanitize_block(&mouse_blockchain.blocks[i]);
+    }
+}
+
 Block block_new_ms(Blockdef* blockdef) {
     Block block = block_new(blockdef);
     for (size_t i = 0; i < vector_size(block.arguments); i++) {
