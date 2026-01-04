@@ -169,10 +169,7 @@ const char* get_locale_path(void) {
 
 #ifndef _WIN32
     snprintf(out_path, LOCALE_DIR_BUF_LEN, "%slocale", GetApplicationDirectory());
-    if (DirectoryExists(out_path)) {
-		snprintf(out_path, LOCALE_DIR_BUF_LEN, "%s", GetApplicationDirectory());
-		goto end;
-	}
+    if (DirectoryExists(out_path)) goto end;
 #endif
 
 	const char* shared_path = get_shared_dir_path();
