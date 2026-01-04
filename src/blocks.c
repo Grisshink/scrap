@@ -3001,12 +3001,43 @@ bool block_on_start(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* 
 
 #endif // USE_INTERPRETER
 
-BlockCategory* find_category(const char* name) {
-    if (!palette.categories) return NULL;
-    for (size_t i = 0; i < vector_size(palette.categories); i++) {
-        if (!strcmp(palette.categories[i].name, name)) return &palette.categories[i];
+BlockCategory block_category_new(const char* name, Color color) {
+    return (BlockCategory) {
+        .name = name,
+        .color = color,
+        .chains = vector_create(),
+        .next = NULL,
+        .prev = NULL,
+    };
+}
+
+BlockCategory* block_category_register(BlockCategory category) {
+    BlockCategory* cat = malloc(sizeof(category));
+    assert(cat != NULL);
+    *cat = category;
+    if (!palette.categories_end) {
+        palette.categories_end   = cat;
+        palette.categories_start = cat;
+        palette.current_category = palette.categories_start;
+        return cat;
     }
-    return NULL;
+    palette.categories_end->next = cat;
+    cat->prev = palette.categories_end;
+    palette.categories_end = cat;
+    return cat;
+}
+
+void block_category_unregister(BlockCategory* category) {
+    for (size_t i = 0; i < vector_size(category->chains); i++) blockchain_free(&category->chains[i]);
+    vector_free(category->chains);
+    if (category->next) category->next->prev = NULL;
+    if (category->prev) category->prev->next = NULL;
+
+    if (palette.categories_start == category) palette.categories_start = category->next;
+    if (palette.categories_end == category) palette.categories_end = category->prev;
+    if (palette.current_category == category) palette.current_category = palette.categories_start;
+
+    free(category);
 }
 
 void add_to_category(Blockdef* blockdef, BlockCategory* category) {
@@ -3019,39 +3050,35 @@ void add_to_category(Blockdef* blockdef, BlockCategory* category) {
     vector_add(&category->chains, chain);
 }
 
-void register_categories(void) {
-    if (!palette.categories) palette.categories = vector_create();
-    vector_add(&palette.categories, block_category_new(gettext("Control"),  (Color) CATEGORY_CONTROL_COLOR));
-    vector_add(&palette.categories, block_category_new(gettext("Terminal"), (Color) CATEGORY_TERMINAL_COLOR));
-    vector_add(&palette.categories, block_category_new(gettext("Math"),     (Color) CATEGORY_MATH_COLOR));
-    vector_add(&palette.categories, block_category_new(gettext("Logic"),    (Color) CATEGORY_LOGIC_COLOR));
-    vector_add(&palette.categories, block_category_new(gettext("Strings"),  (Color) CATEGORY_STRING_COLOR));
-    vector_add(&palette.categories, block_category_new(gettext("Misc."),    (Color) CATEGORY_MISC_COLOR));
-    vector_add(&palette.categories, block_category_new(gettext("Data"),     (Color) CATEGORY_DATA_COLOR));
-}
-
 void unregister_categories(void) {
-    if (!palette.categories) return;
-    for (size_t i = 0; i < vector_size(palette.categories); i++) block_category_free(&palette.categories[i]);
-    vector_free(palette.categories);
+    if (!palette.categories_start) return;
+    BlockCategory* cat = palette.categories_start;
+    while (cat) {
+        BlockCategory* next = cat->next;
+        block_category_unregister(cat);
+        cat = next;
+    }
+    palette.categories_start = NULL;
+    palette.categories_end = NULL;
 }
 
 // Creates and registers blocks (commands) for the Vm/Exec virtual machine
 void register_blocks(Vm* vm) {
-    BlockCategory* cat_control = find_category(gettext("Control"));
-    assert(cat_control != NULL);
-    BlockCategory* cat_terminal = find_category(gettext("Terminal"));
-    assert(cat_terminal != NULL);
-    BlockCategory* cat_math = find_category(gettext("Math"));
-    assert(cat_math != NULL);
-    BlockCategory* cat_logic = find_category(gettext("Logic"));
-    assert(cat_logic != NULL);
-    BlockCategory* cat_string = find_category(gettext("Strings"));
-    assert(cat_string != NULL);
-    BlockCategory* cat_misc = find_category(gettext("Misc."));
-    assert(cat_misc != NULL);
-    BlockCategory* cat_data = find_category(gettext("Data"));
-    assert(cat_data != NULL);
+    BlockCategory cat;
+    cat = block_category_new(gettext("Control"),  (Color) CATEGORY_CONTROL_COLOR);
+    BlockCategory* cat_control = block_category_register(cat);
+    cat = block_category_new(gettext("Terminal"), (Color) CATEGORY_TERMINAL_COLOR);
+    BlockCategory* cat_terminal = block_category_register(cat);
+    cat = block_category_new(gettext("Math"),     (Color) CATEGORY_MATH_COLOR);
+    BlockCategory* cat_math = block_category_register(cat);
+    cat = block_category_new(gettext("Logic"),    (Color) CATEGORY_LOGIC_COLOR);
+    BlockCategory* cat_logic = block_category_register(cat);
+    cat = block_category_new(gettext("Strings"),  (Color) CATEGORY_STRING_COLOR);
+    BlockCategory* cat_string = block_category_register(cat);
+    cat = block_category_new(gettext("Misc."),    (Color) CATEGORY_MISC_COLOR);
+    BlockCategory* cat_misc = block_category_register(cat);
+    cat = block_category_new(gettext("Data"),     (Color) CATEGORY_DATA_COLOR);
+    BlockCategory* cat_data = block_category_register(cat);
 
     BlockdefImage term_img = (BlockdefImage) {
         .image_ptr = &textures.icon_term,

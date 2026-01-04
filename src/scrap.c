@@ -270,19 +270,6 @@ TermVec term_measure_text(void* font, const char* text, unsigned int text_size, 
     return (TermVec) { .x = m.w, .y = m.h };
 }
 
-BlockCategory block_category_new(const char* name, Color color) {
-    return (BlockCategory) {
-        .name = name,
-        .color = color,
-        .chains = vector_create(),
-    };
-}
-
-void block_category_free(BlockCategory* category) {
-    for (size_t i = 0; i < vector_size(category->chains); i++) blockchain_free(&category->chains[i]);
-    vector_free(category->chains);
-}
-
 // Divides the panel into two parts along the specified side with the specified split percentage
 void panel_split(PanelTree* panel, SplitSide side, PanelType new_panel_type, float split_percent) {
     if (panel->type == PANEL_SPLIT) return;
@@ -540,7 +527,6 @@ Image setup(void) {
     exec_compile_error = vector_create();
 
     vm = vm_new();
-    register_categories();
     register_blocks(&vm);
 
     mouse_blockchain = blockchain_new();

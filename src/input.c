@@ -424,8 +424,7 @@ bool handle_stop_button_click(void) {
 }
 
 bool handle_category_click(void) {
-    palette.current_category = hover.category - palette.categories;
-    assert(palette.current_category >= 0 && palette.current_category < (int)vector_size(palette.categories));
+    palette.current_category = hover.category;
     return true;
 }
 
@@ -601,11 +600,12 @@ static bool handle_block_palette_click(bool mouse_empty) {
     if (mouse_empty && hover.editor.block) {
         // Pickup block
         TraceLog(LOG_INFO, "Pickup block");
-        int ind = hover.editor.blockchain - palette.categories[palette.current_category].chains;
-        if (ind < 0 || ind > (int)vector_size(palette.categories[palette.current_category].chains)) return true;
+        assert(palette.current_category != NULL);
+        int ind = hover.editor.blockchain - palette.current_category->chains;
+        if (ind < 0 || ind > (int)vector_size(palette.current_category->chains)) return true;
 
         blockchain_free(&mouse_blockchain);
-        mouse_blockchain = blockchain_copy(&palette.categories[palette.current_category].chains[ind], 0);
+        mouse_blockchain = blockchain_copy(&palette.current_category->chains[ind], 0);
         return true;
     } else if (!mouse_empty) {
         // Drop block
@@ -1088,9 +1088,9 @@ static bool search_blockdef(Blockdef* blockdef) {
 
 void update_search(void) {
     vector_clear(search_list);
-    for (size_t i = 0; i < vector_size(palette.categories); i++) {
-        for (size_t j = 0; j < vector_size(palette.categories[i].chains); j++) {
-            if (search_blockdef(palette.categories[i].chains[j].blocks[0].blockdef)) vector_add(&search_list, &palette.categories[i].chains[j].blocks[0]);
+    for (BlockCategory* cat = palette.categories_start; cat; cat = cat->next) {
+        for (size_t j = 0; j < vector_size(cat->chains); j++) {
+            if (search_blockdef(cat->chains[j].blocks[0].blockdef)) vector_add(&search_list, &cat->chains[j].blocks[0]);
         }
     }
 }

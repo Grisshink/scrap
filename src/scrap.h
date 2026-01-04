@@ -38,6 +38,7 @@ typedef struct Vm Vm;
 #endif
 
 typedef struct PanelTree PanelTree;
+typedef struct BlockCategory BlockCategory;
 
 typedef enum {
     LANG_SYSTEM = 0,
@@ -164,11 +165,14 @@ typedef struct {
     float font_size;
 } InputHoverInfo;
 
-typedef struct {
+struct BlockCategory {
     const char* name;
     Color color;
     BlockChain* chains;
-} BlockCategory;
+
+    BlockCategory* next;
+    BlockCategory* prev;
+};
 
 typedef struct {
     PanelTree* panel;
@@ -258,8 +262,9 @@ typedef struct {
 
 typedef struct {
     int scroll_amount;
-    int current_category;
-    BlockCategory* categories;
+    BlockCategory* current_category;
+    BlockCategory* categories_start;
+    BlockCategory* categories_end;
 } BlockPalette;
 
 typedef enum {
@@ -358,8 +363,6 @@ void init_panels(void);
 PanelTree* panel_new(PanelType type);
 void panel_delete(PanelTree* panel);
 void tab_insert(char* name, PanelTree* root_panel, size_t position);
-BlockCategory block_category_new(const char* name, Color color);
-void block_category_free(BlockCategory* category);
 Vm vm_new(void);
 void vm_free(Vm* vm);
 size_t blockdef_register(Vm* vm, Blockdef* blockdef);

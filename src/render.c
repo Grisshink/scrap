@@ -879,7 +879,7 @@ static void category_on_hover(GuiElement* el) {
     hover.category = el->custom_data;
 }
 
-static void draw_category(BlockCategory* category, bool selected) {
+static void draw_category(BlockCategory* category) {
     GuiColor color = CONVERT_COLOR(category->color, GuiColor);
     color.a = 0x40;
 
@@ -892,7 +892,7 @@ static void draw_category(BlockCategory* category, bool selected) {
         color.a = 0xff;
         gui_element_begin(gui);
             gui_set_grow(gui, DIRECTION_HORIZONTAL);
-            if (selected) gui_set_border(gui, color, BLOCK_OUTLINE_SIZE);
+            if (category == palette.current_category) gui_set_border(gui, color, BLOCK_OUTLINE_SIZE);
             gui_set_direction(gui, DIRECTION_HORIZONTAL);
             gui_set_padding(gui, BLOCK_PADDING, BLOCK_PADDING);
             gui_set_min_size(gui, 0, conf.font_size);
@@ -919,15 +919,18 @@ static void draw_block_categories(void) {
         gui_set_scroll(gui, &categories_scroll);
         gui_set_scissor(gui);
 
-        for (size_t i = 0; i < vector_size(palette.categories); i += 2) {
+        BlockCategory* cat = palette.categories_start;
+        while (cat) {
             gui_element_begin(gui);
                 gui_set_direction(gui, DIRECTION_HORIZONTAL);
                 gui_set_grow(gui, DIRECTION_HORIZONTAL);
                 gui_set_gap(gui, SIDE_BAR_PADDING);
 
-                draw_category(&palette.categories[i], (int)i == palette.current_category);
-                if (i + 1 < vector_size(palette.categories)) {
-                    draw_category(&palette.categories[i + 1], (int)i + 1 == palette.current_category);
+                draw_category(cat);
+                cat = cat->next;
+                if (cat) {
+                    draw_category(cat);
+                    cat = cat->next;
                 } else {
                     gui_grow(gui, DIRECTION_HORIZONTAL);
                 }
@@ -947,8 +950,13 @@ static void draw_block_palette(void) {
         gui_set_scroll_scaling(gui, conf.font_size * 4);
         gui_set_scissor(gui);
 
-        for (size_t i = 0; i < vector_size(palette.categories[palette.current_category].chains); i++) {
-            draw_blockchain(&palette.categories[palette.current_category].chains[i], false, false, false);
+        if (palette.current_category) {
+            for (size_t i = 0; i < vector_size(palette.current_category->chains); i++) {
+                draw_blockchain(&palette.current_category->chains[i], false, false, false);
+            }
+        } else {
+            gui_set_align(gui, ALIGN_CENTER);
+            gui_text(gui, &font_cond_shadow, "No category currently selected", BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
         }
     gui_element_end(gui);
 }
