@@ -396,9 +396,7 @@ static void draw_block(Block* block, bool highlight, bool can_hover, bool ghost,
     Color block_color = collision ? ColorBrightness(color, 0.3) : color;
     Color dropdown_color = collision ? color : ColorBrightness(color, -0.3);
     Color outline_color;
-    if (highlight) {
-        outline_color = YELLOW;
-    } else if (hover.editor.select_block == block) {
+    if (hover.editor.select_block == block) {
         outline_color = ColorBrightness(color, 0.7);
     } else {
         outline_color = ColorBrightness(color, collision ? 0.5 : -0.2);
@@ -430,9 +428,17 @@ static void draw_block(Block* block, bool highlight, bool can_hover, bool ghost,
     size_t arg_id = 0;
     Input* inputs = block->blockdef->inputs;
     size_t inputs_size = vector_size(inputs);
+
+    Argument default_argument = {
+        .input_id = 0,
+        .data = (ArgumentData) {
+            .text = "",
+        },
+    };
+
     for (size_t i = 0; i < inputs_size; i++) {
         Input* input = &inputs[i];
-        Argument* arg = &block->arguments[arg_id];
+        Argument* arg = block->arguments ? &block->arguments[arg_id] : NULL;
 
         switch (input->type) {
         case INPUT_TEXT_DISPLAY:
@@ -444,6 +450,11 @@ static void draw_block(Block* block, bool highlight, bool can_hover, bool ghost,
             gui_image(gui, input->data.image.image_ptr, BLOCK_IMAGE_SIZE, img_color);
             break;
         case INPUT_ARGUMENT:
+            if (!arg) {
+                arg = &default_argument;
+                arg->type = ARGUMENT_TEXT;
+            }
+
             switch (arg->type) {
             case ARGUMENT_CONST_STRING:
             case ARGUMENT_TEXT:
@@ -508,6 +519,11 @@ static void draw_block(Block* block, bool highlight, bool can_hover, bool ghost,
             arg_id++;
             break;
         case INPUT_DROPDOWN:
+            if (!arg) {
+                arg = &default_argument;
+                arg->type = ARGUMENT_CONST_STRING;
+            }
+
             assert(arg->type == ARGUMENT_CONST_STRING);
             gui_element_begin(gui);
                 gui_set_rect(gui, CONVERT_COLOR(dropdown_color, GuiColor));
@@ -534,6 +550,11 @@ static void draw_block(Block* block, bool highlight, bool can_hover, bool ghost,
             arg_id++;
             break;
         case INPUT_BLOCKDEF_EDITOR:
+            if (!arg) {
+                arg_id++;
+                break;
+            }
+
             assert(arg->type == ARGUMENT_BLOCKDEF);
             gui_element_begin(gui);
                 gui_set_direction(gui, DIRECTION_HORIZONTAL);
@@ -1301,7 +1322,7 @@ static void draw_dropdown(void) {
 
 static void search_on_hover(GuiElement* el) {
     el->color = (GuiColor) { 0x40, 0x40, 0x40, 0xff };
-    hover.editor.block = el->custom_data;
+    hover.editor.blockdef = el->custom_data;
 }
 
 static void draw_search_list(void) {
@@ -1339,7 +1360,13 @@ static void draw_search_list(void) {
                     gui_on_hover(gui, search_on_hover);
                     gui_set_custom_data(gui, search_list[i]);
 
-                    draw_block(search_list[i], false, false, false, false);
+                    Block dummy_block = {
+                        .blockdef = search_list[i],
+                        .arguments = NULL,
+                        .parent = NULL,
+                        .width = 0,
+                    };
+                    draw_block(&dummy_block, hover.editor.prev_blockdef == search_list[i], false, false, false);
                 gui_element_end(gui);
             }
 

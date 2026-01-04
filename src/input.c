@@ -838,9 +838,9 @@ static bool handle_mouse_click(void) {
     hover.dragged_slider.value = NULL;
 
     if (hover.select_input == &search_list_search) {
-        if (hover.editor.block) {
-            blockchain_add_block(&mouse_blockchain, block_new_ms(hover.editor.block->blockdef));
-            if (hover.editor.block->blockdef->type == BLOCKTYPE_CONTROL && vm.end_blockdef != (size_t)-1) {
+        if (hover.editor.blockdef) {
+            blockchain_add_block(&mouse_blockchain, block_new_ms(hover.editor.blockdef));
+            if (hover.editor.blockdef->type == BLOCKTYPE_CONTROL && vm.end_blockdef != (size_t)-1) {
                 blockchain_add_block(&mouse_blockchain, block_new_ms(vm.blockdefs[vm.end_blockdef]));
             }
         }
@@ -1088,10 +1088,11 @@ static bool search_blockdef(Blockdef* blockdef) {
 
 void update_search(void) {
     vector_clear(search_list);
-    for (BlockCategory* cat = palette.categories_start; cat; cat = cat->next) {
-        for (size_t j = 0; j < vector_size(cat->chains); j++) {
-            if (search_blockdef(cat->chains[j].blocks[0].blockdef)) vector_add(&search_list, &cat->chains[j].blocks[0]);
-        }
+    for (size_t i = 0; i < vector_size(vm.blockdefs); i++) {
+        if (vm.blockdefs[i]->type == BLOCKTYPE_END) continue;
+        if (!search_blockdef(vm.blockdefs[i])) continue;
+
+        vector_add(&search_list, vm.blockdefs[i]);
     }
 }
 
