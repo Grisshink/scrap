@@ -1777,13 +1777,13 @@ void scrap_gui_process_render(void) {
     write_debug_buffer();
     scrap_gui_render();
 
-    if (start_vm_timeout == 0) {
+    if (vm_start_timeout == 0) {
         term_restart();
         clear_compile_error();
 #ifdef USE_INTERPRETER
         exec = exec_new(&vm.thread);
 #else
-        exec = exec_new(&vm.thread, start_vm_mode);
+        exec = exec_new(&vm.thread, vm_start_mode);
 #endif
         exec.code = editor_code;
         if (!thread_start(exec.thread, &exec)) {

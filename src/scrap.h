@@ -304,9 +304,9 @@ extern Block* exec_compile_error_block;
 extern BlockChain* exec_compile_error_blockchain;
 
 extern Vm vm;
-extern int start_vm_timeout;
+extern int vm_start_timeout;
 #ifndef USE_INTERPRETER
-extern CompilerMode start_vm_mode;
+extern CompilerMode vm_start_mode;
 #endif
 extern Vector2 camera_pos;
 extern ActionBar actionbar;
@@ -349,8 +349,7 @@ extern const int codepoint_regions[CODEPOINT_REGION_COUNT][2];
 extern int codepoint_start_ranges[CODEPOINT_REGION_COUNT];
 
 // scrap.c
-// size_t blockdef_register(Vm* vm, Blockdef* blockdef);
-// void blockdef_unregister(Vm* vm, size_t id);
+// Nothing...
 
 // render.c
 void actionbar_show(const char* text);
@@ -367,20 +366,12 @@ void scrap_gui_process_input(void);
 
 PanelTree* find_panel(PanelTree* root, PanelType panel);
 void update_search(void);
-Block block_new_ms(Blockdef* blockdef);
 void show_dropdown(DropdownLocations location, char** list, int list_len, ButtonClickHandler handler);
-#ifdef USE_INTERPRETER
-bool start_vm(void);
-#else
-bool start_vm(CompilerMode mode);
-#endif
 
 GuiMeasurement scrap_gui_measure_image(void* image, unsigned short size);
 GuiMeasurement scrap_gui_measure_text(void* font, const char* text, unsigned int text_size, unsigned short font_size);
 TermVec term_measure_text(void* font, const char* text, unsigned int text_size, unsigned short font_size);
 int search_glyph(int codepoint);
-
-void clear_compile_error(void);
 
 size_t tab_new(char* name, PanelTree* root_panel);
 void delete_all_tabs(void);
@@ -443,11 +434,7 @@ void handle_window(void);
 void draw_window(void);
 
 // blocks.c
-void blockdef_unregister(Vm* vm, size_t block_id);
-
 void register_blocks(Vm* vm);
-void register_categories(void);
-void unregister_categories(void);
 
 #ifdef USE_INTERPRETER
 bool block_custom_arg(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state);
@@ -456,6 +443,29 @@ bool block_exec_custom(Exec* exec, Block* block, int argc, AnyValue* argv, AnyVa
 bool block_custom_arg(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state);
 bool block_exec_custom(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state);
 #endif
+
+// vm.c
+BlockCategory block_category_new(const char* name, Color color);
+BlockCategory* block_category_register(BlockCategory category);
+void add_to_category(Blockdef* blockdef, BlockCategory* category);
+
+size_t blockdef_register(Vm* vm, Blockdef* blockdef);
+void blockdef_unregister(Vm* vm, size_t block_id);
+
+void unregister_categories(void);
+
+Vm vm_new(void);
+void vm_free(Vm* vm);
+#ifdef USE_INTERPRETER
+bool vm_start(void);
+#else
+bool vm_start(CompilerMode mode);
+#endif
+bool vm_stop(void);
+void vm_handle_running_thread(void);
+
+void clear_compile_error(void);
+Block block_new_ms(Blockdef* blockdef);
 
 // platform.c
 void scrap_set_env(const char* name, const char* value);

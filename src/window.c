@@ -115,9 +115,9 @@ static bool settings_on_apply_button_click(void) {
 
 static bool project_settings_on_build_button_click(void) {
 #ifdef USE_INTERPRETER
-    start_vm();
+    vm_start();
 #else
-    start_vm(COMPILER_MODE_BUILD);
+    vm_start(COMPILER_MODE_BUILD);
 #endif
     gui_window_hide();
     return true;

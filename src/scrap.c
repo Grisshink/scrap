@@ -59,9 +59,9 @@ Font font_mono;
 TextureList textures;
 
 Vm vm;
-int start_vm_timeout = -1;
+int vm_start_timeout = -1;
 #ifndef USE_INTERPRETER
-CompilerMode start_vm_mode = COMPILER_MODE_JIT;
+CompilerMode vm_start_mode = COMPILER_MODE_JIT;
 #endif
 Vector2 camera_pos;
 ActionBar actionbar;
@@ -194,33 +194,6 @@ const char* get_font_path(char* font_path) {
     return font_path[0] != '/' && font_path[1] != ':' ? into_shared_dir_path(font_path) : font_path;
 }
 
-static Vm vm_new(void) {
-    Vm vm = (Vm) {
-        .blockdefs = vector_create(),
-        .end_blockdef = -1,
-        .thread = thread_new(exec_run, exec_cleanup),
-    };
-    return vm;
-}
-
-static void vm_free(Vm* vm) {
-    for (ssize_t i = (ssize_t)vector_size(vm->blockdefs) - 1; i >= 0 ; i--) {
-        blockdef_unregister(vm, i);
-    }
-    vector_free(vm->blockdefs);
-}
-
-static BlockChain* find_blockchain(Block* block) {
-    if (!block) return NULL;
-    while (block->parent) block = block->parent;
-    for (size_t i = 0; i < vector_size(editor_code); i++) {
-        if (block >= editor_code[i].blocks && block < editor_code[i].blocks + vector_size(editor_code[i].blocks)) {
-            return &editor_code[i];
-        }
-    }
-    return NULL;
-}
-
 // Initializes resources and settings by loading textures, fonts, and configurations, and sets up GUI and panel interface
 Image setup(void) {
     SetExitKey(KEY_NULL);
@@ -320,6 +293,39 @@ Image setup(void) {
     return window_icon;
 }
 
+void cleanup(void) {
+    if (thread_is_running(&vm.thread)) {
+        thread_stop(&vm.thread);
+        thread_join(&vm.thread);
+        exec_free(&exec);
+    }
+
+    term_free();
+
+    blockchain_free(&mouse_blockchain);
+    for (vec_size_t i = 0; i < vector_size(editor_code); i++) blockchain_free(&editor_code[i]);
+    vector_free(editor_code);
+    vm_free(&vm);
+
+    vector_free(blockchain_render_layer_widths);
+    free(gui);
+
+    delete_all_tabs();
+    vector_free(code_tabs);
+
+    vector_free(search_list_search);
+    vector_free(search_list);
+    vector_free(exec_compile_error);
+
+    unregister_categories();
+
+    project_config_free(&project_conf);
+    config_free(&conf);
+    config_free(&window_conf);
+
+    CloseWindow();
+}
+
 // Main function: Initializes configurations, sets up window, processes input, renders GUI, and cleans up resources on exit
 int main(void) {
     SetTraceLogCallback(scrap_log);
@@ -357,47 +363,7 @@ int main(void) {
     UnloadImage(icon);
 
     while (!WindowShouldClose()) {
-        ThreadReturnCode thread_return = thread_try_join(&vm.thread);
-        if (thread_return != THREAD_RETURN_RUNNING) {
-            switch (thread_return) {
-            case THREAD_RETURN_SUCCESS:
-                actionbar_show(gettext("Vm executed successfully"));
-                break;
-            case THREAD_RETURN_FAILURE:
-                actionbar_show(gettext("Vm shitted and died :("));
-                break;
-            case THREAD_RETURN_STOPPED:
-                actionbar_show(gettext("Vm stopped >:("));
-                break;
-            default:
-                break;
-            }
-
-            size_t i = 0;
-            while (exec.current_error[i]) {
-                vector_add(&exec_compile_error, vector_create());
-                size_t line_len = 0;
-                while (line_len < 50 && exec.current_error[i]) {
-                    if (((unsigned char)exec.current_error[i] >> 6) != 2) line_len++;
-                    if (line_len >= 50) break;
-                    vector_add(&exec_compile_error[vector_size(exec_compile_error) - 1], exec.current_error[i++]);
-                }
-                vector_add(&exec_compile_error[vector_size(exec_compile_error) - 1], 0);
-            }
-            exec_compile_error_block = exec.current_error_block;
-            exec_compile_error_blockchain = find_blockchain(exec_compile_error_block);
-            exec_free(&exec);
-            render_surface_needs_redraw = true;
-        } else if (thread_is_running(&vm.thread)) {
-            mutex_lock(&term.lock);
-            if (find_panel(code_tabs[current_tab].root_panel, PANEL_TERM) && term.is_buffer_dirty) {
-                render_surface_needs_redraw = true;
-                term.is_buffer_dirty = false;
-            }
-            mutex_unlock(&term.lock);
-        } else {
-            if (vector_size(exec_compile_error) > 0) render_surface_needs_redraw = true;
-        }
+        vm_handle_running_thread();
 
         actionbar.show_time -= GetFrameTime();
         if (actionbar.show_time < 0) {
@@ -439,28 +405,6 @@ int main(void) {
         EndDrawing();
     }
 
-    if (thread_is_running(&vm.thread)) {
-        thread_stop(&vm.thread);
-        thread_join(&vm.thread);
-        exec_free(&exec);
-    }
-    term_free();
-    blockchain_free(&mouse_blockchain);
-    for (vec_size_t i = 0; i < vector_size(editor_code); i++) blockchain_free(&editor_code[i]);
-    vector_free(editor_code);
-    vm_free(&vm);
-    vector_free(blockchain_render_layer_widths);
-    free(gui);
-    delete_all_tabs();
-    vector_free(search_list_search);
-    vector_free(search_list);
-    vector_free(code_tabs);
-    vector_free(exec_compile_error);
-    unregister_categories();
-    project_config_free(&project_conf);
-    config_free(&conf);
-    config_free(&window_conf);
-    CloseWindow();
-
+    cleanup();
     return 0;
 }

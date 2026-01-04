@@ -171,13 +171,6 @@ void init_panels(void) {
     tab_new("Output", panel_new(PANEL_TERM));
 }
 
-void clear_compile_error(void) {
-    exec_compile_error_block = NULL;
-    exec_compile_error_blockchain = NULL;
-    for (size_t i = 0; i < vector_size(exec_compile_error); i++) vector_free(exec_compile_error[i]);
-    vector_clear(exec_compile_error);
-}
-
 int search_glyph(int codepoint) {
     // We assume that ASCII region is the first region, so this index should correspond to char '?' in the glyph table
     const int fallback = 31;
@@ -251,15 +244,6 @@ static void sanitize_links(void) {
     for (vec_size_t i = 0; i < vector_size(mouse_blockchain.blocks); i++) {
         sanitize_block(&mouse_blockchain.blocks[i]);
     }
-}
-
-Block block_new_ms(Blockdef* blockdef) {
-    Block block = block_new(blockdef);
-    for (size_t i = 0; i < vector_size(block.arguments); i++) {
-        if (block.arguments[i].type != ARGUMENT_BLOCKDEF) continue;
-        block.arguments[i].data.blockdef->func = block_exec_custom;
-    }
-    return block;
 }
 
 static void switch_tab_to_panel(PanelType panel) {
@@ -458,43 +442,6 @@ PanelTree* find_panel(PanelTree* root, PanelType panel) {
     return NULL;
 }
 
-#ifdef USE_INTERPRETER
-bool start_vm(void) {
-#else
-bool start_vm(CompilerMode mode) {
-#endif
-    if (thread_is_running(&vm.thread)) return false;
-
-    for (size_t i = 0; i < vector_size(code_tabs); i++) {
-        if (find_panel(code_tabs[i].root_panel, PANEL_TERM)) {
-#ifndef USE_INTERPRETER
-            start_vm_mode = mode;
-#endif
-            if (current_tab != (int)i) {
-                shader_time = 0.0;
-                // Delay vm startup until next frame. Because this handler only runs after the layout is computed and
-                // before the actual rendering begins, we need to add delay to vm startup to make sure the terminal buffer
-                // is initialized and vm does not try to write to uninitialized buffer
-                start_vm_timeout = 2;
-            } else {
-                start_vm_timeout = 1;
-            }
-            current_tab = i;
-            render_surface_needs_redraw = true;
-            break;
-        }
-    }
-    return true;
-}
-
-static bool stop_vm(void) {
-    if (!thread_is_running(&vm.thread)) return false;
-    TraceLog(LOG_INFO, "STOP");
-    thread_stop(&vm.thread);
-    render_surface_needs_redraw = true;
-    return true;
-}
-
 static void deselect_all(void) {
     hover.editor.select_argument = NULL;
     hover.select_input = NULL;
@@ -615,9 +562,9 @@ bool handle_about_button_click(void) {
 
 bool handle_run_button_click(void) {
 #ifdef USE_INTERPRETER
-    start_vm();
+    vm_start();
 #else
-    start_vm(COMPILER_MODE_JIT);
+    vm_start(COMPILER_MODE_JIT);
 #endif
     return true;
 }
@@ -629,7 +576,7 @@ bool handle_build_button_click(void) {
 }
 
 bool handle_stop_button_click(void) {
-    stop_vm();
+    vm_stop();
     return true;
 }
 
@@ -1309,14 +1256,14 @@ void update_search(void) {
 static void handle_key_press(void) {
     if (IsKeyPressed(KEY_F5)) {
 #ifdef USE_INTERPRETER
-        start_vm();
+        vm_start();
 #else
-        start_vm(COMPILER_MODE_JIT);
+        vm_start(COMPILER_MODE_JIT);
 #endif
         return;
     }
     if (IsKeyPressed(KEY_F6)) {
-        stop_vm();
+        vm_stop();
         return;
     }
     if (IsKeyPressed(KEY_S) &&
@@ -1518,7 +1465,7 @@ void scrap_gui_process_input(void) {
         ui_time = end_timer(t);
 #endif
 
-        if (start_vm_timeout >= 0) start_vm_timeout--;
+        if (vm_start_timeout >= 0) vm_start_timeout--;
         // This fixes selecting wrong argument of a block when two blocks overlap
         if (hover.editor.block && hover.editor.argument) {
             int ind = hover.editor.argument - hover.editor.block->arguments;
