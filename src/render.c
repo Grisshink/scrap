@@ -1755,7 +1755,6 @@ static void write_debug_buffer(void) {
     print_debug(&i, "Camera: (%.3f, %.3f), Click: (%.3f, %.3f)", camera_pos.x, camera_pos.y, camera_click_pos.x, camera_click_pos.y);
     print_debug(&i, "Dropdown scroll: %d", dropdown.scroll_amount);
     print_debug(&i, "Drag cancelled: %d", hover.drag_cancelled);
-    print_debug(&i, "Min: (%.3f, %.3f), Max: (%.3f, %.3f)", block_code.min_pos.x, block_code.min_pos.y, block_code.max_pos.x, block_code.max_pos.y);
     print_debug(&i, "Palette scroll: %d", palette.scroll_amount);
     print_debug(&i, "Editor: %d, Editing: %p, Blockdef: %p, input: %zu", hover.editor.part, hover.editor.edit_blockdef, hover.editor.blockdef, hover.editor.blockdef_input);
     print_debug(&i, "Elements: %zu/%zu, Draw: %zu/%zu", gui->element_stack_len, ELEMENT_STACK_SIZE, gui->command_stack_len, COMMAND_STACK_SIZE);

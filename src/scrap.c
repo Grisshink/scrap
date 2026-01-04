@@ -65,7 +65,6 @@ CompilerMode vm_start_mode = COMPILER_MODE_JIT;
 #endif
 Vector2 camera_pos;
 ActionBar actionbar;
-BlockCode block_code = {0};
 Dropdown dropdown = {0};
 BlockPalette palette = {0};
 BlockChain* editor_code = {0};
@@ -120,18 +119,6 @@ const char* line_shader_fragment =
     "    float diff = clamp(1.0 - abs(coord.x + coord.y - pos), 0.0, 1.0);\n"
     "    finalColor = vec4(fragColor.xyz, pow(diff, 2.0));\n"
     "}";
-
-// End-stage brain Winlator
-char* top_bar_buttons_text[3] = {
-    "File",
-    "Settings",
-    "About",
-};
-
-char* tab_bar_buttons_text[2] = {
-    "Code",
-    "Output",
-};
 
 #define SHARED_DIR_BUF_LEN 512
 #define LOCALE_DIR_BUF_LEN 768

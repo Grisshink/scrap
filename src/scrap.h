@@ -310,7 +310,6 @@ extern CompilerMode vm_start_mode;
 #endif
 extern Vector2 camera_pos;
 extern ActionBar actionbar;
-extern BlockCode block_code;
 extern Dropdown dropdown;
 extern BlockPalette palette;
 extern BlockChain* editor_code;
@@ -338,9 +337,6 @@ extern Vector2 camera_pos;
 
 extern float shader_time;
 extern int blockchain_select_counter;
-
-extern char* top_bar_buttons_text[3];
-extern char* tab_bar_buttons_text[2];
 
 extern char project_name[1024];
 extern char* language_list[5];
