@@ -194,56 +194,6 @@ const char* get_font_path(char* font_path) {
     return font_path[0] != '/' && font_path[1] != ':' ? into_shared_dir_path(font_path) : font_path;
 }
 
-GuiMeasurement scrap_gui_measure_image(void* image, unsigned short size) {
-    Texture2D* img = image;
-    return (GuiMeasurement) { img->width * ((float)size / (float)img->height), size };
-}
-
-int search_glyph(int codepoint) {
-    // We assume that ASCII region is the first region, so this index should correspond to char '?' in the glyph table
-    const int fallback = 31;
-    for (int i = 0; i < CODEPOINT_REGION_COUNT; i++) {
-        if (codepoint < codepoint_regions[i][0] || codepoint > codepoint_regions[i][1]) continue;
-        return codepoint - codepoint_regions[i][0] + codepoint_start_ranges[i];
-    }
-    return fallback;
-}
-
-GuiMeasurement measure_slice(Font font, const char *text, unsigned int text_size, float font_size) {
-    GuiMeasurement ms = {0};
-
-    if ((font.texture.id == 0) || !text) return ms;
-
-    int codepoint = 0; // Current character
-    int index = 0; // Index position in sprite font
-
-    for (unsigned int i = 0; i < text_size;) {
-        int next = 0;
-        codepoint = GetCodepointNext(&text[i], &next);
-        index = search_glyph(codepoint);
-        i += next;
-
-        if (font.glyphs[index].advanceX != 0) {
-            ms.w += font.glyphs[index].advanceX;
-        } else {
-            ms.w += font.recs[index].width + font.glyphs[index].offsetX;
-        }
-    }
-
-    ms.w *= font_size / (float)font.baseSize;
-    ms.h = font_size;
-    return ms;
-}
-
-GuiMeasurement scrap_gui_measure_text(void* font, const char* text, unsigned int text_size, unsigned short font_size) {
-    return measure_slice(*(Font*)font, text, text_size, font_size);
-}
-
-TermVec term_measure_text(void* font, const char* text, unsigned int text_size, unsigned short font_size) {
-    GuiMeasurement m = measure_slice(*(Font*)font, text, text_size, font_size);
-    return (TermVec) { .x = m.w, .y = m.h };
-}
-
 // Divides the panel into two parts along the specified side with the specified split percentage
 void panel_split(PanelTree* panel, SplitSide side, PanelType new_panel_type, float split_percent) {
     if (panel->type == PANEL_SPLIT) return;
