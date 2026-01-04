@@ -395,9 +395,9 @@ int main(void) {
                 term.is_buffer_dirty = false;
             }
             mutex_unlock(&term.lock);
-       } else {
+        } else {
             if (vector_size(exec_compile_error) > 0) render_surface_needs_redraw = true;
-       }
+        }
 
         actionbar.show_time -= GetFrameTime();
         if (actionbar.show_time < 0) {
