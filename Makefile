@@ -53,7 +53,7 @@ ifeq ($(BUILD_MODE), DEBUG)
 endif
 
 STD_OBJFILES := $(addprefix $(BUILD_FOLDER),vec-stand.o gc-stand.o std-stand.o scrap-runtime.o)
-OBJFILES := $(addprefix $(BUILD_FOLDER),filedialogs.o render.o save.o term.o blocks.o scrap.o vec.o util.o input.o scrap_gui.o window.o cfgpath.o platform.o ast.o gc.o std.o thread.o)
+OBJFILES := $(addprefix $(BUILD_FOLDER),filedialogs.o render.o save.o term.o blocks.o scrap.o vec.o util.o ui.o scrap_gui.o window.o cfgpath.o platform.o ast.o gc.o std.o thread.o)
 BUNDLE_FILES := data examples extras locale LICENSE README.md CHANGELOG.md
 SCRAP_HEADERS := src/scrap.h src/ast.h src/config.h src/scrap_gui.h
 EXE_NAME := scrap
@@ -191,7 +191,7 @@ $(BUILD_FOLDER)vec.o: src/vec.c
 	$(CC) $(CFLAGS) -c -o $@ $<
 $(BUILD_FOLDER)util.o: src/util.c $(SCRAP_HEADERS)
 	$(CC) $(CFLAGS) -c -o $@ $<
-$(BUILD_FOLDER)input.o: src/input.c $(SCRAP_HEADERS)
+$(BUILD_FOLDER)ui.o: src/ui.c $(SCRAP_HEADERS)
 	$(CC) $(CFLAGS) -c -o $@ $<
 $(BUILD_FOLDER)platform.o: src/platform.c
 	$(CC) $(CFLAGS) -c -o $@ $<
