@@ -761,8 +761,6 @@ static void draw_block_preview(BlockChain* chain) {
 
 static void draw_blockchain(BlockChain* chain, bool ghost, bool show_previews, bool editable_arguments) {
     int layer = 0;
-    bool highlight = vm.exec_chain == chain;
-
     gui_element_begin(gui);
         gui_set_direction(gui, DIRECTION_VERTICAL);
         gui_on_hover(gui, blockchain_on_hover);
@@ -770,7 +768,6 @@ static void draw_blockchain(BlockChain* chain, bool ghost, bool show_previews, b
 
     for (size_t i = 0; i < vector_size(chain->blocks); i++) {
         Blockdef* blockdef = chain->blocks[i].blockdef;
-        bool block_highlight = vm.exec_ind == i;
 
         if (blockdef->type == BLOCKTYPE_END) {
             gui_element_end(gui);
@@ -780,14 +777,12 @@ static void draw_blockchain(BlockChain* chain, bool ghost, bool show_previews, b
 
             Block* block = el->custom_data;
 
-            bool collision = hover.editor.prev_block == &chain->blocks[i] || (highlight && block_highlight);
+            bool collision = hover.editor.prev_block == &chain->blocks[i];
             Color color = CONVERT_COLOR(block->blockdef->color, Color);
             if (ghost) color.a = BLOCK_GHOST_OPACITY;
             Color block_color = ColorBrightness(color, collision ? 0.3 : 0.0);
             Color outline_color;
-            if (highlight && block_highlight) {
-                outline_color = YELLOW;
-            } else if (hover.editor.select_block == &chain->blocks[i]) {
+            if (hover.editor.select_block == &chain->blocks[i]) {
                 outline_color = ColorBrightness(color, 0.7);
             } else {
                 outline_color = ColorBrightness(color, collision ? 0.5 : -0.2);
@@ -829,7 +824,7 @@ static void draw_blockchain(BlockChain* chain, bool ghost, bool show_previews, b
         }
 
         if (blockdef->type != BLOCKTYPE_END) {
-            draw_block(&chain->blocks[i], highlight && block_highlight, true, ghost, editable_arguments);
+            draw_block(&chain->blocks[i], false, true, ghost, editable_arguments);
         }
 
         if (blockdef->type == BLOCKTYPE_CONTROL || blockdef->type == BLOCKTYPE_CONTROLEND) {
@@ -838,14 +833,12 @@ static void draw_blockchain(BlockChain* chain, bool ghost, bool show_previews, b
             GuiElement* el = gui_get_element(gui);
             vector_add(&blockchain_render_layer_widths, el->w);
 
-            bool collision = hover.editor.prev_block == &chain->blocks[i] || (highlight && block_highlight);
+            bool collision = hover.editor.prev_block == &chain->blocks[i];
             Color color = CONVERT_COLOR(blockdef->color, Color);
             if (ghost) color.a = BLOCK_GHOST_OPACITY;
             Color block_color = ColorBrightness(color, collision ? 0.3 : 0.0);
             Color outline_color;
-            if (highlight && block_highlight) {
-                outline_color = YELLOW;
-            } else if (hover.editor.select_block == &chain->blocks[i]) {
+            if (hover.editor.select_block == &chain->blocks[i]) {
                 outline_color = ColorBrightness(color, 0.7);
             } else {
                 outline_color = ColorBrightness(color, collision ? 0.5 : -0.2);
@@ -1768,7 +1761,6 @@ static void write_debug_buffer(void) {
     print_debug(&i, "Elements: %zu/%zu, Draw: %zu/%zu", gui->element_stack_len, ELEMENT_STACK_SIZE, gui->command_stack_len, COMMAND_STACK_SIZE);
     print_debug(&i, "Slider: %p, min: %d, max: %d", hover.hover_slider.value, hover.hover_slider.min, hover.hover_slider.max);
     print_debug(&i, "Input: %p, Select: %p, Pos: (%.3f, %.3f), ind: (%d, %d)", hover.input_info.input, hover.select_input, hover.input_info.rel_pos.x, hover.input_info.rel_pos.y, hover.select_input_cursor, hover.select_input_mark);
-    print_debug(&i, "Exec chain: %p, ind: %zu", vm.exec_chain, vm.exec_ind);
     print_debug(&i, "UI time: %.3f", ui_time);
     print_debug(&i, "FPS: %d, Frame time: %.3f", GetFPS(), GetFrameTime());
     print_debug(&i, "Panel: %p, side: %d", hover.panels.panel, hover.panels.panel_side);

@@ -281,11 +281,6 @@ struct Vm {
     size_t end_blockdef;
 
     Thread thread;
-
-    BlockChain* exec_chain;
-    size_t exec_ind;
-    BlockChain* prev_exec_chain;
-    size_t prev_exec_ind;
 };
 
 extern Config conf;

@@ -199,10 +199,6 @@ static Vm vm_new(void) {
         .blockdefs = vector_create(),
         .end_blockdef = -1,
         .thread = thread_new(exec_run, exec_cleanup),
-        .exec_chain = NULL,
-        .exec_ind = 0,
-        .prev_exec_chain = NULL,
-        .prev_exec_ind = 0,
     };
     return vm;
 }
@@ -361,9 +357,6 @@ int main(void) {
     UnloadImage(icon);
 
     while (!WindowShouldClose()) {
-        vm.exec_ind = -1;
-        vm.exec_chain = NULL;
-
         ThreadReturnCode thread_return = thread_try_join(&vm.thread);
         if (thread_return != THREAD_RETURN_RUNNING) {
             switch (thread_return) {
@@ -396,19 +389,6 @@ int main(void) {
             exec_free(&exec);
             render_surface_needs_redraw = true;
         } else if (thread_is_running(&vm.thread)) {
-#ifdef USE_INTERPRETER
-            vm.exec_chain = exec.running_chain;
-            vm.exec_ind = exec.chain_stack[exec.chain_stack_len - 1].running_ind;
-#else
-            vm.exec_chain = NULL;
-            vm.exec_ind = 0;
-#endif
-            if (vm.prev_exec_chain != vm.exec_chain) render_surface_needs_redraw = true;
-            if (vm.prev_exec_ind != vm.exec_ind) render_surface_needs_redraw = true;
-
-            vm.prev_exec_chain = vm.exec_chain;
-            vm.prev_exec_ind = vm.exec_ind;
-
             mutex_lock(&term.lock);
             if (find_panel(code_tabs[current_tab].root_panel, PANEL_TERM) && term.is_buffer_dirty) {
                 render_surface_needs_redraw = true;
