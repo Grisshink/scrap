@@ -33,56 +33,16 @@
 
 // Global Variables
 
-RenderTexture2D render_surface;
-bool render_surface_needs_redraw = true;
-int shader_time_loc;
-
-Exec exec = {0};
-char** exec_compile_error = NULL;
-Block* exec_compile_error_block = NULL;
-BlockChain* exec_compile_error_blockchain = NULL;
-
-Vector2 camera_pos = {0};
-Vector2 camera_click_pos = {0};
-
 Config conf;
 ProjectConfig project_conf;
-HoverInfo hover = {0};
 
 Assets assets;
 
 Vm vm;
-int vm_start_timeout = -1;
-#ifndef USE_INTERPRETER
-CompilerMode vm_start_mode = COMPILER_MODE_JIT;
-#endif
-Vector2 camera_pos;
-ActionBar actionbar;
-Dropdown dropdown = {0};
-BlockPalette palette = {0};
-BlockChain* editor_code = {0};
-Blockdef** search_list = NULL;
-BlockChain mouse_blockchain = {0};
 Gui* gui = NULL;
-char* search_list_search = NULL;
-int categories_scroll = 0;
-int search_list_scroll = 0;
-Vector2 search_list_pos = {0};
-int* blockchain_render_layer_widths;
 
-SplitPreview split_preview = {0};
-Tab* code_tabs = NULL;
-int current_tab = 0;
-
-char project_name[1024] = "project.scrp";
-char debug_buffer[DEBUG_BUFFER_LINES][DEBUG_BUFFER_LINE_SIZE] = {0};
-
-#ifdef DEBUG
-double ui_time = 0.0;
-#endif
-
-float shader_time = 0.0;
-int blockchain_select_counter = -1;
+Editor editor;
+UI ui;
 
 const char* line_shader_vertex =
     "#version 330\n"
@@ -98,7 +58,6 @@ const char* line_shader_vertex =
     "    gl_Position = pos;\n"
     "}";
 
-// Fragment shader code for line rendering with time-based effects and color modulation
 const char* line_shader_fragment =
     "#version 330\n"
     "in vec2 fragCoord;\n"
@@ -174,11 +133,11 @@ const char* get_font_path(char* font_path) {
     return font_path[0] != '/' && font_path[1] != ':' ? into_shared_dir_path(font_path) : font_path;
 }
 
-// Initializes resources and settings by loading textures, fonts, and configurations, and sets up GUI and panel interface
 Image setup(void) {
     SetExitKey(KEY_NULL);
-    render_surface = LoadRenderTexture(GetScreenWidth(), GetScreenHeight());
-    SetTextureWrap(render_surface.texture, TEXTURE_WRAP_MIRROR_REPEAT);
+
+    ui.render_surface = LoadRenderTexture(GetScreenWidth(), GetScreenHeight());
+    SetTextureWrap(ui.render_surface.texture, TEXTURE_WRAP_MIRROR_REPEAT);
 
     assets.textures.dropdown = LoadTexture(into_shared_dir_path(DATA_PATH "drop.png"));
     SetTextureFilter(assets.textures.dropdown, TEXTURE_FILTER_BILINEAR);
@@ -243,19 +202,24 @@ Image setup(void) {
     prerender_font_shadow(&assets.fonts.font_cond_shadow);
 
     assets.line_shader = LoadShaderFromMemory(line_shader_vertex, line_shader_fragment);
-    shader_time_loc = GetShaderLocation(assets.line_shader, "time");
+    ui.shader_time_loc = GetShaderLocation(assets.line_shader, "time");
 
-    exec_compile_error = vector_create();
+    strncpy(editor.project_name, EDITOR_DEFAULT_PROJECT_NAME, 1024);
+    editor.blockchain_select_counter = -1;
+
+    ui.render_surface_needs_redraw = true;
+
+    vm.compile_error = vector_create();
 
     vm = vm_new();
     register_blocks(&vm);
 
-    mouse_blockchain = blockchain_new();
-    editor_code = vector_create();
+    editor.mouse_blockchain = blockchain_new();
+    editor.code = vector_create();
 
-    search_list = vector_create();
-    search_list_search = vector_create();
-    vector_add(&search_list_search, 0);
+    editor.search_list = vector_create();
+    editor.search_list_search = vector_create();
+    vector_add(&editor.search_list_search, 0);
     update_search();
 
     term_init(term_measure_text, &assets.fonts.font_mono, conf.font_size * 0.6);
@@ -268,34 +232,28 @@ Image setup(void) {
     TraceLog(LOG_INFO, "Allocated %.2f KiB for gui", (float)sizeof(Gui) / 1024.0f);
     init_gui_window();
 
-    blockchain_render_layer_widths = vector_create();
+    editor.blockchain_render_layer_widths = vector_create();
 
     return window_icon;
 }
 
 void cleanup(void) {
-    if (thread_is_running(&vm.thread)) {
-        thread_stop(&vm.thread);
-        thread_join(&vm.thread);
-        exec_free(&exec);
-    }
-
     term_free();
 
-    blockchain_free(&mouse_blockchain);
-    for (vec_size_t i = 0; i < vector_size(editor_code); i++) blockchain_free(&editor_code[i]);
-    vector_free(editor_code);
+    blockchain_free(&editor.mouse_blockchain);
+    for (vec_size_t i = 0; i < vector_size(editor.code); i++) blockchain_free(&editor.code[i]);
+    vector_free(editor.code);
     vm_free(&vm);
 
-    vector_free(blockchain_render_layer_widths);
+    vector_free(editor.blockchain_render_layer_widths);
     free(gui);
 
     delete_all_tabs();
-    vector_free(code_tabs);
+    vector_free(editor.tabs);
 
-    vector_free(search_list_search);
-    vector_free(search_list);
-    vector_free(exec_compile_error);
+    vector_free(editor.search_list_search);
+    vector_free(editor.search_list);
+    vector_free(vm.compile_error);
 
     unregister_categories();
 
@@ -314,7 +272,7 @@ int main(void) {
     project_config_new(&project_conf);
     project_config_set_default(&project_conf);
 
-    code_tabs = vector_create();
+    editor.tabs = vector_create();
     set_default_config(&conf);
     load_config(&conf);
 
@@ -345,39 +303,39 @@ int main(void) {
     while (!WindowShouldClose()) {
         vm_handle_running_thread();
 
-        actionbar.show_time -= GetFrameTime();
-        if (actionbar.show_time < 0) {
-            actionbar.show_time = 0;
+        editor.actionbar.show_time -= GetFrameTime();
+        if (editor.actionbar.show_time < 0) {
+            editor.actionbar.show_time = 0;
         } else {
-            render_surface_needs_redraw = true;
+            ui.render_surface_needs_redraw = true;
         }
 
-        if (shader_time_loc != -1) SetShaderValue(assets.line_shader, shader_time_loc, &shader_time, SHADER_UNIFORM_FLOAT);
-        shader_time += GetFrameTime() / 2.0;
-        if (shader_time >= 1.0) {
-            shader_time = 1.0;
+        if (ui.shader_time_loc != -1) SetShaderValue(assets.line_shader, ui.shader_time_loc, &ui.shader_time, SHADER_UNIFORM_FLOAT);
+        ui.shader_time += GetFrameTime() / 2.0;
+        if (ui.shader_time >= 1.0) {
+            ui.shader_time = 1.0;
         } else {
-            render_surface_needs_redraw = true;
+            ui.render_surface_needs_redraw = true;
         }
 
         scrap_gui_process_input();
 
-        if (render_surface_needs_redraw) {
-            BeginTextureMode(render_surface);
+        if (ui.render_surface_needs_redraw) {
+            BeginTextureMode(ui.render_surface);
                 scrap_gui_process_render();
             EndTextureMode();
-            render_surface_needs_redraw = false;
+            ui.render_surface_needs_redraw = false;
         }
 
         BeginDrawing();
             DrawTexturePro(
-                render_surface.texture,
+                ui.render_surface.texture,
 #ifdef ARABIC_MODE
-                (Rectangle) { render_surface.texture.width, render_surface.texture.height, render_surface.texture.width, render_surface.texture.height },
+                (Rectangle) { ui.render_surface.texture.width, ui.render_surface.texture.height, ui.render_surface.texture.width, ui.render_surface.texture.height },
 #else
-                (Rectangle) { 0, render_surface.texture.height, render_surface.texture.width, render_surface.texture.height },
+                (Rectangle) { 0, ui.render_surface.texture.height, ui.render_surface.texture.width, ui.render_surface.texture.height },
 #endif
-                (Rectangle) { 0, 0, render_surface.texture.width, render_surface.texture.height },
+                (Rectangle) { 0, 0, ui.render_surface.texture.width, ui.render_surface.texture.height },
                 (Vector2) {0},
                 0.0,
                 WHITE

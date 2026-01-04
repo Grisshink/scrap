@@ -18,6 +18,8 @@
 //    misrepresented as being the original software.
 // 3. This notice may not be removed or altered from any source distribution.
 
+#define EDITOR_DEFAULT_PROJECT_NAME "project.scrp"
+
 #define DROP_TEX_WIDTH ((float)(conf.font_size - BLOCK_OUTLINE_SIZE * 4) / (float)drop_tex.height * (float)drop_tex.width)
 #define FONT_PATH_MAX_SIZE 256
 #define FONT_SYMBOLS_MAX_SIZE 1024

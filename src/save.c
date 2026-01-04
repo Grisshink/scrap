@@ -264,9 +264,9 @@ void save_config(Config* config) {
     cursor += sprintf(file_str + cursor, "FONT_PATH=%s\n", config->font_path);
     cursor += sprintf(file_str + cursor, "FONT_BOLD_PATH=%s\n", config->font_bold_path);
     cursor += sprintf(file_str + cursor, "FONT_MONO_PATH=%s\n", config->font_mono_path);
-    for (size_t i = 0; i < vector_size(code_tabs); i++) {
-        cursor += sprintf(file_str + cursor, "CONFIG_TAB_%s=", code_tabs[i].name);
-        save_panel_config(file_str, &cursor, code_tabs[i].root_panel);
+    for (size_t i = 0; i < vector_size(editor.tabs); i++) {
+        cursor += sprintf(file_str + cursor, "CONFIG_TAB_%s=", editor.tabs[i].name);
+        save_panel_config(file_str, &cursor, editor.tabs[i].root_panel);
         cursor += sprintf(file_str + cursor, "\n");
     }
 
@@ -279,8 +279,8 @@ void save_config(Config* config) {
 }
 
 PanelTree* find_panel_in_all_tabs(PanelType panel_type) {
-    for (size_t i = 0; i < vector_size(code_tabs); i++) {
-        PanelTree* panel = find_panel(code_tabs[i].root_panel, panel_type);
+    for (size_t i = 0; i < vector_size(editor.tabs); i++) {
+        PanelTree* panel = find_panel(editor.tabs[i].root_panel, panel_type);
         if (panel) return panel;
     }
     return NULL;
@@ -308,7 +308,7 @@ void load_config(Config* config) {
     char* file = LoadFileText(config_path);
     if (!file) {
         init_panels();
-        current_tab = 0;
+        editor.current_tab = 0;
         return;
     }
     int cursor = 0;
@@ -361,8 +361,8 @@ void load_config(Config* config) {
     }
 
     add_missing_panels();
-    if (vector_size(code_tabs) == 0) init_panels();
-    if (current_tab >= (int)vector_size(code_tabs)) current_tab = vector_size(code_tabs) - 1;
+    if (vector_size(editor.tabs) == 0) init_panels();
+    if (editor.current_tab >= (int)vector_size(editor.tabs)) editor.current_tab = vector_size(editor.tabs) - 1;
 
     UnloadFileText(file);
 }

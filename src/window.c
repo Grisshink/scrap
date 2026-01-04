@@ -60,35 +60,35 @@ static bool window_on_close_button_click(void) {
 
 static bool settings_on_left_slider_button_click(void) {
     settings_applied = false;
-    *hover.hover_slider.value = MAX(*hover.hover_slider.value - 1, hover.hover_slider.min);
+    *ui.hover.hover_slider.value = MAX(*ui.hover.hover_slider.value - 1, ui.hover.hover_slider.min);
     return true;
 }
 
 static bool settings_on_right_slider_button_click(void) {
     settings_applied = false;
-    *hover.hover_slider.value = MIN(*hover.hover_slider.value + 1, hover.hover_slider.max);
+    *ui.hover.hover_slider.value = MIN(*ui.hover.hover_slider.value + 1, ui.hover.hover_slider.max);
     return true;
 }
 
 static bool settings_on_dropdown_button_click(void) {
     settings_applied = false;
-    *hover.select_settings_dropdown_value = hover.dropdown.select_ind;
+    *ui.hover.select_settings_dropdown_value = ui.hover.dropdown.select_ind;
     return handle_dropdown_close();
 }
 
 static bool settings_on_dropdown_click(void) {
-    hover.select_settings_dropdown_value = hover.settings_dropdown_data.value;
-    show_dropdown(LOCATION_SETTINGS, hover.settings_dropdown_data.list, hover.settings_dropdown_data.list_len, settings_on_dropdown_button_click);
+    ui.hover.select_settings_dropdown_value = ui.hover.settings_dropdown_data.value;
+    show_dropdown(LOCATION_SETTINGS, ui.hover.settings_dropdown_data.list, ui.hover.settings_dropdown_data.list_len, settings_on_dropdown_button_click);
     return true;
 }
 
 static bool settings_on_panel_editor_button_click(void) {
     gui_window_hide();
-    hover.is_panel_edit_mode = true;
-    hover.select_input = NULL;
-    hover.editor.select_argument = NULL;
-    hover.editor.select_block = NULL;
-    hover.editor.select_blockchain = NULL;
+    ui.hover.is_panel_edit_mode = true;
+    ui.hover.select_input = NULL;
+    ui.hover.editor.select_argument = NULL;
+    ui.hover.editor.select_block = NULL;
+    ui.hover.editor.select_blockchain = NULL;
     return true;
 }
 
@@ -101,7 +101,7 @@ static bool settings_on_reset_button_click(void) {
 static bool settings_on_reset_panels_button_click(void) {
     delete_all_tabs();
     init_panels();
-    current_tab = 0;
+    editor.current_tab = 0;
     settings_applied = false;
     return true;
 }
@@ -140,7 +140,7 @@ void gui_window_show(WindowGuiType type) {
     config_copy(&window_conf, &conf);
     window.is_fading = false;
     window.type = type;
-    shader_time = -0.2;
+    ui.shader_time = -0.2;
     settings_applied = false;
 
     if (window.type == GUI_TYPE_ABOUT && !about_text_split) {
@@ -163,7 +163,7 @@ void gui_window_show(WindowGuiType type) {
 }
 
 void gui_window_hide(void) {
-    hover.select_input = NULL;
+    ui.hover.select_input = NULL;
     window.is_fading = true;
 }
 
@@ -173,27 +173,27 @@ void gui_window_hide_immediate(void) {
 }
 
 static void settings_button_on_hover(GuiElement* el) {
-    if (hover.button.handler) return;
+    if (ui.hover.button.handler) return;
     el->color = (GuiColor) { 0x40, 0x40, 0x40, 0xff };
-    hover.button.handler = el->custom_data;
+    ui.hover.button.handler = el->custom_data;
 }
 
 static void close_button_on_hover(GuiElement* el) {
-    if (hover.button.handler) return;
+    if (ui.hover.button.handler) return;
     if (el->draw_type == DRAWTYPE_RECT) return;
     el->draw_type = DRAWTYPE_RECT;
     el->data.rect_type = RECT_NORMAL;
     el->color = (GuiColor) { 0x40, 0x40, 0x40, 0xff };
-    hover.button.handler = window_on_close_button_click;
+    ui.hover.button.handler = window_on_close_button_click;
 }
 
 static void window_on_hover(GuiElement* el) {
     (void) el;
-    if (!hover.dropdown.location) hover.button.handler = NULL;
+    if (!ui.hover.dropdown.location) ui.hover.button.handler = NULL;
 }
 
 static void begin_window(const char* title, int w, int h, float scaling) {
-    hover.button.handler = window_on_close_button_click;
+    ui.hover.button.handler = window_on_close_button_click;
     gui_element_begin(gui);
         gui_set_floating(gui);
         gui_set_rect(gui, (GuiColor) { 0x00, 0x00, 0x00, 0x40 * scaling });
@@ -267,7 +267,7 @@ static void end_window(void) {
 }
 
 static void warning_on_hover(GuiElement* el) {
-    if (hover.button.handler) return;
+    if (ui.hover.button.handler) return;
     (void) el;
     settings_tooltip = true;
 }
@@ -301,10 +301,10 @@ static void begin_setting(const char* name, bool warning) {
 }
 
 static void slider_on_hover(GuiElement* el) {
-    if (hover.button.handler) return;
+    if (ui.hover.button.handler) return;
     unsigned short len;
-    hover.hover_slider = *(SliderHoverInfo*)gui_get_state(el, &len);
-    if (hover.hover_slider.value == hover.dragged_slider.value) {
+    ui.hover.hover_slider = *(SliderHoverInfo*)gui_get_state(el, &len);
+    if (ui.hover.hover_slider.value == ui.hover.dragged_slider.value) {
         el->color = (GuiColor) { 0x2b, 0x2b, 0x2b, 0xff };
         settings_applied = false;
     } else {
@@ -313,11 +313,11 @@ static void slider_on_hover(GuiElement* el) {
 }
 
 static void slider_button_on_hover(GuiElement* el) {
-    if (hover.button.handler) return;
+    if (ui.hover.button.handler) return;
     el->draw_type = DRAWTYPE_RECT;
     el->color = (GuiColor) { 0x60, 0x60, 0x60, 0xff };
     el->data.rect_type = RECT_NORMAL;
-    hover.button.handler = el->custom_data;
+    ui.hover.button.handler = el->custom_data;
 }
 
 static void draw_slider(int min, int max, int* value) {
@@ -381,15 +381,15 @@ static void end_setting(void) {
 }
 
 static void text_input_on_hover(GuiElement* el) {
-    if (hover.button.handler) return;
+    if (ui.hover.button.handler) return;
     el->color = (GuiColor) { 0x40, 0x40, 0x40, 0xff };
 }
 
 static void dropdown_input_on_hover(GuiElement* el) {
-    if (hover.button.handler) return;
+    if (ui.hover.button.handler) return;
     unsigned short len;
-    hover.settings_dropdown_data = *(DropdownData*)gui_get_state(el, &len);
-    hover.button.handler = settings_on_dropdown_click;
+    ui.hover.settings_dropdown_data = *(DropdownData*)gui_get_state(el, &len);
+    ui.hover.button.handler = settings_on_dropdown_click;
     if (el->color.r == 0x30) el->color = (GuiColor) { 0x40, 0x40, 0x40, 0xff };
 }
 
@@ -408,8 +408,8 @@ static void draw_dropdown_input(int* value, char** list, int list_len) {
         };
         gui_set_state(gui, &data, sizeof(data));
 
-        if (hover.select_settings_dropdown_value == value && hover.dropdown.location == LOCATION_SETTINGS) {
-            hover.dropdown.element = gui_get_element(gui);
+        if (ui.hover.select_settings_dropdown_value == value && ui.hover.dropdown.location == LOCATION_SETTINGS) {
+            ui.hover.dropdown.element = gui_get_element(gui);
             gui_set_rect(gui, (GuiColor) { 0x2b, 0x2b, 0x2b, 0xff });
         }
 
@@ -442,7 +442,7 @@ static void draw_text_input(char** input, const char* hint, int* scroll, bool ed
         gui_on_hover(gui, text_input_on_hover);
         gui_set_custom_data(gui, input);
 
-        if (input == hover.select_input) gui_set_rect(gui, (GuiColor) { 0x2b, 0x2b, 0x2b, 0xff });
+        if (input == ui.hover.select_input) gui_set_rect(gui, (GuiColor) { 0x2b, 0x2b, 0x2b, 0xff });
 
         gui_element_begin(gui);
             gui_set_grow(gui, DIRECTION_HORIZONTAL);
@@ -496,7 +496,7 @@ void handle_window(void) {
         window.animation_time -= GetFrameTime() * 2.0;
         if (window.animation_time < 0.0) {
             window.animation_time = 0.0;
-            if (window.shown) render_surface_needs_redraw = true;
+            if (window.shown) ui.render_surface_needs_redraw = true;
             window.shown = false;
             if (about_text_split) {
                 for (size_t i = 0; i < vector_size(about_text_split); i++) {
@@ -506,7 +506,7 @@ void handle_window(void) {
                 about_text_split = NULL;
             }
         } else {
-            render_surface_needs_redraw = true;
+            ui.render_surface_needs_redraw = true;
         }
     } else {
         window.shown = true;
@@ -514,7 +514,7 @@ void handle_window(void) {
         if (window.animation_time > 1.0) {
             window.animation_time = 1.0;
         } else {
-            render_surface_needs_redraw = true;
+            ui.render_surface_needs_redraw = true;
         }
     }
 }

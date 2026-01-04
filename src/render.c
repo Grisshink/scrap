@@ -45,28 +45,28 @@ bool rl_vec_equal(Color lhs, Color rhs) {
 
 void actionbar_show(const char* text) {
     TraceLog(LOG_INFO, "[ACTION] %s", text);
-    strncpy(actionbar.text, text, sizeof(actionbar.text) - 1);
-    actionbar.show_time = 3.0;
+    strncpy(editor.actionbar.text, text, sizeof(editor.actionbar.text) - 1);
+    editor.actionbar.show_time = 3.0;
 }
 
 static void draw_dots(void) {
     int win_width = GetScreenWidth();
     int win_height = GetScreenHeight();
 
-    for (int y = MOD(-(int)camera_pos.y, conf.font_size * 2); y < win_height; y += conf.font_size * 2) {
-        for (int x = MOD(-(int)camera_pos.x, conf.font_size * 2); x < win_width; x += conf.font_size * 2) {
+    for (int y = MOD(-(int)editor.camera_pos.y, conf.font_size * 2); y < win_height; y += conf.font_size * 2) {
+        for (int x = MOD(-(int)editor.camera_pos.x, conf.font_size * 2); x < win_width; x += conf.font_size * 2) {
             DrawRectangle(x, y, 2, 2, (Color) { 0x40, 0x40, 0x40, 0xff });
         }
     }
 
-    if (shader_time == 1.0) return;
+    if (ui.shader_time == 1.0) return;
     if (!IsShaderValid(assets.line_shader)) return;
 
     BeginShaderMode(assets.line_shader);
-    for (int y = MOD(-(int)camera_pos.y, conf.font_size * 2); y < win_height; y += conf.font_size * 2) {
+    for (int y = MOD(-(int)editor.camera_pos.y, conf.font_size * 2); y < win_height; y += conf.font_size * 2) {
         DrawRectangle(0, y, win_width, 2, (Color) { 0x40, 0x40, 0x40, 0xff });
     }
-    for (int x = MOD(-(int)camera_pos.x, conf.font_size * 2); x < win_width; x += conf.font_size * 2) {
+    for (int x = MOD(-(int)editor.camera_pos.x, conf.font_size * 2); x < win_width; x += conf.font_size * 2) {
         DrawRectangle(x, 0, 2, win_height, (Color) { 0x40, 0x40, 0x40, 0xff });
     }
     EndShaderMode();
@@ -152,16 +152,16 @@ void prerender_font_shadow(Font* font) {
 }
 
 static void blockdef_on_hover(GuiElement* el) {
-    if (hover.is_panel_edit_mode) return;
+    if (ui.hover.is_panel_edit_mode) return;
     if (gui_window_is_shown()) return;
-    hover.editor.part = EDITOR_BLOCKDEF;
-    hover.editor.blockdef = el->custom_data;
+    ui.hover.editor.part = EDITOR_BLOCKDEF;
+    ui.hover.editor.blockdef = el->custom_data;
 }
 
 static void blockdef_input_on_hover(GuiElement* el) {
-    if (hover.is_panel_edit_mode) return;
+    if (ui.hover.is_panel_edit_mode) return;
     if (gui_window_is_shown()) return;
-    hover.editor.blockchain = hover.editor.prev_blockchain;
+    ui.hover.editor.blockchain = ui.hover.editor.prev_blockchain;
     if (el->draw_type != DRAWTYPE_UNKNOWN) return;
     el->draw_type = DRAWTYPE_BORDER;
     el->color = (GuiColor) { 0xa0, 0xa0, 0xa0, 0xff };
@@ -170,24 +170,24 @@ static void blockdef_input_on_hover(GuiElement* el) {
 }
 
 static void editor_del_button_on_hover(GuiElement* el) {
-    if (hover.is_panel_edit_mode) return;
+    if (ui.hover.is_panel_edit_mode) return;
     if (gui_window_is_shown()) return;
-    if (hover.button.handler) return;
+    if (ui.hover.button.handler) return;
     el->draw_type = DRAWTYPE_RECT;
     el->data.rect_type = RECT_NORMAL;
     el->color = (GuiColor) { 0xff, 0xff, 0xff, 0x80 };
-    hover.editor.blockdef_input = (size_t)el->custom_data;
-    hover.button.handler = handle_editor_del_arg_button;
+    ui.hover.editor.blockdef_input = (size_t)el->custom_data;
+    ui.hover.button.handler = handle_editor_del_arg_button;
 }
 
 static void editor_button_on_hover(GuiElement* el) {
-    if (hover.is_panel_edit_mode) return;
+    if (ui.hover.is_panel_edit_mode) return;
     if (gui_window_is_shown()) return;
-    if (hover.button.handler) return;
+    if (ui.hover.button.handler) return;
     el->draw_type = DRAWTYPE_RECT;
     el->data.rect_type = RECT_NORMAL;
     el->color = (GuiColor) { 0xff, 0xff, 0xff, 0x80 };
-    hover.button.handler = el->custom_data;
+    ui.hover.button.handler = el->custom_data;
 }
 
 static void draw_editor_button(Texture2D* texture, ButtonClickHandler handler) {
@@ -201,12 +201,12 @@ static void draw_editor_button(Texture2D* texture, ButtonClickHandler handler) {
 }
 
 static void input_on_hover(GuiElement* el) {
-    if (hover.button.handler) return;
-    if (hover.is_panel_edit_mode) return;
+    if (ui.hover.button.handler) return;
+    if (ui.hover.is_panel_edit_mode) return;
 
     unsigned short len;
-    hover.input_info = *(InputHoverInfo*)gui_get_state(el, &len);
-    hover.input_info.rel_pos = (Vector2) { gui->mouse_x - el->abs_x, gui->mouse_y - el->abs_y };
+    ui.hover.input_info = *(InputHoverInfo*)gui_get_state(el, &len);
+    ui.hover.input_info.rel_pos = (Vector2) { gui->mouse_x - el->abs_x, gui->mouse_y - el->abs_y };
 }
 
 void draw_input(Font* font, char** input, const char* hint, unsigned short font_size, GuiColor font_color, bool editable) {
@@ -231,20 +231,20 @@ void draw_input(Font* font, char** input, const char* hint, unsigned short font_
             gui_set_align(gui, ALIGN_CENTER);
             gui_set_grow(gui, DIRECTION_VERTICAL);
 
-            if (hover.select_input == input) {
-                if (hover.select_input_cursor == hover.select_input_mark) hover.select_input_mark = -1;
+            if (ui.hover.select_input == input) {
+                if (ui.hover.select_input_cursor == ui.hover.select_input_mark) ui.hover.select_input_mark = -1;
 
-                if (hover.select_input_mark == -1) {
-                    gui_text_slice(gui, font, *input, hover.select_input_cursor, font_size, font_color);
+                if (ui.hover.select_input_mark == -1) {
+                    gui_text_slice(gui, font, *input, ui.hover.select_input_cursor, font_size, font_color);
                     gui_element_begin(gui);
                         gui_set_rect(gui, font_color);
                         gui_set_min_size(gui, BLOCK_OUTLINE_SIZE, BLOCK_TEXT_SIZE);
                     gui_element_end(gui);
 
-                    gui_text(gui, font, *input + hover.select_input_cursor, font_size, font_color);
+                    gui_text(gui, font, *input + ui.hover.select_input_cursor, font_size, font_color);
                 } else {
-                    int select_start = MIN(hover.select_input_cursor, hover.select_input_mark),
-                        select_end   = MAX(hover.select_input_cursor, hover.select_input_mark);
+                    int select_start = MIN(ui.hover.select_input_cursor, ui.hover.select_input_mark),
+                        select_end   = MAX(ui.hover.select_input_cursor, ui.hover.select_input_mark);
                     gui_text_slice(gui, font, *input, select_start, font_size, font_color);
 
                     gui_element_begin(gui);
@@ -266,7 +266,7 @@ void draw_input(Font* font, char** input, const char* hint, unsigned short font_
 }
 
 static void draw_blockdef(Blockdef* blockdef, bool editing) {
-    bool collision = hover.editor.prev_blockdef == blockdef;
+    bool collision = ui.hover.editor.prev_blockdef == blockdef;
     Color color = CONVERT_COLOR(blockdef->color, Color);
     Color block_color = ColorBrightness(color, collision ? 0.3 : 0.0);
     Color dropdown_color = ColorBrightness(color, collision ? 0.0 : -0.3);
@@ -289,7 +289,7 @@ static void draw_blockdef(Blockdef* blockdef, bool editing) {
     for (size_t i = 0; i < vector_size(blockdef->inputs); i++) {
         Input* input = &blockdef->inputs[i];
 
-        if (hover.editor.edit_blockdef == blockdef) {
+        if (ui.hover.editor.edit_blockdef == blockdef) {
             gui_element_begin(gui);
                 gui_set_direction(gui, DIRECTION_HORIZONTAL);
                 gui_set_rect(gui, CONVERT_COLOR(dropdown_color, GuiColor));
@@ -308,7 +308,7 @@ static void draw_blockdef(Blockdef* blockdef, bool editing) {
                         gui_set_direction(gui, DIRECTION_HORIZONTAL);
                         gui_set_min_size(gui, conf.font_size - BLOCK_OUTLINE_SIZE * 4, conf.font_size - BLOCK_OUTLINE_SIZE * 4);
                         gui_set_padding(gui, BLOCK_STRING_PADDING / 2, 0);
-                        if (hover.select_input == &input->data.text) gui_set_border(gui, (GuiColor) { 0x30, 0x30, 0x30, 0xff }, BLOCK_OUTLINE_SIZE);
+                        if (ui.hover.select_input == &input->data.text) gui_set_border(gui, (GuiColor) { 0x30, 0x30, 0x30, 0xff }, BLOCK_OUTLINE_SIZE);
                         gui_on_hover(gui, blockdef_input_on_hover);
 
                         draw_input(&assets.fonts.font_cond, &input->data.text, "", BLOCK_TEXT_SIZE, (GuiColor) { 0x00, 0x00, 0x00, 0xff }, true);
@@ -329,7 +329,7 @@ static void draw_blockdef(Blockdef* blockdef, bool editing) {
             break;
         }
 
-        if (hover.editor.edit_blockdef == blockdef) {
+        if (ui.hover.editor.edit_blockdef == blockdef) {
                 gui_element_begin(gui);
                     gui_set_rect(gui, (GuiColor) { 0xff, 0xff, 0xff, 0x40 });
                     gui_on_hover(gui, editor_del_button_on_hover);
@@ -346,36 +346,36 @@ static void draw_blockdef(Blockdef* blockdef, bool editing) {
 }
 
 static void block_on_hover(GuiElement* el) {
-    if (hover.button.handler) return;
-    if (hover.is_panel_edit_mode) return;
+    if (ui.hover.button.handler) return;
+    if (ui.hover.is_panel_edit_mode) return;
     if (gui_window_is_shown()) return;
-    hover.editor.block = el->custom_data;
-    hover.editor.blockchain = hover.editor.prev_blockchain;
-    if (!hover.editor.block->parent) hover.editor.parent_argument = NULL;
+    ui.hover.editor.block = el->custom_data;
+    ui.hover.editor.blockchain = ui.hover.editor.prev_blockchain;
+    if (!ui.hover.editor.block->parent) ui.hover.editor.parent_argument = NULL;
 }
 
 static void argument_on_render(GuiElement* el) {
-    hover.editor.select_block_pos = (Vector2) { el->abs_x, el->abs_y };
+    ui.hover.editor.select_block_pos = (Vector2) { el->abs_x, el->abs_y };
 }
 
 static void block_on_render(GuiElement* el) {
-    hover.editor.select_block_pos = (Vector2) { el->abs_x, el->abs_y };
-    hover.editor.select_valid = true;
+    ui.hover.editor.select_block_pos = (Vector2) { el->abs_x, el->abs_y };
+    ui.hover.editor.select_valid = true;
 }
 
 static void block_argument_on_hover(GuiElement* el) {
-    if (hover.button.handler) return;
-    if (hover.is_panel_edit_mode) return;
-    hover.editor.parent_argument = el->custom_data;
-    hover.editor.blockchain = hover.editor.prev_blockchain;
+    if (ui.hover.button.handler) return;
+    if (ui.hover.is_panel_edit_mode) return;
+    ui.hover.editor.parent_argument = el->custom_data;
+    ui.hover.editor.blockchain = ui.hover.editor.prev_blockchain;
 }
 
 static void argument_on_hover(GuiElement* el) {
-    if (hover.button.handler) return;
-    if (hover.is_panel_edit_mode) return;
+    if (ui.hover.button.handler) return;
+    if (ui.hover.is_panel_edit_mode) return;
     if (gui_window_is_shown()) return;
-    hover.editor.argument = el->custom_data;
-    hover.editor.blockchain = hover.editor.prev_blockchain;
+    ui.hover.editor.argument = el->custom_data;
+    ui.hover.editor.blockchain = ui.hover.editor.prev_blockchain;
     if (el->draw_type != DRAWTYPE_UNKNOWN) return;
     el->draw_type = DRAWTYPE_BORDER;
     el->color = (GuiColor) { 0xa0, 0xa0, 0xa0, 0xff };
@@ -384,10 +384,10 @@ static void argument_on_hover(GuiElement* el) {
 }
 
 static void draw_block(Block* block, bool highlight, bool can_hover, bool ghost, bool editable) {
-    bool collision = hover.editor.prev_block == block || highlight;
+    bool collision = ui.hover.editor.prev_block == block || highlight;
     Color color = CONVERT_COLOR(block->blockdef->color, Color);
     if (!block->blockdef->func) color = (Color) UNIMPLEMENTED_BLOCK_COLOR;
-    if (!thread_is_running(&vm.thread) && block == exec_compile_error_block) {
+    if (!thread_is_running(&vm.thread) && block == vm.compile_error_block) {
         double animation = fmod(-GetTime(), 1.0) * 0.5 + 1.0;
         color = (Color) { 0xff * animation, 0x20 * animation, 0x20 * animation, 0xff };
     }
@@ -396,7 +396,7 @@ static void draw_block(Block* block, bool highlight, bool can_hover, bool ghost,
     Color block_color = collision ? ColorBrightness(color, 0.3) : color;
     Color dropdown_color = collision ? color : ColorBrightness(color, -0.3);
     Color outline_color;
-    if (hover.editor.select_block == block) {
+    if (ui.hover.editor.select_block == block) {
         outline_color = ColorBrightness(color, 0.7);
     } else {
         outline_color = ColorBrightness(color, collision ? 0.5 : -0.2);
@@ -408,7 +408,7 @@ static void draw_block(Block* block, bool highlight, bool can_hover, bool ghost,
         gui_set_custom_data(gui, block);
         if (block->blockdef->type == BLOCKTYPE_HAT) gui_set_rect_type(gui, RECT_NOTCHED);
         if (can_hover) gui_on_hover(gui, block_on_hover);
-        if (hover.editor.select_block == block) gui_on_render(gui, block_on_render);
+        if (ui.hover.editor.select_block == block) gui_on_render(gui, block_on_render);
 
     gui_element_begin(gui);
         gui_set_direction(gui, DIRECTION_HORIZONTAL);
@@ -470,7 +470,7 @@ static void draw_block(Block* block, bool highlight, bool can_hover, bool ghost,
                         gui_set_min_size(gui, conf.font_size - BLOCK_OUTLINE_SIZE * 4, conf.font_size - BLOCK_OUTLINE_SIZE * 4);
                         gui_set_padding(gui, BLOCK_STRING_PADDING / 2, 0);
                         if (editable) {
-                            if (hover.editor.select_argument == arg) {
+                            if (ui.hover.editor.select_argument == arg) {
                                 gui_set_border(gui, (GuiColor) { 0x30, 0x30, 0x30, 0xff }, BLOCK_OUTLINE_SIZE);
                                 gui_on_render(gui, argument_on_render);
                             }
@@ -528,8 +528,8 @@ static void draw_block(Block* block, bool highlight, bool can_hover, bool ghost,
             gui_element_begin(gui);
                 gui_set_rect(gui, CONVERT_COLOR(dropdown_color, GuiColor));
 
-                if (hover.editor.select_argument == arg && hover.dropdown.location == LOCATION_BLOCK_DROPDOWN) {
-                    hover.dropdown.element = gui_get_element(gui);
+                if (ui.hover.editor.select_argument == arg && ui.hover.dropdown.location == LOCATION_BLOCK_DROPDOWN) {
+                    ui.hover.dropdown.element = gui_get_element(gui);
                 }
 
                 gui_element_begin(gui);
@@ -538,7 +538,7 @@ static void draw_block(Block* block, bool highlight, bool can_hover, bool ghost,
                     gui_set_padding(gui, BLOCK_STRING_PADDING / 2, 0);
                     gui_set_direction(gui, DIRECTION_HORIZONTAL);
                     if (editable) {
-                        if (hover.editor.select_argument == arg) gui_set_border(gui, (GuiColor) { 0x30, 0x30, 0x30, 0xff }, BLOCK_OUTLINE_SIZE);
+                        if (ui.hover.editor.select_argument == arg) gui_set_border(gui, (GuiColor) { 0x30, 0x30, 0x30, 0xff }, BLOCK_OUTLINE_SIZE);
                         if (can_hover) gui_on_hover(gui, argument_on_hover);
                         gui_set_custom_data(gui, arg);
                     }
@@ -564,9 +564,9 @@ static void draw_block(Block* block, bool highlight, bool can_hover, bool ghost,
                 gui_set_custom_data(gui, arg);
                 if (can_hover) gui_on_hover(gui, argument_on_hover);
 
-                draw_blockdef(arg->data.blockdef, hover.editor.edit_blockdef == arg->data.blockdef);
+                draw_blockdef(arg->data.blockdef, ui.hover.editor.edit_blockdef == arg->data.blockdef);
 
-                if (hover.editor.edit_blockdef == arg->data.blockdef) {
+                if (ui.hover.editor.edit_blockdef == arg->data.blockdef) {
                     draw_editor_button(&assets.textures.button_add_arg, handle_editor_add_arg_button);
                     draw_editor_button(&assets.textures.button_add_text, handle_editor_add_text_button);
                     draw_editor_button(&assets.textures.button_close, handle_editor_close_button);
@@ -590,44 +590,44 @@ static void draw_block(Block* block, bool highlight, bool can_hover, bool ghost,
 
 static void tab_button_add_on_hover(GuiElement* el) {
     if (gui_window_is_shown()) return;
-    if (hover.button.handler) return;
+    if (ui.hover.button.handler) return;
     if (el->draw_type == DRAWTYPE_RECT) return;
     el->draw_type = DRAWTYPE_RECT;
     el->data.rect_type = RECT_NORMAL;
     el->color = (GuiColor) { 0x40, 0x40, 0x40, 0xff };
-    hover.button.handler = handle_add_tab_button;
-    hover.button.data = el->custom_data;
+    ui.hover.button.handler = handle_add_tab_button;
+    ui.hover.button.data = el->custom_data;
 }
 
 static void tab_button_on_hover(GuiElement* el) {
     if (gui_window_is_shown()) return;
-    if (hover.button.handler) return;
+    if (ui.hover.button.handler) return;
     if (el->draw_type == DRAWTYPE_RECT) return;
     el->draw_type = DRAWTYPE_RECT;
     el->data.rect_type = RECT_NORMAL;
     el->color = (GuiColor) { 0x40, 0x40, 0x40, 0xff };
-    hover.button.handler = handle_tab_button;
-    hover.button.data = el->custom_data;
+    ui.hover.button.handler = handle_tab_button;
+    ui.hover.button.data = el->custom_data;
 }
 
 static void button_on_hover(GuiElement* el) {
-    if (hover.is_panel_edit_mode) return;
+    if (ui.hover.is_panel_edit_mode) return;
     if (gui_window_is_shown()) return;
-    if (hover.button.handler) return;
+    if (ui.hover.button.handler) return;
     if (el->draw_type == DRAWTYPE_RECT) return;
     el->draw_type = DRAWTYPE_RECT;
     el->data.rect_type = RECT_NORMAL;
     el->color = (GuiColor) { 0x40, 0x40, 0x40, 0xff };
-    hover.button.handler = el->custom_data;
+    ui.hover.button.handler = el->custom_data;
 }
 
 static void panel_editor_button_on_hover(GuiElement* el) {
-    if (!hover.is_panel_edit_mode) return;
-    if (hover.button.handler) return;
+    if (!ui.hover.is_panel_edit_mode) return;
+    if (ui.hover.button.handler) return;
 
     Color color = ColorBrightness(CONVERT_COLOR(el->color, Color), -0.13);
     el->color = CONVERT_COLOR(color, GuiColor);
-    hover.button.handler = el->custom_data;
+    ui.hover.button.handler = el->custom_data;
 }
 
 static void draw_panel_editor_button(const char* text, int size, GuiColor color, ButtonClickHandler handler) {
@@ -677,7 +677,7 @@ static void draw_top_bar(void) {
         gui_spacer(gui, 10, 0);
 
         GuiElement* el = draw_button(gettext("File"), top_bar_size, false, button_on_hover, handle_file_button_click);
-        if (hover.dropdown.location == LOCATION_FILE_MENU) hover.dropdown.element = el;
+        if (ui.hover.dropdown.location == LOCATION_FILE_MENU) ui.hover.dropdown.element = el;
         draw_button(gettext("Settings"), top_bar_size, false, button_on_hover, handle_settings_button_click);
         draw_button(gettext("About"), top_bar_size, false, button_on_hover, handle_about_button_click);
     gui_element_end(gui);
@@ -692,18 +692,18 @@ static void draw_tab_bar(void) {
         gui_set_min_size(gui, 0, tab_bar_size);
         gui_set_align(gui, ALIGN_CENTER);
 
-        if (hover.is_panel_edit_mode && hover.panels.mouse_panel != PANEL_NONE) {
+        if (ui.hover.is_panel_edit_mode && ui.hover.panels.mouse_panel != PANEL_NONE) {
             draw_button("+", tab_bar_size, false, tab_button_add_on_hover, (void*)0);
         }
-        for (size_t i = 0; i < vector_size(code_tabs); i++) {
-            draw_button(gettext(code_tabs[i].name), tab_bar_size, current_tab == (int)i, tab_button_on_hover, (void*)i);
-            if (hover.is_panel_edit_mode && hover.panels.mouse_panel != PANEL_NONE) {
+        for (size_t i = 0; i < vector_size(editor.tabs); i++) {
+            draw_button(gettext(editor.tabs[i].name), tab_bar_size, editor.current_tab == (int)i, tab_button_on_hover, (void*)i);
+            if (ui.hover.is_panel_edit_mode && ui.hover.panels.mouse_panel != PANEL_NONE) {
                 draw_button("+", tab_bar_size, false, tab_button_add_on_hover, (void*)(i + 1));
             }
         }
 
         gui_grow(gui, DIRECTION_HORIZONTAL);
-        gui_text(gui, &assets.fonts.font_cond, project_name, BLOCK_TEXT_SIZE, (GuiColor) { 0x80, 0x80, 0x80, 0xff });
+        gui_text(gui, &assets.fonts.font_cond, editor.project_name, BLOCK_TEXT_SIZE, (GuiColor) { 0x80, 0x80, 0x80, 0xff });
         gui_grow(gui, DIRECTION_HORIZONTAL);
 
 #ifndef USE_INTERPRETER
@@ -746,17 +746,17 @@ static void draw_tab_bar(void) {
 }
 
 static void blockchain_on_hover(GuiElement* el) {
-    if (hover.is_panel_edit_mode) return;
-    hover.editor.prev_blockchain = el->custom_data;
+    if (ui.hover.is_panel_edit_mode) return;
+    ui.hover.editor.prev_blockchain = el->custom_data;
 }
 
 static void draw_block_preview(BlockChain* chain) {
-    if (chain == &mouse_blockchain) return;
-    if (vector_size(mouse_blockchain.blocks) == 0) return;
-    if (hover.editor.prev_argument != NULL) return;
-    if (mouse_blockchain.blocks[0].blockdef->type == BLOCKTYPE_HAT) return;
+    if (chain == &editor.mouse_blockchain) return;
+    if (vector_size(editor.mouse_blockchain.blocks) == 0) return;
+    if (ui.hover.editor.prev_argument != NULL) return;
+    if (editor.mouse_blockchain.blocks[0].blockdef->type == BLOCKTYPE_HAT) return;
 
-    draw_blockchain(&mouse_blockchain, true, false, false);
+    draw_blockchain(&editor.mouse_blockchain, true, false, false);
 }
 
 static void draw_blockchain(BlockChain* chain, bool ghost, bool show_previews, bool editable_arguments) {
@@ -777,22 +777,22 @@ static void draw_blockchain(BlockChain* chain, bool ghost, bool show_previews, b
 
             Block* block = el->custom_data;
 
-            bool collision = hover.editor.prev_block == &chain->blocks[i];
+            bool collision = ui.hover.editor.prev_block == &chain->blocks[i];
             Color color = CONVERT_COLOR(block->blockdef->color, Color);
             if (ghost) color.a = BLOCK_GHOST_OPACITY;
             Color block_color = ColorBrightness(color, collision ? 0.3 : 0.0);
             Color outline_color;
-            if (hover.editor.select_block == &chain->blocks[i]) {
+            if (ui.hover.editor.select_block == &chain->blocks[i]) {
                 outline_color = ColorBrightness(color, 0.7);
             } else {
                 outline_color = ColorBrightness(color, collision ? 0.5 : -0.2);
             }
 
             gui_element_begin(gui);
-                gui_set_min_size(gui, blockchain_render_layer_widths[vector_size(blockchain_render_layer_widths) - 1], conf.font_size);
+                gui_set_min_size(gui, editor.blockchain_render_layer_widths[vector_size(editor.blockchain_render_layer_widths) - 1], conf.font_size);
                 gui_set_rect(gui, CONVERT_COLOR(block_color, GuiColor));
                 gui_on_hover(gui, block_on_hover);
-                if (hover.editor.select_block == &chain->blocks[i]) gui_on_render(gui, block_on_render);
+                if (ui.hover.editor.select_block == &chain->blocks[i]) gui_on_render(gui, block_on_render);
                 gui_set_custom_data(gui, &chain->blocks[i]);
 
                 gui_element_begin(gui);
@@ -803,7 +803,7 @@ static void draw_blockchain(BlockChain* chain, bool ghost, bool show_previews, b
                 gui_element_end(gui);
             gui_element_end(gui);
 
-            vector_pop(blockchain_render_layer_widths);
+            vector_pop(editor.blockchain_render_layer_widths);
             layer--;
             gui_element_end(gui);
         } else if (blockdef->type == BLOCKTYPE_CONTROLEND) {
@@ -813,7 +813,7 @@ static void draw_blockchain(BlockChain* chain, bool ghost, bool show_previews, b
                 gui_element_end(gui);
                 layer--;
             }
-            if (vector_size(blockchain_render_layer_widths) > 0) vector_pop(blockchain_render_layer_widths);
+            if (vector_size(editor.blockchain_render_layer_widths) > 0) vector_pop(editor.blockchain_render_layer_widths);
             gui_element_begin(gui);
                 gui_set_direction(gui, DIRECTION_VERTICAL);
                 gui_set_custom_data(gui, &chain->blocks[i]);
@@ -831,14 +831,14 @@ static void draw_blockchain(BlockChain* chain, bool ghost, bool show_previews, b
             layer++;
 
             GuiElement* el = gui_get_element(gui);
-            vector_add(&blockchain_render_layer_widths, el->w);
+            vector_add(&editor.blockchain_render_layer_widths, el->w);
 
-            bool collision = hover.editor.prev_block == &chain->blocks[i];
+            bool collision = ui.hover.editor.prev_block == &chain->blocks[i];
             Color color = CONVERT_COLOR(blockdef->color, Color);
             if (ghost) color.a = BLOCK_GHOST_OPACITY;
             Color block_color = ColorBrightness(color, collision ? 0.3 : 0.0);
             Color outline_color;
-            if (hover.editor.select_block == &chain->blocks[i]) {
+            if (ui.hover.editor.select_block == &chain->blocks[i]) {
                 outline_color = ColorBrightness(color, 0.7);
             } else {
                 outline_color = ColorBrightness(color, collision ? 0.5 : -0.2);
@@ -865,11 +865,11 @@ static void draw_blockchain(BlockChain* chain, bool ghost, bool show_previews, b
                 gui_element_begin(gui);
                     gui_set_direction(gui, DIRECTION_VERTICAL);
 
-                    if (hover.editor.prev_block == &chain->blocks[i] && show_previews) {
+                    if (ui.hover.editor.prev_block == &chain->blocks[i] && show_previews) {
                         draw_block_preview(chain);
                     }
         } else {
-            if (hover.editor.prev_block == &chain->blocks[i] && show_previews) {
+            if (ui.hover.editor.prev_block == &chain->blocks[i] && show_previews) {
                 draw_block_preview(chain);
             }
         }
@@ -886,13 +886,13 @@ static void draw_blockchain(BlockChain* chain, bool ghost, bool show_previews, b
 }
 
 static void category_on_hover(GuiElement* el) {
-    if (hover.is_panel_edit_mode) return;
+    if (ui.hover.is_panel_edit_mode) return;
     if (gui_window_is_shown()) return;
-    if (hover.button.handler) return;
+    if (ui.hover.button.handler) return;
 
     el->color.a = 0x80;
-    hover.button.handler = handle_category_click;
-    hover.category = el->custom_data;
+    ui.hover.button.handler = handle_category_click;
+    ui.hover.category = el->custom_data;
 }
 
 static void draw_category(BlockCategory* category) {
@@ -908,7 +908,7 @@ static void draw_category(BlockCategory* category) {
         color.a = 0xff;
         gui_element_begin(gui);
             gui_set_grow(gui, DIRECTION_HORIZONTAL);
-            if (category == palette.current_category) gui_set_border(gui, color, BLOCK_OUTLINE_SIZE);
+            if (category == editor.palette.current_category) gui_set_border(gui, color, BLOCK_OUTLINE_SIZE);
             gui_set_direction(gui, DIRECTION_HORIZONTAL);
             gui_set_padding(gui, BLOCK_PADDING, BLOCK_PADDING);
             gui_set_min_size(gui, 0, conf.font_size);
@@ -932,10 +932,10 @@ static void draw_block_categories(void) {
         gui_set_rect(gui, (GuiColor) PANEL_BACKGROUND_COLOR);
         gui_set_padding(gui, SIDE_BAR_PADDING, SIDE_BAR_PADDING);
         gui_set_gap(gui, SIDE_BAR_PADDING);
-        gui_set_scroll(gui, &categories_scroll);
+        gui_set_scroll(gui, &ui.categories_scroll);
         gui_set_scissor(gui);
 
-        BlockCategory* cat = palette.categories_start;
+        BlockCategory* cat = editor.palette.categories_start;
         while (cat) {
             gui_element_begin(gui);
                 gui_set_direction(gui, DIRECTION_HORIZONTAL);
@@ -962,13 +962,13 @@ static void draw_block_palette(void) {
         gui_set_rect(gui, (GuiColor) PANEL_BACKGROUND_COLOR);
         gui_set_padding(gui, SIDE_BAR_PADDING, SIDE_BAR_PADDING);
         gui_set_gap(gui, SIDE_BAR_PADDING);
-        gui_set_scroll(gui, &palette.scroll_amount);
+        gui_set_scroll(gui, &editor.palette.scroll_amount);
         gui_set_scroll_scaling(gui, conf.font_size * 4);
         gui_set_scissor(gui);
 
-        if (palette.current_category) {
-            for (size_t i = 0; i < vector_size(palette.current_category->chains); i++) {
-                draw_blockchain(&palette.current_category->chains[i], false, false, false);
+        if (editor.palette.current_category) {
+            for (size_t i = 0; i < vector_size(editor.palette.current_category->chains); i++) {
+                draw_blockchain(&editor.palette.current_category->chains[i], false, false, false);
             }
         } else {
             gui_set_align(gui, ALIGN_CENTER);
@@ -978,7 +978,7 @@ static void draw_block_palette(void) {
 }
 
 static void code_area_on_render(GuiElement* el) {
-    hover.panels.code_panel_bounds = (Rectangle) { el->abs_x, el->abs_y, el->w, el->h };
+    ui.hover.panels.code_panel_bounds = (Rectangle) { el->abs_x, el->abs_y, el->w, el->h };
 }
 
 static void draw_code_area(void) {
@@ -998,11 +998,11 @@ static void draw_code_area(void) {
             gui_set_position(gui, 0, 0);
             gui_set_padding(gui, conf.font_size * 0.2, conf.font_size * 0.2);
             for (int i = 0; i < DEBUG_BUFFER_LINES; i++) {
-                if (*debug_buffer[i]) gui_text(gui, &assets.fonts.font_cond, debug_buffer[i], conf.font_size * 0.5, (GuiColor) { 0xff, 0xff, 0xff, 0x60 });
+                if (*editor.debug_buffer[i]) gui_text(gui, &assets.fonts.font_cond, editor.debug_buffer[i], conf.font_size * 0.5, (GuiColor) { 0xff, 0xff, 0xff, 0x60 });
             }
         gui_element_end(gui);
 
-        if (!thread_is_running(&vm.thread) && vector_size(exec_compile_error) > 0) {
+        if (!thread_is_running(&vm.thread) && vector_size(vm.compile_error) > 0) {
             gui_element_begin(gui);
                 gui_set_direction(gui, DIRECTION_HORIZONTAL);
                 gui_set_align(gui, ALIGN_CENTER);
@@ -1024,8 +1024,8 @@ static void draw_code_area(void) {
                     gui_set_direction(gui, DIRECTION_VERTICAL);
 
                     gui_text(gui, &assets.fonts.font_cond, gettext("Got compiler error!"), conf.font_size * 0.6, (GuiColor) { 0xff, 0x33, 0x33, 0xff });
-                    for (size_t i = 0; i < vector_size(exec_compile_error); i++) {
-                        gui_text(gui, &assets.fonts.font_cond, exec_compile_error[i], conf.font_size * 0.6, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+                    for (size_t i = 0; i < vector_size(vm.compile_error); i++) {
+                        gui_text(gui, &assets.fonts.font_cond, vm.compile_error[i], conf.font_size * 0.6, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
                     }
 
                     gui_spacer(gui, 0, conf.font_size * 0.5);
@@ -1034,7 +1034,7 @@ static void draw_code_area(void) {
                         gui_set_direction(gui, DIRECTION_HORIZONTAL);   
                         gui_set_gap(gui, conf.font_size * 0.5);
 
-                        if (exec_compile_error_block) {
+                        if (vm.compile_error_block) {
                             gui_element_begin(gui);
                                 gui_set_border(gui, (GuiColor) { 0x40, 0x40, 0x40, 0xff }, BLOCK_OUTLINE_SIZE);
                                 draw_button(gettext("Jump to block"), conf.font_size, false, button_on_hover, handle_jump_to_block_button_click);
@@ -1052,25 +1052,25 @@ static void draw_code_area(void) {
             gui_spacer(gui, 0, conf.font_size * 1.5);
         }
 
-        if (actionbar.show_time > 0) {
+        if (editor.actionbar.show_time > 0) {
             gui_element_begin(gui);
                 gui_set_grow(gui, DIRECTION_HORIZONTAL);
                 gui_set_direction(gui, DIRECTION_VERTICAL);
                 gui_set_align(gui, ALIGN_CENTER);
                 
                 Color color = YELLOW;
-                color.a = actionbar.show_time / 3.0 * 255.0;
-                gui_text(gui, &assets.fonts.font_eb, actionbar.text, conf.font_size * 0.8, CONVERT_COLOR(color, GuiColor));
+                color.a = editor.actionbar.show_time / 3.0 * 255.0;
+                gui_text(gui, &assets.fonts.font_eb, editor.actionbar.text, conf.font_size * 0.8, CONVERT_COLOR(color, GuiColor));
             gui_element_end(gui);
         }
     gui_element_end(gui);
 }
 
 static void draw_split_preview(PanelTree* panel) {
-    if (!hover.is_panel_edit_mode) return;
-    if (hover.panels.prev_panel != panel) return;
+    if (!ui.hover.is_panel_edit_mode) return;
+    if (ui.hover.panels.prev_panel != panel) return;
 
-    if (hover.panels.mouse_panel == PANEL_NONE) {
+    if (ui.hover.panels.mouse_panel == PANEL_NONE) {
         gui_element_begin(gui);
             gui_set_floating(gui);
             gui_set_position(gui, 0, 0);
@@ -1087,7 +1087,7 @@ static void draw_split_preview(PanelTree* panel) {
         return;
     }
 
-    if (hover.panels.panel_side == SPLIT_SIDE_NONE) return;
+    if (ui.hover.panels.panel_side == SPLIT_SIDE_NONE) return;
 
     gui_element_begin(gui);
         gui_set_floating(gui);
@@ -1095,10 +1095,10 @@ static void draw_split_preview(PanelTree* panel) {
         gui_set_grow(gui, DIRECTION_HORIZONTAL);
         gui_set_grow(gui, DIRECTION_VERTICAL);
 
-        if (hover.panels.panel_side == SPLIT_SIDE_LEFT || hover.panels.panel_side == SPLIT_SIDE_RIGHT) gui_set_direction(gui, DIRECTION_HORIZONTAL);
+        if (ui.hover.panels.panel_side == SPLIT_SIDE_LEFT || ui.hover.panels.panel_side == SPLIT_SIDE_RIGHT) gui_set_direction(gui, DIRECTION_HORIZONTAL);
 
-        if (hover.panels.panel_side == SPLIT_SIDE_BOTTOM) gui_grow(gui, DIRECTION_VERTICAL);
-        if (hover.panels.panel_side == SPLIT_SIDE_RIGHT) gui_grow(gui, DIRECTION_HORIZONTAL);
+        if (ui.hover.panels.panel_side == SPLIT_SIDE_BOTTOM) gui_grow(gui, DIRECTION_VERTICAL);
+        if (ui.hover.panels.panel_side == SPLIT_SIDE_RIGHT) gui_grow(gui, DIRECTION_HORIZONTAL);
 
         gui_element_begin(gui);
             gui_set_grow(gui, DIRECTION_VERTICAL);
@@ -1112,8 +1112,8 @@ static void draw_split_preview(PanelTree* panel) {
             gui_element_end(gui);
         gui_element_end(gui);
 
-        if (hover.panels.panel_side == SPLIT_SIDE_TOP) gui_grow(gui, DIRECTION_VERTICAL);
-        if (hover.panels.panel_side == SPLIT_SIDE_LEFT) gui_grow(gui, DIRECTION_HORIZONTAL);
+        if (ui.hover.panels.panel_side == SPLIT_SIDE_TOP) gui_grow(gui, DIRECTION_VERTICAL);
+        if (ui.hover.panels.panel_side == SPLIT_SIDE_LEFT) gui_grow(gui, DIRECTION_HORIZONTAL);
     gui_element_end(gui);
 }
 
@@ -1134,10 +1134,10 @@ static void draw_term_panel(void) {
 }
 
 static void panel_on_hover(GuiElement* el) {
-    hover.panels.panel = el->custom_data;
-    hover.panels.panel_size = (Rectangle) { el->abs_x, el->abs_y, el->w, el->h };
+    ui.hover.panels.panel = el->custom_data;
+    ui.hover.panels.panel_size = (Rectangle) { el->abs_x, el->abs_y, el->w, el->h };
 
-    if (hover.panels.panel->type == PANEL_SPLIT) return;
+    if (ui.hover.panels.panel->type == PANEL_SPLIT) return;
 
     int mouse_x = gui->mouse_x - el->abs_x;
     int mouse_y = gui->mouse_y - el->abs_y;
@@ -1147,15 +1147,15 @@ static void panel_on_hover(GuiElement* el) {
 
     if (is_top_right) {
         if (is_top_left) {
-            hover.panels.panel_side = SPLIT_SIDE_TOP;
+            ui.hover.panels.panel_side = SPLIT_SIDE_TOP;
         } else {
-            hover.panels.panel_side = SPLIT_SIDE_RIGHT;
+            ui.hover.panels.panel_side = SPLIT_SIDE_RIGHT;
         }
     } else {
         if (is_top_left) {
-            hover.panels.panel_side = SPLIT_SIDE_LEFT;
+            ui.hover.panels.panel_side = SPLIT_SIDE_LEFT;
         } else {
-            hover.panels.panel_side = SPLIT_SIDE_BOTTOM;
+            ui.hover.panels.panel_side = SPLIT_SIDE_BOTTOM;
         }
     }
 }
@@ -1210,7 +1210,7 @@ static void draw_panel(PanelTree* panel) {
                 draw_panel(panel->left);
             gui_element_end(gui);
 
-            if (hover.is_panel_edit_mode) {
+            if (ui.hover.is_panel_edit_mode) {
                 gui_element_begin(gui);
                     if (panel->direction == DIRECTION_HORIZONTAL) {
                         gui_set_grow(gui, DIRECTION_VERTICAL);
@@ -1218,7 +1218,7 @@ static void draw_panel(PanelTree* panel) {
                         gui_set_grow(gui, DIRECTION_HORIZONTAL);
                     }
                     gui_set_min_size(gui, 10, 10);
-                    gui_set_rect(gui, (GuiColor) { 0xff, 0xff, 0xff, hover.panels.drag_panel == panel ? 0x20 : hover.panels.prev_panel == panel ? 0x80 : 0x40 });
+                    gui_set_rect(gui, (GuiColor) { 0xff, 0xff, 0xff, ui.hover.panels.drag_panel == panel ? 0x20 : ui.hover.panels.prev_panel == panel ? 0x80 : 0x40 });
                 gui_element_end(gui);
             }
 
@@ -1241,26 +1241,26 @@ static void draw_panel(PanelTree* panel) {
 }
 
 static void draw_code(void) {
-    for (size_t i = 0; i < vector_size(editor_code); i++) {
+    for (size_t i = 0; i < vector_size(editor.code); i++) {
         Vector2 chain_pos = (Vector2) {
-            editor_code[i].x - camera_pos.x,
-            editor_code[i].y - camera_pos.y,
+            editor.code[i].x - editor.camera_pos.x,
+            editor.code[i].y - editor.camera_pos.y,
         };
-        Rectangle code_size = hover.panels.code_panel_bounds;
-        if (&editor_code[i] != hover.editor.select_blockchain) {
+        Rectangle code_size = ui.hover.panels.code_panel_bounds;
+        if (&editor.code[i] != ui.hover.editor.select_blockchain) {
             if (chain_pos.x > code_size.width || chain_pos.y > code_size.height) continue;
-            if (editor_code[i].width > 0 && editor_code[i].height > 0 &&
-                (chain_pos.x + editor_code[i].width < 0 || chain_pos.y + editor_code[i].height < 0)) continue;
+            if (editor.code[i].width > 0 && editor.code[i].height > 0 &&
+                (chain_pos.x + editor.code[i].width < 0 || chain_pos.y + editor.code[i].height < 0)) continue;
         }
         gui_element_begin(gui);
             gui_set_floating(gui);
             gui_set_position(gui, chain_pos.x, chain_pos.y);
 
-            draw_blockchain(&editor_code[i], false, true, true);
+            draw_blockchain(&editor.code[i], false, true, true);
         gui_element_end(gui);
         GuiElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len];
-        editor_code[i].width = el->w;
-        editor_code[i].height = el->h;
+        editor.code[i].width = el->w;
+        editor.code[i].height = el->h;
     }
 }
 
@@ -1269,33 +1269,33 @@ static void dropdown_on_hover(GuiElement* el) {
     el->data.rect_type = RECT_NORMAL;
     el->color = (GuiColor) { 0x40, 0x40, 0x40, 0xff };
     // Double cast to avoid warning. In our case this operation is safe because el->custom_data currently stores a value of type int
-    hover.dropdown.select_ind = (int)(size_t)el->custom_data;
+    ui.hover.dropdown.select_ind = (int)(size_t)el->custom_data;
 
-    hover.button.handler = hover.dropdown.handler;
+    ui.hover.button.handler = ui.hover.dropdown.handler;
 }
 
 static void draw_dropdown(void) {
     const int max_list_size = 10;
 
-    if (!hover.dropdown.location) return;
-    hover.button.handler = handle_dropdown_close;
+    if (!ui.hover.dropdown.location) return;
+    ui.hover.button.handler = handle_dropdown_close;
     gui_element_begin(gui);
         gui_set_floating(gui);
         gui_set_rect(gui, (GuiColor) { 0x40, 0x40, 0x40, 0xff });
         gui_set_gap(gui, 2);
         gui_set_padding(gui, 2, 2);
-        gui_set_parent_anchor(gui, hover.dropdown.element);
-        gui_set_position(gui, 0, hover.dropdown.element->h);
-        if (hover.dropdown.list_len > max_list_size) {
+        gui_set_parent_anchor(gui, ui.hover.dropdown.element);
+        gui_set_position(gui, 0, ui.hover.dropdown.element->h);
+        if (ui.hover.dropdown.list_len > max_list_size) {
             gui_set_scissor(gui);
-            gui_set_fixed(gui, hover.dropdown.element->w + 5, max_list_size * (conf.font_size + 2) + 4);
-            gui_set_scroll(gui, &hover.dropdown.scroll_amount);
+            gui_set_fixed(gui, ui.hover.dropdown.element->w + 5, max_list_size * (conf.font_size + 2) + 4);
+            gui_set_scroll(gui, &ui.hover.dropdown.scroll_amount);
             gui_set_scroll_scaling(gui, (conf.font_size + 2) * 2);
         } else {
-            gui_set_min_size(gui, hover.dropdown.element->w, 0);
+            gui_set_min_size(gui, ui.hover.dropdown.element->w, 0);
         }
 
-        for (int i = 0; i < hover.dropdown.list_len; i++) {
+        for (int i = 0; i < ui.hover.dropdown.list_len; i++) {
             gui_element_begin(gui);
                 gui_set_grow(gui, DIRECTION_HORIZONTAL);
                 gui_set_direction(gui, DIRECTION_HORIZONTAL);
@@ -1306,9 +1306,9 @@ static void draw_dropdown(void) {
                 gui_on_hover(gui, dropdown_on_hover);
                 gui_set_custom_data(gui, (void*)(size_t)i);
 
-                const char* list_value = hover.dropdown.location != LOCATION_BLOCK_DROPDOWN ?
-                                         gettext(hover.dropdown.list[i]) :
-                                         hover.dropdown.list[i];
+                const char* list_value = ui.hover.dropdown.location != LOCATION_BLOCK_DROPDOWN ?
+                                         gettext(ui.hover.dropdown.list[i]) :
+                                         ui.hover.dropdown.list[i];
                 gui_text(gui, &assets.fonts.font_cond, list_value, BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
             gui_element_end(gui);
         }
@@ -1317,13 +1317,13 @@ static void draw_dropdown(void) {
 
 static void search_on_hover(GuiElement* el) {
     el->color = (GuiColor) { 0x40, 0x40, 0x40, 0xff };
-    hover.editor.blockdef = el->custom_data;
+    ui.hover.editor.blockdef = el->custom_data;
 }
 
 static void draw_search_list(void) {
     gui_element_begin(gui);
         gui_set_floating(gui);
-        gui_set_position(gui, search_list_pos.x, search_list_pos.y);
+        gui_set_position(gui, editor.search_list_pos.x, editor.search_list_pos.y);
         gui_set_rect(gui, (GuiColor) { 0x40, 0x40, 0x40, 0xff });
         gui_set_gap(gui, BLOCK_OUTLINE_SIZE);
         gui_set_padding(gui, BLOCK_OUTLINE_SIZE, BLOCK_OUTLINE_SIZE);
@@ -1337,7 +1337,7 @@ static void draw_search_list(void) {
             gui_set_align(gui, ALIGN_CENTER);
 
             gui_element_begin(gui);
-                draw_input(&assets.fonts.font_cond, &search_list_search, "Search...", BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff }, true);
+                draw_input(&assets.fonts.font_cond, &editor.search_list_search, "Search...", BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff }, true);
             gui_element_end(gui);
         gui_element_end(gui);
 
@@ -1346,21 +1346,21 @@ static void draw_search_list(void) {
             gui_set_fit(gui, DIRECTION_HORIZONTAL);
             gui_set_gap(gui, BLOCK_OUTLINE_SIZE);
             gui_set_scissor(gui);
-            gui_set_scroll(gui, &search_list_scroll);
+            gui_set_scroll(gui, &ui.search_list_scroll);
 
-            for (size_t i = 0; i < vector_size(search_list); i++) {
+            for (size_t i = 0; i < vector_size(editor.search_list); i++) {
                 gui_element_begin(gui);
                     gui_set_rect(gui, (GuiColor) { 0x2b, 0x2b, 0x2b, 0xff });
                     gui_set_grow(gui, DIRECTION_HORIZONTAL);
                     gui_on_hover(gui, search_on_hover);
-                    gui_set_custom_data(gui, search_list[i]);
+                    gui_set_custom_data(gui, editor.search_list[i]);
 
                     Block dummy_block = {
-                        .blockdef = search_list[i],
+                        .blockdef = editor.search_list[i],
                         .arguments = NULL,
                         .parent = NULL,
                     };
-                    draw_block(&dummy_block, hover.editor.prev_blockdef == search_list[i], false, false, false);
+                    draw_block(&dummy_block, ui.hover.editor.prev_blockdef == editor.search_list[i], false, false, false);
                 gui_element_end(gui);
             }
 
@@ -1370,8 +1370,8 @@ static void draw_search_list(void) {
 
 static void panel_editor_on_hover(GuiElement* el) {
     (void) el;
-    if (!hover.is_panel_edit_mode) return;
-    hover.panels.panel = NULL;
+    if (!ui.hover.is_panel_edit_mode) return;
+    ui.hover.panels.panel = NULL;
 }
 
 void scrap_gui_process(void) {
@@ -1380,37 +1380,37 @@ void scrap_gui_process(void) {
         draw_tab_bar();
         GuiElement* tab_bar_anchor = NULL;
 
-        if (hover.is_panel_edit_mode) {
+        if (ui.hover.is_panel_edit_mode) {
             gui_element_begin(gui);
                 tab_bar_anchor = gui_get_element(gui);
             gui_element_end(gui);
         }
 
-        draw_panel(code_tabs[current_tab].root_panel);
+        draw_panel(editor.tabs[editor.current_tab].root_panel);
         draw_window();
 
         gui_element_begin(gui);
             gui_set_floating(gui);
             gui_set_position(gui, gui->mouse_x + 5, gui->mouse_y + 5);
 
-            draw_blockchain(&mouse_blockchain, false, false, false);
+            draw_blockchain(&editor.mouse_blockchain, false, false, false);
         gui_element_end(gui);
 
-        if (hover.select_input == &search_list_search) {
+        if (ui.hover.select_input == &editor.search_list_search) {
             draw_search_list();
         } else {
-            search_list_pos = (Vector2) { gui->mouse_x, gui->mouse_y };
+            editor.search_list_pos = (Vector2) { gui->mouse_x, gui->mouse_y };
         }
 
-        if (hover.is_panel_edit_mode) {
-            if (hover.panels.mouse_panel != PANEL_NONE) {
+        if (ui.hover.is_panel_edit_mode) {
+            if (ui.hover.panels.mouse_panel != PANEL_NONE) {
                 gui_element_begin(gui);
                     gui_set_floating(gui);
                     gui_set_fixed(gui, gui->win_w * 0.3, gui->win_h * 0.3);
                     gui_set_position(gui, gui->mouse_x, gui->mouse_y);
 
                     PanelTree panel = (PanelTree) {
-                        .type = hover.panels.mouse_panel,
+                        .type = ui.hover.panels.mouse_panel,
                         .parent = NULL,
                         .left = NULL,
                         .right = NULL,
@@ -1737,32 +1737,32 @@ static void scrap_gui_render(void) {
 static void print_debug(int* num, char* fmt, ...) {
     va_list va;
     va_start(va, fmt);
-    vsnprintf(debug_buffer[(*num)++], DEBUG_BUFFER_LINE_SIZE, fmt, va);
+    vsnprintf(editor.debug_buffer[(*num)++], DEBUG_BUFFER_LINE_SIZE, fmt, va);
     va_end(va);
 }
 
 static void write_debug_buffer(void) {
     int i = 0;
 #ifdef DEBUG
-    print_debug(&i, "Block: %p, Parent: %p, Parent Arg: %p", hover.editor.block, hover.editor.block ? hover.editor.block->parent : NULL, hover.editor.parent_argument);
-    print_debug(&i, "Argument: %p", hover.editor.argument);
-    print_debug(&i, "BlockChain: %p", hover.editor.blockchain);
-    print_debug(&i, "Select block: %p, arg: %p, chain: %p", hover.editor.select_block, hover.editor.select_argument, hover.editor.select_blockchain);
-    print_debug(&i, "Select block pos: (%.3f, %.3f)", hover.editor.select_block_pos.x, hover.editor.select_block_pos.y);
-    print_debug(&i, "Select block bounds Pos: (%.3f, %.3f), Size: (%.3f, %.3f)", hover.panels.code_panel_bounds.x, hover.panels.code_panel_bounds.y, hover.panels.code_panel_bounds.width, hover.panels.code_panel_bounds.height);
-    print_debug(&i, "Category: %p", hover.category);
-    print_debug(&i, "Mouse: %p, Time: %.3f, Pos: (%d, %d), Click: (%d, %d)", mouse_blockchain.blocks, hover.time_at_last_pos, GetMouseX(), GetMouseY(), (int)hover.mouse_click_pos.x, (int)hover.mouse_click_pos.y);
-    print_debug(&i, "Camera: (%.3f, %.3f), Click: (%.3f, %.3f)", camera_pos.x, camera_pos.y, camera_click_pos.x, camera_click_pos.y);
-    print_debug(&i, "Dropdown scroll: %d", dropdown.scroll_amount);
-    print_debug(&i, "Drag cancelled: %d", hover.drag_cancelled);
-    print_debug(&i, "Palette scroll: %d", palette.scroll_amount);
-    print_debug(&i, "Editor: %d, Editing: %p, Blockdef: %p, input: %zu", hover.editor.part, hover.editor.edit_blockdef, hover.editor.blockdef, hover.editor.blockdef_input);
+    print_debug(&i, "Block: %p, Parent: %p, Parent Arg: %p", ui.hover.editor.block, ui.hover.editor.block ? ui.hover.editor.block->parent : NULL, ui.hover.editor.parent_argument);
+    print_debug(&i, "Argument: %p", ui.hover.editor.argument);
+    print_debug(&i, "BlockChain: %p", ui.hover.editor.blockchain);
+    print_debug(&i, "Select block: %p, arg: %p, chain: %p", ui.hover.editor.select_block, ui.hover.editor.select_argument, ui.hover.editor.select_blockchain);
+    print_debug(&i, "Select block pos: (%.3f, %.3f)", ui.hover.editor.select_block_pos.x, ui.hover.editor.select_block_pos.y);
+    print_debug(&i, "Select block bounds Pos: (%.3f, %.3f), Size: (%.3f, %.3f)", ui.hover.panels.code_panel_bounds.x, ui.hover.panels.code_panel_bounds.y, ui.hover.panels.code_panel_bounds.width, ui.hover.panels.code_panel_bounds.height);
+    print_debug(&i, "Category: %p", ui.hover.category);
+    print_debug(&i, "Mouse: %p, Time: %.3f, Pos: (%d, %d), Click: (%d, %d)", editor.mouse_blockchain.blocks, ui.hover.time_at_last_pos, GetMouseX(), GetMouseY(), (int)ui.hover.mouse_click_pos.x, (int)ui.hover.mouse_click_pos.y);
+    print_debug(&i, "Camera: (%.3f, %.3f), Click: (%.3f, %.3f)", editor.camera_pos.x, editor.camera_pos.y, editor.camera_click_pos.x, editor.camera_click_pos.y);
+    print_debug(&i, "Dropdown scroll: %d", ui.dropdown.scroll_amount);
+    print_debug(&i, "Drag cancelled: %d", ui.hover.drag_cancelled);
+    print_debug(&i, "Palette scroll: %d", editor.palette.scroll_amount);
+    print_debug(&i, "Editor: %d, Editing: %p, Blockdef: %p, input: %zu", ui.hover.editor.part, ui.hover.editor.edit_blockdef, ui.hover.editor.blockdef, ui.hover.editor.blockdef_input);
     print_debug(&i, "Elements: %zu/%zu, Draw: %zu/%zu", gui->element_stack_len, ELEMENT_STACK_SIZE, gui->command_stack_len, COMMAND_STACK_SIZE);
-    print_debug(&i, "Slider: %p, min: %d, max: %d", hover.hover_slider.value, hover.hover_slider.min, hover.hover_slider.max);
-    print_debug(&i, "Input: %p, Select: %p, Pos: (%.3f, %.3f), ind: (%d, %d)", hover.input_info.input, hover.select_input, hover.input_info.rel_pos.x, hover.input_info.rel_pos.y, hover.select_input_cursor, hover.select_input_mark);
-    print_debug(&i, "UI time: %.3f", ui_time);
+    print_debug(&i, "Slider: %p, min: %d, max: %d", ui.hover.hover_slider.value, ui.hover.hover_slider.min, ui.hover.hover_slider.max);
+    print_debug(&i, "Input: %p, Select: %p, Pos: (%.3f, %.3f), ind: (%d, %d)", ui.hover.input_info.input, ui.hover.select_input, ui.hover.input_info.rel_pos.x, ui.hover.input_info.rel_pos.y, ui.hover.select_input_cursor, ui.hover.select_input_mark);
+    print_debug(&i, "UI time: %.3f", ui.ui_time);
     print_debug(&i, "FPS: %d, Frame time: %.3f", GetFPS(), GetFrameTime());
-    print_debug(&i, "Panel: %p, side: %d", hover.panels.panel, hover.panels.panel_side);
+    print_debug(&i, "Panel: %p, side: %d", ui.hover.panels.panel, ui.hover.panels.panel_side);
 #else
     print_debug(&i, "Scrap v" SCRAP_VERSION);
     print_debug(&i, "FPS: %d, Frame time: %.3f", GetFPS(), GetFrameTime());
@@ -1776,16 +1776,16 @@ void scrap_gui_process_render(void) {
     write_debug_buffer();
     scrap_gui_render();
 
-    if (vm_start_timeout == 0) {
+    if (vm.start_timeout == 0) {
         term_restart();
         clear_compile_error();
 #ifdef USE_INTERPRETER
-        exec = exec_new(&vm.thread);
+        vm.exec = exec_new(&vm.thread);
 #else
-        exec = exec_new(&vm.thread, vm_start_mode);
+        vm.exec = exec_new(&vm.thread, vm.start_mode);
 #endif
-        exec.code = editor_code;
-        if (!thread_start(exec.thread, &exec)) {
+        vm.exec.code = editor.code;
+        if (!thread_start(vm.exec.thread, &vm.exec)) {
             actionbar_show(gettext("Start failed!"));
         } else {
             actionbar_show(gettext("Started successfully!"));

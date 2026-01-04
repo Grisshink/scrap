@@ -27,9 +27,9 @@
 static BlockChain* find_blockchain(Block* block) {
     if (!block) return NULL;
     while (block->parent) block = block->parent;
-    for (size_t i = 0; i < vector_size(editor_code); i++) {
-        if (block >= editor_code[i].blocks && block < editor_code[i].blocks + vector_size(editor_code[i].blocks)) {
-            return &editor_code[i];
+    for (size_t i = 0; i < vector_size(editor.code); i++) {
+        if (block >= editor.code[i].blocks && block < editor.code[i].blocks + vector_size(editor.code[i].blocks)) {
+            return &editor.code[i];
         }
     }
     return NULL;
@@ -75,15 +75,15 @@ BlockCategory* block_category_register(BlockCategory category) {
     BlockCategory* cat = malloc(sizeof(category));
     assert(cat != NULL);
     *cat = category;
-    if (!palette.categories_end) {
-        palette.categories_end   = cat;
-        palette.categories_start = cat;
-        palette.current_category = palette.categories_start;
+    if (!editor.palette.categories_end) {
+        editor.palette.categories_end   = cat;
+        editor.palette.categories_start = cat;
+        editor.palette.current_category = editor.palette.categories_start;
         return cat;
     }
-    palette.categories_end->next = cat;
-    cat->prev = palette.categories_end;
-    palette.categories_end = cat;
+    editor.palette.categories_end->next = cat;
+    cat->prev = editor.palette.categories_end;
+    editor.palette.categories_end = cat;
     return cat;
 }
 
@@ -93,9 +93,9 @@ void block_category_unregister(BlockCategory* category) {
     if (category->next) category->next->prev = NULL;
     if (category->prev) category->prev->next = NULL;
 
-    if (palette.categories_start == category) palette.categories_start = category->next;
-    if (palette.categories_end == category) palette.categories_end = category->prev;
-    if (palette.current_category == category) palette.current_category = palette.categories_start;
+    if (editor.palette.categories_start == category) editor.palette.categories_start = category->next;
+    if (editor.palette.categories_end == category) editor.palette.categories_end = category->prev;
+    if (editor.palette.current_category == category) editor.palette.current_category = editor.palette.categories_start;
 
     free(category);
 }
@@ -110,22 +110,22 @@ void add_to_category(Blockdef* blockdef, BlockCategory* category) {
 }
 
 void unregister_categories(void) {
-    if (!palette.categories_start) return;
-    BlockCategory* cat = palette.categories_start;
+    if (!editor.palette.categories_start) return;
+    BlockCategory* cat = editor.palette.categories_start;
     while (cat) {
         BlockCategory* next = cat->next;
         block_category_unregister(cat);
         cat = next;
     }
-    palette.categories_start = NULL;
-    palette.categories_end = NULL;
+    editor.palette.categories_start = NULL;
+    editor.palette.categories_end = NULL;
 }
 
 void clear_compile_error(void) {
-    exec_compile_error_block = NULL;
-    exec_compile_error_blockchain = NULL;
-    for (size_t i = 0; i < vector_size(exec_compile_error); i++) vector_free(exec_compile_error[i]);
-    vector_clear(exec_compile_error);
+    vm.compile_error_block = NULL;
+    vm.compile_error_blockchain = NULL;
+    for (size_t i = 0; i < vector_size(vm.compile_error); i++) vector_free(vm.compile_error[i]);
+    vector_clear(vm.compile_error);
 }
 
 Vm vm_new(void) {
@@ -133,11 +133,26 @@ Vm vm_new(void) {
         .blockdefs = vector_create(),
         .end_blockdef = -1,
         .thread = thread_new(exec_run, exec_cleanup),
+        .exec = (Exec) {0},
+
+        .compile_error = vector_create(),
+        .compile_error_block = NULL,
+        .compile_error_blockchain = NULL,
+        .start_timeout = -1,
+#ifndef USE_INTERPRETER
+        .start_mode = COMPILER_MODE_JIT,
+#endif
     };
     return vm;
 }
 
 void vm_free(Vm* vm) {
+    if (thread_is_running(&vm->thread)) {
+        thread_stop(&vm->thread);
+        thread_join(&vm->thread);
+        exec_free(&vm->exec);
+    }
+
     for (ssize_t i = (ssize_t)vector_size(vm->blockdefs) - 1; i >= 0 ; i--) {
         blockdef_unregister(vm, i);
     }
@@ -151,22 +166,22 @@ bool vm_start(CompilerMode mode) {
 #endif
     if (thread_is_running(&vm.thread)) return false;
 
-    for (size_t i = 0; i < vector_size(code_tabs); i++) {
-        if (find_panel(code_tabs[i].root_panel, PANEL_TERM)) {
+    for (size_t i = 0; i < vector_size(editor.tabs); i++) {
+        if (find_panel(editor.tabs[i].root_panel, PANEL_TERM)) {
 #ifndef USE_INTERPRETER
-            vm_start_mode = mode;
+            vm.start_mode = mode;
 #endif
-            if (current_tab != (int)i) {
-                shader_time = 0.0;
+            if (editor.current_tab != (int)i) {
+                ui.shader_time = 0.0;
                 // Delay vm startup until next frame. Because this handler only runs after the layout is computed and
                 // before the actual rendering begins, we need to add delay to vm startup to make sure the terminal buffer
                 // is initialized and vm does not try to write to uninitialized buffer
-                vm_start_timeout = 2;
+                vm.start_timeout = 2;
             } else {
-                vm_start_timeout = 1;
+                vm.start_timeout = 1;
             }
-            current_tab = i;
-            render_surface_needs_redraw = true;
+            editor.current_tab = i;
+            ui.render_surface_needs_redraw = true;
             break;
         }
     }
@@ -177,7 +192,7 @@ bool vm_stop(void) {
     if (!thread_is_running(&vm.thread)) return false;
     TraceLog(LOG_INFO, "STOP");
     thread_stop(&vm.thread);
-    render_surface_needs_redraw = true;
+    ui.render_surface_needs_redraw = true;
     return true;
 }
 
@@ -199,28 +214,28 @@ void vm_handle_running_thread(void) {
         }
 
         size_t i = 0;
-        while (exec.current_error[i]) {
-            vector_add(&exec_compile_error, vector_create());
+        while (vm.exec.current_error[i]) {
+            vector_add(&vm.compile_error, vector_create());
             size_t line_len = 0;
-            while (line_len < 50 && exec.current_error[i]) {
-                if (((unsigned char)exec.current_error[i] >> 6) != 2) line_len++;
+            while (line_len < 50 && vm.exec.current_error[i]) {
+                if (((unsigned char)vm.exec.current_error[i] >> 6) != 2) line_len++;
                 if (line_len >= 50) break;
-                vector_add(&exec_compile_error[vector_size(exec_compile_error) - 1], exec.current_error[i++]);
+                vector_add(&vm.compile_error[vector_size(vm.compile_error) - 1], vm.exec.current_error[i++]);
             }
-            vector_add(&exec_compile_error[vector_size(exec_compile_error) - 1], 0);
+            vector_add(&vm.compile_error[vector_size(vm.compile_error) - 1], 0);
         }
-        exec_compile_error_block = exec.current_error_block;
-        exec_compile_error_blockchain = find_blockchain(exec_compile_error_block);
-        exec_free(&exec);
-        render_surface_needs_redraw = true;
+        vm.compile_error_block = vm.exec.current_error_block;
+        vm.compile_error_blockchain = find_blockchain(vm.compile_error_block);
+        exec_free(&vm.exec);
+        ui.render_surface_needs_redraw = true;
     } else if (thread_is_running(&vm.thread)) {
         mutex_lock(&term.lock);
-        if (find_panel(code_tabs[current_tab].root_panel, PANEL_TERM) && term.is_buffer_dirty) {
-            render_surface_needs_redraw = true;
+        if (find_panel(editor.tabs[editor.current_tab].root_panel, PANEL_TERM) && term.is_buffer_dirty) {
+            ui.render_surface_needs_redraw = true;
             term.is_buffer_dirty = false;
         }
         mutex_unlock(&term.lock);
     } else {
-        if (vector_size(exec_compile_error) > 0) render_surface_needs_redraw = true;
+        if (vector_size(vm.compile_error) > 0) ui.render_surface_needs_redraw = true;
     }
 }

@@ -288,66 +288,79 @@ typedef enum {
     GUI_TYPE_PROJECT_SETTINGS,
 } WindowGuiType;
 
+typedef struct {
+    char project_name[1024];
+    Tab* tabs;
+
+    Vector2 camera_pos;
+    Vector2 camera_click_pos;
+
+    BlockChain* code;
+    BlockPalette palette;
+
+    char* search_list_search;
+    Blockdef** search_list;
+    Vector2 search_list_pos;
+
+    ActionBar actionbar;
+    BlockChain mouse_blockchain;
+    SplitPreview split_preview;
+    int* blockchain_render_layer_widths;
+    int current_tab;
+    int blockchain_select_counter;
+
+    char debug_buffer[DEBUG_BUFFER_LINES][DEBUG_BUFFER_LINE_SIZE];
+} Editor;
+
+typedef struct {
+    RenderTexture2D render_surface;
+    bool render_surface_needs_redraw;
+
+    Dropdown dropdown;
+
+    int shader_time_loc;
+    float shader_time;
+
+    HoverInfo hover;
+
+    int categories_scroll;
+    int search_list_scroll;
+
+#ifdef DEBUG
+    double ui_time;
+#endif
+} UI;
+
 struct Vm {
     Blockdef** blockdefs;
-    // TODO: Maybe remove end_blockdef from here
     size_t end_blockdef;
 
     Thread thread;
+
+    Exec exec;
+    char** compile_error;
+    Block* compile_error_block;
+    BlockChain* compile_error_blockchain;
+
+    int start_timeout; // = -1;
+#ifndef USE_INTERPRETER
+    CompilerMode start_mode; // = COMPILER_MODE_JIT;
+#endif
 };
 
 extern Config conf;
 extern Config window_conf;
 extern ProjectConfig project_conf;
-extern HoverInfo hover;
-extern RenderTexture2D render_surface;
-extern bool render_surface_needs_redraw;
-
-extern Exec exec;
-extern char** exec_compile_error;
-extern Block* exec_compile_error_block;
-extern BlockChain* exec_compile_error_blockchain;
 
 extern Assets assets;
 
 extern Vm vm;
-extern int vm_start_timeout;
-#ifndef USE_INTERPRETER
-extern CompilerMode vm_start_mode;
-#endif
-extern Vector2 camera_pos;
-extern ActionBar actionbar;
-extern Dropdown dropdown;
-extern BlockPalette palette;
-extern BlockChain* editor_code;
-extern Blockdef** search_list;
-extern BlockChain mouse_blockchain;
 extern Gui* gui;
-extern char* search_list_search;
-extern int categories_scroll;
-extern int search_list_scroll;
-extern Vector2 search_list_pos;
-extern int* blockchain_render_layer_widths;
 
-extern SplitPreview split_preview;
-extern Tab* code_tabs;
-extern int current_tab;
+extern Editor editor;
+extern UI ui;
 
-#ifdef DEBUG
-extern double ui_time;
-#endif
-
-extern char debug_buffer[DEBUG_BUFFER_LINES][DEBUG_BUFFER_LINE_SIZE];
-
-extern Vector2 camera_click_pos;
-extern Vector2 camera_pos;
-
-extern float shader_time;
-extern int blockchain_select_counter;
-
-extern char project_name[1024];
 extern char* language_list[5];
-
 extern const int codepoint_regions[CODEPOINT_REGION_COUNT][2];
 extern int codepoint_start_ranges[CODEPOINT_REGION_COUNT];
 
