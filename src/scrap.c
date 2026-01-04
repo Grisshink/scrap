@@ -143,7 +143,7 @@ Image setup(void) {
     SetTextureFilter(assets.textures.dropdown, TEXTURE_FILTER_BILINEAR);
 
     Image window_icon;
-    svg_load(into_shared_dir_path(DATA_PATH "logo.svg"), conf.font_size, conf.font_size, &window_icon);
+    svg_load(into_shared_dir_path(DATA_PATH "logo.svg"), conf.ui_size, conf.ui_size, &window_icon);
     assets.textures.icon_logo = LoadTextureFromImage(window_icon);
     SetTextureFilter(assets.textures.icon_logo, TEXTURE_FILTER_BILINEAR);
 
@@ -169,7 +169,7 @@ Image setup(void) {
 
     for (int i = 0; image_load_paths[i]; i += 2) {
         Image svg_img;
-        if (!svg_load(TextFormat("%s" DATA_PATH "%s", get_shared_dir_path(), image_load_paths[i + 1]), conf.font_size, conf.font_size, &svg_img)) {
+        if (!svg_load(TextFormat("%s" DATA_PATH "%s", get_shared_dir_path(), image_load_paths[i + 1]), conf.ui_size, conf.ui_size, &svg_img)) {
             continue;
         }
 
@@ -188,10 +188,10 @@ Image setup(void) {
     }
     int codepoints_count = vector_size(codepoints);
 
-    assets.fonts.font_cond = LoadFontEx(get_font_path(conf.font_path), conf.font_size, codepoints, codepoints_count);
+    assets.fonts.font_cond = LoadFontEx(get_font_path(conf.font_path), conf.ui_size, codepoints, codepoints_count);
     assets.fonts.font_cond_shadow = LoadFontEx(get_font_path(conf.font_path), BLOCK_TEXT_SIZE, codepoints, codepoints_count);
-    assets.fonts.font_eb = LoadFontEx(get_font_path(conf.font_bold_path), conf.font_size * 0.8, codepoints, codepoints_count);
-    assets.fonts.font_mono = LoadFontEx(get_font_path(conf.font_mono_path), conf.font_size, codepoints, codepoints_count);
+    assets.fonts.font_eb = LoadFontEx(get_font_path(conf.font_bold_path), conf.ui_size * 0.8, codepoints, codepoints_count);
+    assets.fonts.font_mono = LoadFontEx(get_font_path(conf.font_mono_path), conf.ui_size, codepoints, codepoints_count);
     vector_free(codepoints);
 
     SetTextureFilter(assets.fonts.font_cond.texture, TEXTURE_FILTER_BILINEAR);
@@ -222,7 +222,7 @@ Image setup(void) {
     vector_add(&editor.search_list_search, 0);
     update_search();
 
-    term_init(term_measure_text, &assets.fonts.font_mono, conf.font_size * 0.6);
+    term_init(term_measure_text, &assets.fonts.font_mono, conf.ui_size * 0.6);
 
     gui = malloc(sizeof(Gui));
     gui_init(gui);

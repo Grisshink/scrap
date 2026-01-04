@@ -53,8 +53,8 @@ static void draw_dots(void) {
     int win_width = GetScreenWidth();
     int win_height = GetScreenHeight();
 
-    for (int y = MOD(-(int)editor.camera_pos.y, conf.font_size * 2); y < win_height; y += conf.font_size * 2) {
-        for (int x = MOD(-(int)editor.camera_pos.x, conf.font_size * 2); x < win_width; x += conf.font_size * 2) {
+    for (int y = MOD(-(int)editor.camera_pos.y, conf.ui_size * 2); y < win_height; y += conf.ui_size * 2) {
+        for (int x = MOD(-(int)editor.camera_pos.x, conf.ui_size * 2); x < win_width; x += conf.ui_size * 2) {
             DrawRectangle(x, y, 2, 2, (Color) { 0x40, 0x40, 0x40, 0xff });
         }
     }
@@ -63,10 +63,10 @@ static void draw_dots(void) {
     if (!IsShaderValid(assets.line_shader)) return;
 
     BeginShaderMode(assets.line_shader);
-    for (int y = MOD(-(int)editor.camera_pos.y, conf.font_size * 2); y < win_height; y += conf.font_size * 2) {
+    for (int y = MOD(-(int)editor.camera_pos.y, conf.ui_size * 2); y < win_height; y += conf.ui_size * 2) {
         DrawRectangle(0, y, win_width, 2, (Color) { 0x40, 0x40, 0x40, 0xff });
     }
-    for (int x = MOD(-(int)editor.camera_pos.x, conf.font_size * 2); x < win_width; x += conf.font_size * 2) {
+    for (int x = MOD(-(int)editor.camera_pos.x, conf.ui_size * 2); x < win_width; x += conf.ui_size * 2) {
         DrawRectangle(x, 0, 2, win_height, (Color) { 0x40, 0x40, 0x40, 0xff });
     }
     EndShaderMode();
@@ -282,7 +282,7 @@ static void draw_blockdef(Blockdef* blockdef, bool editing) {
         gui_set_direction(gui, DIRECTION_HORIZONTAL);
         gui_set_border(gui, CONVERT_COLOR(outline_color, GuiColor), BLOCK_OUTLINE_SIZE);
         gui_set_align(gui, ALIGN_CENTER);
-        gui_set_min_size(gui, 0, conf.font_size);
+        gui_set_min_size(gui, 0, conf.ui_size);
         gui_set_padding(gui, BLOCK_OUTLINE_SIZE * 2, BLOCK_OUTLINE_SIZE * 2);
         gui_set_gap(gui, BLOCK_PADDING);
 
@@ -306,7 +306,7 @@ static void draw_blockdef(Blockdef* blockdef, bool editing) {
 
                     gui_element_begin(gui);
                         gui_set_direction(gui, DIRECTION_HORIZONTAL);
-                        gui_set_min_size(gui, conf.font_size - BLOCK_OUTLINE_SIZE * 4, conf.font_size - BLOCK_OUTLINE_SIZE * 4);
+                        gui_set_min_size(gui, conf.ui_size - BLOCK_OUTLINE_SIZE * 4, conf.ui_size - BLOCK_OUTLINE_SIZE * 4);
                         gui_set_padding(gui, BLOCK_STRING_PADDING / 2, 0);
                         if (ui.hover.select_input == &input->data.text) gui_set_border(gui, (GuiColor) { 0x30, 0x30, 0x30, 0xff }, BLOCK_OUTLINE_SIZE);
                         gui_on_hover(gui, blockdef_input_on_hover);
@@ -414,7 +414,7 @@ static void draw_block(Block* block, bool highlight, bool can_hover, bool ghost,
         gui_set_direction(gui, DIRECTION_HORIZONTAL);
         gui_set_border(gui, CONVERT_COLOR(outline_color, GuiColor), BLOCK_OUTLINE_SIZE);
         gui_set_align(gui, ALIGN_CENTER);
-        gui_set_min_size(gui, 0, conf.font_size);
+        gui_set_min_size(gui, 0, conf.ui_size);
         gui_set_padding(gui, BLOCK_OUTLINE_SIZE * 2, BLOCK_OUTLINE_SIZE * 2);
         gui_set_gap(gui, BLOCK_PADDING);
         if (block->blockdef->type == BLOCKTYPE_CONTROL) {
@@ -467,7 +467,7 @@ static void draw_block(Block* block, bool highlight, bool can_hover, bool ghost,
 
                     gui_element_begin(gui);
                         gui_set_direction(gui, DIRECTION_HORIZONTAL);
-                        gui_set_min_size(gui, conf.font_size - BLOCK_OUTLINE_SIZE * 4, conf.font_size - BLOCK_OUTLINE_SIZE * 4);
+                        gui_set_min_size(gui, conf.ui_size - BLOCK_OUTLINE_SIZE * 4, conf.ui_size - BLOCK_OUTLINE_SIZE * 4);
                         gui_set_padding(gui, BLOCK_STRING_PADDING / 2, 0);
                         if (editable) {
                             if (ui.hover.editor.select_argument == arg) {
@@ -533,7 +533,7 @@ static void draw_block(Block* block, bool highlight, bool can_hover, bool ghost,
                 }
 
                 gui_element_begin(gui);
-                    gui_set_min_size(gui, 0, conf.font_size - BLOCK_OUTLINE_SIZE * 4);
+                    gui_set_min_size(gui, 0, conf.ui_size - BLOCK_OUTLINE_SIZE * 4);
                     gui_set_align(gui, ALIGN_CENTER);
                     gui_set_padding(gui, BLOCK_STRING_PADDING / 2, 0);
                     gui_set_direction(gui, DIRECTION_HORIZONTAL);
@@ -635,7 +635,7 @@ static void draw_panel_editor_button(const char* text, int size, GuiColor color,
         gui_set_direction(gui, DIRECTION_HORIZONTAL);
         gui_set_align(gui, ALIGN_CENTER);
         gui_set_min_size(gui, 0, size);
-        gui_set_padding(gui, conf.font_size * 0.3, 0);
+        gui_set_padding(gui, conf.ui_size * 0.3, 0);
         gui_set_rect(gui, color);
         gui_on_hover(gui, panel_editor_button_on_hover);
         gui_set_custom_data(gui, handler);
@@ -650,7 +650,7 @@ static GuiElement* draw_button(const char* text, int size, bool selected, GuiHan
         gui_set_direction(gui, DIRECTION_HORIZONTAL);
         gui_set_align(gui, ALIGN_CENTER);
         gui_set_min_size(gui, 0, size);
-        gui_set_padding(gui, conf.font_size * 0.3, 0);
+        gui_set_padding(gui, conf.ui_size * 0.3, 0);
         if (selected) gui_set_rect(gui, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
         gui_on_hover(gui, on_hover);
         gui_set_custom_data(gui, custom_data);
@@ -662,7 +662,7 @@ static GuiElement* draw_button(const char* text, int size, bool selected, GuiHan
 }
 
 static void draw_top_bar(void) {
-    const int top_bar_size = conf.font_size * 1.2;
+    const int top_bar_size = conf.ui_size * 1.2;
     gui_element_begin(gui);
         gui_set_grow(gui, DIRECTION_HORIZONTAL);
         gui_set_direction(gui, DIRECTION_HORIZONTAL);
@@ -671,9 +671,9 @@ static void draw_top_bar(void) {
         gui_set_align(gui, ALIGN_CENTER);
 
         gui_spacer(gui, 5, 0);
-        gui_image(gui, &assets.textures.icon_logo, conf.font_size, CONVERT_COLOR(WHITE, GuiColor));
+        gui_image(gui, &assets.textures.icon_logo, conf.ui_size, CONVERT_COLOR(WHITE, GuiColor));
         gui_spacer(gui, 10, 0);
-        gui_text(gui, &assets.fonts.font_eb, gettext("Scrap"), conf.font_size * 0.8, CONVERT_COLOR(WHITE, GuiColor));
+        gui_text(gui, &assets.fonts.font_eb, gettext("Scrap"), conf.ui_size * 0.8, CONVERT_COLOR(WHITE, GuiColor));
         gui_spacer(gui, 10, 0);
 
         GuiElement* el = draw_button(gettext("File"), top_bar_size, false, button_on_hover, handle_file_button_click);
@@ -684,7 +684,7 @@ static void draw_top_bar(void) {
 }
 
 static void draw_tab_bar(void) {
-    const int tab_bar_size = conf.font_size;
+    const int tab_bar_size = conf.ui_size;
     gui_element_begin(gui);
         gui_set_grow(gui, DIRECTION_HORIZONTAL);
         gui_set_direction(gui, DIRECTION_HORIZONTAL);
@@ -714,7 +714,7 @@ static void draw_tab_bar(void) {
             gui_image(gui, &assets.textures.button_build, tab_bar_size, (GuiColor) { 0xff, 0x99, 0x00, 0xff });
         gui_element_end(gui);
 
-        gui_spacer(gui, conf.font_size * 0.2, 0);
+        gui_spacer(gui, conf.ui_size * 0.2, 0);
 #endif
 
         gui_element_begin(gui);
@@ -729,7 +729,7 @@ static void draw_tab_bar(void) {
             }
         gui_element_end(gui);
 
-        gui_spacer(gui, conf.font_size * 0.2, 0);
+        gui_spacer(gui, conf.ui_size * 0.2, 0);
 
         gui_element_begin(gui);
             gui_on_hover(gui, button_on_hover);
@@ -789,7 +789,7 @@ static void draw_blockchain(BlockChain* chain, bool ghost, bool show_previews, b
             }
 
             gui_element_begin(gui);
-                gui_set_min_size(gui, editor.blockchain_render_layer_widths[vector_size(editor.blockchain_render_layer_widths) - 1], conf.font_size);
+                gui_set_min_size(gui, editor.blockchain_render_layer_widths[vector_size(editor.blockchain_render_layer_widths) - 1], conf.ui_size);
                 gui_set_rect(gui, CONVERT_COLOR(block_color, GuiColor));
                 gui_on_hover(gui, block_on_hover);
                 if (ui.hover.editor.select_block == &chain->blocks[i]) gui_on_render(gui, block_on_render);
@@ -849,7 +849,7 @@ static void draw_blockchain(BlockChain* chain, bool ghost, bool show_previews, b
 
                 gui_element_begin(gui);
                     gui_set_grow(gui, DIRECTION_VERTICAL);
-                    gui_set_min_size(gui, BLOCK_CONTROL_INDENT, conf.font_size / 2);
+                    gui_set_min_size(gui, BLOCK_CONTROL_INDENT, conf.ui_size / 2);
                     gui_set_rect(gui, CONVERT_COLOR(block_color, GuiColor));
                     gui_on_hover(gui, block_on_hover);
                     gui_set_custom_data(gui, &chain->blocks[i]);
@@ -911,12 +911,12 @@ static void draw_category(BlockCategory* category) {
             if (category == editor.palette.current_category) gui_set_border(gui, color, BLOCK_OUTLINE_SIZE);
             gui_set_direction(gui, DIRECTION_HORIZONTAL);
             gui_set_padding(gui, BLOCK_PADDING, BLOCK_PADDING);
-            gui_set_min_size(gui, 0, conf.font_size);
+            gui_set_min_size(gui, 0, conf.ui_size);
             gui_set_align(gui, ALIGN_CENTER);
             gui_set_gap(gui, BLOCK_PADDING);
 
             gui_element_begin(gui);
-                gui_set_min_size(gui, conf.font_size * 0.5, conf.font_size * 0.5);
+                gui_set_min_size(gui, conf.ui_size * 0.5, conf.ui_size * 0.5);
                 gui_set_rect(gui, color);
             gui_element_end(gui);
 
@@ -963,7 +963,7 @@ static void draw_block_palette(void) {
         gui_set_padding(gui, SIDE_BAR_PADDING, SIDE_BAR_PADDING);
         gui_set_gap(gui, SIDE_BAR_PADDING);
         gui_set_scroll(gui, &editor.palette.scroll_amount);
-        gui_set_scroll_scaling(gui, conf.font_size * 4);
+        gui_set_scroll_scaling(gui, conf.ui_size * 4);
         gui_set_scissor(gui);
 
         if (editor.palette.current_category) {
@@ -996,9 +996,9 @@ static void draw_code_area(void) {
         gui_element_begin(gui);
             gui_set_floating(gui);
             gui_set_position(gui, 0, 0);
-            gui_set_padding(gui, conf.font_size * 0.2, conf.font_size * 0.2);
+            gui_set_padding(gui, conf.ui_size * 0.2, conf.ui_size * 0.2);
             for (int i = 0; i < DEBUG_BUFFER_LINES; i++) {
-                if (*editor.debug_buffer[i]) gui_text(gui, &assets.fonts.font_cond, editor.debug_buffer[i], conf.font_size * 0.5, (GuiColor) { 0xff, 0xff, 0xff, 0x60 });
+                if (*editor.debug_buffer[i]) gui_text(gui, &assets.fonts.font_cond, editor.debug_buffer[i], conf.ui_size * 0.5, (GuiColor) { 0xff, 0xff, 0xff, 0x60 });
             }
         gui_element_end(gui);
 
@@ -1006,50 +1006,50 @@ static void draw_code_area(void) {
             gui_element_begin(gui);
                 gui_set_direction(gui, DIRECTION_HORIZONTAL);
                 gui_set_align(gui, ALIGN_CENTER);
-                gui_set_gap(gui, conf.font_size * 0.5);
-                gui_set_padding(gui, conf.font_size * 0.4, conf.font_size * 0.4);
+                gui_set_gap(gui, conf.ui_size * 0.5);
+                gui_set_padding(gui, conf.ui_size * 0.4, conf.ui_size * 0.4);
                 gui_set_rect(gui, (GuiColor) { 0x00, 0x00, 0x00, 0x80 });
 
                 double animation = (fmod(-GetTime(), 1.0) * 0.5 + 1.0) * 255.0;
                 gui_element_begin(gui);
                     gui_set_rect(gui, (GuiColor) { 0xff, 0x20, 0x20, animation });
-                    gui_set_fixed(gui, conf.font_size, conf.font_size);
+                    gui_set_fixed(gui, conf.ui_size, conf.ui_size);
                     gui_set_direction(gui, DIRECTION_VERTICAL);
                     gui_set_align(gui, ALIGN_CENTER);
 
-                    gui_text(gui, &assets.fonts.font_eb, "!", conf.font_size, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+                    gui_text(gui, &assets.fonts.font_eb, "!", conf.ui_size, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
                 gui_element_end(gui);
 
                 gui_element_begin(gui);
                     gui_set_direction(gui, DIRECTION_VERTICAL);
 
-                    gui_text(gui, &assets.fonts.font_cond, gettext("Got compiler error!"), conf.font_size * 0.6, (GuiColor) { 0xff, 0x33, 0x33, 0xff });
+                    gui_text(gui, &assets.fonts.font_cond, gettext("Got compiler error!"), conf.ui_size * 0.6, (GuiColor) { 0xff, 0x33, 0x33, 0xff });
                     for (size_t i = 0; i < vector_size(vm.compile_error); i++) {
-                        gui_text(gui, &assets.fonts.font_cond, vm.compile_error[i], conf.font_size * 0.6, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+                        gui_text(gui, &assets.fonts.font_cond, vm.compile_error[i], conf.ui_size * 0.6, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
                     }
 
-                    gui_spacer(gui, 0, conf.font_size * 0.5);
+                    gui_spacer(gui, 0, conf.ui_size * 0.5);
 
                     gui_element_begin(gui);
                         gui_set_direction(gui, DIRECTION_HORIZONTAL);   
-                        gui_set_gap(gui, conf.font_size * 0.5);
+                        gui_set_gap(gui, conf.ui_size * 0.5);
 
                         if (vm.compile_error_block) {
                             gui_element_begin(gui);
                                 gui_set_border(gui, (GuiColor) { 0x40, 0x40, 0x40, 0xff }, BLOCK_OUTLINE_SIZE);
-                                draw_button(gettext("Jump to block"), conf.font_size, false, button_on_hover, handle_jump_to_block_button_click);
+                                draw_button(gettext("Jump to block"), conf.ui_size, false, button_on_hover, handle_jump_to_block_button_click);
                             gui_element_end(gui);
                         }
 
                         gui_element_begin(gui);
                             gui_set_border(gui, (GuiColor) { 0x40, 0x40, 0x40, 0xff }, BLOCK_OUTLINE_SIZE);
-                            draw_button(gettext("Close"), conf.font_size, false, button_on_hover, handle_error_window_close_button_click);
+                            draw_button(gettext("Close"), conf.ui_size, false, button_on_hover, handle_error_window_close_button_click);
                         gui_element_end(gui);
                     gui_element_end(gui);
                 gui_element_end(gui);
             gui_element_end(gui);
         } else {
-            gui_spacer(gui, 0, conf.font_size * 1.5);
+            gui_spacer(gui, 0, conf.ui_size * 1.5);
         }
 
         if (editor.actionbar.show_time > 0) {
@@ -1060,7 +1060,7 @@ static void draw_code_area(void) {
                 
                 Color color = YELLOW;
                 color.a = editor.actionbar.show_time / 3.0 * 255.0;
-                gui_text(gui, &assets.fonts.font_eb, editor.actionbar.text, conf.font_size * 0.8, CONVERT_COLOR(color, GuiColor));
+                gui_text(gui, &assets.fonts.font_eb, editor.actionbar.text, conf.ui_size * 0.8, CONVERT_COLOR(color, GuiColor));
             gui_element_end(gui);
         }
     gui_element_end(gui);
@@ -1121,7 +1121,7 @@ static void draw_term_panel(void) {
     gui_element_begin(gui);
         gui_set_grow(gui, DIRECTION_HORIZONTAL);
         gui_set_grow(gui, DIRECTION_VERTICAL);
-        gui_set_padding(gui, conf.font_size * 0.5, conf.font_size * 0.5);
+        gui_set_padding(gui, conf.ui_size * 0.5, conf.ui_size * 0.5);
         gui_set_rect(gui, (GuiColor) PANEL_BACKGROUND_COLOR);
 
         gui_element_begin(gui);
@@ -1288,9 +1288,9 @@ static void draw_dropdown(void) {
         gui_set_position(gui, 0, ui.hover.dropdown.element->h);
         if (ui.hover.dropdown.list_len > max_list_size) {
             gui_set_scissor(gui);
-            gui_set_fixed(gui, ui.hover.dropdown.element->w + 5, max_list_size * (conf.font_size + 2) + 4);
+            gui_set_fixed(gui, ui.hover.dropdown.element->w + 5, max_list_size * (conf.ui_size + 2) + 4);
             gui_set_scroll(gui, &ui.hover.dropdown.scroll_amount);
-            gui_set_scroll_scaling(gui, (conf.font_size + 2) * 2);
+            gui_set_scroll_scaling(gui, (conf.ui_size + 2) * 2);
         } else {
             gui_set_min_size(gui, ui.hover.dropdown.element->w, 0);
         }
@@ -1300,8 +1300,8 @@ static void draw_dropdown(void) {
                 gui_set_grow(gui, DIRECTION_HORIZONTAL);
                 gui_set_direction(gui, DIRECTION_HORIZONTAL);
                 gui_set_align(gui, ALIGN_CENTER);
-                gui_set_min_size(gui, 0, conf.font_size);
-                gui_set_padding(gui, conf.font_size * 0.3, 0);
+                gui_set_min_size(gui, 0, conf.ui_size);
+                gui_set_padding(gui, conf.ui_size * 0.3, 0);
                 gui_set_rect(gui, (GuiColor) { 0x2b, 0x2b, 0x2b, 0xff });
                 gui_on_hover(gui, dropdown_on_hover);
                 gui_set_custom_data(gui, (void*)(size_t)i);
@@ -1332,7 +1332,7 @@ static void draw_search_list(void) {
             gui_set_rect(gui, (GuiColor) { 0x2b, 0x2b, 0x2b, 0xff });
             gui_set_grow(gui, DIRECTION_HORIZONTAL);
             gui_set_padding(gui, BLOCK_OUTLINE_SIZE, 0);
-            gui_set_min_size(gui, 0, conf.font_size);
+            gui_set_min_size(gui, 0, conf.ui_size);
             gui_set_direction(gui, DIRECTION_HORIZONTAL);
             gui_set_align(gui, ALIGN_CENTER);
 
@@ -1342,7 +1342,7 @@ static void draw_search_list(void) {
         gui_element_end(gui);
 
         gui_element_begin(gui);
-            gui_set_fixed(gui, 0, conf.font_size * 5);
+            gui_set_fixed(gui, 0, conf.ui_size * 5);
             gui_set_fit(gui, DIRECTION_HORIZONTAL);
             gui_set_gap(gui, BLOCK_OUTLINE_SIZE);
             gui_set_scissor(gui);
@@ -1425,29 +1425,29 @@ void scrap_gui_process(void) {
                 gui_set_position(gui, 0, 0);
                 gui_set_parent_anchor(gui, tab_bar_anchor);
                 gui_set_align(gui, ALIGN_CENTER);
-                gui_set_padding(gui, 0, conf.font_size);
+                gui_set_padding(gui, 0, conf.ui_size);
 
                 gui_element_begin(gui);
-                    gui_set_padding(gui, conf.font_size * 0.3, conf.font_size * 0.3);
+                    gui_set_padding(gui, conf.ui_size * 0.3, conf.ui_size * 0.3);
                     gui_set_rect(gui, (GuiColor) { 0x00, 0x00, 0x00, 0x80 });
                     gui_set_align(gui, ALIGN_CENTER);
                     gui_on_hover(gui, panel_editor_on_hover);
 
-                    gui_text(gui, &assets.fonts.font_eb, gettext("Panel edit mode"), conf.font_size * 0.8, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+                    gui_text(gui, &assets.fonts.font_eb, gettext("Panel edit mode"), conf.ui_size * 0.8, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
 
-                    gui_spacer(gui, 0, conf.font_size * 0.25);
+                    gui_spacer(gui, 0, conf.ui_size * 0.25);
 
                     gui_text(gui, &assets.fonts.font_cond_shadow, gettext("Click on panels to reposition them"), BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
                     gui_text(gui, &assets.fonts.font_cond_shadow, gettext("Drag panel edges to resize them"), BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
 
-                    gui_spacer(gui, 0, conf.font_size * 0.25);
+                    gui_spacer(gui, 0, conf.ui_size * 0.25);
 
                     gui_element_begin(gui);
                         gui_set_direction(gui, DIRECTION_HORIZONTAL);
-                        gui_set_gap(gui, conf.font_size * 0.25);
+                        gui_set_gap(gui, conf.ui_size * 0.25);
 
-                        draw_panel_editor_button(gettext("Save"), conf.font_size, (GuiColor) { 0x40, 0xff, 0x40, 0xff }, handle_panel_editor_save_button);
-                        draw_panel_editor_button(gettext("Done"), conf.font_size, (GuiColor) { 0x80, 0x80, 0x80, 0xff }, handle_panel_editor_cancel_button);
+                        draw_panel_editor_button(gettext("Save"), conf.ui_size, (GuiColor) { 0x40, 0xff, 0x40, 0xff }, handle_panel_editor_save_button);
+                        draw_panel_editor_button(gettext("Done"), conf.ui_size, (GuiColor) { 0x80, 0x80, 0x80, 0xff }, handle_panel_editor_cancel_button);
                     gui_element_end(gui);
                 gui_element_end(gui);
             gui_element_end(gui);
@@ -1576,7 +1576,7 @@ static void render_border_end(GuiDrawCommand* cmd) {
 static void render_border_notched(GuiDrawCommand* cmd) {
     unsigned short border_w = cmd->data.border.width;
     Color color = CONVERT_COLOR(cmd->color, Color);
-    int notch_size = conf.font_size / 4;
+    int notch_size = conf.ui_size / 4;
 
     /* 1 */ DrawRectangle(cmd->pos_x, cmd->pos_y, cmd->width - notch_size, border_w, color);
     /* 2 */ DrawRectanglePro((Rectangle) {
@@ -1592,7 +1592,7 @@ static void render_border_notched(GuiDrawCommand* cmd) {
 
 static void render_rect_notched(GuiDrawCommand* cmd) {
     Color color = CONVERT_COLOR(cmd->color, Color);
-    int notch_size = conf.font_size / 4;
+    int notch_size = conf.ui_size / 4;
 
     DrawRectangle(cmd->pos_x, cmd->pos_y, cmd->width - notch_size, cmd->height, color);
     DrawRectangle(cmd->pos_x, cmd->pos_y + notch_size, cmd->width, cmd->height - notch_size, color);

@@ -50,7 +50,7 @@ typedef enum {
 } Language;
 
 typedef struct {
-    int font_size;
+    int ui_size;
     int fps_limit;
     int block_size_threshold;
     Language language;

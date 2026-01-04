@@ -1338,8 +1338,8 @@ static void handle_mouse_wheel(void) {
     if (gui_window_is_shown()) return;
 
     Vector2 wheel = GetMouseWheelMoveV();
-    editor.camera_pos.x -= wheel.x * conf.font_size * 2;
-    editor.camera_pos.y -= wheel.y * conf.font_size * 2;
+    editor.camera_pos.x -= wheel.x * conf.ui_size * 2;
+    editor.camera_pos.y -= wheel.y * conf.ui_size * 2;
 
     if (wheel.x != 0 || wheel.y != 0) {
         ui.hover.editor.select_block = NULL;

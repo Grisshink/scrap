@@ -107,7 +107,7 @@ void config_free(Config* config) {
 }
 
 void config_copy(Config* dst, Config* src) {
-    dst->font_size = src->font_size;
+    dst->ui_size = src->ui_size;
     dst->fps_limit = src->fps_limit;
     dst->language = src->language;
     dst->block_size_threshold = src->block_size_threshold;
@@ -117,7 +117,7 @@ void config_copy(Config* dst, Config* src) {
 }
 
 void set_default_config(Config* config) {
-    config->font_size = 32;
+    config->ui_size = 32;
     config->fps_limit = 60;
     config->block_size_threshold = 1000;
     config->language = LANG_SYSTEM;
@@ -258,7 +258,7 @@ void save_config(Config* config) {
     int cursor = 0;
 
     cursor += sprintf(file_str + cursor, "LANGUAGE=%s\n", language_to_code(config->language));
-    cursor += sprintf(file_str + cursor, "UI_SIZE=%u\n", config->font_size);
+    cursor += sprintf(file_str + cursor, "UI_SIZE=%u\n", config->ui_size);
     cursor += sprintf(file_str + cursor, "FPS_LIMIT=%u\n", config->fps_limit);
     cursor += sprintf(file_str + cursor, "BLOCK_SIZE_THRESHOLD=%u\n", config->block_size_threshold);
     cursor += sprintf(file_str + cursor, "FONT_PATH=%s\n", config->font_path);
@@ -336,7 +336,7 @@ void load_config(Config* config) {
 
         if (!strcmp(field, "UI_SIZE")) {
             int val = atoi(value);
-            config->font_size = val ? val : config->font_size;
+            config->ui_size = val ? val : config->ui_size;
         } else if (!strcmp(field, "FPS_LIMIT")) {
             int val = atoi(value);
             config->fps_limit = val ? val : config->fps_limit;
