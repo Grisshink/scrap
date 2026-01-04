@@ -194,152 +194,7 @@ const char* get_font_path(char* font_path) {
     return font_path[0] != '/' && font_path[1] != ':' ? into_shared_dir_path(font_path) : font_path;
 }
 
-// Divides the panel into two parts along the specified side with the specified split percentage
-void panel_split(PanelTree* panel, SplitSide side, PanelType new_panel_type, float split_percent) {
-    if (panel->type == PANEL_SPLIT) return;
-
-    PanelTree* old_panel = malloc(sizeof(PanelTree));
-    old_panel->type = panel->type;
-    old_panel->left = NULL;
-    old_panel->right = NULL;
-    old_panel->parent = panel;
-
-    PanelTree* new_panel = malloc(sizeof(PanelTree));
-    new_panel->type = new_panel_type;
-    new_panel->left = NULL;
-    new_panel->right = NULL;
-    new_panel->parent = panel;
-
-    panel->type = PANEL_SPLIT;
-
-    switch (side) {
-    case SPLIT_SIDE_TOP:
-        panel->direction = DIRECTION_VERTICAL;
-        panel->left = new_panel;
-        panel->right = old_panel;
-        panel->split_percent = split_percent;
-        break;
-    case SPLIT_SIDE_BOTTOM:
-        panel->direction = DIRECTION_VERTICAL;
-        panel->left = old_panel;
-        panel->right = new_panel;
-        panel->split_percent = 1.0 - split_percent;
-        break;
-    case SPLIT_SIDE_LEFT:
-        panel->direction = DIRECTION_HORIZONTAL;
-        panel->left = new_panel;
-        panel->right = old_panel;
-        panel->split_percent = split_percent;
-        break;
-    case SPLIT_SIDE_RIGHT:
-        panel->direction = DIRECTION_HORIZONTAL;
-        panel->left = old_panel;
-        panel->right = new_panel;
-        panel->split_percent = 1.0 - split_percent;
-        break;
-    case SPLIT_SIDE_NONE:
-        assert(false && "Got SPLIT_SIDE_NONE");
-        break;
-    default:
-        assert(false && "Got unknown split side");
-        break;
-    }
-}
-
-PanelTree* panel_new(PanelType type) {
-    PanelTree* panel = malloc(sizeof(PanelTree));
-    panel->type = type;
-    panel->left = NULL;
-    panel->right = NULL;
-    panel->parent = NULL;
-    return panel;
-}
-
-// Removes a panel and its child panels recursively, freeing memory
-void panel_delete(PanelTree* panel) {
-    assert(panel != NULL);
-
-    if (panel->type == PANEL_SPLIT) {
-        panel_delete(panel->left);
-        panel_delete(panel->right);
-        panel->left = NULL;
-        panel->right = NULL;
-    }
-
-    panel->type = PANEL_NONE;
-    free(panel);
-}
-
-// Removes a tab by index and frees its resources
-void tab_delete(size_t tab) {
-    assert(tab < vector_size(code_tabs));
-    panel_delete(code_tabs[tab].root_panel);
-    vector_free(code_tabs[tab].name);
-    vector_remove(code_tabs, tab);
-    if (current_tab >= (int)vector_size(code_tabs)) current_tab = vector_size(code_tabs) - 1;
-}
-
-void delete_all_tabs(void) {
-    for (ssize_t i = vector_size(code_tabs) - 1; i >= 0; i--) tab_delete(i);
-}
-
-// Creates a new tab with the given name and panel, adding it to the list of tabs
-size_t tab_new(char* name, PanelTree* root_panel) {
-    if (!root_panel) {
-        TraceLog(LOG_WARNING, "Got root_panel == NULL, not adding");
-        return -1;
-    }
-
-    Tab* tab = vector_add_dst(&code_tabs);
-    tab->name = vector_create();
-    for (char* str = name; *str; str++) vector_add(&tab->name, *str);
-    vector_add(&tab->name, 0);
-    tab->root_panel = root_panel;
-
-    return vector_size(code_tabs) - 1;
-}
-
-// Inserts a new tab with the given name and panel at the specified position in the list of tabs
-void tab_insert(char* name, PanelTree* root_panel, size_t position) {
-    if (!root_panel) {
-        TraceLog(LOG_WARNING, "Got root_panel == NULL, not adding");
-        return;
-    }
-
-    Tab* tab = vector_insert_dst(&code_tabs, position);
-    tab->name = vector_create();
-    for (char* str = name; *str; str++) vector_add(&tab->name, *str);
-    vector_add(&tab->name, 0);
-    tab->root_panel = root_panel;
-}
-
-// Initializes codespace, using a default panel layout
-void init_panels(void) {
-    PanelTree* code_panel = panel_new(PANEL_CODE);
-    panel_split(code_panel, SPLIT_SIDE_LEFT, PANEL_BLOCK_PALETTE, 0.3);
-    panel_split(code_panel->left, SPLIT_SIDE_TOP, PANEL_BLOCK_CATEGORIES, 0.35);
-    tab_new("Code", code_panel);
-    tab_new("Output", panel_new(PANEL_TERM));
-}
-
-size_t blockdef_register(Vm* vm, Blockdef* blockdef) {
-    if (!blockdef->func) TraceLog(LOG_WARNING, "[VM] Block \"%s\" has not defined its implementation!", blockdef->id);
-
-    vector_add(&vm->blockdefs, blockdef);
-    blockdef->ref_count++;
-    if (blockdef->type == BLOCKTYPE_END && vm->end_blockdef == (size_t)-1) {
-        vm->end_blockdef = vector_size(vm->blockdefs) - 1;
-    }
-
-    return vector_size(vm->blockdefs) - 1;
-}
-
-void blockdef_unregister(Vm* vm, size_t block_id) {
-    blockdef_free(vm->blockdefs[block_id]);
-    vector_remove(vm->blockdefs, block_id);
-}
-
-Vm vm_new(void) {
+static Vm vm_new(void) {
     Vm vm = (Vm) {
         .blockdefs = vector_create(),
         .end_blockdef = -1,
@@ -352,7 +207,7 @@ Vm vm_new(void) {
     return vm;
 }
 
-void vm_free(Vm* vm) {
+static void vm_free(Vm* vm) {
     for (ssize_t i = (ssize_t)vector_size(vm->blockdefs) - 1; i >= 0 ; i--) {
         blockdef_unregister(vm, i);
     }
@@ -368,13 +223,6 @@ static BlockChain* find_blockchain(Block* block) {
         }
     }
     return NULL;
-}
-
-void clear_compile_error(void) {
-    exec_compile_error_block = NULL;
-    exec_compile_error_blockchain = NULL;
-    for (size_t i = 0; i < vector_size(exec_compile_error); i++) vector_free(exec_compile_error[i]);
-    vector_clear(exec_compile_error);
 }
 
 // Initializes resources and settings by loading textures, fonts, and configurations, and sets up GUI and panel interface

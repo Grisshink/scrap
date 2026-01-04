@@ -353,17 +353,8 @@ extern const int codepoint_regions[CODEPOINT_REGION_COUNT][2];
 extern int codepoint_start_ranges[CODEPOINT_REGION_COUNT];
 
 // scrap.c
-void panel_split(PanelTree* panel, SplitSide side, PanelType new_panel_type, float split_percent);
-void delete_all_tabs(void);
-size_t tab_new(char* name, PanelTree* root_panel);
-void tab_delete(size_t tab);
-void init_panels(void);
-PanelTree* panel_new(PanelType type);
-void panel_delete(PanelTree* panel);
-void tab_insert(char* name, PanelTree* root_panel, size_t position);
-size_t blockdef_register(Vm* vm, Blockdef* blockdef);
-void blockdef_unregister(Vm* vm, size_t id);
-void clear_compile_error(void);
+// size_t blockdef_register(Vm* vm, Blockdef* blockdef);
+// void blockdef_unregister(Vm* vm, size_t id);
 
 // render.c
 void actionbar_show(const char* text);
@@ -377,6 +368,32 @@ bool svg_load(const char* file_name, size_t width, size_t height, Image* out_ima
 // input.c
 void process_input(void);
 void scrap_gui_process_input(void);
+
+PanelTree* find_panel(PanelTree* root, PanelType panel);
+void update_search(void);
+Block block_new_ms(Blockdef* blockdef);
+void show_dropdown(DropdownLocations location, char** list, int list_len, ButtonClickHandler handler);
+#ifdef USE_INTERPRETER
+bool start_vm(void);
+#else
+bool start_vm(CompilerMode mode);
+#endif
+
+GuiMeasurement scrap_gui_measure_image(void* image, unsigned short size);
+GuiMeasurement scrap_gui_measure_text(void* font, const char* text, unsigned int text_size, unsigned short font_size);
+TermVec term_measure_text(void* font, const char* text, unsigned int text_size, unsigned short font_size);
+int search_glyph(int codepoint);
+
+void clear_compile_error(void);
+
+size_t tab_new(char* name, PanelTree* root_panel);
+void delete_all_tabs(void);
+
+void init_panels(void);
+PanelTree* panel_new(PanelType type);
+void panel_split(PanelTree* panel, SplitSide side, PanelType new_panel_type, float split_percent);
+void panel_delete(PanelTree* panel);
+
 bool handle_file_button_click(void);
 bool handle_settings_button_click(void);
 bool handle_about_button_click(void);
@@ -399,19 +416,6 @@ bool handle_add_tab_button(void);
 bool handle_category_click(void);
 bool handle_jump_to_block_button_click(void);
 bool handle_error_window_close_button_click(void);
-PanelTree* find_panel(PanelTree* root, PanelType panel);
-void update_search(void);
-Block block_new_ms(Blockdef* blockdef);
-void show_dropdown(DropdownLocations location, char** list, int list_len, ButtonClickHandler handler);
-#ifdef USE_INTERPRETER
-bool start_vm(void);
-#else
-bool start_vm(CompilerMode mode);
-#endif
-GuiMeasurement scrap_gui_measure_image(void* image, unsigned short size);
-GuiMeasurement scrap_gui_measure_text(void* font, const char* text, unsigned int text_size, unsigned short font_size);
-TermVec term_measure_text(void* font, const char* text, unsigned int text_size, unsigned short font_size);
-int search_glyph(int codepoint);
 
 // save.c
 void config_new(Config* config);
@@ -443,6 +447,8 @@ void handle_window(void);
 void draw_window(void);
 
 // blocks.c
+void blockdef_unregister(Vm* vm, size_t block_id);
+
 void register_blocks(Vm* vm);
 void register_categories(void);
 void unregister_categories(void);

@@ -3001,6 +3001,23 @@ bool block_on_start(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* 
 
 #endif // USE_INTERPRETER
 
+size_t blockdef_register(Vm* vm, Blockdef* blockdef) {
+    if (!blockdef->func) TraceLog(LOG_WARNING, "[VM] Block \"%s\" has not defined its implementation!", blockdef->id);
+
+    vector_add(&vm->blockdefs, blockdef);
+    blockdef->ref_count++;
+    if (blockdef->type == BLOCKTYPE_END && vm->end_blockdef == (size_t)-1) {
+        vm->end_blockdef = vector_size(vm->blockdefs) - 1;
+    }
+
+    return vector_size(vm->blockdefs) - 1;
+}
+
+void blockdef_unregister(Vm* vm, size_t block_id) {
+    blockdef_free(vm->blockdefs[block_id]);
+    vector_remove(vm->blockdefs, block_id);
+}
+
 BlockCategory block_category_new(const char* name, Color color) {
     return (BlockCategory) {
         .name = name,

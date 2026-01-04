@@ -43,6 +43,141 @@ char* file_menu_list[] = {
     "Load project",
 };
 
+// Divides the panel into two parts along the specified side with the specified split percentage
+void panel_split(PanelTree* panel, SplitSide side, PanelType new_panel_type, float split_percent) {
+    if (panel->type == PANEL_SPLIT) return;
+
+    PanelTree* old_panel = malloc(sizeof(PanelTree));
+    old_panel->type = panel->type;
+    old_panel->left = NULL;
+    old_panel->right = NULL;
+    old_panel->parent = panel;
+
+    PanelTree* new_panel = malloc(sizeof(PanelTree));
+    new_panel->type = new_panel_type;
+    new_panel->left = NULL;
+    new_panel->right = NULL;
+    new_panel->parent = panel;
+
+    panel->type = PANEL_SPLIT;
+
+    switch (side) {
+    case SPLIT_SIDE_TOP:
+        panel->direction = DIRECTION_VERTICAL;
+        panel->left = new_panel;
+        panel->right = old_panel;
+        panel->split_percent = split_percent;
+        break;
+    case SPLIT_SIDE_BOTTOM:
+        panel->direction = DIRECTION_VERTICAL;
+        panel->left = old_panel;
+        panel->right = new_panel;
+        panel->split_percent = 1.0 - split_percent;
+        break;
+    case SPLIT_SIDE_LEFT:
+        panel->direction = DIRECTION_HORIZONTAL;
+        panel->left = new_panel;
+        panel->right = old_panel;
+        panel->split_percent = split_percent;
+        break;
+    case SPLIT_SIDE_RIGHT:
+        panel->direction = DIRECTION_HORIZONTAL;
+        panel->left = old_panel;
+        panel->right = new_panel;
+        panel->split_percent = 1.0 - split_percent;
+        break;
+    case SPLIT_SIDE_NONE:
+        assert(false && "Got SPLIT_SIDE_NONE");
+        break;
+    default:
+        assert(false && "Got unknown split side");
+        break;
+    }
+}
+
+PanelTree* panel_new(PanelType type) {
+    PanelTree* panel = malloc(sizeof(PanelTree));
+    panel->type = type;
+    panel->left = NULL;
+    panel->right = NULL;
+    panel->parent = NULL;
+    return panel;
+}
+
+// Removes a panel and its child panels recursively, freeing memory
+void panel_delete(PanelTree* panel) {
+    assert(panel != NULL);
+
+    if (panel->type == PANEL_SPLIT) {
+        panel_delete(panel->left);
+        panel_delete(panel->right);
+        panel->left = NULL;
+        panel->right = NULL;
+    }
+
+    panel->type = PANEL_NONE;
+    free(panel);
+}
+
+// Removes a tab by index and frees its resources
+void tab_delete(size_t tab) {
+    assert(tab < vector_size(code_tabs));
+    panel_delete(code_tabs[tab].root_panel);
+    vector_free(code_tabs[tab].name);
+    vector_remove(code_tabs, tab);
+    if (current_tab >= (int)vector_size(code_tabs)) current_tab = vector_size(code_tabs) - 1;
+}
+
+void delete_all_tabs(void) {
+    for (ssize_t i = vector_size(code_tabs) - 1; i >= 0; i--) tab_delete(i);
+}
+
+// Creates a new tab with the given name and panel, adding it to the list of tabs
+size_t tab_new(char* name, PanelTree* root_panel) {
+    if (!root_panel) {
+        TraceLog(LOG_WARNING, "Got root_panel == NULL, not adding");
+        return -1;
+    }
+
+    Tab* tab = vector_add_dst(&code_tabs);
+    tab->name = vector_create();
+    for (char* str = name; *str; str++) vector_add(&tab->name, *str);
+    vector_add(&tab->name, 0);
+    tab->root_panel = root_panel;
+
+    return vector_size(code_tabs) - 1;
+}
+
+// Inserts a new tab with the given name and panel at the specified position in the list of tabs
+void tab_insert(char* name, PanelTree* root_panel, size_t position) {
+    if (!root_panel) {
+        TraceLog(LOG_WARNING, "Got root_panel == NULL, not adding");
+        return;
+    }
+
+    Tab* tab = vector_insert_dst(&code_tabs, position);
+    tab->name = vector_create();
+    for (char* str = name; *str; str++) vector_add(&tab->name, *str);
+    vector_add(&tab->name, 0);
+    tab->root_panel = root_panel;
+}
+
+// Initializes codespace, using a default panel layout
+void init_panels(void) {
+    PanelTree* code_panel = panel_new(PANEL_CODE);
+    panel_split(code_panel, SPLIT_SIDE_LEFT, PANEL_BLOCK_PALETTE, 0.3);
+    panel_split(code_panel->left, SPLIT_SIDE_TOP, PANEL_BLOCK_CATEGORIES, 0.35);
+    tab_new("Code", code_panel);
+    tab_new("Output", panel_new(PANEL_TERM));
+}
+
+void clear_compile_error(void) {
+    exec_compile_error_block = NULL;
+    exec_compile_error_blockchain = NULL;
+    for (size_t i = 0; i < vector_size(exec_compile_error); i++) vector_free(exec_compile_error[i]);
+    vector_clear(exec_compile_error);
+}
+
 int search_glyph(int codepoint) {
     // We assume that ASCII region is the first region, so this index should correspond to char '?' in the glyph table
     const int fallback = 31;
