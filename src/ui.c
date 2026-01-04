@@ -495,7 +495,7 @@ bool handle_file_menu_click(void) {
     case FILE_MENU_SAVE_PROJECT:
         path = tinyfd_saveFileDialog(NULL, editor.project_name, ARRLEN(filters), filters, "Scrap project files (.scrp)");
         if (!path) break;
-        save_code(path, &project_conf, editor.code);
+        save_code(path, &project_config, editor.code);
 
         base_path = get_basename(path);
         for (i = 0; base_path[i]; i++) editor.project_name[i] = base_path[i];
@@ -513,8 +513,8 @@ bool handle_file_menu_click(void) {
             break;
         }
 
-        project_config_free(&project_conf);
-        project_conf = new_config;
+        project_config_free(&project_config);
+        project_config = new_config;
 
         for (size_t i = 0; i < vector_size(editor.code); i++) blockchain_free(&editor.code[i]);
         vector_free(editor.code);
@@ -635,7 +635,7 @@ bool handle_add_tab_button(void) {
 
 bool handle_panel_editor_save_button(void) {
     ui.hover.is_panel_edit_mode = false;
-    save_config(&conf);
+    save_config(&config);
     return true;
 }
 
@@ -1338,8 +1338,8 @@ static void handle_mouse_wheel(void) {
     if (gui_window_is_shown()) return;
 
     Vector2 wheel = GetMouseWheelMoveV();
-    editor.camera_pos.x -= wheel.x * conf.ui_size * 2;
-    editor.camera_pos.y -= wheel.y * conf.ui_size * 2;
+    editor.camera_pos.x -= wheel.x * config.ui_size * 2;
+    editor.camera_pos.y -= wheel.y * config.ui_size * 2;
 
     if (wheel.x != 0 || wheel.y != 0) {
         ui.hover.editor.select_block = NULL;

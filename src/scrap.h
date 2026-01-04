@@ -348,9 +348,9 @@ struct Vm {
 #endif
 };
 
-extern Config conf;
-extern Config window_conf;
-extern ProjectConfig project_conf;
+extern Config config;
+extern Config window_config;
+extern ProjectConfig project_config;
 
 extern Assets assets;
 

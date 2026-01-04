@@ -33,8 +33,8 @@
 
 // Global Variables
 
-Config conf;
-ProjectConfig project_conf;
+Config config;
+ProjectConfig project_config;
 
 Assets assets;
 
@@ -143,7 +143,7 @@ Image setup(void) {
     SetTextureFilter(assets.textures.dropdown, TEXTURE_FILTER_BILINEAR);
 
     Image window_icon;
-    svg_load(into_shared_dir_path(DATA_PATH "logo.svg"), conf.ui_size, conf.ui_size, &window_icon);
+    svg_load(into_shared_dir_path(DATA_PATH "logo.svg"), config.ui_size, config.ui_size, &window_icon);
     assets.textures.icon_logo = LoadTextureFromImage(window_icon);
     SetTextureFilter(assets.textures.icon_logo, TEXTURE_FILTER_BILINEAR);
 
@@ -169,7 +169,7 @@ Image setup(void) {
 
     for (int i = 0; image_load_paths[i]; i += 2) {
         Image svg_img;
-        if (!svg_load(TextFormat("%s" DATA_PATH "%s", get_shared_dir_path(), image_load_paths[i + 1]), conf.ui_size, conf.ui_size, &svg_img)) {
+        if (!svg_load(TextFormat("%s" DATA_PATH "%s", get_shared_dir_path(), image_load_paths[i + 1]), config.ui_size, config.ui_size, &svg_img)) {
             continue;
         }
 
@@ -188,10 +188,10 @@ Image setup(void) {
     }
     int codepoints_count = vector_size(codepoints);
 
-    assets.fonts.font_cond = LoadFontEx(get_font_path(conf.font_path), conf.ui_size, codepoints, codepoints_count);
-    assets.fonts.font_cond_shadow = LoadFontEx(get_font_path(conf.font_path), BLOCK_TEXT_SIZE, codepoints, codepoints_count);
-    assets.fonts.font_eb = LoadFontEx(get_font_path(conf.font_bold_path), conf.ui_size * 0.8, codepoints, codepoints_count);
-    assets.fonts.font_mono = LoadFontEx(get_font_path(conf.font_mono_path), conf.ui_size, codepoints, codepoints_count);
+    assets.fonts.font_cond = LoadFontEx(get_font_path(config.font_path), config.ui_size, codepoints, codepoints_count);
+    assets.fonts.font_cond_shadow = LoadFontEx(get_font_path(config.font_path), BLOCK_TEXT_SIZE, codepoints, codepoints_count);
+    assets.fonts.font_eb = LoadFontEx(get_font_path(config.font_bold_path), config.ui_size * 0.8, codepoints, codepoints_count);
+    assets.fonts.font_mono = LoadFontEx(get_font_path(config.font_mono_path), config.ui_size, codepoints, codepoints_count);
     vector_free(codepoints);
 
     SetTextureFilter(assets.fonts.font_cond.texture, TEXTURE_FILTER_BILINEAR);
@@ -222,7 +222,7 @@ Image setup(void) {
     vector_add(&editor.search_list_search, 0);
     update_search();
 
-    term_init(term_measure_text, &assets.fonts.font_mono, conf.ui_size * 0.6);
+    term_init(term_measure_text, &assets.fonts.font_mono, config.ui_size * 0.6);
 
     gui = malloc(sizeof(Gui));
     gui_init(gui);
@@ -257,9 +257,9 @@ void cleanup(void) {
 
     unregister_categories();
 
-    project_config_free(&project_conf);
-    config_free(&conf);
-    config_free(&window_conf);
+    project_config_free(&project_config);
+    config_free(&config);
+    config_free(&window_config);
 
     CloseWindow();
 }
@@ -267,20 +267,20 @@ void cleanup(void) {
 // Main function: Initializes configurations, sets up window, processes input, renders GUI, and cleans up resources on exit
 int main(void) {
     SetTraceLogCallback(scrap_log);
-    config_new(&conf);
-    config_new(&window_conf);
-    project_config_new(&project_conf);
-    project_config_set_default(&project_conf);
+    config_new(&config);
+    config_new(&window_config);
+    project_config_new(&project_config);
+    project_config_set_default(&project_config);
 
     editor.tabs = vector_create();
-    set_default_config(&conf);
-    load_config(&conf);
+    set_default_config(&config);
+    load_config(&config);
 
-    if (conf.language != LANG_SYSTEM) {
+    if (config.language != LANG_SYSTEM) {
 #ifdef _WIN32
-        scrap_set_env("LANG", language_to_code(conf.language));
+        scrap_set_env("LANG", language_to_code(config.language));
 #else
-        scrap_set_env("LANGUAGE", language_to_code(conf.language));
+        scrap_set_env("LANGUAGE", language_to_code(config.language));
 #endif
     }
     setlocale(LC_MESSAGES, "");
@@ -293,7 +293,7 @@ int main(void) {
     SetConfigFlags(FLAG_MSAA_4X_HINT | FLAG_WINDOW_RESIZABLE);
     InitWindow(800, 600, "Scrap");
     //SetWindowState(FLAG_VSYNC_HINT);
-    SetTargetFPS(conf.fps_limit);
+    SetTargetFPS(config.fps_limit);
 
     Image icon = setup();
     SetWindowIcon(icon);
