@@ -129,8 +129,8 @@ struct Blockdef {
 
 struct Block {
     Blockdef* blockdef;
-    struct Argument* arguments;
-    struct Block* parent;
+    Argument* arguments;
+    Block* parent;
 };
 
 union ArgumentData {
