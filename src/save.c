@@ -757,7 +757,6 @@ bool load_block(SaveData* save, Block* block) {
 
     block->blockdef = blockdef;
     block->arguments = vector_create();
-    block->width = 0;
     block->parent = NULL;
     blockdef->ref_count++;
 

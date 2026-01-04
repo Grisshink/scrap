@@ -325,6 +325,7 @@ extern char* search_list_search;
 extern int categories_scroll;
 extern int search_list_scroll;
 extern Vector2 search_list_pos;
+extern int* blockchain_render_layer_widths;
 
 extern SplitPreview split_preview;
 extern Tab* code_tabs;

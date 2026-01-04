@@ -76,6 +76,7 @@ char* search_list_search = NULL;
 int categories_scroll = 0;
 int search_list_scroll = 0;
 Vector2 search_list_pos = {0};
+int* blockchain_render_layer_widths;
 
 SplitPreview split_preview = {0};
 Tab* code_tabs = NULL;
@@ -547,6 +548,8 @@ Image setup(void) {
     TraceLog(LOG_INFO, "Allocated %.2f KiB for gui", (float)sizeof(Gui) / 1024.0f);
     init_gui_window();
 
+    blockchain_render_layer_widths = vector_create();
+
     return window_icon;
 }
 
@@ -695,6 +698,7 @@ int main(void) {
     for (vec_size_t i = 0; i < vector_size(editor_code); i++) blockchain_free(&editor_code[i]);
     vector_free(editor_code);
     vm_free(&vm);
+    vector_free(blockchain_render_layer_widths);
     free(gui);
     delete_all_tabs();
     vector_free(search_list_search);

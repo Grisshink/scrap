@@ -130,7 +130,6 @@ struct Blockdef {
 struct Block {
     Blockdef* blockdef;
     struct Argument* arguments;
-    int width;
     struct Block* parent;
 };
 

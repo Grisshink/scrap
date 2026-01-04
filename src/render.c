@@ -794,7 +794,7 @@ static void draw_blockchain(BlockChain* chain, bool ghost, bool show_previews, b
             }
 
             gui_element_begin(gui);
-                gui_set_min_size(gui, block->width, conf.font_size);
+                gui_set_min_size(gui, blockchain_render_layer_widths[vector_size(blockchain_render_layer_widths) - 1], conf.font_size);
                 gui_set_rect(gui, CONVERT_COLOR(block_color, GuiColor));
                 gui_on_hover(gui, block_on_hover);
                 if (hover.editor.select_block == &chain->blocks[i]) gui_on_render(gui, block_on_render);
@@ -808,6 +808,7 @@ static void draw_blockchain(BlockChain* chain, bool ghost, bool show_previews, b
                 gui_element_end(gui);
             gui_element_end(gui);
 
+            vector_pop(blockchain_render_layer_widths);
             layer--;
             gui_element_end(gui);
         } else if (blockdef->type == BLOCKTYPE_CONTROLEND) {
@@ -817,6 +818,7 @@ static void draw_blockchain(BlockChain* chain, bool ghost, bool show_previews, b
                 gui_element_end(gui);
                 layer--;
             }
+            if (vector_size(blockchain_render_layer_widths) > 0) vector_pop(blockchain_render_layer_widths);
             gui_element_begin(gui);
                 gui_set_direction(gui, DIRECTION_VERTICAL);
                 gui_set_custom_data(gui, &chain->blocks[i]);
@@ -834,7 +836,7 @@ static void draw_blockchain(BlockChain* chain, bool ghost, bool show_previews, b
             layer++;
 
             GuiElement* el = gui_get_element(gui);
-            chain->blocks[i].width = el->w;
+            vector_add(&blockchain_render_layer_widths, el->w);
 
             bool collision = hover.editor.prev_block == &chain->blocks[i] || (highlight && block_highlight);
             Color color = CONVERT_COLOR(blockdef->color, Color);
@@ -1364,7 +1366,6 @@ static void draw_search_list(void) {
                         .blockdef = search_list[i],
                         .arguments = NULL,
                         .parent = NULL,
-                        .width = 0,
                     };
                     draw_block(&dummy_block, hover.editor.prev_blockdef == search_list[i], false, false, false);
                 gui_element_end(gui);

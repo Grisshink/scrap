@@ -54,7 +54,6 @@ const char* type_to_str(DataType type) {
 Block block_new(Blockdef* blockdef) {
     Block block;
     block.blockdef = blockdef;
-    block.width = 0;
     block.arguments = vector_create();
     block.parent = NULL;
     blockdef->ref_count++;
@@ -118,7 +117,6 @@ Block block_copy(Block* block, Block* parent) {
 
     Block new;
     new.blockdef = block->blockdef;
-    new.width = block->width;
     new.parent = parent;
     new.arguments = vector_create();
     new.blockdef->ref_count++;
