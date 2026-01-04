@@ -221,7 +221,7 @@ static void begin_window(const char* title, int w, int h, float scaling) {
             gui_set_align(gui, ALIGN_CENTER);
 
             gui_grow(gui, DIRECTION_HORIZONTAL);
-            gui_text(gui, &font_eb, title, conf.font_size * 0.8, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+            gui_text(gui, &assets.fonts.font_eb, title, conf.font_size * 0.8, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
             gui_grow(gui, DIRECTION_HORIZONTAL);
         gui_element_end(gui);
 
@@ -240,9 +240,9 @@ static void end_window(void) {
 
         gui_element_begin(gui);
             gui_set_floating(gui);
-            if (IsShaderValid(line_shader)) {
+            if (IsShaderValid(assets.line_shader)) {
                 gui_set_border(gui, (GuiColor) { 0x60, 0x60, 0x60, 0xff }, 2);
-                gui_set_shader(gui, &line_shader);
+                gui_set_shader(gui, &assets.line_shader);
             }
             gui_set_position(gui, 0, 0);
             gui_set_fixed(gui, el->w, el->h);
@@ -260,7 +260,7 @@ static void end_window(void) {
                 gui_set_direction(gui, DIRECTION_HORIZONTAL);
                 gui_set_align(gui, ALIGN_CENTER);
 
-                gui_text(gui, &font_cond, "X", conf.font_size * 0.8, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+                gui_text(gui, &assets.fonts.font_cond, "X", conf.font_size * 0.8, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
             gui_element_end(gui);
         gui_element_end(gui);
     gui_element_end(gui);
@@ -286,12 +286,12 @@ static void begin_setting(const char* name, bool warning) {
             gui_set_align(gui, ALIGN_CENTER);
 
             gui_grow(gui, DIRECTION_HORIZONTAL);
-            gui_text(gui, &font_cond, name, conf.font_size * 0.6, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+            gui_text(gui, &assets.fonts.font_cond, name, conf.font_size * 0.6, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
         gui_element_end(gui);
 
         if (warning) {
             gui_element_begin(gui);
-                gui_set_image(gui, &textures.icon_warning, conf.font_size, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+                gui_set_image(gui, &assets.textures.icon_warning, conf.font_size, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
                 gui_on_hover(gui, warning_on_hover);
             gui_element_end(gui);
         } else {
@@ -340,9 +340,9 @@ static void draw_slider(int min, int max, int* value) {
             gui_set_grow(gui, DIRECTION_VERTICAL);
             gui_set_direction(gui, DIRECTION_HORIZONTAL);
             gui_set_align(gui, ALIGN_CENTER);
-            if (IsShaderValid(line_shader)) {
+            if (IsShaderValid(assets.line_shader)) {
                 gui_set_border(gui, (GuiColor) { 0x60, 0x60, 0x60, 0xff }, 2);
-                gui_set_shader(gui, &line_shader);
+                gui_set_shader(gui, &assets.line_shader);
             }
 
             snprintf(state->value_str, 16, "%d", *state->value);
@@ -354,12 +354,12 @@ static void draw_slider(int min, int max, int* value) {
                 gui_set_direction(gui, DIRECTION_HORIZONTAL);
                 gui_set_align(gui, ALIGN_CENTER);
 
-                gui_image(gui, &textures.button_arrow_left, BLOCK_IMAGE_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+                gui_image(gui, &assets.textures.button_arrow_left, BLOCK_IMAGE_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
             gui_element_end(gui);
 
             gui_grow(gui, DIRECTION_HORIZONTAL);
 
-            gui_text(gui, &font_cond, state->value_str, conf.font_size * 0.6, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+            gui_text(gui, &assets.fonts.font_cond, state->value_str, conf.font_size * 0.6, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
 
             gui_grow(gui, DIRECTION_HORIZONTAL);
 
@@ -370,7 +370,7 @@ static void draw_slider(int min, int max, int* value) {
                 gui_set_direction(gui, DIRECTION_HORIZONTAL);
                 gui_set_align(gui, ALIGN_CENTER);
 
-                gui_image(gui, &textures.button_arrow_right, BLOCK_IMAGE_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+                gui_image(gui, &assets.textures.button_arrow_right, BLOCK_IMAGE_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
             gui_element_end(gui);
         gui_element_end(gui);
     gui_element_end(gui);
@@ -418,17 +418,17 @@ static void draw_dropdown_input(int* value, char** list, int list_len) {
             gui_set_grow(gui, DIRECTION_VERTICAL);
             gui_set_direction(gui, DIRECTION_HORIZONTAL);
             gui_set_align(gui, ALIGN_CENTER);
-            if (IsShaderValid(line_shader)) {
+            if (IsShaderValid(assets.line_shader)) {
                 gui_set_border(gui, (GuiColor) { 0x60, 0x60, 0x60, 0xff }, 2);
-                gui_set_shader(gui, &line_shader);
+                gui_set_shader(gui, &assets.line_shader);
             }
             gui_set_padding(gui, WINDOW_ELEMENT_PADDING, 0);
             gui_set_scissor(gui);
 
             gui_grow(gui, DIRECTION_HORIZONTAL);
-            gui_text(gui, &font_cond, gettext(list[*value]), conf.font_size * 0.6, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+            gui_text(gui, &assets.fonts.font_cond, gettext(list[*value]), conf.font_size * 0.6, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
             gui_grow(gui, DIRECTION_HORIZONTAL);
-            gui_image(gui, &textures.dropdown, BLOCK_IMAGE_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+            gui_image(gui, &assets.textures.dropdown, BLOCK_IMAGE_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
         gui_element_end(gui);
     gui_element_end(gui);
 }
@@ -449,16 +449,16 @@ static void draw_text_input(char** input, const char* hint, int* scroll, bool ed
             gui_set_grow(gui, DIRECTION_VERTICAL);
             gui_set_direction(gui, DIRECTION_HORIZONTAL);
             gui_set_align(gui, ALIGN_CENTER);
-            if (IsShaderValid(line_shader)) {
+            if (IsShaderValid(assets.line_shader)) {
                 gui_set_border(gui, (GuiColor) { 0x60, 0x60, 0x60, 0xff }, 2);
-                gui_set_shader(gui, &line_shader);
+                gui_set_shader(gui, &assets.line_shader);
             }
             gui_set_padding(gui, WINDOW_ELEMENT_PADDING, 0);
             gui_set_scroll(gui, scroll);
             gui_set_scissor(gui);
 
             gui_element_begin(gui);
-                draw_input(&font_cond, input, hint, conf.font_size * 0.6, (GuiColor) { 0xff, 0xff, 0xff, 0xff }, editable);
+                draw_input(&assets.fonts.font_cond, input, hint, conf.font_size * 0.6, (GuiColor) { 0xff, 0xff, 0xff, 0xff }, editable);
             gui_element_end(gui);
         gui_element_end(gui);
     gui_element_end(gui);
@@ -477,12 +477,12 @@ static void draw_button(const char* label, ButtonClickHandler handler) {
             gui_set_padding(gui, WINDOW_ELEMENT_PADDING, 0);
             gui_set_direction(gui, DIRECTION_HORIZONTAL);
             gui_set_align(gui, ALIGN_CENTER);
-            if (IsShaderValid(line_shader)) {
+            if (IsShaderValid(assets.line_shader)) {
                 gui_set_border(gui, (GuiColor) { 0x60, 0x60, 0x60, 0xff }, 2);
-                gui_set_shader(gui, &line_shader);
+                gui_set_shader(gui, &assets.line_shader);
             }
 
-            gui_text(gui, &font_cond, label, conf.font_size * 0.6, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+            gui_text(gui, &assets.fonts.font_cond, label, conf.font_size * 0.6, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
         gui_element_end(gui);
     gui_element_end(gui);
 }
@@ -575,7 +575,7 @@ void draw_window(void) {
                 gui_set_min_size(gui, 0, conf.font_size * 0.6);
 
                 gui_grow(gui, DIRECTION_HORIZONTAL);
-                if (settings_applied) gui_text(gui, &font_cond, "Settings applied", conf.font_size * 0.6, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+                if (settings_applied) gui_text(gui, &assets.fonts.font_cond, "Settings applied", conf.font_size * 0.6, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
             gui_element_end(gui);
 
             gui_element_begin(gui);
@@ -620,17 +620,17 @@ void draw_window(void) {
                 gui_set_align(gui, ALIGN_CENTER);
                 gui_set_gap(gui, WINDOW_ELEMENT_PADDING);
 
-                gui_image(gui, &textures.icon_logo, conf.font_size, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
-                gui_text(gui, &font_eb, "Scrap v" SCRAP_VERSION, conf.font_size * 0.8, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+                gui_image(gui, &assets.textures.icon_logo, conf.font_size, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+                gui_text(gui, &assets.fonts.font_eb, "Scrap v" SCRAP_VERSION, conf.font_size * 0.8, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
             gui_element_end(gui);
 
             gui_element_begin(gui);
                 if (about_text_split) {
                     for (size_t i = 0; i < vector_size(about_text_split); i++) {
-                        gui_text_slice(gui, &font_cond, about_text_split[i], vector_size(about_text_split[i]), conf.font_size * 0.6, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+                        gui_text_slice(gui, &assets.fonts.font_cond, about_text_split[i], vector_size(about_text_split[i]), conf.font_size * 0.6, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
                     }
                 } else {
-                    gui_text(gui, &font_cond, "ERROR", conf.font_size * 0.6, (GuiColor) { 0xff, 0x20, 0x20, 0xff });
+                    gui_text(gui, &assets.fonts.font_cond, "ERROR", conf.font_size * 0.6, (GuiColor) { 0xff, 0x20, 0x20, 0xff });
                 }
             gui_element_end(gui);
 
@@ -658,7 +658,7 @@ void draw_window(void) {
             gui_set_position(gui, gui->mouse_x + 10, gui->mouse_y + 10);
             gui_set_padding(gui, WINDOW_ELEMENT_PADDING * 0.5, WINDOW_ELEMENT_PADDING * 0.5);
 
-            gui_text(gui, &font_cond, gettext("Needs restart for changes to take effect"), conf.font_size * 0.6, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+            gui_text(gui, &assets.fonts.font_cond, gettext("Needs restart for changes to take effect"), conf.font_size * 0.6, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
         gui_element_end(gui);
     }
 

@@ -243,6 +243,19 @@ typedef struct {
 } TextureList;
 
 typedef struct {
+    Font font_cond;
+    Font font_cond_shadow;
+    Font font_eb;
+    Font font_mono;
+} Fonts;
+
+typedef struct {
+    Fonts fonts;
+    TextureList textures;
+    Shader line_shader;
+} Assets;
+
+typedef struct {
     int scroll_amount;
 } Dropdown;
 
@@ -287,21 +300,15 @@ extern Config conf;
 extern Config window_conf;
 extern ProjectConfig project_conf;
 extern HoverInfo hover;
-extern Shader line_shader;
 extern RenderTexture2D render_surface;
 extern bool render_surface_needs_redraw;
-
-extern Font font_cond;
-extern Font font_cond_shadow;
-extern Font font_eb;
-extern Font font_mono;
-
-extern TextureList textures;
 
 extern Exec exec;
 extern char** exec_compile_error;
 extern Block* exec_compile_error_block;
 extern BlockChain* exec_compile_error_blockchain;
+
+extern Assets assets;
 
 extern Vm vm;
 extern int vm_start_timeout;

@@ -3020,12 +3020,12 @@ void register_blocks(Vm* vm) {
     BlockCategory* cat_data = block_category_register(cat);
 
     BlockdefImage term_img = (BlockdefImage) {
-        .image_ptr = &textures.icon_term,
+        .image_ptr = &assets.textures.icon_term,
         .image_color = (BlockdefColor) { 0xff, 0xff, 0xff, 0xff },
     };
 
     BlockdefImage list_img = (BlockdefImage) {
-        .image_ptr = &textures.icon_list,
+        .image_ptr = &assets.textures.icon_list,
         .image_color = (BlockdefColor) { 0xff, 0xff, 0xff, 0xff },
     };
 
@@ -3035,7 +3035,7 @@ void register_blocks(Vm* vm) {
 
     Blockdef* on_start = blockdef_new("on_start", BLOCKTYPE_HAT, (BlockdefColor) { 0xff, 0x77, 0x00, 0xFF }, block_on_start);
     blockdef_add_text(on_start, gettext("When"));
-    blockdef_add_image(on_start, (BlockdefImage) { .image_ptr = &textures.button_run, .image_color = (BlockdefColor) { 0x60, 0xff, 0x00, 0xff } });
+    blockdef_add_image(on_start, (BlockdefImage) { .image_ptr = &assets.textures.button_run, .image_color = (BlockdefColor) { 0x60, 0xff, 0x00, 0xff } });
     blockdef_add_text(on_start, gettext("clicked"));
     blockdef_register(vm, on_start);
     add_to_category(on_start, cat_control);
@@ -3223,7 +3223,7 @@ void register_blocks(Vm* vm) {
     add_to_category(sc_math, cat_math);
 
     Blockdef* sc_pi = blockdef_new("pi", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_MATH_COLOR, block_pi);
-    blockdef_add_image(sc_pi, (BlockdefImage) { .image_ptr = &textures.icon_pi, .image_color = (BlockdefColor) { 0xff, 0xff, 0xff, 0xff } });
+    blockdef_add_image(sc_pi, (BlockdefImage) { .image_ptr = &assets.textures.icon_pi, .image_color = (BlockdefColor) { 0xff, 0xff, 0xff, 0xff } });
     blockdef_register(vm, sc_pi);
     add_to_category(sc_pi, cat_math);
 
@@ -3438,7 +3438,7 @@ void register_blocks(Vm* vm) {
 #endif
 
     Blockdef* sc_decl_var = blockdef_new("decl_var", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_DATA_COLOR, block_declare_var);
-    blockdef_add_image(sc_decl_var, (BlockdefImage) { .image_ptr = &textures.icon_variable, .image_color = (BlockdefColor) { 0xff, 0xff, 0xff, 0xff } });
+    blockdef_add_image(sc_decl_var, (BlockdefImage) { .image_ptr = &assets.textures.icon_variable, .image_color = (BlockdefColor) { 0xff, 0xff, 0xff, 0xff } });
     blockdef_add_text(sc_decl_var, gettext("Declare"));
     blockdef_add_argument(sc_decl_var, gettext("my variable"), gettext("Abc"), BLOCKCONSTR_STRING);
     blockdef_add_text(sc_decl_var, "=");
@@ -3447,13 +3447,13 @@ void register_blocks(Vm* vm) {
     add_to_category(sc_decl_var, cat_data);
 
     Blockdef* sc_get_var = blockdef_new("get_var", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_DATA_COLOR, block_get_var);
-    blockdef_add_image(sc_get_var, (BlockdefImage) { .image_ptr = &textures.icon_variable, .image_color = (BlockdefColor) { 0xff, 0xff, 0xff, 0xff } });
+    blockdef_add_image(sc_get_var, (BlockdefImage) { .image_ptr = &assets.textures.icon_variable, .image_color = (BlockdefColor) { 0xff, 0xff, 0xff, 0xff } });
     blockdef_add_argument(sc_get_var, gettext("my variable"), gettext("Abc"), BLOCKCONSTR_STRING);
     blockdef_register(vm, sc_get_var);
     add_to_category(sc_get_var, cat_data);
 
     Blockdef* sc_set_var = blockdef_new("set_var", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_DATA_COLOR, block_set_var);
-    blockdef_add_image(sc_set_var, (BlockdefImage) { .image_ptr = &textures.icon_variable, .image_color = (BlockdefColor) { 0xff, 0xff, 0xff, 0xff } });
+    blockdef_add_image(sc_set_var, (BlockdefImage) { .image_ptr = &assets.textures.icon_variable, .image_color = (BlockdefColor) { 0xff, 0xff, 0xff, 0xff } });
     blockdef_add_text(sc_set_var, gettext("Set"));
     blockdef_add_argument(sc_set_var, gettext("my variable"), gettext("Abc"), BLOCKCONSTR_STRING);
     blockdef_add_text(sc_set_var, "=");
@@ -3503,14 +3503,14 @@ void register_blocks(Vm* vm) {
     add_to_category(sc_list_len, cat_data);
 
     Blockdef* sc_define_block = blockdef_new("define_block", BLOCKTYPE_HAT, (BlockdefColor) { 0x99, 0x00, 0xff, 0xff }, block_define_block);
-    blockdef_add_image(sc_define_block, (BlockdefImage) { .image_ptr = &textures.icon_special, .image_color = (BlockdefColor) { 0xff, 0xff, 0xff, 0xff } });
+    blockdef_add_image(sc_define_block, (BlockdefImage) { .image_ptr = &assets.textures.icon_special, .image_color = (BlockdefColor) { 0xff, 0xff, 0xff, 0xff } });
     blockdef_add_text(sc_define_block, gettext("Define"));
     blockdef_add_blockdef_editor(sc_define_block);
     blockdef_register(vm, sc_define_block);
     add_to_category(sc_define_block, cat_control);
 
     Blockdef* sc_return = blockdef_new("return", BLOCKTYPE_NORMAL, (BlockdefColor) { 0x99, 0x00, 0xff, 0xff }, block_return);
-    blockdef_add_image(sc_return, (BlockdefImage) { .image_ptr = &textures.icon_special, .image_color = (BlockdefColor) { 0xff, 0xff, 0xff, 0xff } });
+    blockdef_add_image(sc_return, (BlockdefImage) { .image_ptr = &assets.textures.icon_special, .image_color = (BlockdefColor) { 0xff, 0xff, 0xff, 0xff } });
     blockdef_add_text(sc_return, gettext("Return"));
     blockdef_add_argument(sc_return, "", gettext("any"), BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_return);

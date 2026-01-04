@@ -60,9 +60,9 @@ static void draw_dots(void) {
     }
 
     if (shader_time == 1.0) return;
-    if (!IsShaderValid(line_shader)) return;
+    if (!IsShaderValid(assets.line_shader)) return;
 
-    BeginShaderMode(line_shader);
+    BeginShaderMode(assets.line_shader);
     for (int y = MOD(-(int)camera_pos.y, conf.font_size * 2); y < win_height; y += conf.font_size * 2) {
         DrawRectangle(0, y, win_width, 2, (Color) { 0x40, 0x40, 0x40, 0xff });
     }
@@ -81,8 +81,8 @@ static void draw_term(int x, int y) {
     Rectangle final_pos = { x, y, term.size.x, term.size.y };
     DrawRectangleRec(final_pos, BLACK);
 
-    if (IsShaderValid(line_shader)) {
-        BeginShaderMode(line_shader);
+    if (IsShaderValid(assets.line_shader)) {
+        BeginShaderMode(assets.line_shader);
         DrawRectangleLinesEx(final_pos, 2.0, (Color) { 0x60, 0x60, 0x60, 0xff });
         EndShaderMode();
     }
@@ -106,7 +106,7 @@ static void draw_term(int x, int y) {
         for (int x = 0; x < term.char_w; x++) {
             TerminalChar buffer_char = term.buffer[x + y*term.char_w];
             if (!rl_vec_equal(CONVERT_COLOR(buffer_char.fg_color, Color), CONVERT_COLOR(buffer_char.bg_color, Color))) {
-                DrawTextEx(font_mono, buffer_char.ch, pos, term.font_size, 0.0, CONVERT_COLOR(buffer_char.fg_color, Color));
+                DrawTextEx(assets.fonts.font_mono, buffer_char.ch, pos, term.font_size, 0.0, CONVERT_COLOR(buffer_char.fg_color, Color));
             }
             pos.x += term.char_size.x;
         }
@@ -311,11 +311,11 @@ static void draw_blockdef(Blockdef* blockdef, bool editing) {
                         if (hover.select_input == &input->data.text) gui_set_border(gui, (GuiColor) { 0x30, 0x30, 0x30, 0xff }, BLOCK_OUTLINE_SIZE);
                         gui_on_hover(gui, blockdef_input_on_hover);
 
-                        draw_input(&font_cond, &input->data.text, "", BLOCK_TEXT_SIZE, (GuiColor) { 0x00, 0x00, 0x00, 0xff }, true);
+                        draw_input(&assets.fonts.font_cond, &input->data.text, "", BLOCK_TEXT_SIZE, (GuiColor) { 0x00, 0x00, 0x00, 0xff }, true);
                     gui_element_end(gui);
                 gui_element_end(gui);
             } else {
-                gui_text(gui, &font_cond_shadow, input->data.text, BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+                gui_text(gui, &assets.fonts.font_cond_shadow, input->data.text, BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
             }
             break;
         case INPUT_IMAGE_DISPLAY:
@@ -325,7 +325,7 @@ static void draw_blockdef(Blockdef* blockdef, bool editing) {
             draw_blockdef(input->data.arg.blockdef, editing);
             break;
         default:
-            gui_text(gui, &font_cond_shadow, "NODEF", BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+            gui_text(gui, &assets.fonts.font_cond_shadow, "NODEF", BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
             break;
         }
 
@@ -335,7 +335,7 @@ static void draw_blockdef(Blockdef* blockdef, bool editing) {
                     gui_on_hover(gui, editor_del_button_on_hover);
                     gui_set_custom_data(gui, (void*)i);
 
-                    gui_image(gui, &textures.button_del_arg, BLOCK_IMAGE_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+                    gui_image(gui, &assets.textures.button_del_arg, BLOCK_IMAGE_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
                 gui_element_end(gui);
             gui_element_end(gui);
         }
@@ -442,7 +442,7 @@ static void draw_block(Block* block, bool highlight, bool can_hover, bool ghost,
 
         switch (input->type) {
         case INPUT_TEXT_DISPLAY:
-            gui_text(gui, &font_cond_shadow, input->data.text, BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0xff, 0xff, ghost ? BLOCK_GHOST_OPACITY : 0xff });
+            gui_text(gui, &assets.fonts.font_cond_shadow, input->data.text, BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0xff, 0xff, ghost ? BLOCK_GHOST_OPACITY : 0xff });
             break;
         case INPUT_IMAGE_DISPLAY: ;
             GuiColor img_color = CONVERT_COLOR(input->data.image.image_color, GuiColor);
@@ -481,7 +481,7 @@ static void draw_block(Block* block, bool highlight, bool can_hover, bool ghost,
                         if (arg->type == ARGUMENT_TEXT) {
                             if (can_hover) {
                                 draw_input(
-                                    &font_cond, 
+                                    &assets.fonts.font_cond, 
                                     &arg->data.text, 
                                     input->data.arg.hint_text, 
                                     BLOCK_TEXT_SIZE, 
@@ -492,7 +492,7 @@ static void draw_block(Block* block, bool highlight, bool can_hover, bool ghost,
                         } else {
                             if (can_hover) {
                                 draw_input(
-                                    &font_cond_shadow, 
+                                    &assets.fonts.font_cond_shadow, 
                                     &arg->data.text, 
                                     input->data.arg.hint_text, 
                                     BLOCK_TEXT_SIZE, 
@@ -513,7 +513,7 @@ static void draw_block(Block* block, bool highlight, bool can_hover, bool ghost,
                 gui_element_end(gui);
                 break;
             default:
-                gui_text(gui, &font_cond_shadow, "NODEF", BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0x00, 0x00, 0xff });
+                gui_text(gui, &assets.fonts.font_cond_shadow, "NODEF", BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0x00, 0x00, 0xff });
                 break;
             }
             arg_id++;
@@ -543,8 +543,8 @@ static void draw_block(Block* block, bool highlight, bool can_hover, bool ghost,
                         gui_set_custom_data(gui, arg);
                     }
 
-                    gui_text(gui, &font_cond_shadow, arg->data.text, BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
-                    gui_image(gui, &textures.dropdown, BLOCK_IMAGE_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+                    gui_text(gui, &assets.fonts.font_cond_shadow, arg->data.text, BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+                    gui_image(gui, &assets.textures.dropdown, BLOCK_IMAGE_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
                 gui_element_end(gui);
             gui_element_end(gui);
             arg_id++;
@@ -567,11 +567,11 @@ static void draw_block(Block* block, bool highlight, bool can_hover, bool ghost,
                 draw_blockdef(arg->data.blockdef, hover.editor.edit_blockdef == arg->data.blockdef);
 
                 if (hover.editor.edit_blockdef == arg->data.blockdef) {
-                    draw_editor_button(&textures.button_add_arg, handle_editor_add_arg_button);
-                    draw_editor_button(&textures.button_add_text, handle_editor_add_text_button);
-                    draw_editor_button(&textures.button_close, handle_editor_close_button);
+                    draw_editor_button(&assets.textures.button_add_arg, handle_editor_add_arg_button);
+                    draw_editor_button(&assets.textures.button_add_text, handle_editor_add_text_button);
+                    draw_editor_button(&assets.textures.button_close, handle_editor_close_button);
                 } else {
-                    draw_editor_button(&textures.button_edit, handle_editor_edit_button);
+                    draw_editor_button(&assets.textures.button_edit, handle_editor_edit_button);
                 }
 
                 gui_spacer(gui, 0, 0);
@@ -579,7 +579,7 @@ static void draw_block(Block* block, bool highlight, bool can_hover, bool ghost,
             arg_id++;
             break;
         default:
-            gui_text(gui, &font_cond_shadow, "NODEF", BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0x00, 0x00, 0xff });
+            gui_text(gui, &assets.fonts.font_cond_shadow, "NODEF", BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0x00, 0x00, 0xff });
             break;
         }
     }
@@ -640,7 +640,7 @@ static void draw_panel_editor_button(const char* text, int size, GuiColor color,
         gui_on_hover(gui, panel_editor_button_on_hover);
         gui_set_custom_data(gui, handler);
 
-        gui_text(gui, &font_cond, text, BLOCK_TEXT_SIZE, (GuiColor) { 0x00, 0x00, 0x00, 0xff });
+        gui_text(gui, &assets.fonts.font_cond, text, BLOCK_TEXT_SIZE, (GuiColor) { 0x00, 0x00, 0x00, 0xff });
     gui_element_end(gui);
 }
 
@@ -656,7 +656,7 @@ static GuiElement* draw_button(const char* text, int size, bool selected, GuiHan
         gui_set_custom_data(gui, custom_data);
         el = gui_get_element(gui);
 
-        gui_text(gui, &font_cond, text, BLOCK_TEXT_SIZE, selected ? (GuiColor) { 0x00, 0x00, 0x00, 0xff } : (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+        gui_text(gui, &assets.fonts.font_cond, text, BLOCK_TEXT_SIZE, selected ? (GuiColor) { 0x00, 0x00, 0x00, 0xff } : (GuiColor) { 0xff, 0xff, 0xff, 0xff });
     gui_element_end(gui);
     return el;
 }
@@ -671,9 +671,9 @@ static void draw_top_bar(void) {
         gui_set_align(gui, ALIGN_CENTER);
 
         gui_spacer(gui, 5, 0);
-        gui_image(gui, &textures.icon_logo, conf.font_size, CONVERT_COLOR(WHITE, GuiColor));
+        gui_image(gui, &assets.textures.icon_logo, conf.font_size, CONVERT_COLOR(WHITE, GuiColor));
         gui_spacer(gui, 10, 0);
-        gui_text(gui, &font_eb, gettext("Scrap"), conf.font_size * 0.8, CONVERT_COLOR(WHITE, GuiColor));
+        gui_text(gui, &assets.fonts.font_eb, gettext("Scrap"), conf.font_size * 0.8, CONVERT_COLOR(WHITE, GuiColor));
         gui_spacer(gui, 10, 0);
 
         GuiElement* el = draw_button(gettext("File"), top_bar_size, false, button_on_hover, handle_file_button_click);
@@ -703,7 +703,7 @@ static void draw_tab_bar(void) {
         }
 
         gui_grow(gui, DIRECTION_HORIZONTAL);
-        gui_text(gui, &font_cond, project_name, BLOCK_TEXT_SIZE, (GuiColor) { 0x80, 0x80, 0x80, 0xff });
+        gui_text(gui, &assets.fonts.font_cond, project_name, BLOCK_TEXT_SIZE, (GuiColor) { 0x80, 0x80, 0x80, 0xff });
         gui_grow(gui, DIRECTION_HORIZONTAL);
 
 #ifndef USE_INTERPRETER
@@ -711,7 +711,7 @@ static void draw_tab_bar(void) {
             gui_on_hover(gui, button_on_hover);
             gui_set_custom_data(gui, handle_build_button_click);
 
-            gui_image(gui, &textures.button_build, tab_bar_size, (GuiColor) { 0xff, 0x99, 0x00, 0xff });
+            gui_image(gui, &assets.textures.button_build, tab_bar_size, (GuiColor) { 0xff, 0x99, 0x00, 0xff });
         gui_element_end(gui);
 
         gui_spacer(gui, conf.font_size * 0.2, 0);
@@ -723,9 +723,9 @@ static void draw_tab_bar(void) {
 
             if (vm.thread.state == THREAD_STATE_STOPPING) {
                 gui_set_rect(gui, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
-                gui_image(gui, &textures.button_stop, tab_bar_size, (GuiColor) { 0x00, 0x00, 0x00, 0xff });
+                gui_image(gui, &assets.textures.button_stop, tab_bar_size, (GuiColor) { 0x00, 0x00, 0x00, 0xff });
             } else {
-                gui_image(gui, &textures.button_stop, tab_bar_size, (GuiColor) { 0xff, 0x40, 0x30, 0xff });
+                gui_image(gui, &assets.textures.button_stop, tab_bar_size, (GuiColor) { 0xff, 0x40, 0x30, 0xff });
             }
         gui_element_end(gui);
 
@@ -737,9 +737,9 @@ static void draw_tab_bar(void) {
 
             if (thread_is_running(&vm.thread)) {
                 gui_set_rect(gui, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
-                gui_image(gui, &textures.button_run, tab_bar_size, (GuiColor) { 0x00, 0x00, 0x00, 0xff });
+                gui_image(gui, &assets.textures.button_run, tab_bar_size, (GuiColor) { 0x00, 0x00, 0x00, 0xff });
             } else {
-                gui_image(gui, &textures.button_run, tab_bar_size, (GuiColor) { 0x60, 0xff, 0x00, 0xff });
+                gui_image(gui, &assets.textures.button_run, tab_bar_size, (GuiColor) { 0x60, 0xff, 0x00, 0xff });
             }
         gui_element_end(gui);
     gui_element_end(gui);
@@ -920,7 +920,7 @@ static void draw_category(BlockCategory* category) {
                 gui_set_rect(gui, color);
             gui_element_end(gui);
 
-            gui_text(gui, &font_cond_shadow, category->name, BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+            gui_text(gui, &assets.fonts.font_cond_shadow, category->name, BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
         gui_element_end(gui);
     gui_element_end(gui);
 }
@@ -972,7 +972,7 @@ static void draw_block_palette(void) {
             }
         } else {
             gui_set_align(gui, ALIGN_CENTER);
-            gui_text(gui, &font_cond_shadow, "No category currently selected", BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+            gui_text(gui, &assets.fonts.font_cond_shadow, "No category currently selected", BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
         }
     gui_element_end(gui);
 }
@@ -998,7 +998,7 @@ static void draw_code_area(void) {
             gui_set_position(gui, 0, 0);
             gui_set_padding(gui, conf.font_size * 0.2, conf.font_size * 0.2);
             for (int i = 0; i < DEBUG_BUFFER_LINES; i++) {
-                if (*debug_buffer[i]) gui_text(gui, &font_cond, debug_buffer[i], conf.font_size * 0.5, (GuiColor) { 0xff, 0xff, 0xff, 0x60 });
+                if (*debug_buffer[i]) gui_text(gui, &assets.fonts.font_cond, debug_buffer[i], conf.font_size * 0.5, (GuiColor) { 0xff, 0xff, 0xff, 0x60 });
             }
         gui_element_end(gui);
 
@@ -1017,15 +1017,15 @@ static void draw_code_area(void) {
                     gui_set_direction(gui, DIRECTION_VERTICAL);
                     gui_set_align(gui, ALIGN_CENTER);
 
-                    gui_text(gui, &font_eb, "!", conf.font_size, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+                    gui_text(gui, &assets.fonts.font_eb, "!", conf.font_size, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
                 gui_element_end(gui);
 
                 gui_element_begin(gui);
                     gui_set_direction(gui, DIRECTION_VERTICAL);
 
-                    gui_text(gui, &font_cond, gettext("Got compiler error!"), conf.font_size * 0.6, (GuiColor) { 0xff, 0x33, 0x33, 0xff });
+                    gui_text(gui, &assets.fonts.font_cond, gettext("Got compiler error!"), conf.font_size * 0.6, (GuiColor) { 0xff, 0x33, 0x33, 0xff });
                     for (size_t i = 0; i < vector_size(exec_compile_error); i++) {
-                        gui_text(gui, &font_cond, exec_compile_error[i], conf.font_size * 0.6, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+                        gui_text(gui, &assets.fonts.font_cond, exec_compile_error[i], conf.font_size * 0.6, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
                     }
 
                     gui_spacer(gui, 0, conf.font_size * 0.5);
@@ -1060,7 +1060,7 @@ static void draw_code_area(void) {
                 
                 Color color = YELLOW;
                 color.a = actionbar.show_time / 3.0 * 255.0;
-                gui_text(gui, &font_eb, actionbar.text, conf.font_size * 0.8, CONVERT_COLOR(color, GuiColor));
+                gui_text(gui, &assets.fonts.font_eb, actionbar.text, conf.font_size * 0.8, CONVERT_COLOR(color, GuiColor));
             gui_element_end(gui);
         }
     gui_element_end(gui);
@@ -1309,7 +1309,7 @@ static void draw_dropdown(void) {
                 const char* list_value = hover.dropdown.location != LOCATION_BLOCK_DROPDOWN ?
                                          gettext(hover.dropdown.list[i]) :
                                          hover.dropdown.list[i];
-                gui_text(gui, &font_cond, list_value, BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+                gui_text(gui, &assets.fonts.font_cond, list_value, BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
             gui_element_end(gui);
         }
     gui_element_end(gui);
@@ -1337,7 +1337,7 @@ static void draw_search_list(void) {
             gui_set_align(gui, ALIGN_CENTER);
 
             gui_element_begin(gui);
-                draw_input(&font_cond, &search_list_search, "Search...", BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff }, true);
+                draw_input(&assets.fonts.font_cond, &search_list_search, "Search...", BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff }, true);
             gui_element_end(gui);
         gui_element_end(gui);
 
@@ -1433,12 +1433,12 @@ void scrap_gui_process(void) {
                     gui_set_align(gui, ALIGN_CENTER);
                     gui_on_hover(gui, panel_editor_on_hover);
 
-                    gui_text(gui, &font_eb, gettext("Panel edit mode"), conf.font_size * 0.8, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+                    gui_text(gui, &assets.fonts.font_eb, gettext("Panel edit mode"), conf.font_size * 0.8, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
 
                     gui_spacer(gui, 0, conf.font_size * 0.25);
 
-                    gui_text(gui, &font_cond_shadow, gettext("Click on panels to reposition them"), BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
-                    gui_text(gui, &font_cond_shadow, gettext("Drag panel edges to resize them"), BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+                    gui_text(gui, &assets.fonts.font_cond_shadow, gettext("Click on panels to reposition them"), BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+                    gui_text(gui, &assets.fonts.font_cond_shadow, gettext("Drag panel edges to resize them"), BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
 
                     gui_spacer(gui, 0, conf.font_size * 0.25);
 

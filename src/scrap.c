@@ -33,7 +33,6 @@
 
 // Global Variables
 
-Shader line_shader;
 RenderTexture2D render_surface;
 bool render_surface_needs_redraw = true;
 int shader_time_loc;
@@ -49,14 +48,8 @@ Vector2 camera_click_pos = {0};
 Config conf;
 ProjectConfig project_conf;
 HoverInfo hover = {0};
-Shader line_shader;
 
-Font font_cond;
-Font font_cond_shadow;
-Font font_eb;
-Font font_mono;
-
-TextureList textures;
+Assets assets;
 
 Vm vm;
 int vm_start_timeout = -1;
@@ -187,31 +180,31 @@ Image setup(void) {
     render_surface = LoadRenderTexture(GetScreenWidth(), GetScreenHeight());
     SetTextureWrap(render_surface.texture, TEXTURE_WRAP_MIRROR_REPEAT);
 
-    textures.dropdown = LoadTexture(into_shared_dir_path(DATA_PATH "drop.png"));
-    SetTextureFilter(textures.dropdown, TEXTURE_FILTER_BILINEAR);
+    assets.textures.dropdown = LoadTexture(into_shared_dir_path(DATA_PATH "drop.png"));
+    SetTextureFilter(assets.textures.dropdown, TEXTURE_FILTER_BILINEAR);
 
     Image window_icon;
     svg_load(into_shared_dir_path(DATA_PATH "logo.svg"), conf.font_size, conf.font_size, &window_icon);
-    textures.icon_logo = LoadTextureFromImage(window_icon);
-    SetTextureFilter(textures.icon_logo, TEXTURE_FILTER_BILINEAR);
+    assets.textures.icon_logo = LoadTextureFromImage(window_icon);
+    SetTextureFilter(assets.textures.icon_logo, TEXTURE_FILTER_BILINEAR);
 
     void* image_load_paths[] = {
-        &textures.button_add_arg,     "add_arg.svg",
-        &textures.button_add_text,    "add_text.svg",
-        &textures.button_arrow_left,  "arrow_left.svg",
-        &textures.button_arrow_right, "arrow_right.svg",
-        &textures.button_build,       "build.svg",
-        &textures.button_close,       "close.svg",
-        &textures.button_del_arg,     "del_arg.svg",
-        &textures.button_edit,        "edit.svg",
-        &textures.button_run,         "run.svg",
-        &textures.button_stop,        "stop.svg",
-        &textures.icon_list,          "list.svg",
-        &textures.icon_pi,            "pi_symbol.svg",
-        &textures.icon_special,       "special.svg",
-        &textures.icon_term,          "term.svg",
-        &textures.icon_variable,      "variable_symbol.svg",
-        &textures.icon_warning,       "warning.svg",
+        &assets.textures.button_add_arg,     "add_arg.svg",
+        &assets.textures.button_add_text,    "add_text.svg",
+        &assets.textures.button_arrow_left,  "arrow_left.svg",
+        &assets.textures.button_arrow_right, "arrow_right.svg",
+        &assets.textures.button_build,       "build.svg",
+        &assets.textures.button_close,       "close.svg",
+        &assets.textures.button_del_arg,     "del_arg.svg",
+        &assets.textures.button_edit,        "edit.svg",
+        &assets.textures.button_run,         "run.svg",
+        &assets.textures.button_stop,        "stop.svg",
+        &assets.textures.icon_list,          "list.svg",
+        &assets.textures.icon_pi,            "pi_symbol.svg",
+        &assets.textures.icon_special,       "special.svg",
+        &assets.textures.icon_term,          "term.svg",
+        &assets.textures.icon_variable,      "variable_symbol.svg",
+        &assets.textures.icon_warning,       "warning.svg",
         NULL,
     };
 
@@ -236,21 +229,21 @@ Image setup(void) {
     }
     int codepoints_count = vector_size(codepoints);
 
-    font_cond = LoadFontEx(get_font_path(conf.font_path), conf.font_size, codepoints, codepoints_count);
-    font_cond_shadow = LoadFontEx(get_font_path(conf.font_path), BLOCK_TEXT_SIZE, codepoints, codepoints_count);
-    font_eb = LoadFontEx(get_font_path(conf.font_bold_path), conf.font_size * 0.8, codepoints, codepoints_count);
-    font_mono = LoadFontEx(get_font_path(conf.font_mono_path), conf.font_size, codepoints, codepoints_count);
+    assets.fonts.font_cond = LoadFontEx(get_font_path(conf.font_path), conf.font_size, codepoints, codepoints_count);
+    assets.fonts.font_cond_shadow = LoadFontEx(get_font_path(conf.font_path), BLOCK_TEXT_SIZE, codepoints, codepoints_count);
+    assets.fonts.font_eb = LoadFontEx(get_font_path(conf.font_bold_path), conf.font_size * 0.8, codepoints, codepoints_count);
+    assets.fonts.font_mono = LoadFontEx(get_font_path(conf.font_mono_path), conf.font_size, codepoints, codepoints_count);
     vector_free(codepoints);
 
-    SetTextureFilter(font_cond.texture, TEXTURE_FILTER_BILINEAR);
-    SetTextureFilter(font_cond_shadow.texture, TEXTURE_FILTER_BILINEAR);
-    SetTextureFilter(font_eb.texture, TEXTURE_FILTER_BILINEAR);
-    SetTextureFilter(font_mono.texture, TEXTURE_FILTER_BILINEAR);
+    SetTextureFilter(assets.fonts.font_cond.texture, TEXTURE_FILTER_BILINEAR);
+    SetTextureFilter(assets.fonts.font_cond_shadow.texture, TEXTURE_FILTER_BILINEAR);
+    SetTextureFilter(assets.fonts.font_eb.texture, TEXTURE_FILTER_BILINEAR);
+    SetTextureFilter(assets.fonts.font_mono.texture, TEXTURE_FILTER_BILINEAR);
 
-    prerender_font_shadow(&font_cond_shadow);
+    prerender_font_shadow(&assets.fonts.font_cond_shadow);
 
-    line_shader = LoadShaderFromMemory(line_shader_vertex, line_shader_fragment);
-    shader_time_loc = GetShaderLocation(line_shader, "time");
+    assets.line_shader = LoadShaderFromMemory(line_shader_vertex, line_shader_fragment);
+    shader_time_loc = GetShaderLocation(assets.line_shader, "time");
 
     exec_compile_error = vector_create();
 
@@ -265,7 +258,7 @@ Image setup(void) {
     vector_add(&search_list_search, 0);
     update_search();
 
-    term_init(term_measure_text, &font_mono, conf.font_size * 0.6);
+    term_init(term_measure_text, &assets.fonts.font_mono, conf.font_size * 0.6);
 
     gui = malloc(sizeof(Gui));
     gui_init(gui);
@@ -359,7 +352,7 @@ int main(void) {
             render_surface_needs_redraw = true;
         }
 
-        if (shader_time_loc != -1) SetShaderValue(line_shader, shader_time_loc, &shader_time, SHADER_UNIFORM_FLOAT);
+        if (shader_time_loc != -1) SetShaderValue(assets.line_shader, shader_time_loc, &shader_time, SHADER_UNIFORM_FLOAT);
         shader_time += GetFrameTime() / 2.0;
         if (shader_time >= 1.0) {
             shader_time = 1.0;
