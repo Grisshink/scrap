@@ -2,6 +2,10 @@
 
 ## What's new?
 - Scrap now shows comfirmation window when trying to close scrap with unsaved changes
+- Blocks inside block pallete are now split into subcategories
+
+## Fixes
+- Fixed block definitions being able to be edited in block palette
 
 # v0.5.1-beta *(27-12-2025)*
 
