@@ -11,7 +11,10 @@ jobs:
         runs-on: ubuntu-22.04
 
         steps:
-            - uses: actions/checkout@v4
+            - name: Checkout code
+              uses: actions/checkout@v6
+              with:
+                submodules: recursive
 
             - name: Install dependencies
               run: |
@@ -24,11 +27,6 @@ jobs:
                 sudo add-apt-repository "deb http://apt.llvm.org/focal/ llvm-toolchain-focal-19 main"
                 sudo apt-get update -y
                 sudo apt-get install -y --no-install-recommends llvm-19-dev
-
-            - name: Update submodules
-              run: |
-                git submodule init
-                git submodule update
 
             - name: Build project (With compiler)
               run: |
