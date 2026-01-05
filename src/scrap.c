@@ -303,22 +303,7 @@ int main(void) {
     while (!WindowShouldClose()) {
         vm_handle_running_thread();
 
-        editor.actionbar.show_time -= GetFrameTime();
-        if (editor.actionbar.show_time < 0) {
-            editor.actionbar.show_time = 0;
-        } else {
-            ui.render_surface_needs_redraw = true;
-        }
-
-        if (ui.shader_time_loc != -1) SetShaderValue(assets.line_shader, ui.shader_time_loc, &ui.shader_time, SHADER_UNIFORM_FLOAT);
-        ui.shader_time += GetFrameTime() / 2.0;
-        if (ui.shader_time >= 1.0) {
-            ui.shader_time = 1.0;
-        } else {
-            ui.render_surface_needs_redraw = true;
-        }
-
-        scrap_gui_process_input();
+        scrap_gui_process_ui();
 
         if (ui.render_surface_needs_redraw) {
             BeginTextureMode(ui.render_surface);

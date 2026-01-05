@@ -377,8 +377,7 @@ void draw_input(Font* font, char** input, const char* hint, unsigned short font_
 bool svg_load(const char* file_name, size_t width, size_t height, Image* out_image);
 
 // input.c
-void process_input(void);
-void scrap_gui_process_input(void);
+void scrap_gui_process_ui(void);
 
 PanelTree* find_panel(PanelTree* root, PanelType panel);
 void update_search(void);

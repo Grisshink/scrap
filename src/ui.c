@@ -1382,7 +1382,22 @@ static void handle_mouse_drag(void) {
     editor.camera_pos.y = editor.camera_click_pos.y - (gui->mouse_y - ui.hover.mouse_click_pos.y);
 }
 
-void scrap_gui_process_input(void) {
+void scrap_gui_process_ui(void) {
+    editor.actionbar.show_time -= GetFrameTime();
+    if (editor.actionbar.show_time < 0) {
+        editor.actionbar.show_time = 0;
+    } else {
+        ui.render_surface_needs_redraw = true;
+    }
+
+    if (ui.shader_time_loc != -1) SetShaderValue(assets.line_shader, ui.shader_time_loc, &ui.shader_time, SHADER_UNIFORM_FLOAT);
+    ui.shader_time += GetFrameTime() / 2.0;
+    if (ui.shader_time >= 1.0) {
+        ui.shader_time = 1.0;
+    } else {
+        ui.render_surface_needs_redraw = true;
+    }
+
     int prev_mouse_scroll = gui->mouse_scroll;
     gui_update_mouse_scroll(gui, GetMouseWheelMove());
     if (prev_mouse_scroll != gui->mouse_scroll) ui.render_surface_needs_redraw = true;
