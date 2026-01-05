@@ -285,6 +285,8 @@ typedef void (*WindowGuiRenderFunc)(void);
 
 typedef struct {
     char project_name[1024];
+    bool project_modified;
+
     Tab* tabs;
 
     Vector2 camera_pos;
@@ -308,6 +310,8 @@ typedef struct {
 } Editor;
 
 typedef struct {
+    bool scrap_running;
+
     RenderTexture2D render_surface;
     bool render_surface_needs_redraw;
 
@@ -391,6 +395,8 @@ PanelTree* panel_new(PanelType type);
 void panel_split(PanelTree* panel, SplitSide side, PanelType new_panel_type, float split_percent);
 void panel_delete(PanelTree* panel);
 
+bool save_project(void);
+
 bool handle_file_button_click(void);
 bool handle_settings_button_click(void);
 bool handle_about_button_click(void);
@@ -446,6 +452,7 @@ void draw_window(void);
 void draw_settings_window(void);
 void draw_project_settings_window(void);
 void draw_about_window(void);
+void draw_save_confirmation_window(void);
 
 // blocks.c
 void register_blocks(Vm* vm);

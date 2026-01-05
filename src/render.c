@@ -704,6 +704,7 @@ static void draw_tab_bar(void) {
 
         gui_grow(gui, DIRECTION_HORIZONTAL);
         gui_text(gui, &assets.fonts.font_cond, editor.project_name, BLOCK_TEXT_SIZE, (GuiColor) { 0x80, 0x80, 0x80, 0xff });
+        if (editor.project_modified) gui_text(gui, &assets.fonts.font_cond, "*", BLOCK_TEXT_SIZE, (GuiColor) { 0x80, 0x80, 0x80, 0xff });
         gui_grow(gui, DIRECTION_HORIZONTAL);
 
 #ifndef USE_INTERPRETER

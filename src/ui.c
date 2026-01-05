@@ -480,57 +480,71 @@ static char* get_basename(char* path) {
     return base_name;
 }
 
-bool handle_file_menu_click(void) {
+bool save_project(void) {
     char const* filters[] = {"*.scrp"};
-    char* path;
-    char* base_path;
-    int i;
 
+    char* path = tinyfd_saveFileDialog(NULL, editor.project_name, ARRLEN(filters), filters, "Scrap project files (.scrp)");
+    if (!path) return false;
+    save_code(path, &project_config, editor.code);
+
+    char* base_path = get_basename(path);
+    int i;
+    for (i = 0; base_path[i]; i++) editor.project_name[i] = base_path[i];
+    editor.project_name[i] = 0;
+    editor.project_modified = false;
+    return true;
+}
+
+void load_project(void) {
+    char const* filters[] = {"*.scrp"};
+
+    char* path = tinyfd_openFileDialog(NULL, editor.project_name, ARRLEN(filters), filters, "Scrap project files (.scrp)", 0);
+    if (!path) return;
+
+    ProjectConfig new_config;
+    BlockChain* chain = load_code(path, &new_config);
+    switch_tab_to_panel(PANEL_CODE);
+    if (!chain) {
+        actionbar_show(gettext("File load failed :("));
+        return;
+    }
+
+    project_config_free(&project_config);
+    project_config = new_config;
+
+    for (size_t i = 0; i < vector_size(editor.code); i++) blockchain_free(&editor.code[i]);
+    vector_free(editor.code);
+    vm.compile_error_block = NULL;
+    vm.compile_error_blockchain = NULL;
+    editor.code = chain;
+
+    editor.blockchain_select_counter = 0;
+    editor.camera_pos.x = editor.code[editor.blockchain_select_counter].x - 50;
+    editor.camera_pos.y = editor.code[editor.blockchain_select_counter].y - 50;
+
+    char* base_path = get_basename(path);
+
+    int i;
+    for (i = 0; base_path[i]; i++) editor.project_name[i] = base_path[i];
+    editor.project_name[i] = 0;
+
+    actionbar_show(gettext("File load succeeded!"));
+    editor.project_modified = false;
+}
+
+bool handle_file_menu_click(void) {
     switch (ui.hover.dropdown.select_ind) {
     case FILE_MENU_NEW_PROJECT:
         for (size_t i = 0; i < vector_size(editor.code); i++) blockchain_free(&editor.code[i]);
         vector_clear(editor.code);
         switch_tab_to_panel(PANEL_CODE);
+        editor.project_modified = false;
         break;
     case FILE_MENU_SAVE_PROJECT:
-        path = tinyfd_saveFileDialog(NULL, editor.project_name, ARRLEN(filters), filters, "Scrap project files (.scrp)");
-        if (!path) break;
-        save_code(path, &project_config, editor.code);
-
-        base_path = get_basename(path);
-        for (i = 0; base_path[i]; i++) editor.project_name[i] = base_path[i];
-        editor.project_name[i] = 0;
+        save_project();
         break;
     case FILE_MENU_LOAD_PROJECT:
-        path = tinyfd_openFileDialog(NULL, editor.project_name, ARRLEN(filters), filters, "Scrap project files (.scrp)", 0);
-        if (!path) break;
-
-        ProjectConfig new_config;
-        BlockChain* chain = load_code(path, &new_config);
-        switch_tab_to_panel(PANEL_CODE);
-        if (!chain) {
-            actionbar_show(gettext("File load failed :("));
-            break;
-        }
-
-        project_config_free(&project_config);
-        project_config = new_config;
-
-        for (size_t i = 0; i < vector_size(editor.code); i++) blockchain_free(&editor.code[i]);
-        vector_free(editor.code);
-        vm.compile_error_block = NULL;
-        vm.compile_error_blockchain = NULL;
-        editor.code = chain;
-
-        editor.blockchain_select_counter = 0;
-        editor.camera_pos.x = editor.code[editor.blockchain_select_counter].x - 50;
-        editor.camera_pos.y = editor.code[editor.blockchain_select_counter].y - 50;
-
-        base_path = get_basename(path);
-        for (i = 0; base_path[i]; i++) editor.project_name[i] = base_path[i];
-        editor.project_name[i] = 0;
-
-        actionbar_show(gettext("File load succeeded!"));
+        load_project();
         break;
     default:
         printf("idk\n");
@@ -801,6 +815,7 @@ static bool handle_code_editor_click(bool mouse_empty) {
                 ui.hover.editor.select_blockchain = ui.hover.editor.blockchain;
                 ui.hover.editor.select_block = &ui.hover.editor.argument->data.block;
                 ui.hover.select_input = NULL;
+                editor.project_modified = true;
             } else if (ui.hover.editor.parent_argument) {
                 // Swap argument
                 TraceLog(LOG_INFO, "Swap argument");
@@ -813,6 +828,7 @@ static bool handle_code_editor_click(bool mouse_empty) {
                 argument_set_block(ui.hover.editor.parent_argument, temp);
                 ui.hover.editor.select_block = &ui.hover.editor.parent_argument->data.block;
                 ui.hover.editor.select_blockchain = ui.hover.editor.blockchain;
+                editor.project_modified = true;
             }
         } else if (
             ui.hover.editor.block &&
@@ -829,6 +845,7 @@ static bool handle_code_editor_click(bool mouse_empty) {
             ui.hover.editor.block = &ui.hover.editor.blockchain->blocks[ind];
             ui.hover.editor.select_block = ui.hover.editor.block + 1;
             ui.hover.editor.select_blockchain = ui.hover.editor.blockchain;
+            editor.project_modified = true;
         } else {
             // Put block
             TraceLog(LOG_INFO, "Put block");
@@ -838,6 +855,7 @@ static bool handle_code_editor_click(bool mouse_empty) {
             editor.mouse_blockchain = blockchain_new();
             ui.hover.editor.select_blockchain = &editor.code[vector_size(editor.code) - 1];
             ui.hover.editor.select_block = &ui.hover.editor.select_blockchain->blocks[0];
+            editor.project_modified = true;
         }
         return true;
     } else if (ui.hover.editor.block) {
@@ -857,6 +875,7 @@ static bool handle_code_editor_click(bool mouse_empty) {
                 argument_set_text(ui.hover.editor.parent_argument, "");
                 ui.hover.editor.select_blockchain = NULL;
                 ui.hover.editor.select_block = NULL;
+                editor.project_modified = true;
             }
         } else if (ui.hover.editor.blockchain) {
             int ind = ui.hover.editor.block - ui.hover.editor.blockchain->blocks;
@@ -886,6 +905,7 @@ static bool handle_code_editor_click(bool mouse_empty) {
                         vector_remove(editor.code, ui.hover.editor.blockchain - editor.code);
                         ui.hover.editor.block = NULL;
                     }
+                    editor.project_modified = true;
                 } else {
                     // Detach chain
                     TraceLog(LOG_INFO, "Detach chain");
@@ -896,6 +916,7 @@ static bool handle_code_editor_click(bool mouse_empty) {
                         vector_remove(editor.code, ui.hover.editor.blockchain - editor.code);
                         ui.hover.editor.block = NULL;
                     }
+                    editor.project_modified = true;
                 }
                 ui.hover.editor.select_blockchain = NULL;
                 ui.hover.editor.select_block = NULL;

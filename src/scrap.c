@@ -298,7 +298,17 @@ int main(void) {
     // SetWindowIcon() copies the icon so we can safely unload it
     UnloadImage(icon);
 
-    while (!WindowShouldClose()) {
+    ui.scrap_running = true;
+    while (ui.scrap_running) {
+        if (WindowShouldClose()) {
+            if (!editor.project_modified) {
+                ui.scrap_running = false;
+                break;
+            } else {
+                gui_window_show(draw_save_confirmation_window);
+            }
+        }
+
         vm_handle_running_thread();
 
         scrap_gui_process_ui();

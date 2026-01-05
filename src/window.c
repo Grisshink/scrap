@@ -124,6 +124,25 @@ static bool project_settings_on_build_button_click(void) {
     return true;
 }
 
+static bool save_confirmation_on_yes_button_click(void) {
+    if (save_project()) {
+        ui.scrap_running = false;
+    } else {
+        gui_window_hide();
+    }
+    return true;
+}
+
+static bool save_confirmation_on_no_button_click(void) {
+    ui.scrap_running = false;
+    return true;
+}
+
+static bool save_confirmation_on_cancel_button_click(void) {
+    gui_window_hide();
+    return true;
+}
+
 void init_gui_window(void) {
     window.is_fading = true;
 }
@@ -655,6 +674,26 @@ void draw_about_window(void) {
 
             gui_grow(gui, DIRECTION_HORIZONTAL);
             draw_button(gettext("License"), about_on_license_button_click);
+        gui_element_end(gui);
+    end_window();
+}
+
+void draw_save_confirmation_window(void) {
+    begin_window(gettext("Confirm save"), 500 * config.ui_size / 32.0, 0, window.animation_ease);
+        gui_text(gui, &assets.fonts.font_cond, gettext("Project is modified. Save the changes and quit?"), config.ui_size * 0.6, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+
+        gui_grow(gui, DIRECTION_VERTICAL);
+
+        gui_element_begin(gui);
+            gui_set_grow(gui, DIRECTION_HORIZONTAL);
+            gui_set_direction(gui, DIRECTION_HORIZONTAL);
+            gui_set_gap(gui, WINDOW_ELEMENT_PADDING);
+
+            gui_grow(gui, DIRECTION_HORIZONTAL);
+
+            draw_button(gettext("Yes"),    save_confirmation_on_yes_button_click);
+            draw_button(gettext("No"),     save_confirmation_on_no_button_click);
+            draw_button(gettext("Cancel"), save_confirmation_on_cancel_button_click);
         gui_element_end(gui);
     end_window();
 }
