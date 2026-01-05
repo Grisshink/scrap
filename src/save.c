@@ -43,7 +43,7 @@ const int codepoint_regions[CODEPOINT_REGION_COUNT][2] = {
 int codepoint_start_ranges[CODEPOINT_REGION_COUNT] = {0};
 
 char* language_list[5] = {
-    "System",
+    "LanguageList|System",
     "English [en]",
     "Russian [ru]",
     "Kazakh [kk]",

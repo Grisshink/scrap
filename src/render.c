@@ -49,6 +49,13 @@ void actionbar_show(const char* text) {
     editor.actionbar.show_time = 3.0;
 }
 
+const char* sgettext(const char* msgid) {
+    const char* msgval = gettext(msgid);
+    if (msgval == msgid) msgval = strrchr(msgid, '|') + 1;
+    if (msgval == (void*)1) msgval = msgid;
+    return msgval;
+}
+
 static void draw_dots(void) {
     int win_width = GetScreenWidth();
     int win_height = GetScreenHeight();
@@ -967,9 +974,30 @@ static void draw_block_palette(void) {
         gui_set_scroll_scaling(gui, config.ui_size * 4);
         gui_set_scissor(gui);
 
-        if (editor.palette.current_category) {
-            for (size_t i = 0; i < vector_size(editor.palette.current_category->chains); i++) {
-                draw_blockchain(&editor.palette.current_category->chains[i], false, false, false);
+        BlockCategory* cat = editor.palette.current_category;
+        if (cat) {
+            for (size_t i = 0; i < vector_size(cat->items); i++) {
+                switch (cat->items[i].type) {
+                case CATEGORY_ITEM_CHAIN:
+                    draw_blockchain(&cat->items[i].data.chain, false, false, false);
+                    break;
+                case CATEGORY_ITEM_LABEL:
+                    if (i != 0) gui_spacer(gui, 0, config.ui_size * 0.1);
+                    gui_element_begin(gui);
+                        gui_set_direction(gui, DIRECTION_HORIZONTAL);
+                        gui_set_gap(gui, BLOCK_OUTLINE_SIZE * 4);
+                        gui_set_align(gui, ALIGN_CENTER);
+                        // gui_set_min_size(gui, 0, config.ui_size);
+
+                        gui_element_begin(gui);
+                            gui_set_fixed(gui, BLOCK_OUTLINE_SIZE * 2, config.ui_size * 0.75);
+                            gui_set_rect(gui, CONVERT_COLOR(cat->items[i].data.label.color, GuiColor));
+                        gui_element_end(gui);
+
+                        gui_text(gui, &assets.fonts.font_cond_shadow, cat->items[i].data.label.text, BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+                    gui_element_end(gui);
+                    break;
+                }
             }
         } else {
             gui_set_align(gui, ALIGN_CENTER);
@@ -1308,7 +1336,7 @@ static void draw_dropdown(void) {
                 gui_set_custom_data(gui, (void*)(size_t)i);
 
                 const char* list_value = ui.hover.dropdown.location != LOCATION_BLOCK_DROPDOWN ?
-                                         gettext(ui.hover.dropdown.list[i]) :
+                                         sgettext(ui.hover.dropdown.list[i]) :
                                          ui.hover.dropdown.list[i];
                 gui_text(gui, &assets.fonts.font_cond, list_value, BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
             gui_element_end(gui);

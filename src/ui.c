@@ -772,11 +772,12 @@ static bool handle_block_palette_click(bool mouse_empty) {
         // Pickup block
         TraceLog(LOG_INFO, "Pickup block");
         assert(editor.palette.current_category != NULL);
-        int ind = ui.hover.editor.blockchain - editor.palette.current_category->chains;
-        if (ind < 0 || ind > (int)vector_size(editor.palette.current_category->chains)) return true;
+
+        // int ind = ui.hover.editor.blockchain - editor.palette.current_category->chains;
+        // if (ind < 0 || ind > (int)vector_size(editor.palette.current_category->chains)) return true;
 
         blockchain_free(&editor.mouse_blockchain);
-        editor.mouse_blockchain = blockchain_copy(&editor.palette.current_category->chains[ind], 0);
+        editor.mouse_blockchain = blockchain_copy(ui.hover.editor.blockchain, 0);
         return true;
     } else if (!mouse_empty) {
         // Drop block

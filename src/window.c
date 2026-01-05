@@ -428,7 +428,7 @@ static void draw_dropdown_input(int* value, char** list, int list_len) {
             gui_set_scissor(gui);
 
             gui_grow(gui, DIRECTION_HORIZONTAL);
-            gui_text(gui, &assets.fonts.font_cond, gettext(list[*value]), config.ui_size * 0.6, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+            gui_text(gui, &assets.fonts.font_cond, sgettext(list[*value]), config.ui_size * 0.6, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
             gui_grow(gui, DIRECTION_HORIZONTAL);
             gui_image(gui, &assets.textures.dropdown, BLOCK_IMAGE_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
         gui_element_end(gui);

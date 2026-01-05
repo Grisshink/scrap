@@ -65,7 +65,7 @@ BlockCategory block_category_new(const char* name, Color color) {
     return (BlockCategory) {
         .name = name,
         .color = color,
-        .chains = vector_create(),
+        .items = vector_create(),
         .next = NULL,
         .prev = NULL,
     };
@@ -88,8 +88,16 @@ BlockCategory* block_category_register(BlockCategory category) {
 }
 
 void block_category_unregister(BlockCategory* category) {
-    for (size_t i = 0; i < vector_size(category->chains); i++) blockchain_free(&category->chains[i]);
-    vector_free(category->chains);
+    for (size_t i = 0; i < vector_size(category->items); i++) {
+        switch (category->items[i].type) {
+        case CATEGORY_ITEM_CHAIN:
+            blockchain_free(&category->items[i].data.chain);
+            break;
+        case CATEGORY_ITEM_LABEL:
+            break;
+        }
+    }
+    vector_free(category->items);
     if (category->next) category->next->prev = NULL;
     if (category->prev) category->prev->next = NULL;
 
@@ -100,13 +108,22 @@ void block_category_unregister(BlockCategory* category) {
     free(category);
 }
 
-void add_to_category(Blockdef* blockdef, BlockCategory* category) {
+void block_category_add_blockdef(BlockCategory* category, Blockdef* blockdef) {
     BlockChain chain = blockchain_new();
     blockchain_add_block(&chain, block_new_ms(blockdef));
     if (blockdef->type == BLOCKTYPE_CONTROL && vm.end_blockdef != (size_t)-1) {
         blockchain_add_block(&chain, block_new(vm.blockdefs[vm.end_blockdef])); }
 
-    vector_add(&category->chains, chain);
+    BlockCategoryItem* item = vector_add_dst(&category->items);
+    item->type = CATEGORY_ITEM_CHAIN;
+    item->data.chain = chain;
+}
+
+void block_category_add_label(BlockCategory* category, const char* label, Color color) {
+    BlockCategoryItem* item = vector_add_dst(&category->items);
+    item->type = CATEGORY_ITEM_LABEL;
+    item->data.label.text = label;
+    item->data.label.color = color;
 }
 
 void unregister_categories(void) {

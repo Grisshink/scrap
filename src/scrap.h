@@ -166,10 +166,26 @@ typedef struct {
     float font_size;
 } InputHoverInfo;
 
+typedef enum {
+    CATEGORY_ITEM_CHAIN,
+    CATEGORY_ITEM_LABEL,
+} BlockCategoryItemType;
+
+typedef struct {
+    BlockCategoryItemType type;
+    union {
+        BlockChain chain;
+        struct {
+            const char* text;
+            Color color;
+        } label;
+    } data;
+} BlockCategoryItem;
+
 struct BlockCategory {
     const char* name;
     Color color;
-    BlockChain* chains;
+    BlockCategoryItem* items;
 
     BlockCategory* next;
     BlockCategory* prev;
@@ -374,6 +390,7 @@ void scrap_gui_process_render(void);
 void scrap_gui_process(void);
 void draw_input(Font* font, char** input, const char* hint, unsigned short font_size, GuiColor font_color, bool editable);
 bool svg_load(const char* file_name, size_t width, size_t height, Image* out_image);
+const char* sgettext(const char* msgid);
 
 // input.c
 void scrap_gui_process_ui(void);
@@ -468,7 +485,8 @@ bool block_exec_custom(Exec* exec, Block* block, int argc, FuncArg* argv, FuncAr
 // vm.c
 BlockCategory block_category_new(const char* name, Color color);
 BlockCategory* block_category_register(BlockCategory category);
-void add_to_category(Blockdef* blockdef, BlockCategory* category);
+void block_category_add_blockdef(BlockCategory* category, Blockdef* blockdef);
+void block_category_add_label(BlockCategory* category, const char* label, Color color);
 
 size_t blockdef_register(Vm* vm, Blockdef* blockdef);
 void blockdef_unregister(Vm* vm, size_t block_id);

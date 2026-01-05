@@ -180,7 +180,7 @@ msgid "False"
 msgstr "Ложь"
 
 #: blocks.c
-msgid "Random"
+msgid "Random from"
 msgstr "Случайное целое от"
 
 #: blocks.c
@@ -383,6 +383,10 @@ msgstr "Невозможно объявить переменную с типом
 msgid "at"
 msgstr "в"
 
+#: save.c
+msgid "System"
+msgstr "Система"
+
 #: input.c
 msgid "Code"
 msgstr "Код"
@@ -582,7 +586,7 @@ msgid "Language"
 msgstr "Язык"
 
 #: save.c
-msgid "System"
+msgid "LanguageList|System"
 msgstr "Системный"
 
 #: save.c
