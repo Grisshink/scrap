@@ -209,8 +209,6 @@ Image setup(void) {
 
     ui.render_surface_needs_redraw = true;
 
-    vm.compile_error = vector_create();
-
     vm = vm_new();
     register_blocks(&vm);
 
