@@ -551,12 +551,12 @@ bool handle_file_button_click(void) {
 }
 
 bool handle_settings_button_click(void) {
-    gui_window_show(GUI_TYPE_SETTINGS);
+    gui_window_show(draw_settings_window);
     return true;
 }
 
 bool handle_about_button_click(void) {
-    gui_window_show(GUI_TYPE_ABOUT);
+    gui_window_show(draw_about_window);
     return true;
 }
 
@@ -571,7 +571,7 @@ bool handle_run_button_click(void) {
 
 bool handle_build_button_click(void) {
     if (thread_is_running(&vm.thread)) return true;
-    gui_window_show(GUI_TYPE_PROJECT_SETTINGS);
+    gui_window_show(draw_project_settings_window);
     return true;
 }
 

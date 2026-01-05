@@ -281,12 +281,7 @@ typedef struct {
     BlockCategory* categories_end;
 } BlockPalette;
 
-typedef enum {
-    GUI_TYPE_SETTINGS,
-    GUI_TYPE_ABOUT,
-    GUI_TYPE_FILE,
-    GUI_TYPE_PROJECT_SETTINGS,
-} WindowGuiType;
+typedef void (*WindowGuiRenderFunc)(void);
 
 typedef struct {
     char project_name[1024];
@@ -440,13 +435,17 @@ Language code_to_language(const char* code);
 
 // window.c
 void init_gui_window(void);
-void gui_window_show(WindowGuiType type);
+void gui_window_show(WindowGuiRenderFunc func);
 void gui_window_hide(void);
 void gui_window_hide_immediate(void);
-WindowGuiType gui_window_get_type(void);
+WindowGuiRenderFunc gui_window_get_render_func(void);
 bool gui_window_is_shown(void);
 void handle_window(void);
 void draw_window(void);
+
+void draw_settings_window(void);
+void draw_project_settings_window(void);
+void draw_about_window(void);
 
 // blocks.c
 void register_blocks(Vm* vm);

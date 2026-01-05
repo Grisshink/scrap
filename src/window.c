@@ -32,9 +32,10 @@
 typedef struct {
     bool shown;
     float animation_time;
+    float animation_ease;
     bool is_fading;
     bool is_hiding;
-    WindowGuiType type;
+    WindowGuiRenderFunc render;
 } WindowGui;
 
 Config window_config;
@@ -131,35 +132,17 @@ bool gui_window_is_shown(void) {
     return window.shown;
 }
 
-WindowGuiType gui_window_get_type(void) {
-    return window.type;
+WindowGuiRenderFunc gui_window_get_render_func(void) {
+    return window.render;
 }
 
-void gui_window_show(WindowGuiType type) {
+void gui_window_show(WindowGuiRenderFunc func) {
     config_free(&window_config); // Drop old strings and replace with new
     config_copy(&window_config, &config);
     window.is_fading = false;
-    window.type = type;
+    window.render = func;
     ui.shader_time = -0.2;
     settings_applied = false;
-
-    if (window.type == GUI_TYPE_ABOUT && !about_text_split) {
-        about_text_split = vector_create();
-        const char* about_text = gettext("Scrap is a project that allows anyone to build\n"
-                                         "software using simple, block based interface.");
-        size_t about_text_len = strlen(about_text);
-
-        char* current_text = vector_create();
-        for (size_t i = 0; i < about_text_len; i++) {
-            if (about_text[i] == '\n') {
-                vector_add(&about_text_split, current_text);
-                current_text = vector_create();
-                continue;
-            }
-            vector_add(&current_text, about_text[i]);
-        }
-        vector_add(&about_text_split, current_text);
-    }
 }
 
 void gui_window_hide(void) {
@@ -519,137 +502,68 @@ void handle_window(void) {
     }
 }
 
-void draw_window(void) {
-    if (!window.shown) return;
-
-    float animation_ease = ease_out_expo(window.animation_time);
-
+void draw_settings_window(void) {
     static int font_path_scroll = 0;
     static int font_bold_path_scroll = 0;
     static int font_mono_path_scroll = 0;
-    static int executable_name_scroll = 0;
-    static int linker_name_scroll = 0;
 
-    switch (window.type) {
-    case GUI_TYPE_SETTINGS:
-        begin_window(gettext("Settings"), MIN(600, gui->win_w - config.ui_size), 0, animation_ease);
-            begin_setting(gettext("Language"), true);
-                draw_dropdown_input((int*)&window_config.language, language_list, ARRLEN(language_list));
-            end_setting();
+    begin_window(gettext("Settings"), MIN(600, gui->win_w - config.ui_size), 0, window.animation_ease);
+        begin_setting(gettext("Language"), true);
+            draw_dropdown_input((int*)&window_config.language, language_list, ARRLEN(language_list));
+        end_setting();
 
-            begin_setting(gettext("UI size"), true);
-                draw_slider(8, 64, &window_config.ui_size);
-            end_setting();
+        begin_setting(gettext("UI size"), true);
+            draw_slider(8, 64, &window_config.ui_size);
+        end_setting();
 
-            begin_setting(gettext("FPS limit"), false);
-                draw_slider(0, 240, &window_config.fps_limit);
-            end_setting();
+        begin_setting(gettext("FPS limit"), false);
+            draw_slider(0, 240, &window_config.fps_limit);
+        end_setting();
 
-            begin_setting(gettext("Font path"), true);
-                draw_text_input(&window_config.font_path, gettext("path"), &font_path_scroll, true);
-            end_setting();
+        begin_setting(gettext("Font path"), true);
+            draw_text_input(&window_config.font_path, gettext("path"), &font_path_scroll, true);
+        end_setting();
 
-            begin_setting(gettext("Bold font path"), true);
-                draw_text_input(&window_config.font_bold_path, gettext("path"), &font_bold_path_scroll, true);
-            end_setting();
+        begin_setting(gettext("Bold font path"), true);
+            draw_text_input(&window_config.font_bold_path, gettext("path"), &font_bold_path_scroll, true);
+        end_setting();
 
-            begin_setting(gettext("Monospaced font path"), true);
-                draw_text_input(&window_config.font_mono_path, gettext("path"), &font_mono_path_scroll, true);
-            end_setting();
+        begin_setting(gettext("Monospaced font path"), true);
+            draw_text_input(&window_config.font_mono_path, gettext("path"), &font_mono_path_scroll, true);
+        end_setting();
 
-            begin_setting(gettext("Panel editor"), false);
-                gui_element_begin(gui);
-                    gui_set_grow(gui, DIRECTION_HORIZONTAL);
-                    gui_set_grow(gui, DIRECTION_VERTICAL);
-                    gui_set_direction(gui, DIRECTION_HORIZONTAL);
-
-                    draw_button(gettext("Open"), settings_on_panel_editor_button_click);
-                gui_element_end(gui);
-            end_setting();
-
-            gui_grow(gui, DIRECTION_VERTICAL);
-
+        begin_setting(gettext("Panel editor"), false);
             gui_element_begin(gui);
                 gui_set_grow(gui, DIRECTION_HORIZONTAL);
+                gui_set_grow(gui, DIRECTION_VERTICAL);
                 gui_set_direction(gui, DIRECTION_HORIZONTAL);
-                gui_set_min_size(gui, 0, config.ui_size * 0.6);
 
-                gui_grow(gui, DIRECTION_HORIZONTAL);
-                if (settings_applied) gui_text(gui, &assets.fonts.font_cond, "Settings applied", config.ui_size * 0.6, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+                draw_button(gettext("Open"), settings_on_panel_editor_button_click);
             gui_element_end(gui);
+        end_setting();
 
-            gui_element_begin(gui);
-                gui_set_grow(gui, DIRECTION_HORIZONTAL);
-                gui_set_direction(gui, DIRECTION_HORIZONTAL);
-                gui_set_gap(gui, WINDOW_ELEMENT_PADDING);
+        gui_grow(gui, DIRECTION_VERTICAL);
 
-                gui_grow(gui, DIRECTION_HORIZONTAL);
-                draw_button(gettext("Reset panels"), settings_on_reset_panels_button_click);
-                draw_button(gettext("Reset"), settings_on_reset_button_click);
-                draw_button(gettext("Apply"), settings_on_apply_button_click);
-            gui_element_end(gui);
-        end_window();
-        break;
-    case GUI_TYPE_PROJECT_SETTINGS:
-        begin_window(gettext("Build settings"), MIN(600, gui->win_w - config.ui_size), 0, animation_ease);
-            begin_setting(gettext("Executable name"), false);
-                draw_text_input(&project_config.executable_name, gettext("name"), &executable_name_scroll, true);
-            end_setting();
+        gui_element_begin(gui);
+            gui_set_grow(gui, DIRECTION_HORIZONTAL);
+            gui_set_direction(gui, DIRECTION_HORIZONTAL);
+            gui_set_min_size(gui, 0, config.ui_size * 0.6);
 
-            begin_setting(gettext("Linker name (Linux only)"), false);
-                draw_text_input(&project_config.linker_name, gettext("name"), &linker_name_scroll, true);
-            end_setting();
+            gui_grow(gui, DIRECTION_HORIZONTAL);
+            if (settings_applied) gui_text(gui, &assets.fonts.font_cond, "Settings applied", config.ui_size * 0.6, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+        gui_element_end(gui);
 
-            gui_grow(gui, DIRECTION_VERTICAL);
+        gui_element_begin(gui);
+            gui_set_grow(gui, DIRECTION_HORIZONTAL);
+            gui_set_direction(gui, DIRECTION_HORIZONTAL);
+            gui_set_gap(gui, WINDOW_ELEMENT_PADDING);
 
-            gui_element_begin(gui);
-                gui_set_grow(gui, DIRECTION_HORIZONTAL);
-                gui_set_direction(gui, DIRECTION_HORIZONTAL);
-                gui_set_gap(gui, WINDOW_ELEMENT_PADDING);
-
-                gui_grow(gui, DIRECTION_HORIZONTAL);
-
-                draw_button(gettext("Build!"), project_settings_on_build_button_click);
-            gui_element_end(gui);
-        end_window();
-        break;
-    case GUI_TYPE_ABOUT:
-        begin_window(gettext("About"), 500 * config.ui_size / 32.0, 0, animation_ease);
-            gui_element_begin(gui);
-                gui_set_direction(gui, DIRECTION_HORIZONTAL);
-                gui_set_align(gui, ALIGN_CENTER);
-                gui_set_gap(gui, WINDOW_ELEMENT_PADDING);
-
-                gui_image(gui, &assets.textures.icon_logo, config.ui_size, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
-                gui_text(gui, &assets.fonts.font_eb, "Scrap v" SCRAP_VERSION, config.ui_size * 0.8, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
-            gui_element_end(gui);
-
-            gui_element_begin(gui);
-                if (about_text_split) {
-                    for (size_t i = 0; i < vector_size(about_text_split); i++) {
-                        gui_text_slice(gui, &assets.fonts.font_cond, about_text_split[i], vector_size(about_text_split[i]), config.ui_size * 0.6, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
-                    }
-                } else {
-                    gui_text(gui, &assets.fonts.font_cond, "ERROR", config.ui_size * 0.6, (GuiColor) { 0xff, 0x20, 0x20, 0xff });
-                }
-            gui_element_end(gui);
-
-            gui_grow(gui, DIRECTION_VERTICAL);
-
-            gui_element_begin(gui);
-                gui_set_grow(gui, DIRECTION_HORIZONTAL);
-                gui_set_direction(gui, DIRECTION_HORIZONTAL);
-                gui_set_gap(gui, WINDOW_ELEMENT_PADDING);
-
-                gui_grow(gui, DIRECTION_HORIZONTAL);
-                draw_button(gettext("License"), about_on_license_button_click);
-            gui_element_end(gui);
-        end_window();
-        break;
-    default:
-        assert(false && "Unhandled window draw");
-        break;
-    }
+            gui_grow(gui, DIRECTION_HORIZONTAL);
+            draw_button(gettext("Reset panels"), settings_on_reset_panels_button_click);
+            draw_button(gettext("Reset"), settings_on_reset_button_click);
+            draw_button(gettext("Apply"), settings_on_apply_button_click);
+        gui_element_end(gui);
+    end_window();
 
     if (settings_tooltip) {
         gui_element_begin(gui);
@@ -663,4 +577,91 @@ void draw_window(void) {
     }
 
     settings_tooltip = false;
+}
+
+void draw_project_settings_window(void) {
+    static int executable_name_scroll = 0;
+    static int linker_name_scroll = 0;
+
+    begin_window(gettext("Build settings"), MIN(600, gui->win_w - config.ui_size), 0, window.animation_ease);
+        begin_setting(gettext("Executable name"), false);
+            draw_text_input(&project_config.executable_name, gettext("name"), &executable_name_scroll, true);
+        end_setting();
+
+        begin_setting(gettext("Linker name (Linux only)"), false);
+            draw_text_input(&project_config.linker_name, gettext("name"), &linker_name_scroll, true);
+        end_setting();
+
+        gui_grow(gui, DIRECTION_VERTICAL);
+
+        gui_element_begin(gui);
+            gui_set_grow(gui, DIRECTION_HORIZONTAL);
+            gui_set_direction(gui, DIRECTION_HORIZONTAL);
+            gui_set_gap(gui, WINDOW_ELEMENT_PADDING);
+
+            gui_grow(gui, DIRECTION_HORIZONTAL);
+
+            draw_button(gettext("Build!"), project_settings_on_build_button_click);
+        gui_element_end(gui);
+    end_window();
+}
+
+void draw_about_window(void) {
+    if (!about_text_split) {
+        TraceLog(LOG_INFO, "Split about text");
+        about_text_split = vector_create();
+        const char* about_text = gettext("Scrap is a project that allows anyone to build\n"
+                                         "software using simple, block based interface.");
+        size_t about_text_len = strlen(about_text);
+
+        char* current_text = vector_create();
+        for (size_t i = 0; i < about_text_len; i++) {
+            if (about_text[i] == '\n') {
+                vector_add(&about_text_split, current_text);
+                current_text = vector_create();
+                continue;
+            }
+            vector_add(&current_text, about_text[i]);
+        }
+        vector_add(&about_text_split, current_text);
+    }
+
+    begin_window(gettext("About"), 500 * config.ui_size / 32.0, 0, window.animation_ease);
+        gui_element_begin(gui);
+            gui_set_direction(gui, DIRECTION_HORIZONTAL);
+            gui_set_align(gui, ALIGN_CENTER);
+            gui_set_gap(gui, WINDOW_ELEMENT_PADDING);
+
+            gui_image(gui, &assets.textures.icon_logo, config.ui_size, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+            gui_text(gui, &assets.fonts.font_eb, "Scrap v" SCRAP_VERSION, config.ui_size * 0.8, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+        gui_element_end(gui);
+
+        gui_element_begin(gui);
+            if (about_text_split) {
+                for (size_t i = 0; i < vector_size(about_text_split); i++) {
+                    gui_text_slice(gui, &assets.fonts.font_cond, about_text_split[i], vector_size(about_text_split[i]), config.ui_size * 0.6, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+                }
+            } else {
+                gui_text(gui, &assets.fonts.font_cond, "ERROR", config.ui_size * 0.6, (GuiColor) { 0xff, 0x20, 0x20, 0xff });
+            }
+        gui_element_end(gui);
+
+        gui_grow(gui, DIRECTION_VERTICAL);
+
+        gui_element_begin(gui);
+            gui_set_grow(gui, DIRECTION_HORIZONTAL);
+            gui_set_direction(gui, DIRECTION_HORIZONTAL);
+            gui_set_gap(gui, WINDOW_ELEMENT_PADDING);
+
+            gui_grow(gui, DIRECTION_HORIZONTAL);
+            draw_button(gettext("License"), about_on_license_button_click);
+        gui_element_end(gui);
+    end_window();
+}
+
+void draw_window(void) {
+    if (!window.shown) return;
+
+    window.animation_ease = ease_out_expo(window.animation_time);
+    window.render();
 }
