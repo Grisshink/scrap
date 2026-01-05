@@ -305,25 +305,33 @@ int main(void) {
 
         scrap_gui_process_ui();
 
-        if (ui.render_surface_needs_redraw) {
-            BeginTextureMode(ui.render_surface);
-                scrap_gui_process_render();
-            EndTextureMode();
-            ui.render_surface_needs_redraw = false;
-        }
+        BeginTextureMode(ui.render_surface);
+            scrap_gui_process_render();
+        EndTextureMode();
 
         BeginDrawing();
+            Texture2D texture = ui.render_surface.texture;
+
             DrawTexturePro(
-                ui.render_surface.texture,
+                texture,
+                (Rectangle) {
 #ifdef ARABIC_MODE
-                (Rectangle) { ui.render_surface.texture.width, ui.render_surface.texture.height, ui.render_surface.texture.width, ui.render_surface.texture.height },
+                    // Flip texture upside down and also mirror it ;)
+                    texture.width, texture.height,
 #else
-                (Rectangle) { 0, ui.render_surface.texture.height, ui.render_surface.texture.width, ui.render_surface.texture.height },
+                    // Render everything just below the texture. This texture has wrapping mode set to TEXTURE_WRAP_MIRROR_REPEAT,
+                    // so this will have the effect of flipping the texture upside down
+                    0, texture.height,
 #endif
-                (Rectangle) { 0, 0, ui.render_surface.texture.width, ui.render_surface.texture.height },
-                (Vector2) {0},
-                0.0,
-                WHITE
+                    texture.width, texture.height,
+                },
+                (Rectangle) {
+                    0, 0,
+                    texture.width, texture.height,
+                },
+                (Vector2) {0}, // Origin at 0,0
+                0.0, // No rotation
+                WHITE // No tint
             );
         EndDrawing();
     }

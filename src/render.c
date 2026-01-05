@@ -1770,6 +1770,9 @@ static void write_debug_buffer(void) {
 }
 
 void scrap_gui_process_render(void) {
+    if (!ui.render_surface_needs_redraw) return;
+    ui.render_surface_needs_redraw = false;
+
     ClearBackground(GetColor(0x202020ff));
     draw_dots();
 
