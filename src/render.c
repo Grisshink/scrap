@@ -573,15 +573,17 @@ static void draw_block(Block* block, bool highlight, bool can_hover, bool ghost,
 
                 draw_blockdef(arg->data.blockdef, ui.hover.editor.edit_blockdef == arg->data.blockdef);
 
-                if (ui.hover.editor.edit_blockdef == arg->data.blockdef) {
-                    draw_editor_button(&assets.textures.button_add_arg, handle_editor_add_arg_button);
-                    draw_editor_button(&assets.textures.button_add_text, handle_editor_add_text_button);
-                    draw_editor_button(&assets.textures.button_close, handle_editor_close_button);
-                } else {
-                    draw_editor_button(&assets.textures.button_edit, handle_editor_edit_button);
+                if (editable) {
+                    if (ui.hover.editor.edit_blockdef == arg->data.blockdef) {
+                        draw_editor_button(&assets.textures.button_add_arg, handle_editor_add_arg_button);
+                        draw_editor_button(&assets.textures.button_add_text, handle_editor_add_text_button);
+                        draw_editor_button(&assets.textures.button_close, handle_editor_close_button);
+                    } else {
+                        draw_editor_button(&assets.textures.button_edit, handle_editor_edit_button);
+                    }
+                    gui_spacer(gui, 0, 0);
                 }
 
-                gui_spacer(gui, 0, 0);
             gui_element_end(gui);
             arg_id++;
             break;
@@ -1422,7 +1424,7 @@ void scrap_gui_process(void) {
             gui_set_floating(gui);
             gui_set_position(gui, gui->mouse_x + 5, gui->mouse_y + 5);
 
-            draw_blockchain(&editor.mouse_blockchain, false, false, false);
+            draw_blockchain(&editor.mouse_blockchain, false, false, true);
         gui_element_end(gui);
 
         if (ui.hover.select_input == &editor.search_list_search) {
