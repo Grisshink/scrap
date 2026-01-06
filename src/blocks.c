@@ -30,6 +30,9 @@
 #include <assert.h>
 #include <libintl.h>
 
+#include <sys/socket.h> 
+#include <netinet/in.h> 
+
 #define MATH_LIST_LEN 10
 #define TERM_COLOR_LIST_LEN 8
 
@@ -64,6 +67,48 @@ char** term_color_list_access(Block* block, size_t* list_len) {
 #ifdef USE_INTERPRETER
 
 #include "std.h"
+
+bool block_start_tcp(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
+    (void) control_state;
+    (void) block;
+    (void) exec;
+    (void) argc;
+    (void) argv;
+    
+    int sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    
+    if (sockfd == -1) {
+        *return_val = DATA_INTEGER(-1);
+        return true;
+    }
+    
+    int opt = 1;
+    setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+    
+    struct sockaddr_in server_addr;
+    server_addr.sin_family = AF_INET;
+    server_addr.sin_addr.s_addr = INADDR_ANY; 
+    server_addr.sin_port = htons(data_to_integer(argv[0]));
+    
+    if (bind(sockfd, (struct sockaddr*)&server_addr, sizeof(server_addr))) {
+        *return_val = DATA_INTEGER(-1);
+        return true;
+    }
+    
+    *return_val = DATA_INTEGER(sockfd);
+    return true;
+}
+
+bool block_stop_tcp(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
+    (void) control_state;
+    (void) block;
+    (void) exec;
+    (void) argc;
+    (void) argv;
+    
+    *return_val = DATA_INTEGER(close(data_to_integer(argv[0])));
+    return true;
+}
 
 bool block_do_nothing(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
@@ -2999,6 +3044,16 @@ bool block_on_start(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* 
     return true;
 }
 
+bool block_start_tcp(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
+    (void) control_state;
+    (void) block;
+    (void) exec;
+    (void) argc;
+    (void) argv;
+    *return_val = DATA_NOTHING;
+    return true;
+}
+
 #endif // USE_INTERPRETER
 
 // Creates and registers blocks (commands) for the Vm/Exec virtual machine
@@ -3460,6 +3515,18 @@ void register_blocks(Vm* vm) {
     blockdef_add_text(sc_nothing, gettext("Nothing"));
     blockdef_register(vm, sc_nothing);
     block_category_add_blockdef(cat_misc, sc_nothing);
+    
+    Blockdef* sc_start_tcp = blockdef_new("start_tcp", BLOCKTYPE_NORMAL, (BlockdefColor) { 0x77, 0x77, 0x77, 0xff }, block_start_tcp);
+    blockdef_add_text(sc_start_tcp, gettext("Start TCP port: "));
+    blockdef_add_argument(sc_start_tcp, "25565", "PORT BLYAT", BLOCKCONSTR_UNLIMITED);
+    blockdef_register(vm, sc_start_tcp);
+    block_category_add_blockdef(cat_misc, sc_start_tcp);
+    
+    Blockdef* sc_stop_tcp = blockdef_new("stop_tcp", BLOCKTYPE_NORMAL, (BlockdefColor) { 0x77, 0x77, 0x77, 0xff }, block_stop_tcp);
+    blockdef_add_text(sc_stop_tcp, gettext("Stop TCP, FD: "));
+    blockdef_add_argument(sc_stop_tcp, "", "FD?", BLOCKCONSTR_UNLIMITED);
+    blockdef_register(vm, sc_stop_tcp);
+    block_category_add_blockdef(cat_misc, sc_stop_tcp);
 
     Blockdef* sc_do_nothing = blockdef_new("do_nothing", BLOCKTYPE_CONTROL, (BlockdefColor) { 0x77, 0x77, 0x77, 0xff }, block_do_nothing);
     blockdef_add_text(sc_do_nothing, gettext("Do nothing"));
