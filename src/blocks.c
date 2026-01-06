@@ -95,7 +95,42 @@ bool block_start_tcp(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValu
         return true;
     }
     
+    if ((listen(sockfd, 5)) != 0) {
+        *return_val = DATA_INTEGER(-1);
+        return true;
+    }
+    
     *return_val = DATA_INTEGER(sockfd);
+    return true;
+}
+
+bool block_accept_tcp(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
+    (void) control_state;
+    (void) block;
+    (void) exec;
+    (void) argc;
+    (void) argv;
+    
+    struct sockaddr_in cli;
+    int len = sizeof(cli);
+    int connfd = accept(data_to_integer(argv[0]), (struct sockaddr_in*)&cli, &len);
+    
+    *return_val = DATA_INTEGER(connfd);
+    return true;
+}
+
+bool block_read_tcp(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
+    (void) control_state;
+    (void) block;
+    (void) exec;
+    (void) argc;
+    (void) argv;
+    
+    StringHeader *buff = malloc(sizeof(StringHeader) + 80 * sizeof(char));
+    buff->capacity = 80;
+    buff->size = read(data_to_integer(argv[0]), buff->str, sizeof(char)*buff->capacity);
+    
+    *return_val = DATA_STRING(buff);
     return true;
 }
 
@@ -3521,6 +3556,18 @@ void register_blocks(Vm* vm) {
     blockdef_add_argument(sc_start_tcp, "25565", "PORT BLYAT", BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_start_tcp);
     block_category_add_blockdef(cat_misc, sc_start_tcp);
+    
+    Blockdef* sc_accept_tcp = blockdef_new("accept_tcp", BLOCKTYPE_NORMAL, (BlockdefColor) { 0x77, 0x77, 0x77, 0xff }, block_accept_tcp);
+    blockdef_add_text(sc_accept_tcp, gettext("Accept TCP, FD: "));
+    blockdef_add_argument(sc_accept_tcp, "", "FD?", BLOCKCONSTR_UNLIMITED);
+    blockdef_register(vm, sc_accept_tcp);
+    block_category_add_blockdef(cat_misc, sc_accept_tcp);
+    
+    Blockdef* sc_read_tcp = blockdef_new("read_tcp", BLOCKTYPE_NORMAL, (BlockdefColor) { 0x77, 0x77, 0x77, 0xff }, block_read_tcp);
+    blockdef_add_text(sc_read_tcp, gettext("Read TCP, FD: "));
+    blockdef_add_argument(sc_read_tcp, "", "FD?", BLOCKCONSTR_UNLIMITED);
+    blockdef_register(vm, sc_read_tcp);
+    block_category_add_blockdef(cat_misc, sc_read_tcp);
     
     Blockdef* sc_stop_tcp = blockdef_new("stop_tcp", BLOCKTYPE_NORMAL, (BlockdefColor) { 0x77, 0x77, 0x77, 0xff }, block_stop_tcp);
     blockdef_add_text(sc_stop_tcp, gettext("Stop TCP, FD: "));
