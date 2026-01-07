@@ -32,6 +32,8 @@
 
 #include <sys/socket.h> 
 #include <netinet/in.h> 
+#include <fcntl.h>
+#include <arpa/inet.h>
 
 #define MATH_LIST_LEN 10
 #define TERM_COLOR_LIST_LEN 8
@@ -126,11 +128,24 @@ bool block_read_tcp(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue
     (void) argc;
     (void) argv;
     
-    StringHeader *buff = malloc(sizeof(StringHeader) + 80 * sizeof(char));
-    buff->capacity = 80;
-    buff->size = read(data_to_integer(argv[0]), buff->str, sizeof(char)*buff->capacity);
+    StringHeader *buff = malloc(sizeof(StringHeader) + data_to_integer(argv[0]) * sizeof(char));
+    buff->capacity = data_to_integer(argv[0]);
+    buff->size = read(data_to_integer(argv[1]), buff->str, sizeof(char) * buff->capacity);
     
     *return_val = DATA_STRING(buff);
+    return true;
+}
+
+bool block_write_tcp(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
+    (void) control_state;
+    (void) block;
+    (void) exec;
+    (void) argc;
+    (void) argv;
+    
+    char* buff = data_to_any_string(exec, argv[1]);
+    
+    *return_val = DATA_INTEGER(write(data_to_integer(argv[0]), buff, strlen(buff)));
     return true;
 }
 
@@ -142,6 +157,34 @@ bool block_stop_tcp(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue
     (void) argv;
     
     *return_val = DATA_INTEGER(close(data_to_integer(argv[0])));
+    return true;
+}
+
+bool block_connect_tcp(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
+    (void) control_state;
+    (void) block;
+    (void) exec;
+    (void) argc;
+    (void) argv;
+    
+    int sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    
+    if (sockfd == -1) {
+        *return_val = DATA_INTEGER(-1);
+        return true;
+    }
+    
+    struct sockaddr_in server_addr;
+    server_addr.sin_family = AF_INET;
+    server_addr.sin_addr.s_addr = inet_addr(data_to_any_string(exec, argv[0]));
+    server_addr.sin_port = htons(data_to_integer(argv[1]));
+    
+    if (connect(sockfd, (struct sockaddr*)&server_addr, sizeof(server_addr))) {
+        *return_val = DATA_INTEGER(-1);
+        return true;
+    }
+    
+    *return_val = DATA_INTEGER(sockfd);
     return true;
 }
 
@@ -3564,17 +3607,35 @@ void register_blocks(Vm* vm) {
     block_category_add_blockdef(cat_misc, sc_accept_tcp);
     
     Blockdef* sc_read_tcp = blockdef_new("read_tcp", BLOCKTYPE_NORMAL, (BlockdefColor) { 0x77, 0x77, 0x77, 0xff }, block_read_tcp);
-    blockdef_add_text(sc_read_tcp, gettext("Read TCP, FD: "));
+    blockdef_add_text(sc_read_tcp, gettext("Read TCP, buf size: "));
+    blockdef_add_argument(sc_read_tcp, "1024", "buffer size", BLOCKCONSTR_UNLIMITED);
+    blockdef_add_text(sc_read_tcp, gettext("FD: "));
     blockdef_add_argument(sc_read_tcp, "", "FD?", BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_read_tcp);
     block_category_add_blockdef(cat_misc, sc_read_tcp);
+    
+    Blockdef* sc_write_tcp = blockdef_new("write_tcp", BLOCKTYPE_NORMAL, (BlockdefColor) { 0x77, 0x77, 0x77, 0xff }, block_write_tcp);
+    blockdef_add_text(sc_write_tcp, gettext("Write TCP, FD: "));
+    blockdef_add_argument(sc_write_tcp, "", "FD?", BLOCKCONSTR_UNLIMITED);
+    blockdef_add_text(sc_write_tcp, gettext("Text:"));
+    blockdef_add_argument(sc_write_tcp, "", "Text?", BLOCKCONSTR_UNLIMITED);
+    blockdef_register(vm, sc_write_tcp);
+    block_category_add_blockdef(cat_misc, sc_write_tcp);
     
     Blockdef* sc_stop_tcp = blockdef_new("stop_tcp", BLOCKTYPE_NORMAL, (BlockdefColor) { 0x77, 0x77, 0x77, 0xff }, block_stop_tcp);
     blockdef_add_text(sc_stop_tcp, gettext("Stop TCP, FD: "));
     blockdef_add_argument(sc_stop_tcp, "", "FD?", BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_stop_tcp);
     block_category_add_blockdef(cat_misc, sc_stop_tcp);
-
+    
+    Blockdef* sc_connect_tcp = blockdef_new("connect_tcp", BLOCKTYPE_NORMAL, (BlockdefColor) { 0x77, 0x77, 0x77, 0xff }, block_connect_tcp);
+    blockdef_add_text(sc_connect_tcp, gettext("Connect TCP, Address: "));
+    blockdef_add_argument(sc_connect_tcp, "", "IP?", BLOCKCONSTR_UNLIMITED);
+    blockdef_add_text(sc_connect_tcp, gettext(":"));
+    blockdef_add_argument(sc_connect_tcp, "", "Port?", BLOCKCONSTR_UNLIMITED);
+    blockdef_register(vm, sc_connect_tcp);
+    block_category_add_blockdef(cat_misc, sc_connect_tcp);
+    
     Blockdef* sc_do_nothing = blockdef_new("do_nothing", BLOCKTYPE_CONTROL, (BlockdefColor) { 0x77, 0x77, 0x77, 0xff }, block_do_nothing);
     blockdef_add_text(sc_do_nothing, gettext("Do nothing"));
     blockdef_register(vm, sc_do_nothing);
