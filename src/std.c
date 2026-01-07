@@ -22,6 +22,11 @@
 #include <string.h>
 #include <stdio.h>
 #include <time.h>
+#include <unistd.h>
+#include <sys/socket.h> 
+#include <netinet/in.h> 
+#include <fcntl.h>
+#include <arpa/inet.h>
 
 #include "std.h"
 #include "util.h"
@@ -866,3 +871,71 @@ int std_term_print_list(List* list) {
 }
 
 #endif
+
+int std_tcp_start_server(int port) {
+    int sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    
+    if (sockfd == -1) {
+        return -1;
+    }
+    
+    int opt = 1;
+    setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+    
+    struct sockaddr_in server_addr;
+    server_addr.sin_family = AF_INET;
+    server_addr.sin_addr.s_addr = INADDR_ANY; 
+    server_addr.sin_port = htons(port);
+    
+    if (bind(sockfd, (struct sockaddr*)&server_addr, sizeof(server_addr))) {
+        return -1;
+    }
+    
+    if ((listen(sockfd, 5)) != 0) {
+        return -1;
+    }
+    
+    return sockfd;
+}
+
+int std_tcp_accept(int sockfd) {
+    struct sockaddr_in cli;
+    unsigned int len = sizeof(cli);
+    int connfd = accept(sockfd, (struct sockaddr_in*)&cli, &len);
+    
+    return connfd;
+}
+
+char* std_tcp_read(int fd, int buff_capacity) {
+    char* buff = malloc(buff_capacity * sizeof(char));
+    read(fd, buff, sizeof(char) * buff_capacity);
+    
+    return buff;
+}
+
+int std_tcp_write(int fd, char* buff) {
+    return write(fd, buff, strlen(buff));
+}
+
+int std_tcp_stop(int fd) {
+    return close(fd);
+}
+
+int std_tcp_connect(char* ip, int port) {
+    int sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    
+    if (sockfd == -1) {
+        return -1;
+    }
+    
+    struct sockaddr_in server_addr;
+    server_addr.sin_family = AF_INET;
+    server_addr.sin_addr.s_addr = inet_addr(ip);
+    server_addr.sin_port = htons(port);
+    
+    if (connect(sockfd, (struct sockaddr*)&server_addr, sizeof(server_addr))) {
+        return -1;
+    }
+    
+    return sockfd;
+}

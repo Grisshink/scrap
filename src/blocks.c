@@ -30,11 +30,6 @@
 #include <assert.h>
 #include <libintl.h>
 
-#include <sys/socket.h> 
-#include <netinet/in.h> 
-#include <fcntl.h>
-#include <arpa/inet.h>
-
 #define MATH_LIST_LEN 10
 #define TERM_COLOR_LIST_LEN 8
 
@@ -77,32 +72,7 @@ bool block_start_tcp(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValu
     (void) argc;
     (void) argv;
     
-    int sockfd = socket(AF_INET, SOCK_STREAM, 0);
-    
-    if (sockfd == -1) {
-        *return_val = DATA_INTEGER(-1);
-        return true;
-    }
-    
-    int opt = 1;
-    setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
-    
-    struct sockaddr_in server_addr;
-    server_addr.sin_family = AF_INET;
-    server_addr.sin_addr.s_addr = INADDR_ANY; 
-    server_addr.sin_port = htons(data_to_integer(argv[0]));
-    
-    if (bind(sockfd, (struct sockaddr*)&server_addr, sizeof(server_addr))) {
-        *return_val = DATA_INTEGER(-1);
-        return true;
-    }
-    
-    if ((listen(sockfd, 5)) != 0) {
-        *return_val = DATA_INTEGER(-1);
-        return true;
-    }
-    
-    *return_val = DATA_INTEGER(sockfd);
+    *return_val = DATA_INTEGER(std_tcp_start_server(data_to_integer(argv[0])));
     return true;
 }
 
@@ -113,11 +83,7 @@ bool block_accept_tcp(Exec* exec, Block* block, int argc, AnyValue* argv, AnyVal
     (void) argc;
     (void) argv;
     
-    struct sockaddr_in cli;
-    int len = sizeof(cli);
-    int connfd = accept(data_to_integer(argv[0]), (struct sockaddr_in*)&cli, &len);
-    
-    *return_val = DATA_INTEGER(connfd);
+    *return_val = DATA_INTEGER(std_tcp_accept(data_to_integer(argv[0])));
     return true;
 }
 
@@ -128,11 +94,9 @@ bool block_read_tcp(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue
     (void) argc;
     (void) argv;
     
-    StringHeader *buff = malloc(sizeof(StringHeader) + data_to_integer(argv[0]) * sizeof(char));
-    buff->capacity = data_to_integer(argv[0]);
-    buff->size = read(data_to_integer(argv[1]), buff->str, sizeof(char) * buff->capacity);
+    char* data = std_tcp_read(data_to_integer(argv[0]), data_to_integer(argv[1]));
     
-    *return_val = DATA_STRING(buff);
+    *return_val = DATA_STRING(std_string_from_literal(&exec->gc, data, data_to_integer(argv[1])));
     return true;
 }
 
@@ -143,9 +107,7 @@ bool block_write_tcp(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValu
     (void) argc;
     (void) argv;
     
-    char* buff = data_to_any_string(exec, argv[1]);
-    
-    *return_val = DATA_INTEGER(write(data_to_integer(argv[0]), buff, strlen(buff)));
+    *return_val = DATA_INTEGER(std_tcp_write(data_to_integer(argv[0]), data_to_any_string(exec, argv[1])));
     return true;
 }
 
@@ -156,7 +118,7 @@ bool block_stop_tcp(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue
     (void) argc;
     (void) argv;
     
-    *return_val = DATA_INTEGER(close(data_to_integer(argv[0])));
+    *return_val = DATA_INTEGER(std_tcp_stop(data_to_integer(argv[0])));
     return true;
 }
 
@@ -167,24 +129,7 @@ bool block_connect_tcp(Exec* exec, Block* block, int argc, AnyValue* argv, AnyVa
     (void) argc;
     (void) argv;
     
-    int sockfd = socket(AF_INET, SOCK_STREAM, 0);
-    
-    if (sockfd == -1) {
-        *return_val = DATA_INTEGER(-1);
-        return true;
-    }
-    
-    struct sockaddr_in server_addr;
-    server_addr.sin_family = AF_INET;
-    server_addr.sin_addr.s_addr = inet_addr(data_to_any_string(exec, argv[0]));
-    server_addr.sin_port = htons(data_to_integer(argv[1]));
-    
-    if (connect(sockfd, (struct sockaddr*)&server_addr, sizeof(server_addr))) {
-        *return_val = DATA_INTEGER(-1);
-        return true;
-    }
-    
-    *return_val = DATA_INTEGER(sockfd);
+    *return_val = DATA_INTEGER(std_tcp_connect(data_to_any_string(exec, argv[0]), data_to_integer(argv[1])));
     return true;
 }
 
@@ -3122,13 +3067,72 @@ bool block_on_start(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* 
     return true;
 }
 
-bool block_start_tcp(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
+bool block_start_tcp(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     (void) exec;
     (void) argc;
     (void) argv;
-    *return_val = DATA_NOTHING;
+    
+    *return_val = DATA_INTEGER(build_call(exec, "std_tcp_start_server", arg_to_integer(exec, block, argv[0])));
+    return true;
+}
+
+bool block_accept_tcp(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
+    (void) control_state;
+    (void) block;
+    (void) exec;
+    (void) argc;
+    (void) argv;
+    
+    *return_val = DATA_INTEGER(build_call(exec, "std_tcp_accept", arg_to_integer(exec, block, argv[0])));
+    return true;
+}
+
+bool block_read_tcp(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
+    (void) control_state;
+    (void) block;
+    (void) exec;
+    (void) argc;
+    (void) argv;
+    
+    LLVMValueRef data = build_call(exec, "std_tcp_read", arg_to_integer(exec, block, argv[0]), arg_to_integer(exec, block, argv[1]));
+    data = build_call(exec, "std_string_from_literal", CONST_GC, data, arg_to_integer(exec, block, argv[1]));
+    
+    *return_val = DATA_STRING(data);
+    return true;
+}
+
+bool block_write_tcp(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
+    (void) control_state;
+    (void) block;
+    (void) exec;
+    (void) argc;
+    (void) argv;
+    
+    *return_val = DATA_INTEGER(build_call(exec, "std_tcp_write", arg_to_integer(exec, block, argv[0]), arg_to_any_string(exec, block, argv[1])));
+    return true;
+}
+
+bool block_stop_tcp(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
+    (void) control_state;
+    (void) block;
+    (void) exec;
+    (void) argc;
+    (void) argv;
+    
+    *return_val = DATA_INTEGER(build_call(exec, "std_tcp_stop", arg_to_integer(exec, block, argv[0])));
+    return true;
+}
+
+bool block_connect_tcp(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
+    (void) control_state;
+    (void) block;
+    (void) exec;
+    (void) argc;
+    (void) argv;
+    
+    *return_val = DATA_INTEGER(build_call(exec, "std_tcp_connect", arg_to_any_string(exec, block, argv[0]), arg_to_integer(exec, block, argv[1])));
     return true;
 }
 
@@ -3607,10 +3611,10 @@ void register_blocks(Vm* vm) {
     block_category_add_blockdef(cat_misc, sc_accept_tcp);
     
     Blockdef* sc_read_tcp = blockdef_new("read_tcp", BLOCKTYPE_NORMAL, (BlockdefColor) { 0x77, 0x77, 0x77, 0xff }, block_read_tcp);
-    blockdef_add_text(sc_read_tcp, gettext("Read TCP, buf size: "));
-    blockdef_add_argument(sc_read_tcp, "1024", "buffer size", BLOCKCONSTR_UNLIMITED);
-    blockdef_add_text(sc_read_tcp, gettext("FD: "));
+    blockdef_add_text(sc_read_tcp, gettext("Read TCP, FD: "));
     blockdef_add_argument(sc_read_tcp, "", "FD?", BLOCKCONSTR_UNLIMITED);
+    blockdef_add_text(sc_read_tcp, gettext("buf size: "));
+    blockdef_add_argument(sc_read_tcp, "1024", "buffer size?", BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_read_tcp);
     block_category_add_blockdef(cat_misc, sc_read_tcp);
     

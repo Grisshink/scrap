@@ -683,7 +683,25 @@ static LLVMValueRef register_globals(Exec* exec) {
     add_function(exec, "gc_root_restore", LLVMVoidType(), gc_root_restore_func_params, ARRLEN(gc_root_restore_func_params), gc_root_restore, false, false);
 
     LLVMAddGlobal(exec->module, LLVMInt64Type(), "gc");
-
+    
+    LLVMTypeRef std_tcp_start_server_func_params[] = { LLVMInt32Type() };
+    add_function(exec, "std_tcp_start_server", LLVMInt32Type(), std_tcp_start_server_func_params, ARRLEN(std_tcp_start_server_func_params), std_tcp_start_server, false, false);
+    
+    LLVMTypeRef std_tcp_accept_func_params[] = { LLVMInt32Type() };
+    add_function(exec, "std_tcp_accept", LLVMInt32Type(), std_tcp_accept_func_params, ARRLEN(std_tcp_accept_func_params), std_tcp_accept, false, false);
+    
+    LLVMTypeRef std_tcp_read_func_params[] = { LLVMInt32Type(), LLVMInt32Type() };
+    add_function(exec, "std_tcp_read", LLVMPointerType(LLVMInt8Type(), 0), std_tcp_read_func_params, ARRLEN(std_tcp_read_func_params), std_tcp_read, false, false);
+    
+    LLVMTypeRef std_tcp_write_func_params[] = { LLVMInt32Type(), LLVMPointerType(LLVMInt8Type(), 0) };
+    add_function(exec, "std_tcp_write", LLVMInt32Type(), std_tcp_write_func_params, ARRLEN(std_tcp_write_func_params), std_tcp_write, false, false);
+    
+    LLVMTypeRef std_tcp_stop_func_params[] = { LLVMInt32Type() };
+    add_function(exec, "std_tcp_stop", LLVMInt32Type(), std_tcp_stop_func_params, ARRLEN(std_tcp_stop_func_params), std_tcp_stop, false, false);
+    
+    LLVMTypeRef std_tcp_connect_func_params[] = { LLVMInt32Type(), LLVMPointerType(LLVMInt8Type(), 0) };
+    add_function(exec, "std_tcp_connect", LLVMInt32Type(), std_tcp_connect_func_params, ARRLEN(std_tcp_connect_func_params), std_tcp_connect, false, false);
+    
     LLVMTypeRef main_func_type = LLVMFunctionType(LLVMVoidType(), NULL, 0, false);
     LLVMValueRef main_func = LLVMAddFunction(exec->module, MAIN_NAME, main_func_type);
 
