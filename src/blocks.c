@@ -90,13 +90,9 @@ bool block_accept_tcp(Exec* exec, Block* block, int argc, AnyValue* argv, AnyVal
 bool block_read_tcp(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
-    (void) exec;
     (void) argc;
-    (void) argv;
     
-    char* data = std_tcp_read(data_to_integer(argv[0]), data_to_integer(argv[1]));
-    
-    *return_val = DATA_STRING(std_string_from_literal(&exec->gc, data, data_to_integer(argv[1])));
+    *return_val = DATA_STRING(std_tcp_read(&exec->gc, data_to_integer(argv[0]), data_to_integer(argv[1])));
     return true;
 }
 
@@ -3091,15 +3087,9 @@ bool block_accept_tcp(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg
 
 bool block_read_tcp(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
     (void) control_state;
-    (void) block;
-    (void) exec;
     (void) argc;
-    (void) argv;
-    
-    LLVMValueRef data = build_call(exec, "std_tcp_read", arg_to_integer(exec, block, argv[0]), arg_to_integer(exec, block, argv[1]));
-    data = build_call(exec, "std_string_from_literal", CONST_GC, data, arg_to_integer(exec, block, argv[1]));
-    
-    *return_val = DATA_STRING(data);
+
+    *return_val = DATA_STRING(build_call(exec, "std_tcp_read", CONST_GC, arg_to_integer(exec, block, argv[0]), arg_to_integer(exec, block, argv[1])));
     return true;
 }
 

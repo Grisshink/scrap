@@ -130,7 +130,7 @@ void std_set_random_seed(int seed);
 // Network (TCP)
 int std_tcp_start_server(int port);
 int std_tcp_accept(int sockfd);
-char* std_tcp_read(int fd, int buff_capacity);
+StringHeader* std_tcp_read(Gc* gc, int fd, int buff_capacity);
 int std_tcp_write(int fd, char* buff);
 int std_tcp_stop(int fd);
 int std_tcp_connect(char* ip, int port);

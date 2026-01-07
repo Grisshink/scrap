@@ -690,8 +690,8 @@ static LLVMValueRef register_globals(Exec* exec) {
     LLVMTypeRef std_tcp_accept_func_params[] = { LLVMInt32Type() };
     add_function(exec, "std_tcp_accept", LLVMInt32Type(), std_tcp_accept_func_params, ARRLEN(std_tcp_accept_func_params), std_tcp_accept, false, false);
     
-    LLVMTypeRef std_tcp_read_func_params[] = { LLVMInt32Type(), LLVMInt32Type() };
-    add_function(exec, "std_tcp_read", LLVMPointerType(LLVMInt8Type(), 0), std_tcp_read_func_params, ARRLEN(std_tcp_read_func_params), std_tcp_read, false, false);
+    LLVMTypeRef std_tcp_read_func_params[] = { LLVMInt64Type(), LLVMInt32Type(), LLVMInt32Type() };
+    add_function(exec, "std_tcp_read", LLVMPointerType(LLVMInt8Type(), 0), std_tcp_read_func_params, ARRLEN(std_tcp_read_func_params), std_tcp_read, true, false);
     
     LLVMTypeRef std_tcp_write_func_params[] = { LLVMInt32Type(), LLVMPointerType(LLVMInt8Type(), 0) };
     add_function(exec, "std_tcp_write", LLVMInt32Type(), std_tcp_write_func_params, ARRLEN(std_tcp_write_func_params), std_tcp_write, false, false);

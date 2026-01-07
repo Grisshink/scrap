@@ -906,11 +906,12 @@ int std_tcp_accept(int sockfd) {
     return connfd;
 }
 
-char* std_tcp_read(int fd, int buff_capacity) {
-    char* buff = malloc(buff_capacity * sizeof(char));
-    read(fd, buff, sizeof(char) * buff_capacity);
-    
-    return buff;
+StringHeader* std_tcp_read(Gc* gc, int fd, int buff_capacity) {
+    char buf[buff_capacity + 1];
+    size_t buf_size = read(fd, buf, buff_capacity * sizeof(char));
+    buf[buf_size] = 0;
+
+    return std_string_from_literal(gc, buf, buf_size);
 }
 
 int std_tcp_write(int fd, char* buff) {
