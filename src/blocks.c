@@ -3141,10 +3141,12 @@ void register_blocks(Vm* vm) {
     BlockCategory* cat_logic = block_category_register(cat);
     cat = block_category_new(gettext("Strings"),  (Color) CATEGORY_STRING_COLOR);
     BlockCategory* cat_string = block_category_register(cat);
-    cat = block_category_new(gettext("Misc."),    (Color) CATEGORY_MISC_COLOR);
-    BlockCategory* cat_misc = block_category_register(cat);
+    cat = block_category_new(gettext("Network"),    (Color) CATEGORY_NETWORK_COLOR);
+    BlockCategory* cat_network = block_category_register(cat);
     cat = block_category_new(gettext("Data"),     (Color) CATEGORY_DATA_COLOR);
     BlockCategory* cat_data = block_category_register(cat);
+    cat = block_category_new(gettext("Misc."),    (Color) CATEGORY_MISC_COLOR);
+    BlockCategory* cat_misc = block_category_register(cat);
 
     BlockdefImage term_img = (BlockdefImage) {
         .image_ptr = &assets.textures.icon_term,
@@ -3588,48 +3590,6 @@ void register_blocks(Vm* vm) {
     blockdef_register(vm, sc_nothing);
     block_category_add_blockdef(cat_misc, sc_nothing);
     
-    Blockdef* sc_start_tcp = blockdef_new("start_tcp", BLOCKTYPE_NORMAL, (BlockdefColor) { 0x77, 0x77, 0x77, 0xff }, block_start_tcp);
-    blockdef_add_text(sc_start_tcp, gettext("Start TCP port: "));
-    blockdef_add_argument(sc_start_tcp, "25565", "PORT BLYAT", BLOCKCONSTR_UNLIMITED);
-    blockdef_register(vm, sc_start_tcp);
-    block_category_add_blockdef(cat_misc, sc_start_tcp);
-    
-    Blockdef* sc_accept_tcp = blockdef_new("accept_tcp", BLOCKTYPE_NORMAL, (BlockdefColor) { 0x77, 0x77, 0x77, 0xff }, block_accept_tcp);
-    blockdef_add_text(sc_accept_tcp, gettext("Accept TCP, FD: "));
-    blockdef_add_argument(sc_accept_tcp, "", "FD?", BLOCKCONSTR_UNLIMITED);
-    blockdef_register(vm, sc_accept_tcp);
-    block_category_add_blockdef(cat_misc, sc_accept_tcp);
-    
-    Blockdef* sc_read_tcp = blockdef_new("read_tcp", BLOCKTYPE_NORMAL, (BlockdefColor) { 0x77, 0x77, 0x77, 0xff }, block_read_tcp);
-    blockdef_add_text(sc_read_tcp, gettext("Read TCP, FD: "));
-    blockdef_add_argument(sc_read_tcp, "", "FD?", BLOCKCONSTR_UNLIMITED);
-    blockdef_add_text(sc_read_tcp, gettext("buf size: "));
-    blockdef_add_argument(sc_read_tcp, "1024", "buffer size?", BLOCKCONSTR_UNLIMITED);
-    blockdef_register(vm, sc_read_tcp);
-    block_category_add_blockdef(cat_misc, sc_read_tcp);
-    
-    Blockdef* sc_write_tcp = blockdef_new("write_tcp", BLOCKTYPE_NORMAL, (BlockdefColor) { 0x77, 0x77, 0x77, 0xff }, block_write_tcp);
-    blockdef_add_text(sc_write_tcp, gettext("Write TCP, FD: "));
-    blockdef_add_argument(sc_write_tcp, "", "FD?", BLOCKCONSTR_UNLIMITED);
-    blockdef_add_text(sc_write_tcp, gettext("Text:"));
-    blockdef_add_argument(sc_write_tcp, "", "Text?", BLOCKCONSTR_UNLIMITED);
-    blockdef_register(vm, sc_write_tcp);
-    block_category_add_blockdef(cat_misc, sc_write_tcp);
-    
-    Blockdef* sc_stop_tcp = blockdef_new("stop_tcp", BLOCKTYPE_NORMAL, (BlockdefColor) { 0x77, 0x77, 0x77, 0xff }, block_stop_tcp);
-    blockdef_add_text(sc_stop_tcp, gettext("Stop TCP, FD: "));
-    blockdef_add_argument(sc_stop_tcp, "", "FD?", BLOCKCONSTR_UNLIMITED);
-    blockdef_register(vm, sc_stop_tcp);
-    block_category_add_blockdef(cat_misc, sc_stop_tcp);
-    
-    Blockdef* sc_connect_tcp = blockdef_new("connect_tcp", BLOCKTYPE_NORMAL, (BlockdefColor) { 0x77, 0x77, 0x77, 0xff }, block_connect_tcp);
-    blockdef_add_text(sc_connect_tcp, gettext("Connect TCP, Address: "));
-    blockdef_add_argument(sc_connect_tcp, "", "IP?", BLOCKCONSTR_UNLIMITED);
-    blockdef_add_text(sc_connect_tcp, gettext(":"));
-    blockdef_add_argument(sc_connect_tcp, "", "Port?", BLOCKCONSTR_UNLIMITED);
-    blockdef_register(vm, sc_connect_tcp);
-    block_category_add_blockdef(cat_misc, sc_connect_tcp);
-    
     Blockdef* sc_do_nothing = blockdef_new("do_nothing", BLOCKTYPE_CONTROL, (BlockdefColor) { 0x77, 0x77, 0x77, 0xff }, block_do_nothing);
     blockdef_add_text(sc_do_nothing, gettext("Do nothing"));
     blockdef_register(vm, sc_do_nothing);
@@ -3640,6 +3600,50 @@ void register_blocks(Vm* vm) {
     blockdef_add_argument(sc_comment, "", gettext("any"), BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_comment);
     block_category_add_blockdef(cat_misc, sc_comment);
+    
+    block_category_add_label(cat_network, gettext("TCP"), (Color) CATEGORY_NETWORK_COLOR);
+    
+    Blockdef* sc_start_tcp = blockdef_new("start_tcp", BLOCKTYPE_NORMAL, (BlockdefColor) { 0x88, 0x00, 0xff, 0xff }, block_start_tcp);
+    blockdef_add_text(sc_start_tcp, gettext("(TCP) Start server at"));
+    blockdef_add_argument(sc_start_tcp, "25565", "port?", BLOCKCONSTR_UNLIMITED);
+    blockdef_register(vm, sc_start_tcp);
+    block_category_add_blockdef(cat_network, sc_start_tcp);
+    
+    Blockdef* sc_connect_tcp = blockdef_new("connect_tcp", BLOCKTYPE_NORMAL, (BlockdefColor) { 0x88, 0x00, 0xff, 0xff }, block_connect_tcp);
+    blockdef_add_text(sc_connect_tcp, gettext("(TCP) Connect to the server at"));
+    blockdef_add_argument(sc_connect_tcp, "127.0.0.1", "IP?", BLOCKCONSTR_UNLIMITED);
+    blockdef_add_text(sc_connect_tcp, gettext(":"));
+    blockdef_add_argument(sc_connect_tcp, "25565", "port?", BLOCKCONSTR_UNLIMITED);
+    blockdef_register(vm, sc_connect_tcp);
+    block_category_add_blockdef(cat_network, sc_connect_tcp);
+    
+    Blockdef* sc_accept_tcp = blockdef_new("accept_tcp", BLOCKTYPE_NORMAL, (BlockdefColor) { 0x88, 0x00, 0xff, 0xff }, block_accept_tcp);
+    blockdef_add_text(sc_accept_tcp, gettext("(TCP) Wait for the client's response"));
+    blockdef_add_argument(sc_accept_tcp, "", "FD?", BLOCKCONSTR_UNLIMITED);
+    blockdef_register(vm, sc_accept_tcp);
+    block_category_add_blockdef(cat_network, sc_accept_tcp);
+    
+    Blockdef* sc_read_tcp = blockdef_new("read_tcp", BLOCKTYPE_NORMAL, (BlockdefColor) { 0x88, 0x00, 0xff, 0xff }, block_read_tcp);
+    blockdef_add_text(sc_read_tcp, gettext("(TCP) Read the response"));
+    blockdef_add_argument(sc_read_tcp, "", "FD?", BLOCKCONSTR_UNLIMITED);
+    blockdef_add_text(sc_read_tcp, gettext(", "));
+    blockdef_add_argument(sc_read_tcp, "1024", "buffer size?", BLOCKCONSTR_UNLIMITED);
+    blockdef_register(vm, sc_read_tcp);
+    block_category_add_blockdef(cat_network, sc_read_tcp);
+    
+    Blockdef* sc_write_tcp = blockdef_new("write_tcp", BLOCKTYPE_NORMAL, (BlockdefColor) { 0x88, 0x00, 0xff, 0xff }, block_write_tcp);
+    blockdef_add_text(sc_write_tcp, gettext("(TCP) Write a response"));
+    blockdef_add_argument(sc_write_tcp, "", "FD?", BLOCKCONSTR_UNLIMITED);
+    blockdef_add_text(sc_write_tcp, gettext(", "));
+    blockdef_add_argument(sc_write_tcp, gettext("Hello, scrap!"), "text?", BLOCKCONSTR_UNLIMITED);
+    blockdef_register(vm, sc_write_tcp);
+    block_category_add_blockdef(cat_network, sc_write_tcp);
+    
+    Blockdef* sc_stop_tcp = blockdef_new("stop_tcp", BLOCKTYPE_NORMAL, (BlockdefColor) { 0x88, 0x00, 0xff, 0xff }, block_stop_tcp);
+    blockdef_add_text(sc_stop_tcp, gettext("(TCP) Stop the server or client"));
+    blockdef_add_argument(sc_stop_tcp, "", "FD?", BLOCKCONSTR_UNLIMITED);
+    blockdef_register(vm, sc_stop_tcp);
+    block_category_add_blockdef(cat_network, sc_stop_tcp);
 
 #ifdef DEBUG
     block_category_add_label(cat_misc, gettext("Debug blocks"), (Color) { 0xa0, 0x70, 0x00, 0xff });

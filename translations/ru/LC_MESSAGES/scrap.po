@@ -383,6 +383,34 @@ msgstr "Невозможно объявить переменную с типом
 msgid "at"
 msgstr "в"
 
+#: blocks.c
+msgid "(TCP) Start server at"
+msgstr "(TCP) Открыть сервер на"
+
+#: blocks.c
+msgid "(TCP) Connect to the server at"
+msgstr "(TCP) Подключится к серверу на"
+
+#: blocks.c
+msgid "(TCP) Wait for the client's response"
+msgstr "(TCP) Ждем ответ от клиента"
+
+#: blocks.c
+msgid "(TCP) Read the response"
+msgstr "(TCP) Прочитать ответ"
+
+#: blocks.c
+msgid "(TCP) Write a response"
+msgstr "(TCP) Отправить ответ"
+
+#: blocks.c
+msgid "(TCP) Stop the server or client"
+msgstr "(TCP) Остановить сервер или клиент"
+
+#: blocks.c
+msgid "Network"
+msgstr "Сеть"
+
 #: save.c
 msgid "System"
 msgstr "Система"
