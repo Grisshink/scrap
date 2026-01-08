@@ -272,10 +272,6 @@ typedef struct {
 } Assets;
 
 typedef struct {
-    int scroll_amount;
-} Dropdown;
-
-typedef struct {
     char* name;
     PanelTree* root_panel;
 } Tab;
@@ -330,8 +326,6 @@ typedef struct {
 
     RenderTexture2D render_surface;
     bool render_surface_needs_redraw;
-
-    Dropdown dropdown;
 
     int shader_time_loc;
     float shader_time;
