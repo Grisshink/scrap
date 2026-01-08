@@ -129,6 +129,59 @@ bool block_connect_tcp(Exec* exec, Block* block, int argc, AnyValue* argv, AnyVa
     return true;
 }
 
+bool block_start_udp(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
+    (void) control_state;
+    (void) block;
+    (void) exec;
+    (void) argc;
+    (void) argv;
+    
+    *return_val = DATA_INTEGER(std_udp_start_server(data_to_integer(argv[0])));
+    return true;
+}
+
+bool block_connect_udp(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
+    (void) control_state;
+    (void) block;
+    (void) exec;
+    (void) argc;
+    (void) argv;
+    
+    *return_val = DATA_INTEGER(std_udp_connect(data_to_any_string(exec, argv[0]), data_to_integer(argv[1])));
+    return true;
+}
+
+bool block_read_udp(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
+    (void) control_state;
+    (void) block;
+    (void) argc;
+    
+    *return_val = DATA_STRING(std_udp_read(&exec->gc, data_to_integer(argv[0]), data_to_integer(argv[1])));
+    return true;
+}
+
+bool block_write_udp(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
+    (void) control_state;
+    (void) block;
+    (void) exec;
+    (void) argc;
+    (void) argv;
+    
+    *return_val = DATA_INTEGER(std_udp_write(data_to_integer(argv[0]), data_to_any_string(exec, argv[1])));
+    return true;
+}
+
+bool block_stop_udp(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
+    (void) control_state;
+    (void) block;
+    (void) exec;
+    (void) argc;
+    (void) argv;
+    
+    *return_val = DATA_INTEGER(std_udp_stop(data_to_integer(argv[0])));
+    return true;
+}
+
 bool block_do_nothing(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
@@ -3644,6 +3697,44 @@ void register_blocks(Vm* vm) {
     blockdef_add_argument(sc_stop_tcp, "", "FD?", BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_stop_tcp);
     block_category_add_blockdef(cat_network, sc_stop_tcp);
+    
+    block_category_add_label(cat_network, gettext("UDP"), (Color) CATEGORY_NETWORK_COLOR);
+    
+    Blockdef* sc_start_udp = blockdef_new("start_udp", BLOCKTYPE_NORMAL, (BlockdefColor) { 0x88, 0x00, 0xff, 0xff }, block_start_udp);
+    blockdef_add_text(sc_start_udp, gettext("(UDP) Start server at"));
+    blockdef_add_argument(sc_start_udp, "25565", "port?", BLOCKCONSTR_UNLIMITED);
+    blockdef_register(vm, sc_start_udp);
+    block_category_add_blockdef(cat_network, sc_start_udp);
+    
+    Blockdef* sc_connect_udp = blockdef_new("connect_udp", BLOCKTYPE_NORMAL, (BlockdefColor) { 0x88, 0x00, 0xff, 0xff }, block_connect_udp);
+    blockdef_add_text(sc_connect_udp, gettext("(UDP) Connect to the server at"));
+    blockdef_add_argument(sc_connect_udp, "127.0.0.1", "IP?", BLOCKCONSTR_UNLIMITED);
+    blockdef_add_text(sc_connect_udp, gettext(":"));
+    blockdef_add_argument(sc_connect_udp, "25565", "port?", BLOCKCONSTR_UNLIMITED);
+    blockdef_register(vm, sc_connect_udp);
+    block_category_add_blockdef(cat_network, sc_connect_udp);
+    
+    Blockdef* sc_read_udp = blockdef_new("read_udp", BLOCKTYPE_NORMAL, (BlockdefColor) { 0x88, 0x00, 0xff, 0xff }, block_read_udp);
+    blockdef_add_text(sc_read_udp, gettext("(UDP) Read the response"));
+    blockdef_add_argument(sc_read_udp, "", "FD?", BLOCKCONSTR_UNLIMITED);
+    blockdef_add_text(sc_read_udp, gettext(", "));
+    blockdef_add_argument(sc_read_udp, "1024", "buffer size?", BLOCKCONSTR_UNLIMITED);
+    blockdef_register(vm, sc_read_udp);
+    block_category_add_blockdef(cat_network, sc_read_udp);
+    
+    Blockdef* sc_write_udp = blockdef_new("write_udp", BLOCKTYPE_NORMAL, (BlockdefColor) { 0x88, 0x00, 0xff, 0xff }, block_write_udp);
+    blockdef_add_text(sc_write_udp, gettext("(UDP) Write a response"));
+    blockdef_add_argument(sc_write_udp, "", "FD?", BLOCKCONSTR_UNLIMITED);
+    blockdef_add_text(sc_write_udp, gettext(", "));
+    blockdef_add_argument(sc_write_udp, gettext("Hello, scrap!"), "text?", BLOCKCONSTR_UNLIMITED);
+    blockdef_register(vm, sc_write_udp);
+    block_category_add_blockdef(cat_network, sc_write_udp);
+    
+    Blockdef* sc_stop_udp = blockdef_new("stop_tcp", BLOCKTYPE_NORMAL, (BlockdefColor) { 0x88, 0x00, 0xff, 0xff }, block_stop_udp);
+    blockdef_add_text(sc_stop_udp, gettext("(UDP) Stop the server or client"));
+    blockdef_add_argument(sc_stop_udp, "", "FD?", BLOCKCONSTR_UNLIMITED);
+    blockdef_register(vm, sc_stop_udp);
+    block_category_add_blockdef(cat_network, sc_stop_udp);
 
 #ifdef DEBUG
     block_category_add_label(cat_misc, gettext("Debug blocks"), (Color) { 0xa0, 0x70, 0x00, 0xff });
