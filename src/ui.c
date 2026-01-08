@@ -448,17 +448,18 @@ static void deselect_all(void) {
     ui.hover.dropdown.scroll_amount = 0;
 }
 
-void show_dropdown(DropdownLocations location, char** list, int list_len, ButtonClickHandler handler) {
-    ui.hover.dropdown.location = location;
+void show_dropdown(char** list, int list_len, void* ref_object, ButtonClickHandler handler) {
+    ui.hover.dropdown.ref_object = ref_object;
     ui.hover.dropdown.list = list;
     ui.hover.dropdown.list_len = list_len;
     ui.hover.dropdown.handler = handler;
     ui.hover.dropdown.select_ind = 0;
     ui.hover.dropdown.scroll_amount = 0;
+    ui.hover.dropdown.shown = true;
 }
 
 bool handle_dropdown_close(void) {
-    ui.hover.dropdown.location = LOCATION_NONE;
+    ui.hover.dropdown.ref_object = NULL;
     ui.hover.dropdown.list = NULL;
     ui.hover.dropdown.list_len = 0;
     ui.hover.dropdown.handler = NULL;
@@ -467,6 +468,7 @@ bool handle_dropdown_close(void) {
     ui.hover.editor.select_block = NULL;
     ui.hover.select_input = NULL;
     ui.hover.editor.select_argument = NULL;
+    ui.hover.dropdown.shown = false;
     return true;
 }
 
@@ -560,7 +562,7 @@ bool handle_block_dropdown_click(void) {
 
 bool handle_file_button_click(void) {
     if (thread_is_running(&vm.thread)) return true;
-    show_dropdown(LOCATION_FILE_MENU, file_menu_list, ARRLEN(file_menu_list), handle_file_menu_click);
+    show_dropdown(file_menu_list, ARRLEN(file_menu_list), NULL, handle_file_menu_click);
     return true;
 }
 
@@ -1063,20 +1065,30 @@ static bool handle_mouse_click(void) {
                 size_t list_len = 0;
                 char** list = block_input.data.drop.list(ui.hover.editor.block, &list_len);
 
-                show_dropdown(LOCATION_BLOCK_DROPDOWN, list, list_len, handle_block_dropdown_click);
+                show_dropdown(list, list_len, ui.hover.editor.argument, handle_block_dropdown_click);
             }
         }
+
         if (ui.hover.editor.blockchain != ui.hover.editor.select_blockchain) {
             ui.hover.editor.select_blockchain = ui.hover.editor.blockchain;
             if (ui.hover.editor.select_blockchain) editor.blockchain_select_counter = ui.hover.editor.select_blockchain - editor.code;
         }
-        if (ui.hover.editor.block != ui.hover.editor.select_block) ui.hover.editor.select_block = ui.hover.editor.block;
+
+        if (ui.hover.editor.block != ui.hover.editor.select_block) {
+            ui.hover.editor.select_block = ui.hover.editor.block;
+        }
+
         if (ui.hover.editor.argument != ui.hover.editor.select_argument) {
-            if (!ui.hover.editor.argument || ui.hover.input_info.input || ui.hover.dropdown.location != LOCATION_NONE) ui.hover.editor.select_argument = ui.hover.editor.argument;
+            if (!ui.hover.editor.argument || ui.hover.input_info.input || ui.hover.dropdown.shown) {
+                ui.hover.editor.select_argument = ui.hover.editor.argument;
+            }
             ui.hover.dropdown.scroll_amount = 0;
             return true;
         }
-        if (ui.hover.editor.select_argument) return true;
+
+        if (ui.hover.editor.select_argument) {
+            return true;
+        }
     }
 
     if (ui.hover.panels.panel->type == PANEL_CODE && handle_code_editor_click(mouse_empty)) return true;

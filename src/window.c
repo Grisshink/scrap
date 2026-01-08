@@ -73,13 +73,12 @@ static bool settings_on_right_slider_button_click(void) {
 
 static bool settings_on_dropdown_button_click(void) {
     settings_applied = false;
-    *ui.hover.select_settings_dropdown_value = ui.hover.dropdown.select_ind;
+    *(int*)ui.hover.dropdown.ref_object = ui.hover.dropdown.select_ind;
     return handle_dropdown_close();
 }
 
 static bool settings_on_dropdown_click(void) {
-    ui.hover.select_settings_dropdown_value = ui.hover.settings_dropdown_data.value;
-    show_dropdown(LOCATION_SETTINGS, ui.hover.settings_dropdown_data.list, ui.hover.settings_dropdown_data.list_len, settings_on_dropdown_button_click);
+    show_dropdown(ui.hover.settings_dropdown_data.list, ui.hover.settings_dropdown_data.list_len, ui.hover.settings_dropdown_data.value, settings_on_dropdown_button_click);
     return true;
 }
 
@@ -191,7 +190,7 @@ static void close_button_on_hover(GuiElement* el) {
 
 static void window_on_hover(GuiElement* el) {
     (void) el;
-    if (!ui.hover.dropdown.location) ui.hover.button.handler = NULL;
+    if (!ui.hover.dropdown.shown) ui.hover.button.handler = NULL;
 }
 
 static void begin_window(const char* title, int w, int h, float scaling) {
@@ -410,7 +409,7 @@ static void draw_dropdown_input(int* value, char** list, int list_len) {
         };
         gui_set_state(gui, &data, sizeof(data));
 
-        if (ui.hover.select_settings_dropdown_value == value && ui.hover.dropdown.location == LOCATION_SETTINGS) {
+        if ((int*)ui.hover.dropdown.ref_object == value) {
             ui.hover.dropdown.element = gui_get_element(gui);
             gui_set_rect(gui, (GuiColor) { 0x2b, 0x2b, 0x2b, 0xff });
         }

@@ -105,13 +105,6 @@ typedef enum {
     EDITOR_ADD_TEXT,
 } EditorHoverPart;
 
-typedef enum {
-    LOCATION_NONE = 0,
-    LOCATION_FILE_MENU,
-    LOCATION_BLOCK_DROPDOWN,
-    LOCATION_SETTINGS,
-} DropdownLocations;
-
 typedef struct {
     BlockChain* prev_blockchain;
     BlockChain* blockchain;
@@ -137,11 +130,14 @@ typedef struct {
 } EditorHoverInfo;
 
 typedef struct {
-    DropdownLocations location;
+    bool shown;
+    void* ref_object;
     GuiElement* element;
     ButtonClickHandler handler;
+
     char** list;
     int list_len;
+
     int select_ind;
     int scroll_amount;
 } DropdownHoverInfo;
@@ -391,7 +387,7 @@ void scrap_gui_process_ui(void);
 
 PanelTree* find_panel(PanelTree* root, PanelType panel);
 void update_search(void);
-void show_dropdown(DropdownLocations location, char** list, int list_len, ButtonClickHandler handler);
+void show_dropdown(char** list, int list_len, void* ref_object, ButtonClickHandler handler);
 
 GuiMeasurement scrap_gui_measure_image(void* image, unsigned short size);
 GuiMeasurement scrap_gui_measure_text(void* font, const char* text, unsigned int text_size, unsigned short font_size);

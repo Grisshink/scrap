@@ -535,7 +535,7 @@ static void draw_block(Block* block, bool highlight, bool can_hover, bool ghost,
             gui_element_begin(gui);
                 gui_set_rect(gui, CONVERT_COLOR(dropdown_color, GuiColor));
 
-                if (ui.hover.editor.select_argument == arg && ui.hover.dropdown.location == LOCATION_BLOCK_DROPDOWN) {
+                if (ui.hover.dropdown.ref_object == arg) {
                     ui.hover.dropdown.element = gui_get_element(gui);
                 }
 
@@ -552,6 +552,7 @@ static void draw_block(Block* block, bool highlight, bool can_hover, bool ghost,
 
                     gui_text(gui, &assets.fonts.font_cond_shadow, arg->data.text, BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
                     gui_image(gui, &assets.textures.dropdown, BLOCK_IMAGE_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+
                 gui_element_end(gui);
             gui_element_end(gui);
             arg_id++;
@@ -686,7 +687,7 @@ static void draw_top_bar(void) {
         gui_spacer(gui, 10, 0);
 
         GuiElement* el = draw_button(gettext("File"), top_bar_size, false, button_on_hover, handle_file_button_click);
-        if (ui.hover.dropdown.location == LOCATION_FILE_MENU) ui.hover.dropdown.element = el;
+        if (ui.hover.dropdown.handler == handle_file_menu_click) ui.hover.dropdown.element = el;
         draw_button(gettext("Settings"), top_bar_size, false, button_on_hover, handle_settings_button_click);
         draw_button(gettext("About"), top_bar_size, false, button_on_hover, handle_about_button_click);
     gui_element_end(gui);
@@ -1308,7 +1309,7 @@ static void dropdown_on_hover(GuiElement* el) {
 static void draw_dropdown(void) {
     const int max_list_size = 10;
 
-    if (!ui.hover.dropdown.location) return;
+    if (!ui.hover.dropdown.shown) return;
     ui.hover.button.handler = handle_dropdown_close;
     gui_element_begin(gui);
         gui_set_floating(gui);
@@ -1337,9 +1338,7 @@ static void draw_dropdown(void) {
                 gui_on_hover(gui, dropdown_on_hover);
                 gui_set_custom_data(gui, (void*)(size_t)i);
 
-                const char* list_value = ui.hover.dropdown.location != LOCATION_BLOCK_DROPDOWN ?
-                                         sgettext(ui.hover.dropdown.list[i]) :
-                                         ui.hover.dropdown.list[i];
+                const char* list_value = sgettext(ui.hover.dropdown.list[i]);
                 gui_text(gui, &assets.fonts.font_cond, list_value, BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
             gui_element_end(gui);
         }
