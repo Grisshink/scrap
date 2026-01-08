@@ -1296,21 +1296,21 @@ static void draw_code(void) {
     }
 }
 
-static void dropdown_on_hover(GuiElement* el) {
+static void list_dropdown_on_hover(GuiElement* el) {
+    assert(ui.hover.dropdown.type == DROPDOWN_LIST);
+
     el->draw_type = DRAWTYPE_RECT;
     el->data.rect_type = RECT_NORMAL;
     el->color = (GuiColor) { 0x40, 0x40, 0x40, 0xff };
     // Double cast to avoid warning. In our case this operation is safe because el->custom_data currently stores a value of type int
-    ui.hover.dropdown.select_ind = (int)(size_t)el->custom_data;
+    ui.hover.dropdown.as.list.select_ind = (int)(size_t)el->custom_data;
 
     ui.hover.button.handler = ui.hover.dropdown.handler;
 }
 
-static void draw_dropdown(void) {
+static void draw_list_dropdown(void) {
     const int max_list_size = 10;
 
-    if (!ui.hover.dropdown.shown) return;
-    ui.hover.button.handler = handle_dropdown_close;
     gui_element_begin(gui);
         gui_set_floating(gui);
         gui_set_rect(gui, (GuiColor) { 0x40, 0x40, 0x40, 0xff });
@@ -1318,16 +1318,16 @@ static void draw_dropdown(void) {
         gui_set_padding(gui, 2, 2);
         gui_set_parent_anchor(gui, ui.hover.dropdown.element);
         gui_set_position(gui, 0, ui.hover.dropdown.element->h);
-        if (ui.hover.dropdown.list_len > max_list_size) {
+        if (ui.hover.dropdown.as.list.len > max_list_size) {
             gui_set_scissor(gui);
             gui_set_fixed(gui, ui.hover.dropdown.element->w + 5, max_list_size * (config.ui_size + 2) + 4);
-            gui_set_scroll(gui, &ui.hover.dropdown.scroll_amount);
+            gui_set_scroll(gui, &ui.hover.dropdown.as.list.scroll);
             gui_set_scroll_scaling(gui, (config.ui_size + 2) * 2);
         } else {
             gui_set_min_size(gui, ui.hover.dropdown.element->w, 0);
         }
 
-        for (int i = 0; i < ui.hover.dropdown.list_len; i++) {
+        for (int i = 0; i < ui.hover.dropdown.as.list.len; i++) {
             gui_element_begin(gui);
                 gui_set_grow(gui, DIRECTION_HORIZONTAL);
                 gui_set_direction(gui, DIRECTION_HORIZONTAL);
@@ -1335,14 +1335,26 @@ static void draw_dropdown(void) {
                 gui_set_min_size(gui, 0, config.ui_size);
                 gui_set_padding(gui, config.ui_size * 0.3, 0);
                 gui_set_rect(gui, (GuiColor) { 0x2b, 0x2b, 0x2b, 0xff });
-                gui_on_hover(gui, dropdown_on_hover);
+                gui_on_hover(gui, list_dropdown_on_hover);
                 gui_set_custom_data(gui, (void*)(size_t)i);
 
-                const char* list_value = sgettext(ui.hover.dropdown.list[i]);
+                const char* list_value = sgettext(ui.hover.dropdown.as.list.data[i]);
                 gui_text(gui, &assets.fonts.font_cond, list_value, BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
             gui_element_end(gui);
         }
     gui_element_end(gui);
+}
+
+static void draw_dropdown(void) {
+    if (!ui.hover.dropdown.shown) return;
+    ui.hover.button.handler = handle_dropdown_close;
+
+    switch (ui.hover.dropdown.type) {
+    case DROPDOWN_LIST:
+        draw_list_dropdown();
+        return;
+    }
+    assert(false && "Unhandled dropdown type");
 }
 
 static void search_on_hover(GuiElement* el) {
@@ -1783,7 +1795,6 @@ static void write_debug_buffer(void) {
     print_debug(&i, "Category: %p", ui.hover.category);
     print_debug(&i, "Mouse: %p, Time: %.3f, Pos: (%d, %d), Click: (%d, %d)", editor.mouse_blockchain.blocks, ui.hover.time_at_last_pos, GetMouseX(), GetMouseY(), (int)ui.hover.mouse_click_pos.x, (int)ui.hover.mouse_click_pos.y);
     print_debug(&i, "Camera: (%.3f, %.3f), Click: (%.3f, %.3f)", editor.camera_pos.x, editor.camera_pos.y, editor.camera_click_pos.x, editor.camera_click_pos.y);
-    print_debug(&i, "Dropdown scroll: %d", ui.hover.dropdown.scroll_amount);
     print_debug(&i, "Drag cancelled: %d", ui.hover.drag_cancelled);
     print_debug(&i, "Palette scroll: %d", editor.palette.scroll_amount);
     print_debug(&i, "Editor: %d, Editing: %p, Blockdef: %p, input: %zu", ui.hover.editor.part, ui.hover.editor.edit_blockdef, ui.hover.editor.blockdef, ui.hover.editor.blockdef_input);

@@ -129,17 +129,28 @@ typedef struct {
     size_t blockdef_input;
 } EditorHoverInfo;
 
+typedef enum {
+    DROPDOWN_LIST,
+} DropdownType;
+
+typedef struct {
+    char** data;
+    int len;
+
+    int select_ind;
+    int scroll;
+} ListDropdownHoverInfo;
+
 typedef struct {
     bool shown;
     void* ref_object;
     GuiElement* element;
     ButtonClickHandler handler;
 
-    char** list;
-    int list_len;
-
-    int select_ind;
-    int scroll_amount;
+    DropdownType type;
+    union {
+        ListDropdownHoverInfo list;
+    } as;
 } DropdownHoverInfo;
 
 typedef struct {
@@ -387,7 +398,7 @@ void scrap_gui_process_ui(void);
 
 PanelTree* find_panel(PanelTree* root, PanelType panel);
 void update_search(void);
-void show_dropdown(char** list, int list_len, void* ref_object, ButtonClickHandler handler);
+void show_list_dropdown(char** list, int list_len, void* ref_object, ButtonClickHandler handler);
 
 GuiMeasurement scrap_gui_measure_image(void* image, unsigned short size);
 GuiMeasurement scrap_gui_measure_text(void* font, const char* text, unsigned int text_size, unsigned short font_size);

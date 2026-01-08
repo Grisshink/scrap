@@ -73,12 +73,12 @@ static bool settings_on_right_slider_button_click(void) {
 
 static bool settings_on_dropdown_button_click(void) {
     settings_applied = false;
-    *(int*)ui.hover.dropdown.ref_object = ui.hover.dropdown.select_ind;
+    *(int*)ui.hover.dropdown.ref_object = ui.hover.dropdown.as.list.select_ind;
     return handle_dropdown_close();
 }
 
 static bool settings_on_dropdown_click(void) {
-    show_dropdown(ui.hover.settings_dropdown_data.list, ui.hover.settings_dropdown_data.list_len, ui.hover.settings_dropdown_data.value, settings_on_dropdown_button_click);
+    show_list_dropdown(ui.hover.settings_dropdown_data.list, ui.hover.settings_dropdown_data.list_len, ui.hover.settings_dropdown_data.value, settings_on_dropdown_button_click);
     return true;
 }
 
