@@ -37,7 +37,8 @@
 #include <stdio.h>
 
 typedef enum {
-    BORDER_CONTROL = 1,
+    BORDER_NORMAL = 0,
+    BORDER_CONTROL,
     BORDER_CONTROL_BODY,
     BORDER_END,
     BORDER_CONTROL_END,
@@ -45,7 +46,8 @@ typedef enum {
 } BorderType;
 
 typedef enum {
-    RECT_NOTCHED = 1,
+    RECT_NORMAL = 0,
+    RECT_NOTCHED,
     RECT_TERMINAL, // Terminal rendering is handled specially as it needs to synchronize with its buffer
 } RectType;
 
