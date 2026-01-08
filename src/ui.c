@@ -445,25 +445,27 @@ PanelTree* find_panel(PanelTree* root, PanelType panel) {
 static void deselect_all(void) {
     ui.hover.editor.select_argument = NULL;
     ui.hover.select_input = NULL;
-    ui.hover.dropdown.scroll_amount = 0;
+    if (ui.hover.dropdown.type == DROPDOWN_LIST) ui.hover.dropdown.as.list.scroll = 0;
 }
 
-void show_dropdown(DropdownLocations location, char** list, int list_len, ButtonClickHandler handler) {
-    ui.hover.dropdown.location = location;
-    ui.hover.dropdown.list = list;
-    ui.hover.dropdown.list_len = list_len;
+void show_list_dropdown(char** list, int list_len, void* ref_object, ButtonClickHandler handler) {
+    ui.hover.dropdown.ref_object = ref_object;
     ui.hover.dropdown.handler = handler;
-    ui.hover.dropdown.select_ind = 0;
-    ui.hover.dropdown.scroll_amount = 0;
+    ui.hover.dropdown.shown = true;
+    ui.hover.dropdown.type = DROPDOWN_LIST;
+
+    ui.hover.dropdown.as.list.data = list;
+    ui.hover.dropdown.as.list.len = list_len;
+    ui.hover.dropdown.as.list.select_ind = 0;
+    ui.hover.dropdown.as.list.scroll = 0;
 }
 
 bool handle_dropdown_close(void) {
-    ui.hover.dropdown.location = LOCATION_NONE;
-    ui.hover.dropdown.list = NULL;
-    ui.hover.dropdown.list_len = 0;
+    memset(&ui.hover.dropdown.as, 0, sizeof(ui.hover.dropdown.as));
+    ui.hover.dropdown.ref_object = NULL;
     ui.hover.dropdown.handler = NULL;
-    ui.hover.dropdown.select_ind = 0;
-    ui.hover.dropdown.scroll_amount = 0;
+    ui.hover.dropdown.shown = false;
+
     ui.hover.editor.select_block = NULL;
     ui.hover.select_input = NULL;
     ui.hover.editor.select_argument = NULL;
@@ -533,7 +535,9 @@ void load_project(void) {
 }
 
 bool handle_file_menu_click(void) {
-    switch (ui.hover.dropdown.select_ind) {
+    assert(ui.hover.dropdown.type == DROPDOWN_LIST);
+
+    switch (ui.hover.dropdown.as.list.select_ind) {
     case FILE_MENU_NEW_PROJECT:
         for (size_t i = 0; i < vector_size(editor.code); i++) blockchain_free(&editor.code[i]);
         vector_clear(editor.code);
@@ -554,13 +558,14 @@ bool handle_file_menu_click(void) {
 }
 
 bool handle_block_dropdown_click(void) {
-    argument_set_const_string(ui.hover.editor.select_argument, ui.hover.dropdown.list[ui.hover.dropdown.select_ind]);
+    assert(ui.hover.dropdown.type == DROPDOWN_LIST);
+    argument_set_const_string(ui.hover.editor.select_argument, ui.hover.dropdown.as.list.data[ui.hover.dropdown.as.list.select_ind]);
     return handle_dropdown_close();
 }
 
 bool handle_file_button_click(void) {
     if (thread_is_running(&vm.thread)) return true;
-    show_dropdown(LOCATION_FILE_MENU, file_menu_list, ARRLEN(file_menu_list), handle_file_menu_click);
+    show_list_dropdown(file_menu_list, ARRLEN(file_menu_list), NULL, handle_file_menu_click);
     return true;
 }
 
@@ -1063,20 +1068,30 @@ static bool handle_mouse_click(void) {
                 size_t list_len = 0;
                 char** list = block_input.data.drop.list(ui.hover.editor.block, &list_len);
 
-                show_dropdown(LOCATION_BLOCK_DROPDOWN, list, list_len, handle_block_dropdown_click);
+                show_list_dropdown(list, list_len, ui.hover.editor.argument, handle_block_dropdown_click);
             }
         }
+
         if (ui.hover.editor.blockchain != ui.hover.editor.select_blockchain) {
             ui.hover.editor.select_blockchain = ui.hover.editor.blockchain;
             if (ui.hover.editor.select_blockchain) editor.blockchain_select_counter = ui.hover.editor.select_blockchain - editor.code;
         }
-        if (ui.hover.editor.block != ui.hover.editor.select_block) ui.hover.editor.select_block = ui.hover.editor.block;
+
+        if (ui.hover.editor.block != ui.hover.editor.select_block) {
+            ui.hover.editor.select_block = ui.hover.editor.block;
+        }
+
         if (ui.hover.editor.argument != ui.hover.editor.select_argument) {
-            if (!ui.hover.editor.argument || ui.hover.input_info.input || ui.hover.dropdown.location != LOCATION_NONE) ui.hover.editor.select_argument = ui.hover.editor.argument;
-            ui.hover.dropdown.scroll_amount = 0;
+            if (!ui.hover.editor.argument || ui.hover.input_info.input || ui.hover.dropdown.shown) {
+                ui.hover.editor.select_argument = ui.hover.editor.argument;
+            }
+            if (ui.hover.dropdown.type == DROPDOWN_LIST) ui.hover.dropdown.as.list.scroll = 0;
             return true;
         }
-        if (ui.hover.editor.select_argument) return true;
+
+        if (ui.hover.editor.select_argument) {
+            return true;
+        }
     }
 
     if (ui.hover.panels.panel->type == PANEL_CODE && handle_code_editor_click(mouse_empty)) return true;
