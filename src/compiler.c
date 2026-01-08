@@ -687,6 +687,9 @@ static LLVMValueRef register_globals(Exec* exec) {
     LLVMTypeRef std_tcp_start_server_func_params[] = { LLVMInt32Type() };
     add_function(exec, "std_tcp_start_server", LLVMInt32Type(), std_tcp_start_server_func_params, ARRLEN(std_tcp_start_server_func_params), std_tcp_start_server, false, false);
     
+    LLVMTypeRef std_tcp_connect_func_params[] = { LLVMInt32Type(), LLVMPointerType(LLVMInt8Type(), 0) };
+    add_function(exec, "std_tcp_connect", LLVMInt32Type(), std_tcp_connect_func_params, ARRLEN(std_tcp_connect_func_params), std_tcp_connect, false, false);
+    
     LLVMTypeRef std_tcp_accept_func_params[] = { LLVMInt32Type() };
     add_function(exec, "std_tcp_accept", LLVMInt32Type(), std_tcp_accept_func_params, ARRLEN(std_tcp_accept_func_params), std_tcp_accept, false, false);
     
@@ -699,8 +702,20 @@ static LLVMValueRef register_globals(Exec* exec) {
     LLVMTypeRef std_tcp_stop_func_params[] = { LLVMInt32Type() };
     add_function(exec, "std_tcp_stop", LLVMInt32Type(), std_tcp_stop_func_params, ARRLEN(std_tcp_stop_func_params), std_tcp_stop, false, false);
     
-    LLVMTypeRef std_tcp_connect_func_params[] = { LLVMInt32Type(), LLVMPointerType(LLVMInt8Type(), 0) };
-    add_function(exec, "std_tcp_connect", LLVMInt32Type(), std_tcp_connect_func_params, ARRLEN(std_tcp_connect_func_params), std_tcp_connect, false, false);
+    LLVMTypeRef std_udp_start_server_func_params[] = { LLVMInt32Type() };
+    add_function(exec, "std_udp_start_server", LLVMInt32Type(), std_udp_start_server_func_params, ARRLEN(std_udp_start_server_func_params), std_udp_start_server, false, false);
+    
+    LLVMTypeRef std_udp_connect_func_params[] = { LLVMInt32Type(), LLVMPointerType(LLVMInt8Type(), 0) };
+    add_function(exec, "std_udp_connect", LLVMInt32Type(), std_udp_connect_func_params, ARRLEN(std_udp_connect_func_params), std_udp_connect, false, false);
+    
+    LLVMTypeRef std_udp_read_func_params[] = { LLVMInt64Type(), LLVMInt32Type(), LLVMInt32Type() };
+    add_function(exec, "std_udp_read", LLVMPointerType(LLVMInt8Type(), 0), std_udp_read_func_params, ARRLEN(std_udp_read_func_params), std_udp_read, true, false);
+    
+    LLVMTypeRef std_udp_write_func_params[] = { LLVMInt32Type(), LLVMPointerType(LLVMInt8Type(), 0) };
+    add_function(exec, "std_udp_write", LLVMInt32Type(), std_udp_write_func_params, ARRLEN(std_udp_write_func_params), std_udp_write, false, false);
+    
+    LLVMTypeRef std_udp_stop_func_params[] = { LLVMInt32Type() };
+    add_function(exec, "std_udp_stop", LLVMInt32Type(), std_udp_stop_func_params, ARRLEN(std_udp_stop_func_params), std_udp_stop, false, false);
     
     LLVMTypeRef main_func_type = LLVMFunctionType(LLVMVoidType(), NULL, 0, false);
     LLVMValueRef main_func = LLVMAddFunction(exec->module, MAIN_NAME, main_func_type);

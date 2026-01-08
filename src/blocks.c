@@ -3127,6 +3127,17 @@ bool block_start_tcp(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg*
     return true;
 }
 
+bool block_connect_tcp(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
+    (void) control_state;
+    (void) block;
+    (void) exec;
+    (void) argc;
+    (void) argv;
+    
+    *return_val = DATA_INTEGER(build_call(exec, "std_tcp_connect", arg_to_any_string(exec, block, argv[0]), arg_to_integer(exec, block, argv[1])));
+    return true;
+}
+
 bool block_accept_tcp(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
@@ -3168,14 +3179,55 @@ bool block_stop_tcp(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* 
     return true;
 }
 
-bool block_connect_tcp(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
+bool block_start_udp(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     (void) exec;
     (void) argc;
     (void) argv;
     
-    *return_val = DATA_INTEGER(build_call(exec, "std_tcp_connect", arg_to_any_string(exec, block, argv[0]), arg_to_integer(exec, block, argv[1])));
+    *return_val = DATA_INTEGER(build_call(exec, "std_udp_start_server", arg_to_integer(exec, block, argv[0])));
+    return true;
+}
+
+bool block_connect_udp(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
+    (void) control_state;
+    (void) block;
+    (void) exec;
+    (void) argc;
+    (void) argv;
+    
+    *return_val = DATA_INTEGER(build_call(exec, "std_udp_connect", arg_to_any_string(exec, block, argv[0]), arg_to_integer(exec, block, argv[1])));
+    return true;
+}
+
+bool block_read_udp(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
+    (void) control_state;
+    (void) argc;
+
+    *return_val = DATA_STRING(build_call(exec, "std_udp_read", CONST_GC, arg_to_integer(exec, block, argv[0]), arg_to_integer(exec, block, argv[1])));
+    return true;
+}
+
+bool block_write_udp(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
+    (void) control_state;
+    (void) block;
+    (void) exec;
+    (void) argc;
+    (void) argv;
+    
+    *return_val = DATA_INTEGER(build_call(exec, "std_udp_write", arg_to_integer(exec, block, argv[0]), arg_to_any_string(exec, block, argv[1])));
+    return true;
+}
+
+bool block_stop_udp(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
+    (void) control_state;
+    (void) block;
+    (void) exec;
+    (void) argc;
+    (void) argv;
+    
+    *return_val = DATA_INTEGER(build_call(exec, "std_udp_stop", arg_to_integer(exec, block, argv[0])));
     return true;
 }
 
