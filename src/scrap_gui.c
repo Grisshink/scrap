@@ -168,7 +168,7 @@ static void flush_aux_buffers(Gui* gui) {
     gui->text_stack_len = 0;
 }
 
-static GuiDrawCommand* new_draw_command(Gui* gui, GuiDrawBounds bounds, GuiDrawType draw_type, GuiDrawData data, GuiColor color) {
+static GuiDrawCommand* new_draw_command(Gui* gui, GuiDrawBounds bounds, GuiDrawType draw_type, unsigned char draw_subtype, GuiDrawData data, GuiColor color) {
     GuiDrawCommand* command = &gui->command_stack[gui->command_stack_len++];
     command->pos_x = bounds.x;
     command->pos_y = bounds.y;
@@ -177,6 +177,7 @@ static GuiDrawCommand* new_draw_command(Gui* gui, GuiDrawBounds bounds, GuiDrawT
     command->type = draw_type;
     command->data = data;
     command->color = color;
+    command->subtype = draw_subtype;
     return command;
 }
 
@@ -246,10 +247,10 @@ static void gui_render(Gui* gui, GuiElement* el, float pos_x, float pos_y, float
     if (SCISSOR(el) || FLOATING(el) || el->shader) flush_aux_buffers(gui);
 
     if (SCISSOR(el)) {
-        new_draw_command(gui, el_bounds, DRAWTYPE_SCISSOR_BEGIN, (GuiDrawData) {0}, (GuiColor) {0});
+        new_draw_command(gui, el_bounds, DRAWTYPE_SCISSOR_BEGIN, SUBTYPE_DEFAULT, (GuiDrawData) {0}, (GuiColor) {0});
         gui->scissor_stack[gui->scissor_stack_len++] = (GuiBounds) { el_bounds.x, el_bounds.y, el_bounds.w, el_bounds.h };
     }
-    if (el->shader) new_draw_command(gui, el_bounds, DRAWTYPE_SHADER_BEGIN, (GuiDrawData) { .shader = el->shader }, (GuiColor) {0});
+    if (el->shader) new_draw_command(gui, el_bounds, DRAWTYPE_SHADER_BEGIN, SUBTYPE_DEFAULT, (GuiDrawData) { .shader = el->shader }, (GuiColor) {0});
 
     if (el->draw_type != DRAWTYPE_UNKNOWN) {
         GuiDrawCommand command;
@@ -260,6 +261,7 @@ static void gui_render(Gui* gui, GuiElement* el, float pos_x, float pos_y, float
         command.type = el->draw_type;
         command.color = el->color;
         command.data = el->data;
+        command.subtype = el->draw_subtype;
 
         if (inside_window(gui, &command)) {
             switch (el->draw_type) {
@@ -284,7 +286,7 @@ static void gui_render(Gui* gui, GuiElement* el, float pos_x, float pos_y, float
 
     if (el->shader) {
         flush_aux_buffers(gui);
-        new_draw_command(gui, el_bounds, DRAWTYPE_SHADER_END, (GuiDrawData) { .shader = el->shader }, (GuiColor) {0});
+        new_draw_command(gui, el_bounds, DRAWTYPE_SHADER_END, SUBTYPE_DEFAULT, (GuiDrawData) { .shader = el->shader }, (GuiColor) {0});
     }
 
     GuiElement* iter = el + 1;
@@ -302,7 +304,7 @@ static void gui_render(Gui* gui, GuiElement* el, float pos_x, float pos_y, float
             flush_aux_buffers(gui);
             GuiDrawCommand* command = &gui->command_stack[gui->command_stack_len++];
             command->type = DRAWTYPE_RECT;
-            command->data.rect_type = RECT_NORMAL;
+            command->subtype = SUBTYPE_DEFAULT;
             command->color = (GuiColor) { 0xff, 0xff, 0xff, 0x80 };
 
             float scroll_size = (float)el_size / ((float)content_size / (float)el_size);
@@ -328,7 +330,7 @@ static void gui_render(Gui* gui, GuiElement* el, float pos_x, float pos_y, float
     if (FLOATING(el) || SCISSOR(el)) flush_aux_buffers(gui);
 
     if (SCISSOR(el)) {
-        new_draw_command(gui, el_bounds, DRAWTYPE_SCISSOR_END, (GuiDrawData) {0}, (GuiColor) {0});
+        new_draw_command(gui, el_bounds, DRAWTYPE_SCISSOR_END, SUBTYPE_DEFAULT, (GuiDrawData) {0}, (GuiColor) {0});
         gui->scissor_stack_len--;
     }
 }
@@ -369,6 +371,7 @@ GuiElement* gui_element_begin(Gui* gui) {
     el->shader = NULL;
     el->scroll_scaling = 64;
     el->state_len = 0;
+    el->draw_subtype = 0;
     return el;
 }
 
@@ -666,6 +669,11 @@ void gui_set_percent_size(Gui* gui, float percentage, GuiElementDirection direct
     }
 }
 
+void gui_set_draw_subtype(Gui* gui, unsigned char subtype) {
+    GuiElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
+    el->draw_subtype = subtype;
+}
+
 void gui_set_direction(Gui* gui, GuiElementDirection direction) {
     GuiElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
     SET_DIRECTION(el, direction);
@@ -675,27 +683,13 @@ void gui_set_rect(Gui* gui, GuiColor color) {
     GuiElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
     el->draw_type = DRAWTYPE_RECT;
     el->color = color;
-    el->data.rect_type = RECT_NORMAL;
-}
-
-void gui_set_rect_type(Gui* gui, GuiRectType type) {
-    GuiElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
-    if (el->draw_type != DRAWTYPE_RECT) return;
-    el->data.rect_type = type;
 }
 
 void gui_set_border(Gui* gui, GuiColor color, unsigned int border_width) {
     GuiElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
     el->draw_type = DRAWTYPE_BORDER;
     el->color = color;
-    el->data.border.width = border_width;
-    el->data.border.type = BORDER_NORMAL;
-}
-
-void gui_set_border_type(Gui* gui, GuiBorderType type) {
-    GuiElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
-    if (el->draw_type != DRAWTYPE_BORDER) return;
-    el->data.border.type = type;
+    el->data.border_width = border_width;
 }
 
 void gui_set_text_slice(Gui* gui, void* font, const char* text, unsigned int text_size, unsigned short font_size, GuiColor color) {

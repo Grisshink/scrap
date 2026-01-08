@@ -36,6 +36,21 @@
 #include <libintl.h>
 #include <stdio.h>
 
+typedef enum {
+    BORDER_NORMAL = 0,
+    BORDER_CONTROL,
+    BORDER_CONTROL_BODY,
+    BORDER_END,
+    BORDER_CONTROL_END,
+    BORDER_NOTCHED,
+} BorderType;
+
+typedef enum {
+    RECT_NORMAL = 0,
+    RECT_NOTCHED,
+    RECT_TERMINAL, // Terminal rendering is handled specially as it needs to synchronize with its buffer
+} RectType;
+
 static void draw_code(void);
 static void draw_blockchain(BlockChain* chain, bool ghost, bool show_previews, bool editable_arguments);
 
@@ -172,8 +187,8 @@ static void blockdef_input_on_hover(GuiElement* el) {
     if (el->draw_type != DRAWTYPE_UNKNOWN) return;
     el->draw_type = DRAWTYPE_BORDER;
     el->color = (GuiColor) { 0xa0, 0xa0, 0xa0, 0xff };
-    el->data.border.width = BLOCK_OUTLINE_SIZE;
-    el->data.border.type = BORDER_NORMAL;
+    el->data.border_width = BLOCK_OUTLINE_SIZE;
+    el->draw_subtype = SUBTYPE_DEFAULT;
 }
 
 static void editor_del_button_on_hover(GuiElement* el) {
@@ -181,7 +196,7 @@ static void editor_del_button_on_hover(GuiElement* el) {
     if (gui_window_is_shown()) return;
     if (ui.hover.button.handler) return;
     el->draw_type = DRAWTYPE_RECT;
-    el->data.rect_type = RECT_NORMAL;
+    el->draw_subtype = SUBTYPE_DEFAULT;
     el->color = (GuiColor) { 0xff, 0xff, 0xff, 0x80 };
     ui.hover.editor.blockdef_input = (size_t)el->custom_data;
     ui.hover.button.handler = handle_editor_del_arg_button;
@@ -192,7 +207,7 @@ static void editor_button_on_hover(GuiElement* el) {
     if (gui_window_is_shown()) return;
     if (ui.hover.button.handler) return;
     el->draw_type = DRAWTYPE_RECT;
-    el->data.rect_type = RECT_NORMAL;
+    el->draw_subtype = SUBTYPE_DEFAULT;
     el->color = (GuiColor) { 0xff, 0xff, 0xff, 0x80 };
     ui.hover.button.handler = el->custom_data;
 }
@@ -385,9 +400,9 @@ static void argument_on_hover(GuiElement* el) {
     ui.hover.editor.blockchain = ui.hover.editor.prev_blockchain;
     if (el->draw_type != DRAWTYPE_UNKNOWN) return;
     el->draw_type = DRAWTYPE_BORDER;
+    el->draw_subtype = SUBTYPE_DEFAULT;
     el->color = (GuiColor) { 0xa0, 0xa0, 0xa0, 0xff };
-    el->data.border.width = BLOCK_OUTLINE_SIZE;
-    el->data.border.type = BORDER_NORMAL;
+    el->data.border_width = BLOCK_OUTLINE_SIZE;
 }
 
 static void draw_block(Block* block, bool highlight, bool can_hover, bool ghost, bool editable) {
@@ -413,7 +428,7 @@ static void draw_block(Block* block, bool highlight, bool can_hover, bool ghost,
         gui_set_direction(gui, DIRECTION_HORIZONTAL);
         gui_set_rect(gui, CONVERT_COLOR(block_color, GuiColor));
         gui_set_custom_data(gui, block);
-        if (block->blockdef->type == BLOCKTYPE_HAT) gui_set_rect_type(gui, RECT_NOTCHED);
+        if (block->blockdef->type == BLOCKTYPE_HAT) gui_set_draw_subtype(gui, RECT_NOTCHED);
         if (can_hover) gui_on_hover(gui, block_on_hover);
         if (ui.hover.editor.select_block == block) gui_on_render(gui, block_on_render);
 
@@ -425,11 +440,11 @@ static void draw_block(Block* block, bool highlight, bool can_hover, bool ghost,
         gui_set_padding(gui, BLOCK_OUTLINE_SIZE * 2, BLOCK_OUTLINE_SIZE * 2);
         gui_set_gap(gui, BLOCK_PADDING);
         if (block->blockdef->type == BLOCKTYPE_CONTROL) {
-            gui_set_border_type(gui, BORDER_CONTROL);
+            gui_set_draw_subtype(gui, BORDER_CONTROL);
         } else if (block->blockdef->type == BLOCKTYPE_CONTROLEND) {
-            gui_set_border_type(gui, BORDER_CONTROL_END);
+            gui_set_draw_subtype(gui, BORDER_CONTROL_END);
         } else if (block->blockdef->type == BLOCKTYPE_HAT) {
-            gui_set_border_type(gui, BORDER_NOTCHED);
+            gui_set_draw_subtype(gui, BORDER_NOTCHED);
         }
 
     size_t arg_id = 0;
@@ -603,7 +618,7 @@ static void tab_button_add_on_hover(GuiElement* el) {
     if (ui.hover.button.handler) return;
     if (el->draw_type == DRAWTYPE_RECT) return;
     el->draw_type = DRAWTYPE_RECT;
-    el->data.rect_type = RECT_NORMAL;
+    el->draw_subtype = SUBTYPE_DEFAULT;
     el->color = (GuiColor) { 0x40, 0x40, 0x40, 0xff };
     ui.hover.button.handler = handle_add_tab_button;
     ui.hover.button.data = el->custom_data;
@@ -614,7 +629,7 @@ static void tab_button_on_hover(GuiElement* el) {
     if (ui.hover.button.handler) return;
     if (el->draw_type == DRAWTYPE_RECT) return;
     el->draw_type = DRAWTYPE_RECT;
-    el->data.rect_type = RECT_NORMAL;
+    el->draw_subtype = SUBTYPE_DEFAULT;
     el->color = (GuiColor) { 0x40, 0x40, 0x40, 0xff };
     ui.hover.button.handler = handle_tab_button;
     ui.hover.button.data = el->custom_data;
@@ -626,7 +641,7 @@ static void button_on_hover(GuiElement* el) {
     if (ui.hover.button.handler) return;
     if (el->draw_type == DRAWTYPE_RECT) return;
     el->draw_type = DRAWTYPE_RECT;
-    el->data.rect_type = RECT_NORMAL;
+    el->draw_subtype = SUBTYPE_DEFAULT;
     el->color = (GuiColor) { 0x40, 0x40, 0x40, 0xff };
     ui.hover.button.handler = el->custom_data;
 }
@@ -810,7 +825,7 @@ static void draw_blockchain(BlockChain* chain, bool ghost, bool show_previews, b
                     gui_set_grow(gui, DIRECTION_VERTICAL);
                     gui_set_grow(gui, DIRECTION_HORIZONTAL);
                     gui_set_border(gui, CONVERT_COLOR(outline_color, GuiColor), BLOCK_OUTLINE_SIZE);
-                    gui_set_border_type(gui, BORDER_END);
+                    gui_set_draw_subtype(gui, BORDER_END);
                 gui_element_end(gui);
             gui_element_end(gui);
 
@@ -869,7 +884,7 @@ static void draw_blockchain(BlockChain* chain, bool ghost, bool show_previews, b
                         gui_set_grow(gui, DIRECTION_VERTICAL);
                         gui_set_grow(gui, DIRECTION_HORIZONTAL);
                         gui_set_border(gui, CONVERT_COLOR(outline_color, GuiColor), BLOCK_OUTLINE_SIZE);
-                        gui_set_border_type(gui, BORDER_CONTROL_BODY);
+                        gui_set_draw_subtype(gui, BORDER_CONTROL_BODY);
                     gui_element_end(gui);
                 gui_element_end(gui);
 
@@ -1160,7 +1175,7 @@ static void draw_term_panel(void) {
             gui_set_grow(gui, DIRECTION_HORIZONTAL);
             gui_set_grow(gui, DIRECTION_VERTICAL);
             gui_set_rect(gui, (GuiColor) { 0x00, 0x00, 0x00, 0xff });
-            gui_set_rect_type(gui, RECT_TERMINAL);
+            gui_set_draw_subtype(gui, RECT_TERMINAL);
         gui_element_end(gui);
     gui_element_end(gui);
 }
@@ -1300,7 +1315,7 @@ static void list_dropdown_on_hover(GuiElement* el) {
     assert(ui.hover.dropdown.type == DROPDOWN_LIST);
 
     el->draw_type = DRAWTYPE_RECT;
-    el->data.rect_type = RECT_NORMAL;
+    el->draw_subtype = SUBTYPE_DEFAULT;
     el->color = (GuiColor) { 0x40, 0x40, 0x40, 0xff };
     // Double cast to avoid warning. In our case this operation is safe because el->custom_data currently stores a value of type int
     ui.hover.dropdown.as.list.select_ind = (int)(size_t)el->custom_data;
@@ -1549,7 +1564,7 @@ bool svg_load(const char* file_name, size_t width, size_t height, Image* out_ima
 //             3
 //
 static void render_border_control(GuiDrawCommand* cmd) {
-    unsigned short border_w = cmd->data.border.width;
+    unsigned short border_w = cmd->data.border_width;
     Color color = CONVERT_COLOR(cmd->color, Color);
 
     /* 1 */ DrawRectangle(cmd->pos_x, cmd->pos_y, cmd->width, border_w, color);
@@ -1565,7 +1580,7 @@ static void render_border_control(GuiDrawCommand* cmd) {
 //   +     +
 //
 static void render_border_control_body(GuiDrawCommand* cmd) {
-    unsigned short border_w = cmd->data.border.width;
+    unsigned short border_w = cmd->data.border_width;
     Color color = CONVERT_COLOR(cmd->color, Color);
 
     /* 1 */ DrawRectangle(cmd->pos_x, cmd->pos_y, border_w, cmd->height, color);
@@ -1581,7 +1596,7 @@ static void render_border_control_body(GuiDrawCommand* cmd) {
 //              3
 //
 static void render_border_control_end(GuiDrawCommand* cmd) {
-    unsigned short border_w = cmd->data.border.width;
+    unsigned short border_w = cmd->data.border_width;
     Color color = CONVERT_COLOR(cmd->color, Color);
 
     /* 1 */ DrawRectangle(cmd->pos_x + BLOCK_CONTROL_INDENT - border_w, cmd->pos_y, cmd->width - BLOCK_CONTROL_INDENT, border_w, color);
@@ -1598,7 +1613,7 @@ static void render_border_control_end(GuiDrawCommand* cmd) {
 //   +---------------+
 //           3
 static void render_border_end(GuiDrawCommand* cmd) {
-    unsigned short border_w = cmd->data.border.width;
+    unsigned short border_w = cmd->data.border_width;
     Color color = CONVERT_COLOR(cmd->color, Color);
 
     /* 1 */ DrawRectangle(cmd->pos_x + BLOCK_CONTROL_INDENT - border_w, cmd->pos_y, cmd->width - BLOCK_CONTROL_INDENT, border_w, color);
@@ -1616,7 +1631,7 @@ static void render_border_end(GuiDrawCommand* cmd) {
 //   +---------------+
 //           4
 static void render_border_notched(GuiDrawCommand* cmd) {
-    unsigned short border_w = cmd->data.border.width;
+    unsigned short border_w = cmd->data.border_width;
     Color color = CONVERT_COLOR(cmd->color, Color);
     int notch_size = config.ui_size / 4;
 
@@ -1682,11 +1697,11 @@ static void scrap_gui_render(void) {
             assert(false && "Got unknown draw type");
             break;
         case DRAWTYPE_BORDER:
-            switch (command->data.border.type) {
+            switch (command->subtype) {
             case BORDER_NORMAL:
                 DrawRectangleLinesEx(
                     (Rectangle) { command->pos_x, command->pos_y, command->width, command->height },
-                    command->data.border.width,
+                    command->data.border_width,
                     CONVERT_COLOR(command->color, Color)
                 );
                 break;
@@ -1711,7 +1726,7 @@ static void scrap_gui_render(void) {
             }
             break;
         case DRAWTYPE_RECT:
-            switch (command->data.rect_type) {
+            switch (command->subtype) {
             case RECT_NORMAL:
                 DrawRectangle(command->pos_x, command->pos_y, command->width, command->height, CONVERT_COLOR(command->color, Color));
                 break;

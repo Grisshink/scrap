@@ -183,7 +183,7 @@ static void close_button_on_hover(GuiElement* el) {
     if (ui.hover.button.handler) return;
     if (el->draw_type == DRAWTYPE_RECT) return;
     el->draw_type = DRAWTYPE_RECT;
-    el->data.rect_type = RECT_NORMAL;
+    el->draw_subtype = SUBTYPE_DEFAULT;
     el->color = (GuiColor) { 0x40, 0x40, 0x40, 0xff };
     ui.hover.button.handler = window_on_close_button_click;
 }
@@ -317,7 +317,7 @@ static void slider_button_on_hover(GuiElement* el) {
     if (ui.hover.button.handler) return;
     el->draw_type = DRAWTYPE_RECT;
     el->color = (GuiColor) { 0x60, 0x60, 0x60, 0xff };
-    el->data.rect_type = RECT_NORMAL;
+    el->draw_subtype = SUBTYPE_DEFAULT;
     ui.hover.button.handler = el->custom_data;
 }
 

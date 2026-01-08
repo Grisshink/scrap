@@ -54,26 +54,6 @@ typedef struct {
 } GuiTextData;
 
 typedef enum {
-    BORDER_NORMAL,
-    BORDER_CONTROL,
-    BORDER_CONTROL_BODY,
-    BORDER_END,
-    BORDER_CONTROL_END,
-    BORDER_NOTCHED,
-} GuiBorderType;
-
-typedef enum {
-    RECT_NORMAL = 0,
-    RECT_NOTCHED,
-    RECT_TERMINAL, // Terminal rendering is handled specially as it needs to synchronize with its buffer
-} GuiRectType;
-
-typedef struct {
-    unsigned int width;
-    GuiBorderType type;
-} GuiBorderData;
-
-typedef enum {
     DRAWTYPE_UNKNOWN = 0,
     DRAWTYPE_RECT,
     DRAWTYPE_BORDER,
@@ -90,12 +70,12 @@ typedef union {
     void* image;
     void* custom_data;
     void* shader;
-    GuiBorderData border;
-    GuiRectType rect_type;
+    unsigned int border_width;
 } GuiDrawData;
 
 typedef struct {
     unsigned char type; // DrawType
+    unsigned char subtype;
     float pos_x, pos_y;
     float width, height;
     GuiColor color;
@@ -134,6 +114,10 @@ struct GuiElement {
     float scaling;
     float size_percentage;
     unsigned char draw_type; // DrawType
+    // Custom draw type, interpretation of this is defined by user
+    // NOTE: Scrap gui always interprets 0 as no subtype, so don't do custom
+    // rendering with this subtype value to not break things in unexpected way
+    unsigned char draw_subtype;
     GuiDrawData data;
     GuiColor color;
     // Sizing layout:
@@ -214,6 +198,7 @@ struct Gui {
 #define TRANSPARENT (GuiColor) {0}
 #define NO_BORDER TRANSPARENT, 0
 #define NO_COLOR TRANSPARENT, NO_BORDER
+#define SUBTYPE_DEFAULT 0
 
 void gui_init(Gui* gui);
 void gui_begin(Gui* gui);
@@ -231,11 +216,10 @@ void gui_set_fixed(Gui* gui, unsigned short w, unsigned short h);
 void gui_set_fit(Gui* gui, GuiElementDirection direction);
 void gui_set_grow(Gui* gui, GuiElementDirection diection);
 void gui_set_percent_size(Gui* gui, float percentage, GuiElementDirection direction);
+void gui_set_draw_subtype(Gui* gui, unsigned char subtype);
 void gui_set_rect(Gui* gui, GuiColor color);
-void gui_set_rect_type(Gui* gui, GuiRectType type);
 void gui_set_direction(Gui* gui, GuiElementDirection direction);
 void gui_set_border(Gui* gui, GuiColor color, unsigned int border_width);
-void gui_set_border_type(Gui* gui, GuiBorderType type);
 void gui_set_text_slice(Gui* gui, void* font, const char* text, unsigned int text_size, unsigned short font_size, GuiColor color);
 void gui_set_text(Gui* gui, void* font, const char* text, unsigned short size, GuiColor color);
 void gui_set_image(Gui* gui, void* image, unsigned short size, GuiColor color);
