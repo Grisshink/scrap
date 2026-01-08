@@ -445,7 +445,7 @@ PanelTree* find_panel(PanelTree* root, PanelType panel) {
 static void deselect_all(void) {
     ui.hover.editor.select_argument = NULL;
     ui.hover.select_input = NULL;
-    ui.dropdown.scroll_amount = 0;
+    ui.hover.dropdown.scroll_amount = 0;
 }
 
 void show_dropdown(DropdownLocations location, char** list, int list_len, ButtonClickHandler handler) {
@@ -1073,7 +1073,7 @@ static bool handle_mouse_click(void) {
         if (ui.hover.editor.block != ui.hover.editor.select_block) ui.hover.editor.select_block = ui.hover.editor.block;
         if (ui.hover.editor.argument != ui.hover.editor.select_argument) {
             if (!ui.hover.editor.argument || ui.hover.input_info.input || ui.hover.dropdown.location != LOCATION_NONE) ui.hover.editor.select_argument = ui.hover.editor.argument;
-            ui.dropdown.scroll_amount = 0;
+            ui.hover.dropdown.scroll_amount = 0;
             return true;
         }
         if (ui.hover.editor.select_argument) return true;
