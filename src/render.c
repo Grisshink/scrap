@@ -1370,6 +1370,12 @@ static void list_dropdown_on_hover(GuiElement* el) {
 static void draw_list_dropdown(void) {
     const int max_list_size = 10;
 
+    if (!ui.hover.dropdown.element) {
+        TraceLog(LOG_WARNING, "[DROPDOWN] Anchor is not set or gone");
+        handle_dropdown_close();
+        return;
+    }
+
     gui_element_begin(gui);
         gui_set_floating(gui);
         gui_set_rect(gui, (GuiColor) { 0x40, 0x40, 0x40, 0xff });

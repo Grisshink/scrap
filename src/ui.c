@@ -1508,6 +1508,7 @@ void scrap_gui_process_ui(void) {
         ui.hover.panels.panel = NULL;
         ui.hover.panels.panel_size = (Rectangle) {0};
         ui.hover.editor.select_valid = false;
+        ui.hover.dropdown.element = NULL;
 
 #ifdef DEBUG
         Timer t = start_timer("gui process");
