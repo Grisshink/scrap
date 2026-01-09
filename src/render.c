@@ -1029,39 +1029,105 @@ static void draw_block_palette(void) {
     gui_element_end(gui);
 }
 
+static void spectrum_on_hover(GuiElement* el) {
+    ui.hover.dropdown.as.color_picker.color.hue = CLAMP((gui->mouse_y - el->abs_y) / el->h * 360.0, 0.0, 360.0);
+}
+
+static void spectrum_on_render(GuiElement* el) {
+    el->y = (ui.hover.dropdown.as.color_picker.select_color.hue / 360.0) * el->parent->h - el->h / 2.0;
+}
+
+static void color_picker_on_hover(GuiElement* el) {
+    (void) el;
+    ui.hover.button.handler = NULL;
+}
+
+static void color_picker_sv_on_hover(GuiElement* el) {
+    ui.hover.dropdown.as.color_picker.color.saturation = CLAMP((gui->mouse_x - el->abs_x) / el->h, 0.0, 1.0);
+    ui.hover.dropdown.as.color_picker.color.value = CLAMP(1 - (gui->mouse_y - el->abs_y) / el->h, 0.0, 1.0);
+}
+
+static void color_picker_sv_on_render(GuiElement* el) {
+    el->x = ui.hover.dropdown.as.color_picker.select_color.saturation * el->parent->w - el->w / 2.0;
+    el->y = (1 - ui.hover.dropdown.as.color_picker.select_color.value) * el->parent->h - el->h / 2.0;
+}
+
 static void draw_color_picker(void) {
+    Color col = ColorFromHSV(
+        ui.hover.dropdown.as.color_picker.select_color.hue,
+        ui.hover.dropdown.as.color_picker.select_color.saturation,
+        ui.hover.dropdown.as.color_picker.select_color.value
+    );
+
+    Color col_hue = ColorFromHSV(
+        ui.hover.dropdown.as.color_picker.select_color.hue,
+        1.0,
+        1.0
+    );
+
     gui_element_begin(gui);
-        gui_set_rect(gui, (GuiColor) { 0x00, 0x00, 0x00, 0x80 });
-        gui_set_gap(gui, config.ui_size * 0.25);
-        gui_set_padding(gui, config.ui_size * 0.25, config.ui_size * 0.25);
-        gui_set_direction(gui, DIRECTION_HORIZONTAL);
+        gui_set_rect(gui, (GuiColor) { 0x20, 0x20, 0x20, 0xff });
+        gui_on_hover(gui, color_picker_on_hover);
 
         gui_element_begin(gui);
-            gui_set_rect(gui, (GuiColor) { 0xff, 0x00, 0x00, 0xff });
-            gui_set_fixed(gui, config.ui_size * 8.0, config.ui_size * 8.0);
-            gui_set_shader(gui, &assets.gradient_shader);
+            gui_set_border(gui, (GuiColor) { 0x40, 0x40, 0x40, 0xff }, 2);
+            gui_set_gap(gui, config.ui_size * 0.25);
+            gui_set_padding(gui, config.ui_size * 0.25, config.ui_size * 0.25);
+            gui_set_direction(gui, DIRECTION_HORIZONTAL);
 
             gui_element_begin(gui);
-                gui_set_rect(gui, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
-                gui_set_floating(gui);
-                gui_set_position(gui, -config.ui_size * 0.125, -config.ui_size * 0.125);
-                gui_set_fixed(gui, config.ui_size * 0.25, config.ui_size * 0.25);
-            gui_element_end(gui);
-        gui_element_end(gui);
+                gui_set_rect(gui, CONVERT_COLOR(col_hue, GuiColor));
+                gui_set_fixed(gui, config.ui_size * 8.0, config.ui_size * 8.0);
+                gui_set_shader(gui, &assets.gradient_shader);
+                gui_on_hover(gui, color_picker_sv_on_hover);
 
-        gui_element_begin(gui);
-            gui_set_image(gui, &assets.textures.spectrum, 0, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
-            gui_set_min_size(gui, config.ui_size * 0.75, 0);
-            gui_set_grow(gui, DIRECTION_VERTICAL);
-            gui_set_draw_subtype(gui, IMAGE_STRETCHED);
+                gui_element_begin(gui);
+                    gui_set_border(gui, (GuiColor) { 0xff - col.r, 0xff - col.g, 0xff - col.b, 0xff }, 2);
+                    gui_set_floating(gui);
+                    gui_set_position(gui, -config.ui_size * 0.125, -config.ui_size * 0.125);
+                    gui_set_fixed(gui, config.ui_size * 0.25, config.ui_size * 0.25);
+                    gui_on_render(gui, color_picker_sv_on_render);
+                gui_element_end(gui);
+            gui_element_end(gui);
 
             gui_element_begin(gui);
-                gui_set_rect(gui, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
-                gui_set_floating(gui);
-                gui_set_position(gui, -config.ui_size * 0.125, -config.ui_size * 0.125);
-                gui_set_fixed(gui, config.ui_size, config.ui_size * 0.25);
+                gui_set_image(gui, &assets.textures.spectrum, 0, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+                gui_set_min_size(gui, config.ui_size * 0.75, 0);
+                gui_set_grow(gui, DIRECTION_VERTICAL);
+                gui_set_draw_subtype(gui, IMAGE_STRETCHED);
+                gui_on_hover(gui, spectrum_on_hover);
+
+                gui_element_begin(gui);
+                    gui_set_border(gui, (GuiColor) { 0xff - col_hue.r, 0xff - col_hue.g, 0xff - col_hue.b, 0xff }, 2);
+                    gui_set_floating(gui);
+                    gui_set_position(gui, -config.ui_size * 0.125, -config.ui_size * 0.125);
+                    gui_set_fixed(gui, config.ui_size, config.ui_size * 0.25);
+                    gui_on_render(gui, spectrum_on_render);
+                gui_element_end(gui);
             gui_element_end(gui);
+
+            gui_element_begin(gui);
+                gui_set_gap(gui, config.ui_size * 0.25);
+
+                gui_element_begin(gui);
+                    gui_set_rect(gui, (GuiColor) { 0x30, 0x30, 0x30, 0xff });
+                    gui_set_padding(gui, config.ui_size * 0.2, config.ui_size * 0.2);
+
+                    snprintf(ui.hover.dropdown.as.color_picker.color_hex, 8, "#%02x%02x%02x", col.r, col.g, col.b);
+                    gui_text(gui, &assets.fonts.font_cond, ui.hover.dropdown.as.color_picker.color_hex, BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+                gui_element_end(gui);
+
+                gui_element_begin(gui);
+                    gui_set_border(gui, (GuiColor) { 0x40, 0x40, 0x40, 0xff }, 2);
+                    gui_element_begin(gui);
+                        gui_set_fixed(gui, config.ui_size, config.ui_size);
+                        gui_set_rect(gui, CONVERT_COLOR(col, GuiColor));
+                    gui_element_end(gui);
+                gui_element_end(gui);
+            gui_element_end(gui);
+
         gui_element_end(gui);
+
     gui_element_end(gui);
 }
 
@@ -1415,6 +1481,9 @@ static void draw_dropdown(void) {
     ui.hover.button.handler = handle_dropdown_close;
 
     switch (ui.hover.dropdown.type) {
+    case DROPDOWN_COLOR_PICKER:
+        draw_color_picker();
+        return;
     case DROPDOWN_LIST:
         draw_list_dropdown();
         return;
