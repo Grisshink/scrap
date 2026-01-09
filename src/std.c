@@ -963,6 +963,49 @@ int std_udp_start_server(int port) {
     return sockfd;
 }
 
+StringHeader* std_udp_server_accept_and_read(Gc* gc, int fd, int buff_capacity) {
+    struct sockaddr_in cli;
+    socklen_t len = sizeof(cli);
+    
+    char buf[buff_capacity + 10];
+    size_t buf_size;
+    
+    buf_size = recvfrom(fd, buf + 10, buff_capacity * sizeof(char), 0, (struct sockaddr*)&cli, &len);
+    
+    *(uint32_t*)buf = buf_size + 10;
+    *(uint32_t*)(buf + 4) = cli.sin_addr.s_addr;
+    *(uint16_t*)(buf + 8) = cli.sin_port;
+
+    return std_string_from_literal(gc, buf, buf_size + 10);
+}
+
+StringHeader* std_udp_server_read(Gc* gc, int fd, char* buf) {
+    uint32_t buf_size;
+    memcpy(&buf_size, buf, 4);
+    
+    char ans[buf_size - 9];
+    memcpy(ans, buf + 10, buf_size - 10);
+    
+    ans[buf_size - 10] = 0;
+
+    return std_string_from_literal(gc, ans, buf_size - 9);
+}
+
+int std_udp_server_write(int fd, char* buf, char* text) {
+    uint32_t ip;
+    uint16_t port;
+    memcpy(&ip, buf+4, 4);
+    memcpy(&port, buf+8, 2);
+    
+    struct sockaddr_in cli;
+    cli.sin_addr.s_addr = ip;
+    cli.sin_family = AF_INET;
+    cli.sin_port = port;
+    socklen_t len = sizeof(cli);
+    
+    return sendto(fd, text, strlen(text), 0, (struct sockaddr*)&cli, len);
+}
+
 int std_udp_connect(char* ip, int port) {
     int sockfd = socket(AF_INET, SOCK_DGRAM, 0);
     
@@ -982,7 +1025,7 @@ int std_udp_connect(char* ip, int port) {
     return sockfd;
 }
 
-StringHeader* std_udp_read(Gc* gc, int fd, int buff_capacity) {
+StringHeader* std_udp_client_read(Gc* gc, int fd, int buff_capacity) {
     char buf[buff_capacity + 1];
     size_t buf_size = recv(fd, buf, buff_capacity * sizeof(char), MSG_WAITALL);
     buf[buf_size] = 0;
@@ -990,7 +1033,7 @@ StringHeader* std_udp_read(Gc* gc, int fd, int buff_capacity) {
     return std_string_from_literal(gc, buf, buf_size);
 }
 
-int std_udp_write(int fd, char* buff) {
+int std_udp_client_write(int fd, char* buff) {
     return send(fd, buff, strlen(buff), MSG_CONFIRM);
 }
 

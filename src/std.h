@@ -138,8 +138,9 @@ int std_tcp_stop(int fd);
 // Network (UDP)
 int std_udp_start_server(int port);
 int std_udp_connect(char* ip, int port);
-StringHeader* std_udp_read(Gc* gc, int fd, int buff_capacity);
-int std_udp_write(int fd, char* buff);
+StringHeader* std_udp_server_accept_and_read(Gc* gc, int fd, int buff_capacity);
+StringHeader* std_udp_server_read(Gc* gc, int fd, char* buf);
+int std_udp_server_write(int fd, char* buf, char* text);
 int std_udp_stop(int fd);
 
 #endif // SCRAP_STD_H
