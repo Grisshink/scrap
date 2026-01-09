@@ -51,6 +51,11 @@ typedef enum {
     RECT_TERMINAL, // Terminal rendering is handled specially as it needs to synchronize with its buffer
 } RectType;
 
+typedef enum {
+    IMAGE_NORMAL = 0,
+    IMAGE_STRETCHED,
+} ImageType;
+
 static void draw_code(void);
 static void draw_blockchain(BlockChain* chain, bool ghost, bool show_previews, bool editable_arguments);
 
@@ -1024,6 +1029,42 @@ static void draw_block_palette(void) {
     gui_element_end(gui);
 }
 
+static void draw_color_picker(void) {
+    gui_element_begin(gui);
+        gui_set_rect(gui, (GuiColor) { 0x00, 0x00, 0x00, 0x80 });
+        gui_set_gap(gui, config.ui_size * 0.25);
+        gui_set_padding(gui, config.ui_size * 0.25, config.ui_size * 0.25);
+        gui_set_direction(gui, DIRECTION_HORIZONTAL);
+
+        gui_element_begin(gui);
+            gui_set_rect(gui, (GuiColor) { 0xff, 0x00, 0x00, 0xff });
+            gui_set_fixed(gui, config.ui_size * 8.0, config.ui_size * 8.0);
+            gui_set_shader(gui, &assets.gradient_shader);
+
+            gui_element_begin(gui);
+                gui_set_rect(gui, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+                gui_set_floating(gui);
+                gui_set_position(gui, -config.ui_size * 0.125, -config.ui_size * 0.125);
+                gui_set_fixed(gui, config.ui_size * 0.25, config.ui_size * 0.25);
+            gui_element_end(gui);
+        gui_element_end(gui);
+
+        gui_element_begin(gui);
+            gui_set_image(gui, &assets.textures.spectrum, 0, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+            gui_set_min_size(gui, config.ui_size * 0.75, 0);
+            gui_set_grow(gui, DIRECTION_VERTICAL);
+            gui_set_draw_subtype(gui, IMAGE_STRETCHED);
+
+            gui_element_begin(gui);
+                gui_set_rect(gui, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+                gui_set_floating(gui);
+                gui_set_position(gui, -config.ui_size * 0.125, -config.ui_size * 0.125);
+                gui_set_fixed(gui, config.ui_size, config.ui_size * 0.25);
+            gui_element_end(gui);
+        gui_element_end(gui);
+    gui_element_end(gui);
+}
+
 static void code_area_on_render(GuiElement* el) {
     ui.hover.panels.code_panel_bounds = (Rectangle) { el->abs_x, el->abs_y, el->w, el->h };
 }
@@ -1047,6 +1088,10 @@ static void draw_code_area(void) {
             for (int i = 0; i < DEBUG_BUFFER_LINES; i++) {
                 if (*editor.debug_buffer[i]) gui_text(gui, &assets.fonts.font_cond, editor.debug_buffer[i], config.ui_size * 0.5, (GuiColor) { 0xff, 0xff, 0xff, 0x60 });
             }
+
+            gui_spacer(gui, 0, config.ui_size * 0.5);
+
+            // draw_color_picker();
         gui_element_end(gui);
 
         if (!thread_is_running(&vm.thread) && vector_size(vm.compile_error) > 0) {
@@ -1754,20 +1799,34 @@ static void scrap_gui_render(void) {
             );
             break;
         case DRAWTYPE_IMAGE:
-            DrawTextureEx(
-                *image,
-                (Vector2) { command->pos_x + SHADOW_DISTANCE, command->pos_y + SHADOW_DISTANCE },
-                0.0,
-                (float)command->height / (float)image->height,
-                (Color) { 0x00, 0x00, 0x00, 0x80 }
-            );
-            DrawTextureEx(
-                *image,
-                (Vector2) { command->pos_x, command->pos_y},
-                0.0,
-                (float)command->height / (float)image->height,
-                CONVERT_COLOR(command->color, Color)
-            );
+            switch (command->subtype) {
+            case IMAGE_NORMAL:
+                DrawTextureEx(
+                    *image,
+                    (Vector2) { command->pos_x + SHADOW_DISTANCE, command->pos_y + SHADOW_DISTANCE },
+                    0.0,
+                    (float)command->height / (float)image->height,
+                    (Color) { 0x00, 0x00, 0x00, 0x80 }
+                );
+                DrawTextureEx(
+                    *image,
+                    (Vector2) { command->pos_x, command->pos_y},
+                    0.0,
+                    (float)command->height / (float)image->height,
+                    CONVERT_COLOR(command->color, Color)
+                );
+                break;
+            case IMAGE_STRETCHED:
+                DrawTexturePro(
+                    *image,
+                    (Rectangle) { 0, 0, image->width, image->height },
+                    (Rectangle) { command->pos_x, command->pos_y, command->width, command->height },
+                    (Vector2) {0},
+                    0.0,
+                    CONVERT_COLOR(command->color, Color)
+                );
+                break;
+            }
             break;
         case DRAWTYPE_SCISSOR_BEGIN:
             BeginScissorMode(command->pos_x, command->pos_y, command->width, command->height);
