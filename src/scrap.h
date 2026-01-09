@@ -277,7 +277,7 @@ typedef struct {
     Fonts fonts;
     TextureList textures;
     Shader line_shader;
-	Shader gradient_shader;
+    Shader gradient_shader;
 } Assets;
 
 typedef struct {

@@ -76,7 +76,7 @@ const char* line_shader_fragment =
 const char* gradient_shader_vertex =
     "#version 330\n"
     "in vec3 vertexPosition;\n"
-	"in vec2 vertexTexCoord;\n"
+    "in vec2 vertexTexCoord;\n"
     "in vec4 vertexColor;\n"
     "out vec2 fragCoord;\n"
     "out vec4 fragColor;\n"
@@ -94,9 +94,9 @@ const char* gradient_shader_fragment =
     "in vec4 fragColor;\n"
     "out vec4 finalColor;\n"
     "void main() {\n"
-	"    vec4 left = mix(vec4(0.0, 0.0, 0.0, 1.0), vec4(1.0, 1.0, 1.0, 1.0), fragCoord.y);\n"
-	"    vec4 right = mix(vec4(0.0, 0.0, 0.0, 1.0), fragColor, fragCoord.y);\n"
-	"    finalColor = mix(left, right, fragCoord.x);\n"
+    "    vec4 left = mix(vec4(0.0, 0.0, 0.0, 1.0), vec4(1.0, 1.0, 1.0, 1.0), fragCoord.y);\n"
+    "    vec4 right = mix(vec4(0.0, 0.0, 0.0, 1.0), fragColor, fragCoord.y);\n"
+    "    finalColor = mix(left, right, fragCoord.x);\n"
     "}";
 
 #define SHARED_DIR_BUF_LEN 512
@@ -109,9 +109,9 @@ const char* get_shared_dir_path(void) {
 #ifndef _WIN32
     snprintf(out_path, SHARED_DIR_BUF_LEN, "%sdata", GetApplicationDirectory());
     if (DirectoryExists(out_path)) {
-		snprintf(out_path, SHARED_DIR_BUF_LEN, "%s", GetApplicationDirectory());
-		goto end;
-	}
+        snprintf(out_path, SHARED_DIR_BUF_LEN, "%s", GetApplicationDirectory());
+        goto end;
+    }
 
     snprintf(out_path, SHARED_DIR_BUF_LEN, "%s../share/scrap/", GetApplicationDirectory());
     if (DirectoryExists(out_path)) goto end;
@@ -139,12 +139,12 @@ const char* get_locale_path(void) {
     if (DirectoryExists(out_path)) goto end;
 #endif
 
-	const char* shared_path = get_shared_dir_path();
-	if (!strcmp(shared_path, GetApplicationDirectory())) {
-		snprintf(out_path, LOCALE_DIR_BUF_LEN, "%slocale", shared_path);
-	} else {
-		snprintf(out_path, LOCALE_DIR_BUF_LEN, "%s../locale", shared_path);
-	}
+    const char* shared_path = get_shared_dir_path();
+    if (!strcmp(shared_path, GetApplicationDirectory())) {
+        snprintf(out_path, LOCALE_DIR_BUF_LEN, "%slocale", shared_path);
+    } else {
+        snprintf(out_path, LOCALE_DIR_BUF_LEN, "%s../locale", shared_path);
+    }
 
 end:
     TraceLog(LOG_INFO, "Using \"%s\" as locale directory path", out_path);
@@ -254,15 +254,15 @@ Image setup(void) {
 
     term_init(term_measure_text, &assets.fonts.font_mono, config.ui_size * 0.6);
 
-	// This fixes incorrect texture coordinates in gradient shader
-	Texture2D texture = {
-		.id = rlGetTextureIdDefault(),
-		.width = 1,
-		.height = 1,
-		.mipmaps = 1,
-		.format = PIXELFORMAT_UNCOMPRESSED_R8G8B8A8,
-	};
-	SetShapesTexture(texture, (Rectangle){ 0.0f, 0.0f, 1.0f, 1.0f });
+    // This fixes incorrect texture coordinates in gradient shader
+    Texture2D texture = {
+        .id = rlGetTextureIdDefault(),
+        .width = 1,
+        .height = 1,
+        .mipmaps = 1,
+        .format = PIXELFORMAT_UNCOMPRESSED_R8G8B8A8,
+    };
+    SetShapesTexture(texture, (Rectangle){ 0.0f, 0.0f, 1.0f, 1.0f });
 
     gui = malloc(sizeof(Gui));
     gui_init(gui);
