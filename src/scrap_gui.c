@@ -47,7 +47,7 @@
 #define SET_DIRECTION(el, dir) (el->flags = (el->flags & 0xfe) | dir)
 #define SET_ANCHOR(el, x, y) (el->anchor = x | (y << 4))
 
-static void gui_render(Gui* gui, GuiElement* el, float pos_x, float pos_y, float parent_scaling);
+static void gui_render(Gui* gui, GuiElement* el);
 static void flush_aux_buffers(Gui* gui);
 
 static bool inside_window(Gui* gui, GuiDrawCommand* command) {
@@ -81,16 +81,17 @@ void gui_begin(Gui* gui) {
     gui->image_stack_len = 0;
     gui->text_stack_len = 0;
     gui->element_stack_len = 0;
-    gui->element_ptr_stack_len = 0;
     gui->scissor_stack_len = 0;
     gui->state_stack_len = 0;
+    gui->current_element = NULL;
+
     gui_element_begin(gui);
     gui_set_fixed(gui, gui->win_w, gui->win_h);
 }
 
 void gui_end(Gui* gui) {
     gui_element_end(gui);
-    gui_render(gui, &gui->element_stack[0], 0, 0, 1.0);
+    gui_render(gui, &gui->element_stack[0]);
     flush_aux_buffers(gui);
 }
 
@@ -200,35 +201,47 @@ static GuiBounds scissor_rect(GuiBounds rect, GuiBounds scissor) {
     return rect;
 }
 
-static void gui_render(Gui* gui, GuiElement* el, float pos_x, float pos_y, float parent_scaling) {
-    GuiBounds scissor = gui->scissor_stack_len > 0 ? gui->scissor_stack[gui->scissor_stack_len - 1] : (GuiBounds) { 0, 0, gui->win_w, gui->win_h };
-    bool hover = false;
-
-    if (el->parent_anchor && el->parent_anchor < el) {
-        pos_x = el->parent_anchor->abs_x;
-        pos_y = el->parent_anchor->abs_y;
-    }
-
-    float anchor_x = 0, 
-          anchor_y = 0;
-
+static void gui_get_anchor_pos(GuiElement* el, float* anchor_x, float* anchor_y) {
     switch (ANCHOR_X(el)) {
-    case ALIGN_CENTER: anchor_x = el->w * el->scaling / 2; break;
-    case ALIGN_RIGHT: anchor_x = el->w * el->scaling; break;
+    case ALIGN_CENTER: *anchor_x = (float)el->w * el->scaling / 2; break;
+    case ALIGN_RIGHT:  *anchor_x = (float)el->w * el->scaling; break;
     default: break;
     }
     switch (ANCHOR_Y(el)) {
-    case ALIGN_CENTER: anchor_y = el->h * el->scaling / 2; break;
-    case ALIGN_RIGHT: anchor_y = el->h * el->scaling; break;
+    case ALIGN_CENTER: *anchor_y = (float)el->h * el->scaling / 2; break;
+    case ALIGN_RIGHT:  *anchor_y = (float)el->h * el->scaling; break;
     default: break;
     }
+}
 
-    el->abs_x = (el->x - anchor_x) * parent_scaling + pos_x;
-    el->abs_y = (el->y - anchor_y) * parent_scaling + pos_y;
+static void gui_render(Gui* gui, GuiElement* el) {
+    GuiBounds scissor = gui->scissor_stack_len > 0 ? gui->scissor_stack[gui->scissor_stack_len - 1] : (GuiBounds) { 0, 0, gui->win_w, gui->win_h };
+    bool hover = false;
+
+    float parent_pos_x   = 0,
+          parent_pos_y   = 0,
+          parent_scaling = 1.0;
+    if (el->parent) {
+        if (el->parent_anchor) {
+            parent_pos_x = el->parent_anchor->abs_x;
+            parent_pos_y = el->parent_anchor->abs_y;
+        } else {
+            parent_pos_x = el->parent->abs_x;
+            parent_pos_y = el->parent->abs_y;
+        }
+        parent_scaling = el->parent->scaling;
+    }
+
+    float anchor_x = 0,
+          anchor_y = 0;
+    gui_get_anchor_pos(el, &anchor_x, &anchor_y);
+
+    el->abs_x = ((float)el->x - anchor_x) * parent_scaling + parent_pos_x;
+    el->abs_y = ((float)el->y - anchor_y) * parent_scaling + parent_pos_y;
 
     if (mouse_inside(gui, scissor_rect((GuiBounds) {
-        (el->x - anchor_x) * parent_scaling + pos_x,
-        (el->y - anchor_y) * parent_scaling + pos_y,
+        (el->x - anchor_x) * parent_scaling + parent_pos_x,
+        (el->y - anchor_y) * parent_scaling + parent_pos_y,
         el->w * el->scaling,
         el->h * el->scaling }, scissor)))
     {
@@ -238,8 +251,8 @@ static void gui_render(Gui* gui, GuiElement* el, float pos_x, float pos_y, float
     if (el->handle_pre_render) el->handle_pre_render(el);
 
     GuiDrawBounds el_bounds = (GuiDrawBounds) {
-        pos_x + ((float)el->x - anchor_x) * parent_scaling,
-        pos_y + ((float)el->y - anchor_y) * parent_scaling,
+        parent_pos_x + ((float)el->x - anchor_x) * parent_scaling,
+        parent_pos_y + ((float)el->y - anchor_y) * parent_scaling,
         (float)el->w * el->scaling,
         (float)el->h * el->scaling,
     };
@@ -289,10 +302,8 @@ static void gui_render(Gui* gui, GuiElement* el, float pos_x, float pos_y, float
         new_draw_command(gui, el_bounds, DRAWTYPE_SHADER_END, SUBTYPE_DEFAULT, (GuiDrawData) { .shader = el->shader }, (GuiColor) {0});
     }
 
-    GuiElement* iter = el + 1;
-    for (int i = 0; i < el->element_count; i++) {
-        gui_render(gui, iter, pos_x + ((float)el->x - anchor_x) * parent_scaling, pos_y + ((float)el->y - anchor_y) * parent_scaling, el->scaling);
-        iter = iter->next;
+    for (GuiElement* iter = el->child_elements_begin; iter; iter = iter->next) {
+        gui_render(gui, iter); // , pos_x + ((float)el->x - anchor_x) * parent_scaling, pos_y + ((float)el->y - anchor_y) * parent_scaling, el->scaling);
     }
 
     if (el->scroll_value) {
@@ -335,52 +346,44 @@ static void gui_render(Gui* gui, GuiElement* el, float pos_x, float pos_y, float
     }
 }
 
-GuiElement* gui_element_begin(Gui* gui) {
+static GuiElement* gui_element_new(Gui* gui) {
     assert(gui->element_stack_len < ELEMENT_STACK_SIZE);
-    assert(gui->element_ptr_stack_len < ELEMENT_STACK_SIZE);
 
-    GuiElement* prev = gui->element_ptr_stack_len > 0 ? gui->element_ptr_stack[gui->element_ptr_stack_len - 1] : NULL;
     GuiElement* el = &gui->element_stack[gui->element_stack_len++];
-    gui->element_ptr_stack[gui->element_ptr_stack_len++] = el;
-    el->draw_type = DRAWTYPE_UNKNOWN;
-    el->data = (GuiDrawData) {0};
-    el->x = prev ? prev->cursor_x : 0;
-    el->y = prev ? prev->cursor_y : 0;
-    el->abs_x = 0;
-    el->abs_y = 0;
-    el->scaling = prev ? prev->scaling : 1.0;
-    el->element_count = 0;
-    el->cursor_x = 0;
-    el->cursor_y = 0;
-    el->sizing = 0; // sizing_x = SIZING_FIT, sizing_y = SIZING_FIT
-    el->pad_w = 0;
-    el->pad_h = 0;
-    el->gap = 0;
-    el->w = 0;
-    el->h = 0;
-    el->flags = 0; // direction = DIRECTION_VERTICAL, align = ALIGN_TOP | ALIGN_LEFT, is_floating = false, needs_resize = false
-    el->anchor = 0; // Top left anchor
-    el->next = NULL;
-    el->parent_anchor = NULL;
-    el->handle_hover = NULL;
-    el->handle_pre_render = NULL;
-    el->custom_data = NULL;
-    el->custom_state = NULL;
-    el->scroll_value = NULL;
+    memset(el, 0, sizeof(*el));
+
+    el->scaling = 1.0;
     el->size_percentage = 1.0;
-    el->shader = NULL;
     el->scroll_scaling = 64;
-    el->state_len = 0;
-    el->draw_subtype = 0;
+    return el;
+}
+
+GuiElement* gui_element_begin(Gui* gui) {
+    GuiElement* parent = gui->current_element;
+    GuiElement* el = gui_element_new(gui);
+    gui->current_element = el;
+    el->parent = parent;
+
+    if (parent) {
+        if (!parent->child_elements_end) {
+            parent->child_elements_begin = el;
+            parent->child_elements_end = el;
+        } else {
+            parent->child_elements_end->next = el;
+            el->prev = parent->child_elements_end;
+            parent->child_elements_end = el;
+        }
+        el->scaling = parent->scaling;
+        el->x = parent->cursor_x;
+        el->y = parent->cursor_y;
+    }
     return el;
 }
 
 static void gui_element_offset(GuiElement* el, int offset_x, int offset_y) {
-    GuiElement *iter = el + 1;
-    for (int i = 0; i < el->element_count; i++) {
+    for (GuiElement* iter = el->child_elements_begin; iter; iter = iter->next) {
         iter->x += offset_x;
         iter->y += offset_y;
-        iter = iter->next;
     }
 }
 
@@ -388,8 +391,7 @@ static void gui_element_realign(GuiElement* el) {
     if (ALIGN(el) == ALIGN_TOP) return;
 
     int align_div = ALIGN(el) == ALIGN_CENTER ? 2 : 1;
-    GuiElement *iter = el + 1;
-    for (int i = 0; i < el->element_count; i++) {
+    for (GuiElement* iter = el->child_elements_begin; iter; iter = iter->next) {
         if (!FLOATING(iter)) {
             if (DIRECTION(el) == DIRECTION_VERTICAL) {
                 iter->x = (el->w - iter->w) / align_div;
@@ -397,7 +399,6 @@ static void gui_element_realign(GuiElement* el) {
                 iter->y = (el->h - iter->h) / align_div;
             }
         }
-        iter = iter->next;
     }
 }
 
@@ -409,30 +410,28 @@ static void gui_element_resize(Gui* gui, GuiElement* el, unsigned short new_w, u
     int left_h = el->h - el->pad_h * 2 + el->gap;
     int grow_elements = 0;
 
-    GuiElement* iter = el + 1;
-    for (int i = 0; i < el->element_count; i++) {
-        if (!FLOATING(iter)) {
-            if (DIRECTION(el) == DIRECTION_VERTICAL) {
-                if (SIZING_Y(iter) == SIZING_GROW) {
-                    grow_elements++;
-                } else if (SIZING_Y(iter) == SIZING_PERCENT) {
-                    left_h -= el->h * iter->size_percentage;
-                } else {
-                    left_h -= iter->h;
-                }
-                left_h -= el->gap;
+    for (GuiElement* iter = el->child_elements_begin; iter; iter = iter->next) {
+        if (FLOATING(iter)) continue;
+
+        if (DIRECTION(el) == DIRECTION_VERTICAL) {
+            if (SIZING_Y(iter) == SIZING_GROW) {
+                grow_elements++;
+            } else if (SIZING_Y(iter) == SIZING_PERCENT) {
+                left_h -= el->h * iter->size_percentage;
             } else {
-                if (SIZING_X(iter) == SIZING_GROW) {
-                    grow_elements++;
-                } else if (SIZING_X(iter) == SIZING_PERCENT) {
-                    left_w -= el->w * iter->size_percentage;
-                } else {
-                    left_w -= iter->w;
-                }
-                left_w -= el->gap;
+                left_h -= iter->h;
             }
+            left_h -= el->gap;
+        } else {
+            if (SIZING_X(iter) == SIZING_GROW) {
+                grow_elements++;
+            } else if (SIZING_X(iter) == SIZING_PERCENT) {
+                left_w -= el->w * iter->size_percentage;
+            } else {
+                left_w -= iter->w;
+            }
+            left_w -= el->gap;
         }
-        iter = iter->next;
     }
 
     if (left_w < 0) left_w = 0;
@@ -441,8 +440,7 @@ static void gui_element_resize(Gui* gui, GuiElement* el, unsigned short new_w, u
     el->cursor_x = el->pad_w;
     el->cursor_y = el->pad_h;
 
-    iter = el + 1;
-    for (int i = 0; i < el->element_count; i++) {
+    for (GuiElement* iter = el->child_elements_begin; iter; iter = iter->next) {
         bool is_floating = FLOATING(iter);
         if (!is_floating) {
             iter->x = el->cursor_x;
@@ -467,7 +465,6 @@ static void gui_element_resize(Gui* gui, GuiElement* el, unsigned short new_w, u
             if (sizing_x == SIZING_GROW || sizing_y == SIZING_GROW || sizing_x == SIZING_PERCENT || sizing_y == SIZING_PERCENT) gui_element_resize(gui, iter, size_w, size_h);
             if (!is_floating) el->cursor_x += iter->w + el->gap;
         }
-        iter = iter->next;
     }
     if (DIRECTION(el) == DIRECTION_HORIZONTAL) {
         el->cursor_x += el->pad_w - el->gap;
@@ -500,25 +497,23 @@ static void gui_element_advance(GuiElement* el, GuiMeasurement ms) {
 }
 
 void gui_element_end(Gui* gui) {
-    GuiElement* el = gui->element_ptr_stack[--gui->element_ptr_stack_len];
-    GuiElement* prev = gui->element_ptr_stack_len > 0 ? gui->element_ptr_stack[gui->element_ptr_stack_len - 1] : NULL;
+    GuiElement* el     = gui->current_element;
+    GuiElement* parent = gui->current_element->parent;
+
     if (DIRECTION(el) == DIRECTION_VERTICAL) {
         el->h -= el->gap;
     } else {
         el->w -= el->gap;
     }
-    el->next = &gui->element_stack[gui->element_stack_len];
-    if (prev) {
-        prev->element_count++;
-    }
 
-    if (!FLOATING(el)) gui_element_advance(prev, (GuiMeasurement) { el->w, el->h });
-    GuiElementSizing sizing_x = SIZING_X(el);
-    GuiElementSizing sizing_y = SIZING_Y(el);
+    if (!FLOATING(el)) gui_element_advance(parent, (GuiMeasurement) { el->w, el->h });
+
+    GuiElementSizing sizing_x = SIZING_X(el),
+                     sizing_y = SIZING_Y(el);
     bool has_defined_size = sizing_x != SIZING_GROW && sizing_x != SIZING_PERCENT &&
                             sizing_y != SIZING_GROW && sizing_y != SIZING_PERCENT;
 
-    if (!has_defined_size) SET_NEED_RESIZE(prev, 1);
+    if (!has_defined_size) SET_NEED_RESIZE(parent, 1);
 
     if (has_defined_size && NEED_RESIZE(el) && (sizing_x == SIZING_FIXED || sizing_y == SIZING_FIXED || sizing_x == SIZING_FIT || sizing_y == SIZING_FIT)) {
         gui_element_resize(gui, el, el->w, el->h);
@@ -532,59 +527,61 @@ void gui_element_end(Gui* gui) {
             }
         }
     }
+
+    gui->current_element = parent;
 }
 
 GuiElement* gui_get_element(Gui* gui) {
-    return gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
+    return gui->current_element;
 }
 
 void gui_on_hover(Gui* gui, GuiHandler handler) {
-    GuiElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
+    GuiElement* el = gui->current_element;
     el->handle_hover = handler;
 }
 
 void gui_on_render(Gui* gui, GuiHandler handler) {
-    GuiElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
+    GuiElement* el = gui->current_element;
     el->handle_pre_render = handler;
 }
 
 void gui_set_anchor(Gui* gui, GuiAlignmentType anchor_x, GuiAlignmentType anchor_y) {
-    GuiElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
+    GuiElement* el = gui->current_element;
     SET_ANCHOR(el, anchor_x, anchor_y);
 }
 
 void gui_set_parent_anchor(Gui* gui, GuiElement* anchor) {
-    GuiElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
+    GuiElement* el = gui->current_element;
     el->parent_anchor = anchor;
 }
 
 void gui_set_shader(Gui* gui, void* shader) {
-    GuiElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
+    GuiElement* el = gui->current_element;
     el->shader = shader;
 }
 
 void gui_set_scroll_scaling(Gui* gui, int scroll_scaling) {
-    GuiElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
+    GuiElement* el = gui->current_element;
     el->scroll_scaling = scroll_scaling;
 }
 
 void gui_set_scroll(Gui* gui, int* scroll_value) {
-    GuiElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
+    GuiElement* el = gui->current_element;
     el->scroll_value = scroll_value;
 }
 
 void gui_set_scissor(Gui* gui) {
-    GuiElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
+    GuiElement* el = gui->current_element;
     SET_SCISSOR(el, 1);
 }
 
 void gui_scale_element(Gui* gui, float scaling) {
-    GuiElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
+    GuiElement* el = gui->current_element;
     el->scaling *= scaling;
 }
 
 void* gui_set_state(Gui* gui, void* state, unsigned short state_len) {
-    GuiElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
+    GuiElement* el = gui->current_element;
     if (el->custom_state) return el->custom_state;
     assert(gui->state_stack_len + state_len <= STATE_STACK_SIZE);
 
@@ -600,30 +597,30 @@ void* gui_get_state(GuiElement* el, unsigned short* state_len) {
 }
 
 void gui_set_floating(Gui* gui) {
-    GuiElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
+    GuiElement* el = gui->current_element;
     SET_FLOATING(el, 1);
 }
 
 void gui_set_position(Gui* gui, int x, int y) {
-    GuiElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
+    GuiElement* el = gui->current_element;
     el->x = x;
     el->y = y;
 }
 
 void gui_set_custom_data(Gui* gui, void* custom_data) {
-    GuiElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
+    GuiElement* el = gui->current_element;
     el->custom_data = custom_data;
 }
 
 void gui_set_fixed(Gui* gui, unsigned short w, unsigned short h) {
-    GuiElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
+    GuiElement* el = gui->current_element;
     el->sizing = SIZING_FIXED | (SIZING_FIXED << 4); // This sets both dimensions to SIZING_FIXED
     el->w = w;
     el->h = h;
 }
 
 void gui_set_fit(Gui* gui, GuiElementDirection direction) {
-    GuiElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
+    GuiElement* el = gui->current_element;
     if (direction == DIRECTION_VERTICAL) {
         SET_SIZING_Y(el, SIZING_FIT);
     } else {
@@ -632,7 +629,7 @@ void gui_set_fit(Gui* gui, GuiElementDirection direction) {
 }
 
 void gui_set_padding(Gui* gui, unsigned short pad_w, unsigned short pad_h) {
-    GuiElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
+    GuiElement* el = gui->current_element;
     el->pad_w = pad_w;
     el->pad_h = pad_h;
     el->w = MAX(el->w, el->pad_w * 2);
@@ -642,12 +639,12 @@ void gui_set_padding(Gui* gui, unsigned short pad_w, unsigned short pad_h) {
 }
 
 void gui_set_gap(Gui* gui, unsigned short gap) {
-    GuiElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
+    GuiElement* el = gui->current_element;
     el->gap = gap;
 }
 
 void gui_set_grow(Gui* gui, GuiElementDirection direction) {
-    GuiElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
+    GuiElement* el = gui->current_element;
     if (direction == DIRECTION_VERTICAL) {
         SET_SIZING_Y(el, SIZING_GROW);
         el->h = 0;
@@ -658,7 +655,7 @@ void gui_set_grow(Gui* gui, GuiElementDirection direction) {
 }
 
 void gui_set_percent_size(Gui* gui, float percentage, GuiElementDirection direction) {
-    GuiElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
+    GuiElement* el = gui->current_element;
     el->size_percentage = percentage;
     if (direction == DIRECTION_VERTICAL) {
         SET_SIZING_Y(el, SIZING_PERCENT);
@@ -670,23 +667,23 @@ void gui_set_percent_size(Gui* gui, float percentage, GuiElementDirection direct
 }
 
 void gui_set_draw_subtype(Gui* gui, unsigned char subtype) {
-    GuiElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
+    GuiElement* el = gui->current_element;
     el->draw_subtype = subtype;
 }
 
 void gui_set_direction(Gui* gui, GuiElementDirection direction) {
-    GuiElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
+    GuiElement* el = gui->current_element;
     SET_DIRECTION(el, direction);
 }
 
 void gui_set_rect(Gui* gui, GuiColor color) {
-    GuiElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
+    GuiElement* el = gui->current_element;
     el->draw_type = DRAWTYPE_RECT;
     el->color = color;
 }
 
 void gui_set_border(Gui* gui, GuiColor color, unsigned int border_width) {
-    GuiElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
+    GuiElement* el = gui->current_element;
     el->draw_type = DRAWTYPE_BORDER;
     el->color = color;
     el->data.border_width = border_width;
@@ -694,7 +691,7 @@ void gui_set_border(Gui* gui, GuiColor color, unsigned int border_width) {
 
 void gui_set_text_slice(Gui* gui, void* font, const char* text, unsigned int text_size, unsigned short font_size, GuiColor color) {
     if (text_size == 0) return;
-    GuiElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
+    GuiElement* el = gui->current_element;
     GuiMeasurement text_bounds = gui->measure_text(font, text, text_size, font_size);
     el->draw_type = DRAWTYPE_TEXT;
     el->color = color;
@@ -710,7 +707,7 @@ inline void gui_set_text(Gui* gui, void* font, const char* text, unsigned short 
 }
 
 void gui_set_image(Gui* gui, void* image, unsigned short size, GuiColor color) {
-    GuiElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
+    GuiElement* el = gui->current_element;
     GuiMeasurement image_size = gui->measure_image(image, size);
     el->draw_type = DRAWTYPE_IMAGE;
     el->color = color;
@@ -720,12 +717,12 @@ void gui_set_image(Gui* gui, void* image, unsigned short size, GuiColor color) {
 }
 
 void gui_set_align(Gui* gui, GuiAlignmentType align) {
-    GuiElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
+    GuiElement* el = gui->current_element;
     SET_ALIGN(el, align);
 }
 
 void gui_set_min_size(Gui* gui, unsigned short min_w, unsigned short min_h) {
-    GuiElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len - 1];
+    GuiElement* el = gui->current_element;
     el->w = MAX(el->w, min_w);
     el->h = MAX(el->h, min_h);
 }

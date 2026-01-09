@@ -1344,13 +1344,12 @@ static void draw_code(void) {
             if (editor.code[i].width > 0 && editor.code[i].height > 0 &&
                 (chain_pos.x + editor.code[i].width < 0 || chain_pos.y + editor.code[i].height < 0)) continue;
         }
-        gui_element_begin(gui);
+        GuiElement* el = gui_element_begin(gui);
             gui_set_floating(gui);
             gui_set_position(gui, chain_pos.x, chain_pos.y);
 
             draw_blockchain(&editor.code[i], false, true, true);
         gui_element_end(gui);
-        GuiElement* el = gui->element_ptr_stack[gui->element_ptr_stack_len];
         editor.code[i].width = el->w;
         editor.code[i].height = el->h;
     }
