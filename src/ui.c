@@ -1478,6 +1478,7 @@ void scrap_gui_process_ui(void) {
         ui.hover.select_input = NULL;
         ui.hover.editor.select_blockchain = NULL;
         ui.render_surface_needs_redraw = true;
+        if (ui.hover.dropdown.shown) handle_dropdown_close();
     } else if (IsMouseButtonDown(MOUSE_BUTTON_MIDDLE) || IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
         handle_mouse_drag();
     } else {
@@ -1508,6 +1509,7 @@ void scrap_gui_process_ui(void) {
         ui.hover.panels.panel = NULL;
         ui.hover.panels.panel_size = (Rectangle) {0};
         ui.hover.editor.select_valid = false;
+        ui.hover.dropdown.element = NULL;
 
 #ifdef DEBUG
         Timer t = start_timer("gui process");

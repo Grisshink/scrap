@@ -263,6 +263,7 @@ typedef struct {
     Texture2D icon_term;
     Texture2D icon_variable;
     Texture2D icon_warning;
+    Texture2D spectrum;
 } TextureList;
 
 typedef struct {
@@ -276,6 +277,7 @@ typedef struct {
     Fonts fonts;
     TextureList textures;
     Shader line_shader;
+    Shader gradient_shader;
 } Assets;
 
 typedef struct {

@@ -107,7 +107,7 @@ typedef void (*GuiHandler)(GuiElement* el);
 struct GuiElement {
     int x, y;
     unsigned short w, h;
-    int abs_x, abs_y;
+    float abs_x, abs_y;
     int cursor_x, cursor_y;
     unsigned short pad_w, pad_h;
     unsigned short gap;
@@ -150,9 +150,15 @@ struct GuiElement {
     void* custom_state;
     void* shader;
     unsigned short state_len;
-    unsigned short element_count;
-    struct GuiElement* parent_anchor;
-    struct GuiElement* next;
+
+    GuiElement* child_elements_begin;
+    GuiElement* child_elements_end;
+
+    GuiElement* parent;
+    GuiElement* parent_anchor;
+
+    GuiElement* prev;
+    GuiElement* next;
 };
 
 typedef GuiMeasurement (*GuiMeasureTextSliceFunc)(void* font, const char* text, unsigned int text_size, unsigned short font_size);
@@ -177,9 +183,6 @@ struct Gui {
     GuiElement element_stack[ELEMENT_STACK_SIZE];
     size_t element_stack_len;
 
-    GuiElement* element_ptr_stack[ELEMENT_STACK_SIZE];
-    size_t element_ptr_stack_len;
-
     void* state_stack[STATE_STACK_SIZE];
     size_t state_stack_len;
 
@@ -188,6 +191,8 @@ struct Gui {
 
     GuiMeasureTextSliceFunc measure_text;
     GuiMeasureImageFunc measure_image;
+
+    GuiElement* current_element;
 
     unsigned short win_w, win_h;
     short mouse_x, mouse_y;
@@ -232,7 +237,7 @@ void gui_set_floating(Gui* gui);
 void gui_set_scissor(Gui* gui);
 void gui_set_position(Gui* gui, int x, int y);
 void gui_set_anchor(Gui* gui, GuiAlignmentType anchor_x, GuiAlignmentType anchor_y);
-void gui_set_parent_anchor(Gui* gui, GuiElement* anchor);
+void gui_set_parent_anchor(Gui* gui, GuiElement* parent_anchor);
 void gui_set_scroll(Gui* gui, int* scroll_value);
 void gui_set_scroll_scaling(Gui* gui, int scroll_scaling);
 void gui_set_shader(Gui* gui, void* shader);
