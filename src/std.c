@@ -1002,6 +1002,7 @@ int std_udp_server_write(int fd, char* buf, char* text) {
     memcpy(&port, buf + 8, 2);
     
     printf("DEBUG: Sending to IP=%x Port=%d\n", ip, port);
+    printf("DEBUG: %s", text);
     
     struct sockaddr_in cli;
     cli.sin_addr.s_addr = ip;

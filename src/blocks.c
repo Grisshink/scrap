@@ -3258,7 +3258,7 @@ bool block_server_write_udp(Exec* exec, Block* block, int argc, FuncArg* argv, F
     (void) argv;
     
     LLVMValueRef buf = build_call(exec, "std_string_get_data", arg_to_any_string(exec, block, argv[1]));
-    LLVMValueRef text = build_call(exec, "std_string_get_data", arg_to_any_string(exec, block, argv[2]));
+    LLVMValueRef text = arg_to_any_string(exec, block, argv[2]);
     
     *return_val = DATA_INTEGER(build_call(exec, "std_udp_server_write", arg_to_integer(exec, block, argv[0]), buf, text));
     return true;
@@ -3280,9 +3280,7 @@ bool block_client_write_udp(Exec* exec, Block* block, int argc, FuncArg* argv, F
     (void) argc;
     (void) argv;
     
-    LLVMValueRef text = build_call(exec, "std_string_get_data", arg_to_any_string(exec, block, argv[1]));
-    
-    *return_val = DATA_INTEGER(build_call(exec, "std_udp_client_write", arg_to_integer(exec, block, argv[0]), text));
+    *return_val = DATA_INTEGER(build_call(exec, "std_udp_client_write", arg_to_integer(exec, block, argv[0]), arg_to_any_string(exec, block, argv[1])));
     return true;
 }
 
