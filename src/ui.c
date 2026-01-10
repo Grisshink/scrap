@@ -1389,6 +1389,11 @@ static void handle_mouse_wheel(void) {
 static void handle_mouse_drag(void) {
     if (ui.hover.drag_cancelled) return;
 
+    if (ui.hover.dropdown.shown && ui.hover.dropdown.type == DROPDOWN_COLOR_PICKER) {
+        ui.hover.dropdown.as.color_picker.select_color = ui.hover.dropdown.as.color_picker.color;
+        return;
+    }
+
     if (ui.hover.is_panel_edit_mode && ui.hover.panels.drag_panel && ui.hover.panels.drag_panel->type == PANEL_SPLIT) {
         if (ui.hover.panels.drag_panel->direction == DIRECTION_HORIZONTAL) {
             ui.hover.panels.drag_panel->split_percent = CLAMP(
@@ -1510,6 +1515,9 @@ void scrap_gui_process_ui(void) {
         ui.hover.panels.panel_size = (Rectangle) {0};
         ui.hover.editor.select_valid = false;
         ui.hover.dropdown.element = NULL;
+        if (ui.hover.dropdown.shown && ui.hover.dropdown.type == DROPDOWN_COLOR_PICKER) {
+            ui.hover.dropdown.as.color_picker.color = ui.hover.dropdown.as.color_picker.select_color;
+        }
 
 #ifdef DEBUG
         Timer t = start_timer("gui process");

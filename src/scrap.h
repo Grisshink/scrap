@@ -131,7 +131,12 @@ typedef struct {
 
 typedef enum {
     DROPDOWN_LIST,
+    DROPDOWN_COLOR_PICKER,
 } DropdownType;
+
+typedef struct {
+    float hue, saturation, value;
+} HSV;
 
 typedef struct {
     char** data;
@@ -142,6 +147,11 @@ typedef struct {
 } ListDropdownHoverInfo;
 
 typedef struct {
+    HSV color, select_color;
+    char color_hex[8];
+} ColorPickerDropdownHoverInfo;
+
+typedef struct {
     bool shown;
     void* ref_object;
     GuiElement* element;
@@ -150,6 +160,7 @@ typedef struct {
     DropdownType type;
     union {
         ListDropdownHoverInfo list;
+        ColorPickerDropdownHoverInfo color_picker;
     } as;
 } DropdownHoverInfo;
 
