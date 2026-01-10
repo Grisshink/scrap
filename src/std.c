@@ -972,8 +972,6 @@ StringHeader* std_udp_server_accept_and_read(Gc* gc, int fd, int buff_capacity) 
     
     buf_size = recvfrom(fd, buf + 10, buff_capacity * sizeof(char), 0, (struct sockaddr*)&cli, &len) + 10;
     
-    printf("%d", buf_size);
-    
     memcpy(buf, &buf_size, 4);
     memcpy(buf + 4, &cli.sin_addr.s_addr, 4);
     memcpy(buf + 8, &cli.sin_port, 2);
@@ -984,8 +982,6 @@ StringHeader* std_udp_server_accept_and_read(Gc* gc, int fd, int buff_capacity) 
 StringHeader* std_udp_server_read(Gc* gc, char* buf) {
     uint32_t buf_size;
     memcpy(&buf_size, buf, 4);
-    
-    printf(" %d", buf_size);
     
     char ans[buf_size - 9];
     memcpy(ans, buf + 10, buf_size - 10);
@@ -1000,9 +996,6 @@ int std_udp_server_write(int fd, char* buf, char* text) {
     uint16_t port;
     memcpy(&ip, buf + 4, 4);
     memcpy(&port, buf + 8, 2);
-    
-    printf("DEBUG: Sending to IP=%x Port=%d\n", ip, port);
-    printf("DEBUG: %s", text);
     
     struct sockaddr_in cli;
     cli.sin_addr.s_addr = ip;
