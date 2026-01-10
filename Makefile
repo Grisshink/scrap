@@ -22,7 +22,7 @@ else ifeq ($(TARGET), OSX)
 	LDFLAGS := -framework CoreVideo -framework IOKit -framework Cocoa -framework GLUT -framework OpenGL -lm -lpthread -lintl
 else
 	CC := x86_64-w64-mingw32-gcc
-	LDFLAGS := -static -lole32 -lcomdlg32 -lwinmm -lgdi32 -lintl -liconv -lshlwapi -Wl,--subsystem,windows
+	LDFLAGS := -static -lole32 -lcomdlg32 -lwinmm -lgdi32 -lintl -liconv -lshlwapi -lws2_32 -Wl,--subsystem,windows
 endif
 
 ifeq ($(ARABIC_MODE), TRUE)

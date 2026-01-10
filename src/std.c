@@ -22,19 +22,22 @@
 #include <string.h>
 #include <stdio.h>
 #include <time.h>
-#include <unistd.h>
-#include <sys/socket.h> 
-#include <netinet/in.h> 
 #include <fcntl.h>
-#include <arpa/inet.h>
 
 #include "std.h"
 #include "util.h"
 
 #ifdef _WIN32
+typedef int socklen_t;
+#include <winsock2.h>
 #include <windows.h>
+#include <sys/types.h>
 #else
 #include <sys/ioctl.h>
+#include <unistd.h>
+#include <sys/socket.h> 
+#include <netinet/in.h> 
+#include <arpa/inet.h>
 #endif
 
 // Explicitly including rprand.h here as this translation unit will soon need 
@@ -873,6 +876,17 @@ int std_term_print_list(List* list) {
 #endif
 
 int std_tcp_start_server(int port) {
+#ifdef _WIN32
+	WSADATA wsaData;
+		
+	int wsa = WSAStartup(MAKEWORD(2,2), &wsaData);
+	
+	if (wsa != 0) {
+		WSACleanup();
+		return -1;
+	}
+#endif
+	
     int sockfd = socket(AF_INET, SOCK_STREAM, 0);
     
     if (sockfd == -1) {
@@ -880,14 +894,19 @@ int std_tcp_start_server(int port) {
     }
     
     int opt = 1;
+#ifdef _WIN32
+	setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, (char*)&opt, sizeof(opt));
+#else
     setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+#endif
     
     struct sockaddr_in server_addr;
+	memset(&server_addr, 0, sizeof(server_addr));
     server_addr.sin_family = AF_INET;
     server_addr.sin_addr.s_addr = INADDR_ANY; 
     server_addr.sin_port = htons(port);
     
-    if (bind(sockfd, (struct sockaddr*)&server_addr, sizeof(server_addr))) {
+    if (bind(sockfd, (struct sockaddr*)&server_addr, sizeof(server_addr)) == -1) {
         return -1;
     }
     
@@ -899,18 +918,40 @@ int std_tcp_start_server(int port) {
 }
 
 int std_tcp_connect(char* ip, int port) {
+#ifdef _WIN32
+	WSADATA wsaData;
+		
+	int wsa = WSAStartup(MAKEWORD(2,2), &wsaData);
+	
+	if (wsa != 0) {
+		WSACleanup();
+		return -1;
+	}
+#endif
+	
     int sockfd = socket(AF_INET, SOCK_STREAM, 0);
     
     if (sockfd == -1) {
+#ifdef _WIN32
+		closesocket(sockfd);
+#else
+		close(sockfd);
+#endif
         return -1;
     }
     
     struct sockaddr_in server_addr;
+	memset(&server_addr, 0, sizeof(server_addr));
     server_addr.sin_family = AF_INET;
     server_addr.sin_addr.s_addr = inet_addr(ip);
     server_addr.sin_port = htons(port);
     
-    if (connect(sockfd, (struct sockaddr*)&server_addr, sizeof(server_addr))) {
+    if (connect(sockfd, (struct sockaddr*)&server_addr, sizeof(server_addr)) == -1) {
+#ifdef _WIN32
+		closesocket(sockfd);
+#else
+		close(sockfd);
+#endif
         return -1;
     }
     
@@ -919,29 +960,53 @@ int std_tcp_connect(char* ip, int port) {
 
 int std_tcp_accept(int sockfd) {
     struct sockaddr_in cli;
-    unsigned int len = sizeof(cli);
-    int connfd = accept(sockfd, (struct sockaddr_in*)&cli, &len);
+    int len = sizeof(cli);
+    int connfd = accept(sockfd, (struct sockaddr*)&cli, &len);
     
     return connfd;
 }
 
 StringHeader* std_tcp_read(Gc* gc, int fd, int buff_capacity) {
     char buf[buff_capacity + 1];
-    size_t buf_size = read(fd, buf, buff_capacity * sizeof(char));
+#ifdef _WIN32
+    size_t buf_size = recv(fd, buf, buff_capacity * sizeof(char), 0);
+#else
+	size_t buf_size = read(fd, buf, buff_capacity * sizeof(char));
+#endif
     buf[buf_size] = 0;
 
     return std_string_from_literal(gc, buf, buf_size);
 }
 
 int std_tcp_write(int fd, char* buff) {
+#ifdef _WIN32
+	return send(fd, buff, strlen(buff), 0);
+#else
     return write(fd, buff, strlen(buff));
+#endif
 }
 
 int std_tcp_stop(int fd) {
+#ifdef _WIN32
+    //WSACleanup();
+	return closesocket(fd);
+#else
     return close(fd);
+#endif
 }
 
 int std_udp_start_server(int port) {
+#ifdef _WIN32
+	WSADATA wsaData;
+		
+	int wsa = WSAStartup(MAKEWORD(2,2), &wsaData);
+	
+	if (wsa != 0) {
+		WSACleanup();
+		return -1;
+	}
+#endif
+	
     int sockfd = socket(AF_INET, SOCK_DGRAM, 0);
     
     if (sockfd == -1) {
@@ -949,8 +1014,12 @@ int std_udp_start_server(int port) {
     }
     
     int opt = 1;
-    setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
-    
+#ifdef _WIN32
+    setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, (char*)&opt, sizeof(opt)); 
+#else
+	setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+#endif
+	
     struct sockaddr_in server_addr;
     server_addr.sin_family = AF_INET;
     server_addr.sin_addr.s_addr = INADDR_ANY; 
@@ -1007,9 +1076,21 @@ int std_udp_server_write(int fd, char* buf, char* text) {
 }
 
 int std_udp_connect(char* ip, int port) {
+#ifdef _WIN32
+	WSADATA wsaData;
+		
+	int wsa = WSAStartup(MAKEWORD(2,2), &wsaData);
+	
+	if (wsa != 0) {
+		WSACleanup();
+		return -1;
+	}
+#endif
+	
     int sockfd = socket(AF_INET, SOCK_DGRAM, 0);
     
     if (sockfd == -1) {
+		WSACleanup();
         return -1;
     }
     
@@ -1019,6 +1100,7 @@ int std_udp_connect(char* ip, int port) {
     server_addr.sin_port = htons(port);
     
     if (connect(sockfd, (struct sockaddr*)&server_addr, sizeof(server_addr))) {
+		WSACleanup();
         return -1;
     }
     
@@ -1027,7 +1109,7 @@ int std_udp_connect(char* ip, int port) {
 
 StringHeader* std_udp_client_read(Gc* gc, int fd, int buff_capacity) {
     char buf[buff_capacity + 1];
-    size_t buf_size = recv(fd, buf, buff_capacity * sizeof(char), MSG_WAITALL);
+    size_t buf_size = recv(fd, buf, buff_capacity * sizeof(char), 0);
     buf[buf_size] = 0;
 
     return std_string_from_literal(gc, buf, buf_size);
@@ -1038,5 +1120,10 @@ int std_udp_client_write(int fd, char* buff) {
 }
 
 int std_udp_stop(int fd) {
+#ifdef _WIN32
+    //WSACleanup();
+	return closesocket(fd);
+#else
     return close(fd);
+#endif
 }
