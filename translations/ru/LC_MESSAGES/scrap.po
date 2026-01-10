@@ -393,7 +393,7 @@ msgstr "(TCP) Подключится к серверу на"
 
 #: blocks.c
 msgid "(TCP) Wait for the client's response"
-msgstr "(TCP) Ждем ответ от клиента"
+msgstr "(TCP) Ждать ответ от клиента"
 
 #: blocks.c
 msgid "(TCP) Read the response"
@@ -406,6 +406,54 @@ msgstr "(TCP) Отправить ответ"
 #: blocks.c
 msgid "(TCP) Stop the server or client"
 msgstr "(TCP) Остановить сервер или клиент"
+
+#: blocks.c
+msgid "(UDP) Start server at"
+msgstr "(UDP) Открыть сервер на"
+
+#: blocks.c
+msgid "(UDP) Wait for the client's response"
+msgstr "(UDP) Ждать ответ от клиента"
+
+#: blocks.c
+msgid "(UDP) Read the client's response"
+msgstr "(UDP) Прочитать ответ от клиента"
+
+#: blocks.c
+msgid "(UDP) Write a response to the client"
+msgstr "(UDP) Отправить ответ клиенту"
+
+#: blocks.c
+msgid "(UDP) Stop the server"
+msgstr "(UDP) Остановить сервер"
+
+#: blocks.c
+msgid "(UDP) Connect to the server at"
+msgstr "(UDP) Подключится к серверу на"
+
+#: blocks.c
+msgid "(UDP) Read the server's response"
+msgstr "(UDP) Прочитать ответ от сервера"
+
+#: blocks.c
+msgid "(UDP) Write a response to the server"
+msgstr "(UDP) Отправить ответ серверу"
+
+#: blocks.c
+msgid "(UDP) Stop the client"
+msgstr "(UDP) Остановить клиент"
+
+#: blocks.c
+msgid "buffer size?"
+msgstr "размер буфера?"
+
+#: blocks.c
+msgid "port?"
+msgstr "порт?"
+
+#: blocks.c
+msgid "Accepted?"
+msgstr "Принятое от клиента?"
 
 #: blocks.c
 msgid "Network"

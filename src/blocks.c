@@ -3804,7 +3804,7 @@ void register_blocks(Vm* vm) {
     blockdef_add_text(sc_write_tcp, gettext("(TCP) Write a response"));
     blockdef_add_argument(sc_write_tcp, "", "FD?", BLOCKCONSTR_UNLIMITED);
     blockdef_add_text(sc_write_tcp, gettext(", "));
-    blockdef_add_argument(sc_write_tcp, gettext("Hello, scrap!"), "text?", BLOCKCONSTR_UNLIMITED);
+    blockdef_add_argument(sc_write_tcp, gettext("Hello, scrap!"), gettext("Abc"), BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_write_tcp);
     block_category_add_blockdef(cat_network, sc_write_tcp);
     
@@ -3818,7 +3818,7 @@ void register_blocks(Vm* vm) {
     
     Blockdef* sc_start_udp = blockdef_new("start_udp", BLOCKTYPE_NORMAL, (BlockdefColor) { 0x88, 0x00, 0xff, 0xff }, block_start_udp);
     blockdef_add_text(sc_start_udp, gettext("(UDP) Start server at"));
-    blockdef_add_argument(sc_start_udp, "27015", "port?", BLOCKCONSTR_UNLIMITED);
+    blockdef_add_argument(sc_start_udp, "27015", gettext("port?"), BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_start_udp);
     block_category_add_blockdef(cat_network, sc_start_udp);
     
@@ -3826,13 +3826,13 @@ void register_blocks(Vm* vm) {
     blockdef_add_text(sc_accept_udp, gettext("(UDP) Wait for the client's response"));
     blockdef_add_argument(sc_accept_udp, "", "FD?", BLOCKCONSTR_UNLIMITED);
     blockdef_add_text(sc_accept_udp, gettext(","));
-    blockdef_add_argument(sc_accept_udp, "", "buf size", BLOCKCONSTR_UNLIMITED);
+    blockdef_add_argument(sc_accept_udp, "", gettext("buf size"), BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_accept_udp);
     block_category_add_blockdef(cat_network, sc_accept_udp);
     
     Blockdef* sc_server_read_udp = blockdef_new("read_server_udp", BLOCKTYPE_NORMAL, (BlockdefColor) { 0x88, 0x00, 0xff, 0xff }, block_server_read_udp);
     blockdef_add_text(sc_server_read_udp, gettext("(UDP) Read the client's response"));
-    blockdef_add_argument(sc_server_read_udp, "", "Accepted?", BLOCKCONSTR_STRING);
+    blockdef_add_argument(sc_server_read_udp, "", gettext("Accepted?"), BLOCKCONSTR_STRING);
     blockdef_register(vm, sc_server_read_udp);
     block_category_add_blockdef(cat_network, sc_server_read_udp);
     
@@ -3840,9 +3840,9 @@ void register_blocks(Vm* vm) {
     blockdef_add_text(sc_write_udp, gettext("(UDP) Write a response to the client"));
     blockdef_add_argument(sc_write_udp, "", "FD?", BLOCKCONSTR_UNLIMITED);
     blockdef_add_text(sc_write_udp, gettext(", "));
-    blockdef_add_argument(sc_write_udp, "", "Accepted?", BLOCKCONSTR_STRING);
+    blockdef_add_argument(sc_write_udp, "", gettext("Accepted?"), BLOCKCONSTR_STRING);
     blockdef_add_text(sc_write_udp, ", ");
-    blockdef_add_argument(sc_write_udp, gettext("Hello, scrap!"), "text?", BLOCKCONSTR_STRING);
+    blockdef_add_argument(sc_write_udp, gettext("Hello, scrap!"), gettext("Abc"), BLOCKCONSTR_STRING);
     blockdef_register(vm, sc_write_udp);
     block_category_add_blockdef(cat_network, sc_write_udp);
     
@@ -3858,7 +3858,7 @@ void register_blocks(Vm* vm) {
     blockdef_add_text(sc_connect_udp, gettext("(UDP) Connect to the server at"));
     blockdef_add_argument(sc_connect_udp, "127.0.0.1", "IP?", BLOCKCONSTR_UNLIMITED);
     blockdef_add_text(sc_connect_udp, ":");
-    blockdef_add_argument(sc_connect_udp, "27015", "port?", BLOCKCONSTR_UNLIMITED);
+    blockdef_add_argument(sc_connect_udp, "27015", gettext("port?"), BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_connect_udp);
     block_category_add_blockdef(cat_network, sc_connect_udp);
     
@@ -3866,7 +3866,7 @@ void register_blocks(Vm* vm) {
     blockdef_add_text(sc_client_read_udp, gettext("(UDP) Read the server's response"));
     blockdef_add_argument(sc_client_read_udp, "", "FD?", BLOCKCONSTR_UNLIMITED);
     blockdef_add_text(sc_client_read_udp, ", ");
-    blockdef_add_argument(sc_client_read_udp, "1024", "buffer size?", BLOCKCONSTR_UNLIMITED);
+    blockdef_add_argument(sc_client_read_udp, "1024", gettext("buffer size?"), BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_client_read_udp);
     block_category_add_blockdef(cat_network, sc_client_read_udp);
     
@@ -3874,7 +3874,7 @@ void register_blocks(Vm* vm) {
     blockdef_add_text(sc_client_write_udp, gettext("(UDP) Write a response to the server"));
     blockdef_add_argument(sc_client_write_udp, "", "FD?", BLOCKCONSTR_STRING);
     blockdef_add_text(sc_client_write_udp, ", ");
-    blockdef_add_argument(sc_client_write_udp, gettext("Hello, scrap!"), "text?", BLOCKCONSTR_STRING);
+    blockdef_add_argument(sc_client_write_udp, gettext("Hello, scrap!"), gettext("Abc"), BLOCKCONSTR_STRING);
     blockdef_register(vm, sc_client_write_udp);
     block_category_add_blockdef(cat_network, sc_client_write_udp);
     
