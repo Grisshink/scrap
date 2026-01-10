@@ -882,35 +882,44 @@ int std_tcp_start_server(int port) {
 	int wsa = WSAStartup(MAKEWORD(2,2), &wsaData);
 	
 	if (wsa != 0) {
-		WSACleanup();
-		return -1;
+	  WSACleanup();
+	  return -1;
 	}
 #endif
 	
     int sockfd = socket(AF_INET, SOCK_STREAM, 0);
     
     if (sockfd == -1) {
+#ifdef _WIN32
+        WSACleanup();
+#endif
         return -1;
     }
     
     int opt = 1;
 #ifdef _WIN32
-	setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, (char*)&opt, sizeof(opt));
+    setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, (char*)&opt, sizeof(opt));
 #else
     setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
 #endif
     
     struct sockaddr_in server_addr;
-	memset(&server_addr, 0, sizeof(server_addr));
+    memset(&server_addr, 0, sizeof(server_addr));
     server_addr.sin_family = AF_INET;
     server_addr.sin_addr.s_addr = INADDR_ANY; 
     server_addr.sin_port = htons(port);
     
     if (bind(sockfd, (struct sockaddr*)&server_addr, sizeof(server_addr)) == -1) {
+#ifdef _WIN32
+        WSACleanup();
+#endif
         return -1;
     }
     
     if ((listen(sockfd, 5)) != 0) {
+#ifdef _WIN32
+        WSACleanup();
+#endif
         return -1;
     }
     
@@ -924,8 +933,8 @@ int std_tcp_connect(char* ip, int port) {
 	int wsa = WSAStartup(MAKEWORD(2,2), &wsaData);
 	
 	if (wsa != 0) {
-		WSACleanup();
-		return -1;
+	    WSACleanup();
+	    return -1;
 	}
 #endif
 	
@@ -933,24 +942,24 @@ int std_tcp_connect(char* ip, int port) {
     
     if (sockfd == -1) {
 #ifdef _WIN32
-		closesocket(sockfd);
+	closesocket(sockfd);
 #else
-		close(sockfd);
+	close(sockfd);
 #endif
         return -1;
     }
     
     struct sockaddr_in server_addr;
-	memset(&server_addr, 0, sizeof(server_addr));
+    memset(&server_addr, 0, sizeof(server_addr));
     server_addr.sin_family = AF_INET;
     server_addr.sin_addr.s_addr = inet_addr(ip);
     server_addr.sin_port = htons(port);
     
     if (connect(sockfd, (struct sockaddr*)&server_addr, sizeof(server_addr)) == -1) {
 #ifdef _WIN32
-		closesocket(sockfd);
+	closesocket(sockfd);
 #else
-		close(sockfd);
+	close(sockfd);
 #endif
         return -1;
     }
@@ -971,7 +980,7 @@ StringHeader* std_tcp_read(Gc* gc, int fd, int buff_capacity) {
 #ifdef _WIN32
     size_t buf_size = recv(fd, buf, buff_capacity * sizeof(char), 0);
 #else
-	size_t buf_size = read(fd, buf, buff_capacity * sizeof(char));
+    size_t buf_size = read(fd, buf, buff_capacity * sizeof(char));
 #endif
     buf[buf_size] = 0;
 
@@ -980,7 +989,7 @@ StringHeader* std_tcp_read(Gc* gc, int fd, int buff_capacity) {
 
 int std_tcp_write(int fd, char* buff) {
 #ifdef _WIN32
-	return send(fd, buff, strlen(buff), 0);
+    return send(fd, buff, strlen(buff), 0);
 #else
     return write(fd, buff, strlen(buff));
 #endif
@@ -989,7 +998,7 @@ int std_tcp_write(int fd, char* buff) {
 int std_tcp_stop(int fd) {
 #ifdef _WIN32
     //WSACleanup();
-	return closesocket(fd);
+    return closesocket(fd);
 #else
     return close(fd);
 #endif
@@ -997,19 +1006,22 @@ int std_tcp_stop(int fd) {
 
 int std_udp_start_server(int port) {
 #ifdef _WIN32
-	WSADATA wsaData;
+    WSADATA wsaData;
 		
-	int wsa = WSAStartup(MAKEWORD(2,2), &wsaData);
-	
-	if (wsa != 0) {
-		WSACleanup();
-		return -1;
-	}
+    int wsa = WSAStartup(MAKEWORD(2,2), &wsaData);
+    
+    if (wsa != 0) {
+        WSACleanup();
+        return -1;
+    }
 #endif
 	
     int sockfd = socket(AF_INET, SOCK_DGRAM, 0);
     
     if (sockfd == -1) {
+#ifdef _WIN32
+        WSACleanup();
+#endif
         return -1;
     }
     
@@ -1017,7 +1029,7 @@ int std_udp_start_server(int port) {
 #ifdef _WIN32
     setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, (char*)&opt, sizeof(opt)); 
 #else
-	setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+    setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
 #endif
 	
     struct sockaddr_in server_addr;
@@ -1026,6 +1038,9 @@ int std_udp_start_server(int port) {
     server_addr.sin_port = htons(port);
     
     if (bind(sockfd, (struct sockaddr*)&server_addr, sizeof(server_addr))) {
+#ifdef _WIN32
+        WSACleanup();
+#endif
         return -1;
     }
     
@@ -1090,7 +1105,9 @@ int std_udp_connect(char* ip, int port) {
     int sockfd = socket(AF_INET, SOCK_DGRAM, 0);
     
     if (sockfd == -1) {
-		WSACleanup();
+#ifdef _WIN32
+        WSACleanup();
+#endif
         return -1;
     }
     
@@ -1100,7 +1117,9 @@ int std_udp_connect(char* ip, int port) {
     server_addr.sin_port = htons(port);
     
     if (connect(sockfd, (struct sockaddr*)&server_addr, sizeof(server_addr))) {
-		WSACleanup();
+#ifdef _WIN32
+        WSACleanup();
+#endif
         return -1;
     }
     
