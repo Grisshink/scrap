@@ -138,6 +138,12 @@ typedef struct {
     float hue, saturation, value;
 } HSV;
 
+typedef enum {
+    COLOR_PICKER_NONE = 0,
+    COLOR_PICKER_SV,
+    COLOR_PICKER_SPECTRUM,
+} ColorPickerPartType;
+
 typedef struct {
     char** data;
     int len;
@@ -147,7 +153,8 @@ typedef struct {
 } ListDropdownHoverInfo;
 
 typedef struct {
-    HSV color, select_color;
+    ColorPickerPartType hover_part, select_part;
+    HSV color;
     char color_hex[8];
 } ColorPickerDropdownHoverInfo;
 
@@ -450,6 +457,7 @@ bool handle_add_tab_button(void);
 bool handle_category_click(void);
 bool handle_jump_to_block_button_click(void);
 bool handle_error_window_close_button_click(void);
+bool handle_color_picker_click(void);
 
 // save.c
 void config_new(Config* config);
