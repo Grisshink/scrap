@@ -687,7 +687,7 @@ static LLVMValueRef register_globals(Exec* exec) {
     LLVMTypeRef std_tcp_start_server_func_params[] = { LLVMInt32Type() };
     add_function(exec, "std_tcp_start_server", LLVMInt32Type(), std_tcp_start_server_func_params, ARRLEN(std_tcp_start_server_func_params), std_tcp_start_server, false, false);
     
-    LLVMTypeRef std_tcp_connect_func_params[] = { LLVMInt32Type(), LLVMPointerType(LLVMInt8Type(), 0) };
+    LLVMTypeRef std_tcp_connect_func_params[] = { LLVMPointerType(LLVMInt8Type(), 0), LLVMInt32Type() };
     add_function(exec, "std_tcp_connect", LLVMInt32Type(), std_tcp_connect_func_params, ARRLEN(std_tcp_connect_func_params), std_tcp_connect, false, false);
     
     LLVMTypeRef std_tcp_accept_func_params[] = { LLVMInt32Type() };
