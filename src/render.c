@@ -1030,37 +1030,47 @@ static void draw_block_palette(void) {
 }
 
 static void spectrum_on_hover(GuiElement* el) {
-    ui.hover.dropdown.as.color_picker.color.hue = CLAMP((gui->mouse_y - el->abs_y) / el->h * 360.0, 0.0, 360.0);
+    (void) el;
+    ui.hover.dropdown.as.color_picker.hover_part = COLOR_PICKER_SPECTRUM;
 }
 
 static void spectrum_on_render(GuiElement* el) {
-    el->y = (ui.hover.dropdown.as.color_picker.select_color.hue / 360.0) * el->parent->h - el->h / 2.0;
+    if (IsMouseButtonDown(MOUSE_BUTTON_LEFT) && ui.hover.dropdown.as.color_picker.select_part == COLOR_PICKER_SPECTRUM) {
+        ui.hover.dropdown.as.color_picker.color.hue = CLAMP((gui->mouse_y - el->parent->abs_y) / el->parent->h * 360.0, 0.0, 360.0);
+    }
+    el->y = (ui.hover.dropdown.as.color_picker.color.hue / 360.0) * el->parent->h - el->h / 2.0;
 }
 
 static void color_picker_on_hover(GuiElement* el) {
     (void) el;
-    ui.hover.button.handler = NULL;
+    ui.hover.button.handler = handle_color_picker_click;
 }
 
 static void color_picker_sv_on_hover(GuiElement* el) {
-    ui.hover.dropdown.as.color_picker.color.saturation = CLAMP((gui->mouse_x - el->abs_x) / el->h, 0.0, 1.0);
-    ui.hover.dropdown.as.color_picker.color.value = CLAMP(1 - (gui->mouse_y - el->abs_y) / el->h, 0.0, 1.0);
+    (void) el;
+    ui.hover.dropdown.as.color_picker.hover_part = COLOR_PICKER_SV;
 }
 
 static void color_picker_sv_on_render(GuiElement* el) {
-    el->x = ui.hover.dropdown.as.color_picker.select_color.saturation * el->parent->w - el->w / 2.0;
-    el->y = (1 - ui.hover.dropdown.as.color_picker.select_color.value) * el->parent->h - el->h / 2.0;
+    if (IsMouseButtonDown(MOUSE_BUTTON_LEFT) && ui.hover.dropdown.as.color_picker.select_part == COLOR_PICKER_SV) {
+        TraceLog(LOG_INFO, "%d", el->parent->w);
+        ui.hover.dropdown.as.color_picker.color.saturation = CLAMP((gui->mouse_x - el->parent->abs_x) / el->parent->w, 0.0, 1.0);
+        ui.hover.dropdown.as.color_picker.color.value = CLAMP(1.0 - (gui->mouse_y - el->parent->abs_y) / el->parent->h, 0.0, 1.0);
+    }
+
+    el->x = ui.hover.dropdown.as.color_picker.color.saturation * el->parent->w - el->w / 2.0;
+    el->y = (1 - ui.hover.dropdown.as.color_picker.color.value) * el->parent->h - el->h / 2.0;
 }
 
 static void draw_color_picker(void) {
     Color col = ColorFromHSV(
-        ui.hover.dropdown.as.color_picker.select_color.hue,
-        ui.hover.dropdown.as.color_picker.select_color.saturation,
-        ui.hover.dropdown.as.color_picker.select_color.value
+        ui.hover.dropdown.as.color_picker.color.hue,
+        ui.hover.dropdown.as.color_picker.color.saturation,
+        ui.hover.dropdown.as.color_picker.color.value
     );
 
     Color col_hue = ColorFromHSV(
-        ui.hover.dropdown.as.color_picker.select_color.hue,
+        ui.hover.dropdown.as.color_picker.color.hue,
         1.0,
         1.0
     );
@@ -1952,6 +1962,7 @@ static void write_debug_buffer(void) {
     print_debug(&i, "UI time: %.3f", ui.ui_time);
     print_debug(&i, "FPS: %d, Frame time: %.3f", GetFPS(), GetFrameTime());
     print_debug(&i, "Panel: %p, side: %d", ui.hover.panels.panel, ui.hover.panels.panel_side);
+    print_debug(&i, "Part: %d, Select: %d", ui.hover.dropdown.as.color_picker.hover_part, ui.hover.dropdown.as.color_picker.select_part);
 #else
     print_debug(&i, "Scrap v" SCRAP_VERSION);
     print_debug(&i, "FPS: %d, Frame time: %.3f", GetFPS(), GetFrameTime());

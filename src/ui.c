@@ -563,6 +563,11 @@ bool handle_block_dropdown_click(void) {
     return handle_dropdown_close();
 }
 
+bool handle_color_picker_click(void) {
+    ui.hover.dropdown.as.color_picker.select_part = ui.hover.dropdown.as.color_picker.hover_part;
+    return true;
+}
+
 bool handle_file_button_click(void) {
     if (thread_is_running(&vm.thread)) return true;
     show_list_dropdown(file_menu_list, ARRLEN(file_menu_list), NULL, handle_file_menu_click);
@@ -1061,6 +1066,10 @@ static bool handle_mouse_click(void) {
         if (handle_blockdef_editor_click()) return true;
     }
 
+    if (ui.hover.dropdown.shown && ui.hover.dropdown.type == DROPDOWN_COLOR_PICKER) {
+        ui.hover.dropdown.as.color_picker.select_part = COLOR_PICKER_NONE;
+    }
+
     if (mouse_empty) {
         if (ui.hover.editor.block && ui.hover.editor.argument) {
             Input block_input = ui.hover.editor.block->blockdef->inputs[ui.hover.editor.argument->input_id];
@@ -1389,11 +1398,6 @@ static void handle_mouse_wheel(void) {
 static void handle_mouse_drag(void) {
     if (ui.hover.drag_cancelled) return;
 
-    if (ui.hover.dropdown.shown && ui.hover.dropdown.type == DROPDOWN_COLOR_PICKER) {
-        ui.hover.dropdown.as.color_picker.select_color = ui.hover.dropdown.as.color_picker.color;
-        return;
-    }
-
     if (ui.hover.is_panel_edit_mode && ui.hover.panels.drag_panel && ui.hover.panels.drag_panel->type == PANEL_SPLIT) {
         if (ui.hover.panels.drag_panel->direction == DIRECTION_HORIZONTAL) {
             ui.hover.panels.drag_panel->split_percent = CLAMP(
@@ -1516,7 +1520,7 @@ void scrap_gui_process_ui(void) {
         ui.hover.editor.select_valid = false;
         ui.hover.dropdown.element = NULL;
         if (ui.hover.dropdown.shown && ui.hover.dropdown.type == DROPDOWN_COLOR_PICKER) {
-            ui.hover.dropdown.as.color_picker.color = ui.hover.dropdown.as.color_picker.select_color;
+            ui.hover.dropdown.as.color_picker.hover_part = COLOR_PICKER_NONE;
         }
 
 #ifdef DEBUG
