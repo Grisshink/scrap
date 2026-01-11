@@ -78,6 +78,7 @@ int std_bool_from_any(AnyValue* value);
 List* std_list_from_any(Gc* gc, AnyValue* value);
 StdColor std_color_from_any(AnyValue* value);
 StringHeader* std_string_from_any(Gc* gc, AnyValue* value);
+char* std_any_string_from_any(Gc* gc, AnyValue* value);
 bool std_any_is_eq(AnyValue* left, AnyValue* right);
 
 // String operations

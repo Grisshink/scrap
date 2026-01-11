@@ -176,10 +176,4 @@ bool evaluate_argument(Exec* exec, Argument* arg, AnyValue* return_val);
 Variable* variable_stack_push_var(Exec* exec, const char* name, AnyValue arg);
 Variable* variable_stack_get_variable(Exec* exec, const char* name);
 
-int data_to_integer(AnyValue arg);
-int data_to_bool(AnyValue arg);
-char* data_to_any_string(Exec* exec, AnyValue arg);
-double data_to_float(AnyValue arg);
-StdColor data_to_color(AnyValue arg);
-
 #endif // INTERPRETER_H

@@ -470,6 +470,11 @@ StringHeader* std_string_from_color(Gc* gc, StdColor value) {
     return std_string_from_literal(gc, str, len);
 }
 
+char* std_any_string_from_any(Gc* gc, AnyValue* value) {
+    if (value->type == DATA_TYPE_LITERAL) return value->data.literal_val;
+    return std_string_from_any(gc, value)->str;
+}
+
 StringHeader* std_string_from_any(Gc* gc, AnyValue* value) {
     if (!value) return std_string_from_literal(gc, "", 0);
     char str[32];

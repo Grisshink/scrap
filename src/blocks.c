@@ -116,7 +116,7 @@ bool block_if(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* retu
     (void) block;
 
     if (control_state == CONTROL_STATE_BEGIN) {
-        if (argc < 1 || !data_to_bool(argv[0])) {
+        if (argc < 1 || !std_bool_from_any(&argv[0])) {
             exec_set_skip_block(exec);
             control_stack_push_data((int)0, int);
         } else {
@@ -139,11 +139,11 @@ bool block_else_if(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue*
     (void) block;
 
     if (control_state == CONTROL_STATE_BEGIN) {
-        if (argc < 2 || data_to_bool(argv[0])) {
+        if (argc < 2 || std_bool_from_any(&argv[0])) {
             exec_set_skip_block(exec);
             control_stack_push_data((int)1, int);
         } else {
-            int condition = data_to_bool(argv[1]);
+            int condition = std_bool_from_any(&argv[1]);
             if (!condition) exec_set_skip_block(exec);
             control_stack_push_data(condition, int);
         }
@@ -163,7 +163,7 @@ bool block_else(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* re
     (void) block;
 
     if (control_state == CONTROL_STATE_BEGIN) {
-        if (argc < 1 || data_to_bool(argv[0])) {
+        if (argc < 1 || std_bool_from_any(&argv[0])) {
             exec_set_skip_block(exec);
         }
         *return_val = DATA_NOTHING;
@@ -188,7 +188,7 @@ bool block_repeat(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* 
     (void) block;
 
     if (control_state == CONTROL_STATE_BEGIN) {
-        int cycles = argc < 1 ? 0 : data_to_integer(argv[0]);
+        int cycles = argc < 1 ? 0 : std_integer_from_any(&argv[0]);
         if (cycles <= 0) {
             exec_set_skip_block(exec);
             control_stack_push_data((int)0, int); // This indicates the end block that it should NOT loop
@@ -231,7 +231,7 @@ bool block_repeat(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* 
 
 bool block_while(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     if (control_state == CONTROL_STATE_BEGIN) {
-        if (argc < 1 || !data_to_bool(argv[0])) {
+        if (argc < 1 || !std_bool_from_any(&argv[0])) {
             exec_set_skip_block(exec);
         }
         control_stack_push_data(exec->chain_stack[exec->chain_stack_len - 1].running_ind, size_t);
@@ -239,7 +239,7 @@ bool block_while(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* r
         AnyValue out_val;
         if (!evaluate_argument(exec, &block->arguments[0], &out_val)) return false;
 
-        if (vector_size(block->arguments) < 1 || !data_to_bool(out_val)) {
+        if (vector_size(block->arguments) < 1 || !std_bool_from_any(&out_val)) {
             size_t bin;
             control_stack_pop_data(bin, size_t);
             (void) bin;
@@ -263,7 +263,7 @@ bool block_sleep(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* r
     (void) block;
     (void) exec;
     (void) argc;
-    int usecs = data_to_integer(argv[0]);
+    int usecs = std_integer_from_any(&argv[0]);
     if (usecs < 0) {
         *return_val = DATA_INTEGER(0);
         return true;
@@ -313,8 +313,13 @@ bool block_get_var(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue*
     (void) control_state;
     (void) block;
     (void) argc;
+
+    if (argv[0].type != DATA_TYPE_LITERAL) {
+        exec_set_error(exec, block, gettext("Invalid data type %s, expected %s"), type_to_str(argv[0].type), type_to_str(DATA_TYPE_LITERAL));
+        return false;
+    }
     
-    char* var_name = data_to_any_string(exec, argv[0]);
+    char* var_name = argv[0].data.literal_val;
     Variable* var = variable_stack_get_variable(exec, var_name);
     if (!var) {
         exec_set_error(exec, block, gettext("Variable with name \"%s\" does not exist in the current scope"), var_name);
@@ -329,7 +334,12 @@ bool block_set_var(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue*
     (void) block;
     (void) argc;
 
-    char* var_name = data_to_any_string(exec, argv[0]);
+    if (argv[0].type != DATA_TYPE_LITERAL) {
+        exec_set_error(exec, block, gettext("Invalid data type %s, expected %s"), type_to_str(argv[0].type), type_to_str(DATA_TYPE_LITERAL));
+        return false;
+    }
+
+    char* var_name = argv[0].data.literal_val;
     Variable* var = variable_stack_get_variable(exec, var_name);
     if (!var) {
         exec_set_error(exec, block, gettext("Variable with name \"%s\" does not exist in the current scope"), var_name);
@@ -376,7 +386,7 @@ bool block_list_get(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue
     }
 
     List* list = argv[0].data.list_val;
-    int index = data_to_integer(argv[1]);
+    int index = std_integer_from_any(&argv[1]);
 
     if (index >= list->size || index < 0) {
         *return_val = DATA_NOTHING;
@@ -411,7 +421,7 @@ bool block_list_set(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue
         return false;
     }
 
-    int index = data_to_integer(argv[1]);
+    int index = std_integer_from_any(&argv[1]);
     if (index >= argv[0].data.list_val->size || index < 0) {
         exec_set_error(exec, block, gettext("Tried to access index %d for list of length %d"), index, argv[0].data.list_val->size);
         return false;
@@ -540,8 +550,8 @@ bool block_set_cursor(Exec* exec, Block* block, int argc, AnyValue* argv, AnyVal
     (void) argc;
 
     mutex_lock(&term.lock);
-    int x = CLAMP(data_to_integer(argv[0]), 0, term.char_w - 1);
-    int y = CLAMP(data_to_integer(argv[1]), 0, term.char_h - 1);
+    int x = CLAMP(std_integer_from_any(&argv[0]), 0, term.char_w - 1);
+    int y = CLAMP(std_integer_from_any(&argv[1]), 0, term.char_h - 1);
     term.cursor_pos = x + y * term.char_w;
     mutex_unlock(&term.lock);
 
@@ -554,7 +564,7 @@ bool block_set_fg_color(Exec* exec, Block* block, int argc, AnyValue* argv, AnyV
     (void) block;
     (void) exec;
     (void) argc;
-    term_set_fg_color(CONVERT_COLOR(data_to_color(argv[0]), TermColor));
+    term_set_fg_color(CONVERT_COLOR(std_color_from_any(&argv[0]), TermColor));
     *return_val = DATA_NOTHING;
     return true;
 }
@@ -564,7 +574,7 @@ bool block_set_bg_color(Exec* exec, Block* block, int argc, AnyValue* argv, AnyV
     (void) block;
     (void) exec;
     (void) argc;
-    term_set_bg_color(CONVERT_COLOR(data_to_color(argv[0]), TermColor));
+    term_set_bg_color(CONVERT_COLOR(std_color_from_any(&argv[0]), TermColor));
     *return_val = DATA_NOTHING;
     return true;
 }
@@ -599,7 +609,7 @@ bool block_term_set_clear(Exec* exec, Block* block, int argc, AnyValue* argv, An
     (void) block;
     (void) exec;
     (void) argc;
-    term_set_clear_color(CONVERT_COLOR(data_to_color(argv[0]), TermColor));
+    term_set_clear_color(CONVERT_COLOR(std_color_from_any(&argv[0]), TermColor));
     *return_val = DATA_NOTHING;
     return true;
 }
@@ -629,8 +639,8 @@ bool block_random(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* 
     (void) exec;
     (void) argc;
 
-    int min = data_to_integer(argv[0]);
-    int max = data_to_integer(argv[1]);
+    int min = std_integer_from_any(&argv[0]);
+    int max = std_integer_from_any(&argv[1]);
     if (min > max) {
         int temp = min;
         min = max;
@@ -656,7 +666,7 @@ bool block_ord(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* ret
     (void) exec;
     (void) argc;
 
-    const char* str = data_to_any_string(exec, argv[0]);
+    const char* str = std_any_string_from_any(&exec->gc, &argv[0]);
     int codepoint_size;
     int codepoint = GetCodepoint(str, &codepoint_size);
     *return_val = DATA_INTEGER(codepoint);
@@ -667,7 +677,7 @@ bool block_chr(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* ret
     (void) control_state;
     (void) block;
     (void) argc;
-    *return_val = DATA_STRING(std_string_chr(&exec->gc, data_to_integer(argv[0])));
+    *return_val = DATA_STRING(std_string_chr(&exec->gc, std_integer_from_any(&argv[0])));
     return true;
 }
 
@@ -675,7 +685,7 @@ bool block_letter_in(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValu
     (void) control_state;
     (void) block;
     (void) argc;
-    *return_val = DATA_STRING(std_string_letter_in(&exec->gc, data_to_integer(argv[0]), std_string_from_any(&exec->gc, &argv[1])));
+    *return_val = DATA_STRING(std_string_letter_in(&exec->gc, std_integer_from_any(&argv[0]), std_string_from_any(&exec->gc, &argv[1])));
     return true;
 }
 
@@ -683,7 +693,7 @@ bool block_substring(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValu
     (void) control_state;
     (void) block;
     (void) argc;
-    *return_val = DATA_STRING(std_string_substring(&exec->gc, data_to_integer(argv[0]), data_to_integer(argv[1]), std_string_from_any(&exec->gc, &argv[2])));
+    *return_val = DATA_STRING(std_string_substring(&exec->gc, std_integer_from_any(&argv[0]), std_integer_from_any(&argv[1]), std_string_from_any(&exec->gc, &argv[2])));
     return true;
 }
 
@@ -710,7 +720,7 @@ bool block_convert_int(Exec* exec, Block* block, int argc, AnyValue* argv, AnyVa
     (void) block;
     (void) exec;
     (void) argc;
-    *return_val = DATA_INTEGER(data_to_integer(argv[0]));
+    *return_val = DATA_INTEGER(std_integer_from_any(&argv[0]));
     return true;
 }
 
@@ -719,7 +729,7 @@ bool block_convert_float(Exec* exec, Block* block, int argc, AnyValue* argv, Any
     (void) block;
     (void) exec;
     (void) argc;
-    *return_val = DATA_FLOAT(data_to_float(argv[0]));
+    *return_val = DATA_FLOAT(std_float_from_any(&argv[0]));
     return true;
 }
 
@@ -736,7 +746,7 @@ bool block_convert_bool(Exec* exec, Block* block, int argc, AnyValue* argv, AnyV
     (void) block;
     (void) exec;
     (void) argc;
-    *return_val = DATA_BOOL(data_to_bool(argv[0]));
+    *return_val = DATA_BOOL(std_bool_from_any(&argv[0]));
     return true;
 }
 
@@ -745,7 +755,7 @@ bool block_convert_color(Exec* exec, Block* block, int argc, AnyValue* argv, Any
     (void) block;
     (void) exec;
     (void) argc;
-    *return_val = DATA_COLOR(data_to_color(argv[0]));
+    *return_val = DATA_COLOR(std_color_from_any(&argv[0]));
     return true;
 }
 
@@ -764,9 +774,9 @@ bool block_plus(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* re
     (void) exec;
     (void) argc;
     if (argv[0].type == DATA_TYPE_FLOAT) {
-        *return_val = DATA_FLOAT(argv[0].data.float_val + data_to_float(argv[1]));
+        *return_val = DATA_FLOAT(argv[0].data.float_val + std_float_from_any(&argv[1]));
     } else {
-        *return_val = DATA_INTEGER(data_to_integer(argv[0]) + data_to_integer(argv[1]));
+        *return_val = DATA_INTEGER(std_integer_from_any(&argv[0]) + std_integer_from_any(&argv[1]));
     }
     return true;
 }
@@ -777,9 +787,9 @@ bool block_minus(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* r
     (void) exec;
     (void) argc;
     if (argv[0].type == DATA_TYPE_FLOAT) {
-        *return_val = DATA_FLOAT(argv[0].data.float_val - data_to_float(argv[1]));
+        *return_val = DATA_FLOAT(argv[0].data.float_val - std_float_from_any(&argv[1]));
     } else {
-        *return_val = DATA_INTEGER(data_to_integer(argv[0]) - data_to_integer(argv[1]));
+        *return_val = DATA_INTEGER(std_integer_from_any(&argv[0]) - std_integer_from_any(&argv[1]));
     }
     return true;
 }
@@ -790,9 +800,9 @@ bool block_mult(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* re
     (void) exec;
     (void) argc;
     if (argv[0].type == DATA_TYPE_FLOAT) {
-        *return_val = DATA_FLOAT(argv[0].data.float_val * data_to_float(argv[1]));
+        *return_val = DATA_FLOAT(argv[0].data.float_val * std_float_from_any(&argv[1]));
     } else {
-        *return_val = DATA_INTEGER(data_to_integer(argv[0]) * data_to_integer(argv[1]));
+        *return_val = DATA_INTEGER(std_integer_from_any(&argv[0]) * std_integer_from_any(&argv[1]));
     }
     return true;
 }
@@ -804,14 +814,14 @@ bool block_div(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* ret
     (void) argc;
 
     if (argv[0].type == DATA_TYPE_FLOAT) {
-        *return_val = DATA_FLOAT(argv[0].data.float_val / data_to_float(argv[1]));
+        *return_val = DATA_FLOAT(argv[0].data.float_val / std_float_from_any(&argv[1]));
     } else {
-        int divisor = data_to_integer(argv[1]);
+        int divisor = std_integer_from_any(&argv[1]);
         if (divisor == 0) {
             exec_set_error(exec, block, gettext("Division by zero"));
             return false;
         }
-        *return_val = DATA_INTEGER(data_to_integer(argv[0]) / divisor);
+        *return_val = DATA_INTEGER(std_integer_from_any(&argv[0]) / divisor);
     }
     return true;
 }
@@ -822,12 +832,12 @@ bool block_pow(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* ret
     (void) exec;
     (void) argc;
     if (argv[0].type == DATA_TYPE_FLOAT) {
-        *return_val = DATA_FLOAT(pow(argv[0].data.float_val, data_to_float(argv[1])));
+        *return_val = DATA_FLOAT(pow(argv[0].data.float_val, std_float_from_any(&argv[1])));
         return true;
     }
 
-    int base = data_to_integer(argv[0]);
-    unsigned int exp = data_to_integer(argv[1]);
+    int base = std_integer_from_any(&argv[0]);
+    unsigned int exp = std_integer_from_any(&argv[1]);
     if (!exp) {
         *return_val = DATA_INTEGER(1);
         return true;
@@ -854,25 +864,25 @@ bool block_math(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* re
     }
 
     if (!strcmp(argv[0].data.literal_val, "sin")) {
-        *return_val = DATA_FLOAT(sin(data_to_float(argv[1])));
+        *return_val = DATA_FLOAT(sin(std_float_from_any(&argv[1])));
     } else if (!strcmp(argv[0].data.literal_val, "cos")) {
-        *return_val = DATA_FLOAT(cos(data_to_float(argv[1])));
+        *return_val = DATA_FLOAT(cos(std_float_from_any(&argv[1])));
     } else if (!strcmp(argv[0].data.literal_val, "tan")) {
-        *return_val = DATA_FLOAT(tan(data_to_float(argv[1])));
+        *return_val = DATA_FLOAT(tan(std_float_from_any(&argv[1])));
     } else if (!strcmp(argv[0].data.literal_val, "asin")) {
-        *return_val = DATA_FLOAT(asin(data_to_float(argv[1])));
+        *return_val = DATA_FLOAT(asin(std_float_from_any(&argv[1])));
     } else if (!strcmp(argv[0].data.literal_val, "acos")) {
-        *return_val = DATA_FLOAT(acos(data_to_float(argv[1])));
+        *return_val = DATA_FLOAT(acos(std_float_from_any(&argv[1])));
     } else if (!strcmp(argv[0].data.literal_val, "atan")) {
-        *return_val = DATA_FLOAT(atan(data_to_float(argv[1])));
+        *return_val = DATA_FLOAT(atan(std_float_from_any(&argv[1])));
     } else if (!strcmp(argv[0].data.literal_val, "sqrt")) {
-        *return_val = DATA_FLOAT(sqrt(data_to_float(argv[1])));
+        *return_val = DATA_FLOAT(sqrt(std_float_from_any(&argv[1])));
     } else if (!strcmp(argv[0].data.literal_val, "round")) {
-        *return_val = DATA_FLOAT(round(data_to_float(argv[1])));
+        *return_val = DATA_FLOAT(round(std_float_from_any(&argv[1])));
     } else if (!strcmp(argv[0].data.literal_val, "floor")) {
-        *return_val = DATA_FLOAT(floor(data_to_float(argv[1])));
+        *return_val = DATA_FLOAT(floor(std_float_from_any(&argv[1])));
     } else if (!strcmp(argv[0].data.literal_val, "ceil")) {
-        *return_val = DATA_FLOAT(ceil(data_to_float(argv[1])));
+        *return_val = DATA_FLOAT(ceil(std_float_from_any(&argv[1])));
     } else {
         exec_set_error(exec, block, gettext("Invalid argument %s"), argv[0].data.literal_val);
         return false;
@@ -895,7 +905,7 @@ bool block_bit_not(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue*
     (void) block;
     (void) exec;
     (void) argc;
-    *return_val = DATA_INTEGER(~data_to_integer(argv[0]));
+    *return_val = DATA_INTEGER(~std_integer_from_any(&argv[0]));
     return true;
 }
 
@@ -904,7 +914,7 @@ bool block_bit_and(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue*
     (void) block;
     (void) exec;
     (void) argc;
-    *return_val = DATA_INTEGER(data_to_integer(argv[0]) & data_to_integer(argv[1]));
+    *return_val = DATA_INTEGER(std_integer_from_any(&argv[0]) & std_integer_from_any(&argv[1]));
     return true;
 }
 
@@ -913,7 +923,7 @@ bool block_bit_xor(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue*
     (void) block;
     (void) exec;
     (void) argc;
-    *return_val = DATA_INTEGER(data_to_integer(argv[0]) ^ data_to_integer(argv[1]));
+    *return_val = DATA_INTEGER(std_integer_from_any(&argv[0]) ^ std_integer_from_any(&argv[1]));
     return true;
 }
 
@@ -922,7 +932,7 @@ bool block_bit_or(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* 
     (void) block;
     (void) exec;
     (void) argc;
-    *return_val = DATA_INTEGER(data_to_integer(argv[0]) | data_to_integer(argv[1]));
+    *return_val = DATA_INTEGER(std_integer_from_any(&argv[0]) | std_integer_from_any(&argv[1]));
     return true;
 }
 
@@ -932,9 +942,9 @@ bool block_rem(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* ret
     (void) exec;
     (void) argc;
     if (argv[0].type == DATA_TYPE_FLOAT) {
-        *return_val = DATA_FLOAT(fmod(argv[0].data.float_val, data_to_float(argv[1])));
+        *return_val = DATA_FLOAT(fmod(argv[0].data.float_val, std_float_from_any(&argv[1])));
     } else {
-        *return_val = DATA_INTEGER(data_to_integer(argv[0]) % data_to_integer(argv[1]));
+        *return_val = DATA_INTEGER(std_integer_from_any(&argv[0]) % std_integer_from_any(&argv[1]));
     }
     return true;
 }
@@ -946,9 +956,9 @@ bool block_less(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* re
     (void) argc;
 
     if (argv[0].type == DATA_TYPE_FLOAT) {
-        *return_val = DATA_BOOL(argv[0].data.float_val < data_to_float(argv[1]));
+        *return_val = DATA_BOOL(argv[0].data.float_val < std_float_from_any(&argv[1]));
     } else {
-        *return_val = DATA_BOOL(data_to_integer(argv[0]) < data_to_integer(argv[1]));
+        *return_val = DATA_BOOL(std_integer_from_any(&argv[0]) < std_integer_from_any(&argv[1]));
     }
     return true;
 }
@@ -959,9 +969,9 @@ bool block_less_eq(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue*
     (void) exec;
     (void) argc;
     if (argv[0].type == DATA_TYPE_FLOAT) {
-        *return_val = DATA_BOOL(argv[0].data.float_val <= data_to_float(argv[1]));
+        *return_val = DATA_BOOL(argv[0].data.float_val <= std_float_from_any(&argv[1]));
     } else {
-        *return_val = DATA_BOOL(data_to_integer(argv[0]) <= data_to_integer(argv[1]));
+        *return_val = DATA_BOOL(std_integer_from_any(&argv[0]) <= std_integer_from_any(&argv[1]));
     }
     return true;
 }
@@ -972,9 +982,9 @@ bool block_more(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* re
     (void) exec;
     (void) argc;
     if (argv[0].type == DATA_TYPE_FLOAT) {
-        *return_val = DATA_BOOL(argv[0].data.float_val > data_to_float(argv[1]));
+        *return_val = DATA_BOOL(argv[0].data.float_val > std_float_from_any(&argv[1]));
     } else {
-        *return_val = DATA_BOOL(data_to_integer(argv[0]) > data_to_integer(argv[1]));
+        *return_val = DATA_BOOL(std_integer_from_any(&argv[0]) > std_integer_from_any(&argv[1]));
     }
     return true;
 }
@@ -985,9 +995,9 @@ bool block_more_eq(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue*
     (void) exec;
     (void) argc;
     if (argv[0].type == DATA_TYPE_FLOAT) {
-        *return_val = DATA_BOOL(argv[0].data.float_val >= data_to_float(argv[1]));
+        *return_val = DATA_BOOL(argv[0].data.float_val >= std_float_from_any(&argv[1]));
     } else {
-        *return_val = DATA_BOOL(data_to_integer(argv[0]) >= data_to_integer(argv[1]));
+        *return_val = DATA_BOOL(std_integer_from_any(&argv[0]) >= std_integer_from_any(&argv[1]));
     }
     return true;
 }
@@ -997,7 +1007,7 @@ bool block_not(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* ret
     (void) block;
     (void) exec;
     (void) argc;
-    *return_val = DATA_BOOL(!data_to_bool(argv[0]));
+    *return_val = DATA_BOOL(!std_bool_from_any(&argv[0]));
     return true;
 }
 
@@ -1006,7 +1016,7 @@ bool block_and(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* ret
     (void) block;
     (void) exec;
     (void) argc;
-    *return_val = DATA_BOOL(data_to_bool(argv[0]) && data_to_bool(argv[1]));
+    *return_val = DATA_BOOL(std_bool_from_any(&argv[0]) && std_bool_from_any(&argv[1]));
     return true;
 }
 
@@ -1015,7 +1025,7 @@ bool block_or(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* retu
     (void) block;
     (void) exec;
     (void) argc;
-    *return_val = DATA_BOOL(data_to_bool(argv[0]) || data_to_bool(argv[1]));
+    *return_val = DATA_BOOL(std_bool_from_any(&argv[0]) || std_bool_from_any(&argv[1]));
     return true;
 }
 
