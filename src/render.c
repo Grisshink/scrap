@@ -555,8 +555,8 @@ static void draw_block(Block* block, bool highlight, bool can_hover, bool ghost,
             gui_element_begin(gui);
                 gui_set_rect(gui, CONVERT_COLOR(dropdown_color, GuiColor));
 
-                if (ui.hover.dropdown.ref_object == arg) {
-                    ui.hover.dropdown.element = gui_get_element(gui);
+                if (ui.dropdown.ref_object == arg) {
+                    ui.dropdown.element = gui_get_element(gui);
                 }
 
                 gui_element_begin(gui);
@@ -653,8 +653,8 @@ static void draw_block(Block* block, bool highlight, bool can_hover, bool ghost,
                         if (can_hover) gui_on_hover(gui, argument_on_hover);
                     }
 
-                    if (ui.hover.dropdown.ref_object == arg) {
-                        ui.hover.dropdown.element = gui_get_element(gui);
+                    if (ui.dropdown.ref_object == arg) {
+                        ui.dropdown.element = gui_get_element(gui);
                     }
 
                     gui_element_begin(gui);
@@ -777,7 +777,7 @@ static void draw_top_bar(void) {
         gui_spacer(gui, 10, 0);
 
         GuiElement* el = draw_button(gettext("File"), top_bar_size, false, button_on_hover, handle_file_button_click);
-        if (ui.hover.dropdown.handler == handle_file_menu_click) ui.hover.dropdown.element = el;
+        if (ui.dropdown.handler == handle_file_menu_click) ui.dropdown.element = el;
         draw_button(gettext("Settings"), top_bar_size, false, button_on_hover, handle_settings_button_click);
         draw_button(gettext("About"), top_bar_size, false, button_on_hover, handle_about_button_click);
     gui_element_end(gui);
@@ -1101,15 +1101,15 @@ static void draw_block_palette(void) {
 
 static void spectrum_on_hover(GuiElement* el) {
     (void) el;
-    ui.hover.dropdown.as.color_picker.hover_part = COLOR_PICKER_SPECTRUM;
+    ui.dropdown.as.color_picker.hover_part = COLOR_PICKER_SPECTRUM;
 }
 
 static void spectrum_on_render(GuiElement* el) {
-    if (IsMouseButtonDown(MOUSE_BUTTON_LEFT) && ui.hover.dropdown.as.color_picker.select_part == COLOR_PICKER_SPECTRUM) {
-        ui.hover.dropdown.as.color_picker.color.hue = CLAMP((gui->mouse_y - el->parent->abs_y) / el->parent->h * 360.0, 0.0, 360.0);
+    if (IsMouseButtonDown(MOUSE_BUTTON_LEFT) && ui.dropdown.as.color_picker.select_part == COLOR_PICKER_SPECTRUM) {
+        ui.dropdown.as.color_picker.color.hue = CLAMP((gui->mouse_y - el->parent->abs_y) / el->parent->h * 360.0, 0.0, 360.0);
         editor.project_modified = true;
     }
-    el->y = (ui.hover.dropdown.as.color_picker.color.hue / 360.0) * el->parent->h - el->h / 2.0;
+    el->y = (ui.dropdown.as.color_picker.color.hue / 360.0) * el->parent->h - el->h / 2.0;
 }
 
 static void color_picker_on_hover(GuiElement* el) {
@@ -1119,39 +1119,39 @@ static void color_picker_on_hover(GuiElement* el) {
 
 static void color_picker_sv_on_hover(GuiElement* el) {
     (void) el;
-    ui.hover.dropdown.as.color_picker.hover_part = COLOR_PICKER_SV;
+    ui.dropdown.as.color_picker.hover_part = COLOR_PICKER_SV;
 }
 
 static void color_picker_sv_on_render(GuiElement* el) {
-    if (IsMouseButtonDown(MOUSE_BUTTON_LEFT) && ui.hover.dropdown.as.color_picker.select_part == COLOR_PICKER_SV) {
-        ui.hover.dropdown.as.color_picker.color.saturation = CLAMP((gui->mouse_x - el->parent->abs_x) / el->parent->w, 0.0, 1.0);
-        ui.hover.dropdown.as.color_picker.color.value = CLAMP(1.0 - (gui->mouse_y - el->parent->abs_y) / el->parent->h, 0.0, 1.0);
+    if (IsMouseButtonDown(MOUSE_BUTTON_LEFT) && ui.dropdown.as.color_picker.select_part == COLOR_PICKER_SV) {
+        ui.dropdown.as.color_picker.color.saturation = CLAMP((gui->mouse_x - el->parent->abs_x) / el->parent->w, 0.0, 1.0);
+        ui.dropdown.as.color_picker.color.value = CLAMP(1.0 - (gui->mouse_y - el->parent->abs_y) / el->parent->h, 0.0, 1.0);
         editor.project_modified = true;
     }
 
-    el->x = ui.hover.dropdown.as.color_picker.color.saturation * el->parent->w - el->w / 2.0;
-    el->y = (1 - ui.hover.dropdown.as.color_picker.color.value) * el->parent->h - el->h / 2.0;
+    el->x = ui.dropdown.as.color_picker.color.saturation * el->parent->w - el->w / 2.0;
+    el->y = (1 - ui.dropdown.as.color_picker.color.value) * el->parent->h - el->h / 2.0;
 }
 
 static void draw_color_picker(void) {
     Color col = ColorFromHSV(
-        ui.hover.dropdown.as.color_picker.color.hue,
-        ui.hover.dropdown.as.color_picker.color.saturation,
-        ui.hover.dropdown.as.color_picker.color.value
+        ui.dropdown.as.color_picker.color.hue,
+        ui.dropdown.as.color_picker.color.saturation,
+        ui.dropdown.as.color_picker.color.value
     );
 
     Color col_hue = ColorFromHSV(
-        ui.hover.dropdown.as.color_picker.color.hue,
+        ui.dropdown.as.color_picker.color.hue,
         1.0,
         1.0
     );
 
-    *ui.hover.dropdown.as.color_picker.edit_color = col;
+    *ui.dropdown.as.color_picker.edit_color = col;
 
     gui_element_begin(gui);
         gui_set_floating(gui);
-        gui_set_parent_anchor(gui, ui.hover.dropdown.element);
-        gui_set_position(gui, 0, ui.hover.dropdown.element->h);
+        gui_set_parent_anchor(gui, ui.dropdown.element);
+        gui_set_position(gui, 0, ui.dropdown.element->h);
         gui_set_rect(gui, (GuiColor) { 0x20, 0x20, 0x20, 0xff });
         gui_on_hover(gui, color_picker_on_hover);
 
@@ -1199,8 +1199,8 @@ static void draw_color_picker(void) {
                     gui_set_rect(gui, (GuiColor) { 0x30, 0x30, 0x30, 0xff });
                     gui_set_padding(gui, config.ui_size * 0.2, config.ui_size * 0.2);
 
-                    snprintf(ui.hover.dropdown.as.color_picker.color_hex, 10, "#%02x%02x%02x%02x", col.r, col.g, col.b, col.a);
-                    gui_text(gui, &assets.fonts.font_cond, ui.hover.dropdown.as.color_picker.color_hex, BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+                    snprintf(ui.dropdown.as.color_picker.color_hex, 10, "#%02x%02x%02x%02x", col.r, col.g, col.b, col.a);
+                    gui_text(gui, &assets.fonts.font_cond, ui.dropdown.as.color_picker.color_hex, BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
                 gui_element_end(gui);
 
                 gui_element_begin(gui);
@@ -1506,15 +1506,15 @@ static void draw_code(void) {
 }
 
 static void list_dropdown_on_hover(GuiElement* el) {
-    assert(ui.hover.dropdown.type == DROPDOWN_LIST);
+    assert(ui.dropdown.type == DROPDOWN_LIST);
 
     el->draw_type = DRAWTYPE_RECT;
     el->draw_subtype = SUBTYPE_DEFAULT;
     el->color = (GuiColor) { 0x40, 0x40, 0x40, 0xff };
     // Double cast to avoid warning. In our case this operation is safe because el->custom_data currently stores a value of type int
-    ui.hover.dropdown.as.list.select_ind = (int)(size_t)el->custom_data;
+    ui.dropdown.as.list.select_ind = (int)(size_t)el->custom_data;
 
-    ui.hover.button.handler = ui.hover.dropdown.handler;
+    ui.hover.button.handler = ui.dropdown.handler;
 }
 
 static void draw_list_dropdown(void) {
@@ -1525,18 +1525,18 @@ static void draw_list_dropdown(void) {
         gui_set_rect(gui, (GuiColor) { 0x40, 0x40, 0x40, 0xff });
         gui_set_gap(gui, 2);
         gui_set_padding(gui, 2, 2);
-        gui_set_parent_anchor(gui, ui.hover.dropdown.element);
-        gui_set_position(gui, 0, ui.hover.dropdown.element->h);
-        if (ui.hover.dropdown.as.list.len > max_list_size) {
+        gui_set_parent_anchor(gui, ui.dropdown.element);
+        gui_set_position(gui, 0, ui.dropdown.element->h);
+        if (ui.dropdown.as.list.len > max_list_size) {
             gui_set_scissor(gui);
-            gui_set_fixed(gui, ui.hover.dropdown.element->w + 5, max_list_size * (config.ui_size + 2) + 4);
-            gui_set_scroll(gui, &ui.hover.dropdown.as.list.scroll);
+            gui_set_fixed(gui, ui.dropdown.element->w + 5, max_list_size * (config.ui_size + 2) + 4);
+            gui_set_scroll(gui, &ui.dropdown.as.list.scroll);
             gui_set_scroll_scaling(gui, (config.ui_size + 2) * 2);
         } else {
-            gui_set_min_size(gui, ui.hover.dropdown.element->w, 0);
+            gui_set_min_size(gui, ui.dropdown.element->w, 0);
         }
 
-        for (int i = 0; i < ui.hover.dropdown.as.list.len; i++) {
+        for (int i = 0; i < ui.dropdown.as.list.len; i++) {
             gui_element_begin(gui);
                 gui_set_grow(gui, DIRECTION_HORIZONTAL);
                 gui_set_direction(gui, DIRECTION_HORIZONTAL);
@@ -1547,7 +1547,7 @@ static void draw_list_dropdown(void) {
                 gui_on_hover(gui, list_dropdown_on_hover);
                 gui_set_custom_data(gui, (void*)(size_t)i);
 
-                const char* list_value = sgettext(ui.hover.dropdown.as.list.data[i]);
+                const char* list_value = sgettext(ui.dropdown.as.list.data[i]);
                 gui_text(gui, &assets.fonts.font_cond, list_value, BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
             gui_element_end(gui);
         }
@@ -1555,16 +1555,16 @@ static void draw_list_dropdown(void) {
 }
 
 static void draw_dropdown(void) {
-    if (!ui.hover.dropdown.shown) return;
+    if (!ui.dropdown.shown) return;
     ui.hover.button.handler = handle_dropdown_close;
 
-    if (!ui.hover.dropdown.element) {
+    if (!ui.dropdown.element) {
         TraceLog(LOG_WARNING, "[DROPDOWN] Anchor is not set or gone");
         handle_dropdown_close();
         return;
     }
 
-    switch (ui.hover.dropdown.type) {
+    switch (ui.dropdown.type) {
     case DROPDOWN_COLOR_PICKER:
         draw_color_picker();
         return;
@@ -2036,9 +2036,9 @@ static void write_debug_buffer(void) {
     print_debug(&i, "UI time: %.3f", ui.ui_time);
     print_debug(&i, "FPS: %d, Frame time: %.3f", GetFPS(), GetFrameTime());
     print_debug(&i, "Panel: %p, side: %d", ui.hover.panels.panel, ui.hover.panels.panel_side);
-    print_debug(&i, "Part: %d, Select: %d", ui.hover.dropdown.as.color_picker.hover_part, ui.hover.dropdown.as.color_picker.select_part);
+    print_debug(&i, "Part: %d, Select: %d", ui.dropdown.as.color_picker.hover_part, ui.dropdown.as.color_picker.select_part);
     print_debug(&i, "Handler: %p", ui.hover.button.handler);
-    print_debug(&i, "Anchor: %p, Ref: %p", ui.hover.dropdown.element, ui.hover.dropdown.ref_object);
+    print_debug(&i, "Anchor: %p, Ref: %p", ui.dropdown.element, ui.dropdown.ref_object);
 #else
     print_debug(&i, "Scrap v" SCRAP_VERSION);
     print_debug(&i, "FPS: %d, Frame time: %.3f", GetFPS(), GetFrameTime());

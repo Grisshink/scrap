@@ -150,14 +150,14 @@ typedef struct {
 
     int select_ind;
     int scroll;
-} ListDropdownHoverInfo;
+} ListDropdown;
 
 typedef struct {
     ColorPickerPartType hover_part, select_part;
     HSV color;
     Color* edit_color;
     char color_hex[10];
-} ColorPickerDropdownHoverInfo;
+} ColorPickerDropdown;
 
 typedef struct {
     bool shown;
@@ -167,10 +167,10 @@ typedef struct {
 
     DropdownType type;
     union {
-        ListDropdownHoverInfo list;
-        ColorPickerDropdownHoverInfo color_picker;
+        ListDropdown list;
+        ColorPickerDropdown color_picker;
     } as;
-} DropdownHoverInfo;
+} Dropdown;
 
 typedef struct {
     int* value;
@@ -254,7 +254,6 @@ typedef struct {
     PanelHoverInfo panels;
     ButtonHoverInfo button;
 
-    DropdownHoverInfo dropdown;
     SliderHoverInfo hover_slider;
     SliderHoverInfo dragged_slider;
     int slider_last_val;
@@ -362,6 +361,8 @@ typedef struct {
 
     int categories_scroll;
     int search_list_scroll;
+
+    Dropdown dropdown;
 
 #ifdef DEBUG
     double ui_time;

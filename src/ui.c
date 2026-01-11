@@ -445,22 +445,22 @@ PanelTree* find_panel(PanelTree* root, PanelType panel) {
 static void deselect_all(void) {
     ui.hover.editor.select_argument = NULL;
     ui.hover.select_input = NULL;
-    if (ui.hover.dropdown.type == DROPDOWN_LIST) ui.hover.dropdown.as.list.scroll = 0;
+    if (ui.dropdown.type == DROPDOWN_LIST) ui.dropdown.as.list.scroll = 0;
 }
 
 void show_dropdown(DropdownType type, void* ref_object, ButtonClickHandler handler) {
-    ui.hover.dropdown.ref_object = ref_object;
-    ui.hover.dropdown.handler = handler;
-    ui.hover.dropdown.shown = true;
-    ui.hover.dropdown.type = type;
+    ui.dropdown.ref_object = ref_object;
+    ui.dropdown.handler = handler;
+    ui.dropdown.shown = true;
+    ui.dropdown.type = type;
 }
 
 void show_list_dropdown(char** list, int list_len, void* ref_object, ButtonClickHandler handler) {
     show_dropdown(DROPDOWN_LIST, ref_object, handler);
-    ui.hover.dropdown.as.list.data = list;
-    ui.hover.dropdown.as.list.len = list_len;
-    ui.hover.dropdown.as.list.select_ind = 0;
-    ui.hover.dropdown.as.list.scroll = 0;
+    ui.dropdown.as.list.data = list;
+    ui.dropdown.as.list.len = list_len;
+    ui.dropdown.as.list.select_ind = 0;
+    ui.dropdown.as.list.scroll = 0;
 }
 
 void show_color_picker_dropdown(Color* edit_color, void* ref_object, ButtonClickHandler handler) {
@@ -470,18 +470,18 @@ void show_color_picker_dropdown(Color* edit_color, void* ref_object, ButtonClick
 
     Vector3 hsv = ColorToHSV(*edit_color);
 
-    ui.hover.dropdown.as.color_picker.hover_part  = COLOR_PICKER_NONE;
-    ui.hover.dropdown.as.color_picker.select_part = COLOR_PICKER_NONE;
-    ui.hover.dropdown.as.color_picker.color = *(HSV*)&hsv;
-    ui.hover.dropdown.as.color_picker.edit_color = edit_color;
-    ui.hover.dropdown.as.color_picker.color_hex[0] = 0;
+    ui.dropdown.as.color_picker.hover_part  = COLOR_PICKER_NONE;
+    ui.dropdown.as.color_picker.select_part = COLOR_PICKER_NONE;
+    ui.dropdown.as.color_picker.color = *(HSV*)&hsv;
+    ui.dropdown.as.color_picker.edit_color = edit_color;
+    ui.dropdown.as.color_picker.color_hex[0] = 0;
 }
 
 bool handle_dropdown_close(void) {
-    memset(&ui.hover.dropdown.as, 0, sizeof(ui.hover.dropdown.as));
-    ui.hover.dropdown.ref_object = NULL;
-    ui.hover.dropdown.handler = NULL;
-    ui.hover.dropdown.shown = false;
+    memset(&ui.dropdown.as, 0, sizeof(ui.dropdown.as));
+    ui.dropdown.ref_object = NULL;
+    ui.dropdown.handler = NULL;
+    ui.dropdown.shown = false;
 
     ui.hover.editor.select_block = NULL;
     ui.hover.select_input = NULL;
@@ -552,9 +552,9 @@ void load_project(void) {
 }
 
 bool handle_file_menu_click(void) {
-    assert(ui.hover.dropdown.type == DROPDOWN_LIST);
+    assert(ui.dropdown.type == DROPDOWN_LIST);
 
-    switch (ui.hover.dropdown.as.list.select_ind) {
+    switch (ui.dropdown.as.list.select_ind) {
     case FILE_MENU_NEW_PROJECT:
         for (size_t i = 0; i < vector_size(editor.code); i++) blockchain_free(&editor.code[i]);
         vector_clear(editor.code);
@@ -575,13 +575,13 @@ bool handle_file_menu_click(void) {
 }
 
 bool handle_block_dropdown_click(void) {
-    assert(ui.hover.dropdown.type == DROPDOWN_LIST);
-    argument_set_const_string(ui.hover.editor.select_argument, ui.hover.dropdown.as.list.data[ui.hover.dropdown.as.list.select_ind]);
+    assert(ui.dropdown.type == DROPDOWN_LIST);
+    argument_set_const_string(ui.hover.editor.select_argument, ui.dropdown.as.list.data[ui.dropdown.as.list.select_ind]);
     return handle_dropdown_close();
 }
 
 bool handle_color_picker_click(void) {
-    ui.hover.dropdown.as.color_picker.select_part = ui.hover.dropdown.as.color_picker.hover_part;
+    ui.dropdown.as.color_picker.select_part = ui.dropdown.as.color_picker.hover_part;
     return true;
 }
 
@@ -1087,8 +1087,8 @@ static bool handle_mouse_click(void) {
         if (handle_blockdef_editor_click()) return true;
     }
 
-    if (ui.hover.dropdown.shown && ui.hover.dropdown.type == DROPDOWN_COLOR_PICKER) {
-        ui.hover.dropdown.as.color_picker.select_part = COLOR_PICKER_NONE;
+    if (ui.dropdown.shown && ui.dropdown.type == DROPDOWN_COLOR_PICKER) {
+        ui.dropdown.as.color_picker.select_part = COLOR_PICKER_NONE;
     }
 
     if (mouse_empty) {
@@ -1114,10 +1114,10 @@ static bool handle_mouse_click(void) {
         }
 
         if (ui.hover.editor.argument != ui.hover.editor.select_argument) {
-            if (!ui.hover.editor.argument || ui.hover.input_info.input || ui.hover.dropdown.shown) {
+            if (!ui.hover.editor.argument || ui.hover.input_info.input || ui.dropdown.shown) {
                 ui.hover.editor.select_argument = ui.hover.editor.argument;
             }
-            if (ui.hover.dropdown.type == DROPDOWN_LIST) ui.hover.dropdown.as.list.scroll = 0;
+            if (ui.dropdown.type == DROPDOWN_LIST) ui.dropdown.as.list.scroll = 0;
             return true;
         }
 
@@ -1510,7 +1510,7 @@ void scrap_gui_process_ui(void) {
         ui.hover.select_input = NULL;
         ui.hover.editor.select_blockchain = NULL;
         ui.render_surface_needs_redraw = true;
-        if (ui.hover.dropdown.shown) handle_dropdown_close();
+        if (ui.dropdown.shown) handle_dropdown_close();
     } else if (IsMouseButtonDown(MOUSE_BUTTON_MIDDLE) || IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
         handle_mouse_drag();
     } else {
@@ -1541,9 +1541,9 @@ void scrap_gui_process_ui(void) {
         ui.hover.panels.panel = NULL;
         ui.hover.panels.panel_size = (Rectangle) {0};
         ui.hover.editor.select_valid = false;
-        ui.hover.dropdown.element = NULL;
-        if (ui.hover.dropdown.shown && ui.hover.dropdown.type == DROPDOWN_COLOR_PICKER) {
-            ui.hover.dropdown.as.color_picker.hover_part = COLOR_PICKER_NONE;
+        ui.dropdown.element = NULL;
+        if (ui.dropdown.shown && ui.dropdown.type == DROPDOWN_COLOR_PICKER) {
+            ui.dropdown.as.color_picker.hover_part = COLOR_PICKER_NONE;
         }
 
 #ifdef DEBUG
