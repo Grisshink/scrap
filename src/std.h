@@ -31,6 +31,10 @@ typedef struct {
     char str[];
 } StringHeader;
 
+typedef struct {
+    unsigned char r, g, b, a;
+} StdColor;
+
 typedef struct AnyValue AnyValue;
 typedef struct List List;
 
@@ -41,6 +45,7 @@ typedef union {
     double float_val;
     List* list_val;
     AnyValue* any_val;
+    StdColor color_val;
 } AnyValueData;
 
 struct AnyValue {
@@ -71,6 +76,7 @@ int std_integer_from_any(AnyValue* value);
 double std_float_from_any(AnyValue* value);
 int std_bool_from_any(AnyValue* value);
 List* std_list_from_any(Gc* gc, AnyValue* value);
+StdColor std_color_from_any(AnyValue* value);
 StringHeader* std_string_from_any(Gc* gc, AnyValue* value);
 bool std_any_is_eq(AnyValue* left, AnyValue* right);
 
@@ -79,6 +85,7 @@ StringHeader* std_string_from_literal(Gc* gc, const char* literal, unsigned int 
 StringHeader* std_string_from_integer(Gc* gc, int value);
 StringHeader* std_string_from_bool(Gc* gc, bool value);
 StringHeader* std_string_from_float(Gc* gc, double value);
+StringHeader* std_string_from_color(Gc* gc, StdColor value);
 char* std_string_get_data(StringHeader* str);
 
 int std_string_length(StringHeader* str);
@@ -103,6 +110,7 @@ int std_term_print_str(const char* str);
 int std_term_print_integer(int value);
 int std_term_print_float(double value);
 int std_term_print_bool(bool value);
+int std_term_print_color(StdColor value);
 void std_term_clear(void);
 
 #ifdef STANDALONE_STD
@@ -126,5 +134,6 @@ void std_term_set_clear_color(TermColor color);
 int std_sleep(int usecs);
 int std_get_random(int min, int max);
 void std_set_random_seed(int seed);
+StdColor std_parse_color(const char* value);
 
 #endif // SCRAP_STD_H

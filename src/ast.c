@@ -41,6 +41,8 @@ const char* type_to_str(DataType type) {
         return "bool";
     case DATA_TYPE_LIST:
         return "list";
+    case DATA_TYPE_COLOR:
+        return "color";
     case DATA_TYPE_ANY:
         return "any";
     case DATA_TYPE_BLOCKDEF:
@@ -59,14 +61,13 @@ Block block_new(Blockdef* blockdef) {
     blockdef->ref_count++;
 
     for (size_t i = 0; i < vector_size(blockdef->inputs); i++) {
-        if (block.blockdef->inputs[i].type != INPUT_ARGUMENT &&
-            block.blockdef->inputs[i].type != INPUT_DROPDOWN &&
-            block.blockdef->inputs[i].type != INPUT_BLOCKDEF_EDITOR) continue;
-        Argument* arg = vector_add_dst((Argument**)&block.arguments);
-        arg->input_id = i;
+        Argument* arg;
 
         switch (blockdef->inputs[i].type) {
         case INPUT_ARGUMENT:
+            arg = vector_add_dst(&block.arguments);
+            arg->input_id = i;
+
             switch (blockdef->inputs[i].data.arg.constr) {
             case BLOCKCONSTR_UNLIMITED:
                 arg->type = ARGUMENT_TEXT;
@@ -86,6 +87,8 @@ Block block_new(Blockdef* blockdef) {
             vector_add(&arg->data.text, 0);
             break;
         case INPUT_DROPDOWN:
+            arg = vector_add_dst(&block.arguments);
+            arg->input_id = i;
             arg->type = ARGUMENT_CONST_STRING;
 
             size_t list_len = 0;
@@ -99,13 +102,24 @@ Block block_new(Blockdef* blockdef) {
             vector_add(&arg->data.text, 0);
             break;
         case INPUT_BLOCKDEF_EDITOR:
+            arg = vector_add_dst(&block.arguments);
+            arg->input_id = i;
             arg->type = ARGUMENT_BLOCKDEF;
             arg->data.blockdef = blockdef_new("custom", BLOCKTYPE_NORMAL, blockdef->color, NULL);
             arg->data.blockdef->ref_count++;
             blockdef_add_text(arg->data.blockdef, gettext("My block"));
             break;
+        case INPUT_COLOR:
+            arg = vector_add_dst(&block.arguments);
+            arg->input_id = i;
+            arg->type = ARGUMENT_COLOR;
+            arg->data.color = blockdef->inputs[i].data.color;
+            break;
+        case INPUT_TEXT_DISPLAY:
+        case INPUT_IMAGE_DISPLAY:
+            break;
         default:
-            assert(false && "Unreachable");
+            assert(false && "Unhandled add input argument");
             break;
         }
     }
@@ -137,6 +151,9 @@ Block block_copy(Block* block, Block* parent) {
             arg->data.blockdef = blockdef_copy(block->arguments[i].data.blockdef);
             arg->data.blockdef->ref_count++;
             break;
+        case ARGUMENT_COLOR:
+            arg->data.color = block->arguments[i].data.color;
+            break;
         default:
             assert(false && "Unimplemented argument copy");
             break;
@@ -165,6 +182,8 @@ void block_free(Block* block) {
                 break;
             case ARGUMENT_BLOCKDEF:
                 blockdef_free(block->arguments[i].data.blockdef);
+                break;
+            case ARGUMENT_COLOR:
                 break;
             default:
                 assert(false && "Unimplemented argument free");
@@ -392,9 +411,6 @@ void argument_set_const_string(Argument* block_arg, char* text) {
 }
 
 void argument_set_text(Argument* block_arg, char* text) {
-    assert(block_arg->type == ARGUMENT_BLOCK);
-    assert(block_arg->data.block.parent != NULL);
-
     block_arg->type = ARGUMENT_TEXT;
     block_arg->data.text = vector_create();
 
@@ -402,6 +418,11 @@ void argument_set_text(Argument* block_arg, char* text) {
         vector_add(&block_arg->data.text, *pos);
     }
     vector_add(&block_arg->data.text, 0);
+}
+
+void argument_set_color(Argument* block_arg, BlockdefColor color) {
+    block_arg->type = ARGUMENT_COLOR;
+    block_arg->data.color = color;
 }
 
 Blockdef* blockdef_new(const char* id, BlockdefType type, BlockdefColor color, void* func) {
@@ -508,6 +529,14 @@ void blockdef_add_dropdown(Blockdef* blockdef, InputDropdownSource dropdown_sour
             .source = dropdown_source,
             .list = accessor,
         },
+    };
+}
+
+void blockdef_add_color_input(Blockdef* blockdef, BlockdefColor color) {
+    Input* input = vector_add_dst(&blockdef->inputs);
+    input->type = INPUT_COLOR;
+    input->data = (InputData) {
+        .color = color,
     };
 }
 

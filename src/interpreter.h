@@ -158,6 +158,11 @@ struct Exec {
     .data = (AnyValueData) { .list_val = (val) }, \
 }
 
+#define DATA_COLOR(val) (AnyValue) { \
+    .type = DATA_TYPE_COLOR, \
+    .data = (AnyValueData) { .color_val = (val) }, \
+}
+
 Exec exec_new(Thread* thread);
 bool exec_run(void* e);
 void exec_cleanup(void* e);
@@ -175,5 +180,6 @@ int data_to_integer(AnyValue arg);
 int data_to_bool(AnyValue arg);
 char* data_to_any_string(Exec* exec, AnyValue arg);
 double data_to_float(AnyValue arg);
+StdColor data_to_color(AnyValue arg);
 
 #endif // INTERPRETER_H

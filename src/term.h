@@ -79,6 +79,7 @@ int term_print_str(const char* str);
 int term_print_integer(int value);
 int term_print_float(double value);
 int term_print_bool(bool value);
+int term_print_color(TermColor value);
 void term_clear(void);
 void term_resize(float screen_w, float screen_h);
 void term_free(void);

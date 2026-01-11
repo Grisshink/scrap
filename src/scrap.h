@@ -155,7 +155,8 @@ typedef struct {
 typedef struct {
     ColorPickerPartType hover_part, select_part;
     HSV color;
-    char color_hex[8];
+    Color* edit_color;
+    char color_hex[10];
 } ColorPickerDropdownHoverInfo;
 
 typedef struct {

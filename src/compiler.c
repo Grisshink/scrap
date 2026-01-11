@@ -240,6 +240,11 @@ static bool evaluate_block(Exec* exec, Block* block, FuncArg* return_val, Contro
                 arg->type = DATA_TYPE_BLOCKDEF;
                 arg->data.blockdef = block->arguments[i].data.blockdef;
                 break;
+            case ARGUMENT_COLOR:
+                arg = vector_add_dst(&args);
+                arg->type = DATA_TYPE_COLOR;
+                arg->data.value = CONST_INTEGER(*(int*)&block->arguments[i].data.color);
+                break;
             }
         }
     }
@@ -338,6 +343,7 @@ DefineFunction* define_function(Exec* exec, Blockdef* blockdef) {
             vector_add(&func_name, ' ');
             break;
         case INPUT_BLOCKDEF_EDITOR:
+        case INPUT_COLOR:
         case INPUT_DROPDOWN:
             vector_add_str(&func_name, "[] ");
             break;
@@ -497,6 +503,9 @@ static LLVMValueRef register_globals(Exec* exec) {
     LLVMTypeRef print_list_func_params[] = { LLVMPointerType(LLVMInt8Type(), 0) };
     add_function(exec, "std_term_print_list", LLVMInt32Type(), print_list_func_params, ARRLEN(print_list_func_params), std_term_print_list, false, false);
 
+    LLVMTypeRef print_color_func_params[] = { LLVMInt32Type() };
+    add_function(exec, "std_term_print_color", LLVMInt32Type(), print_color_func_params, ARRLEN(print_color_func_params), std_term_print_color, false, false);
+
     LLVMTypeRef print_any_func_params[] = { LLVMPointerType(LLVMInt8Type(), 0) };
     add_function(exec, "std_term_print_any", LLVMInt32Type(), print_any_func_params, ARRLEN(print_any_func_params), std_term_print_any, false, false);
 
@@ -512,6 +521,9 @@ static LLVMValueRef register_globals(Exec* exec) {
     LLVMTypeRef string_float_func_params[] = { LLVMInt64Type(), LLVMDoubleType() };
     add_function(exec, "std_string_from_float", LLVMPointerType(LLVMInt8Type(), 0), string_float_func_params, ARRLEN(string_float_func_params), std_string_from_float, true, false);
 
+    LLVMTypeRef string_color_func_params[] = { LLVMInt64Type(), LLVMInt32Type() };
+    add_function(exec, "std_string_from_color", LLVMPointerType(LLVMInt8Type(), 0), string_color_func_params, ARRLEN(string_color_func_params), std_string_from_color, true, false);
+
     LLVMTypeRef string_any_func_params[] = { LLVMInt64Type(), LLVMPointerType(LLVMInt8Type(), 0) };
     add_function(exec, "std_string_from_any", LLVMPointerType(LLVMInt8Type(), 0), string_any_func_params, ARRLEN(string_any_func_params), std_string_from_any, true, false);
 
@@ -526,6 +538,12 @@ static LLVMValueRef register_globals(Exec* exec) {
 
     LLVMTypeRef bool_any_func_params[] = { LLVMPointerType(LLVMInt8Type(), 0) };
     add_function(exec, "std_bool_from_any", LLVMInt1Type(), bool_any_func_params, ARRLEN(bool_any_func_params), std_bool_from_any, false, false);
+
+    LLVMTypeRef color_any_func_params[] = { LLVMPointerType(LLVMInt8Type(), 0) };
+    add_function(exec, "std_color_from_any", LLVMInt32Type(), color_any_func_params, ARRLEN(color_any_func_params), std_color_from_any, false, false);
+
+    LLVMTypeRef parse_color_func_params[] = { LLVMPointerType(LLVMInt8Type(), 0) };
+    add_function(exec, "std_parse_color", LLVMInt32Type(), parse_color_func_params, ARRLEN(parse_color_func_params), std_parse_color, false, false);
 
     LLVMTypeRef list_any_func_params[] = { LLVMInt64Type(), LLVMPointerType(LLVMInt8Type(), 0) };
     add_function(exec, "std_list_from_any", LLVMPointerType(LLVMInt8Type(), 0), list_any_func_params, ARRLEN(list_any_func_params), std_list_from_any, true, false);

@@ -58,6 +58,7 @@ typedef enum {
     DATA_TYPE_LIST,
     DATA_TYPE_ANY,
     DATA_TYPE_BLOCKDEF,
+    DATA_TYPE_COLOR,
 } DataType;
 
 struct BlockdefColor {
@@ -95,6 +96,7 @@ union InputData {
     BlockdefImage image;
     InputArgument arg;
     InputDropdown drop;
+    BlockdefColor color;
 };
 
 enum InputType {
@@ -103,6 +105,7 @@ enum InputType {
     INPUT_DROPDOWN,
     INPUT_BLOCKDEF_EDITOR,
     INPUT_IMAGE_DISPLAY,
+    INPUT_COLOR,
 };
 
 struct Input {
@@ -135,6 +138,7 @@ struct Block {
 
 union ArgumentData {
     char* text;
+    BlockdefColor color;
     Block block;
     Blockdef* blockdef;
 };
@@ -144,6 +148,7 @@ enum ArgumentType {
     ARGUMENT_BLOCK,
     ARGUMENT_CONST_STRING,
     ARGUMENT_BLOCKDEF,
+    ARGUMENT_COLOR,
 };
 
 struct Argument {
@@ -163,6 +168,7 @@ Blockdef* blockdef_copy(Blockdef* blockdef);
 void blockdef_add_text(Blockdef* blockdef, const char* text);
 void blockdef_add_argument(Blockdef* blockdef, char* defualt_data, const char* hint_text, InputArgumentConstraint constraint);
 void blockdef_add_dropdown(Blockdef* blockdef, InputDropdownSource dropdown_source, ListAccessor accessor);
+void blockdef_add_color_input(Blockdef* blockdef, BlockdefColor color);
 void blockdef_add_image(Blockdef* blockdef, BlockdefImage image);
 void blockdef_add_blockdef_editor(Blockdef* blockdef);
 void blockdef_delete_input(Blockdef* blockdef, size_t input);
@@ -190,6 +196,7 @@ void block_free(Block* block);
 void argument_set_block(Argument* block_arg, Block block);
 void argument_set_const_string(Argument* block_arg, char* text);
 void argument_set_text(Argument* block_arg, char* text);
+void argument_set_color(Argument* block_arg, BlockdefColor color);
 
 const char* type_to_str(DataType type);
 

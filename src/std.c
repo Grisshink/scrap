@@ -221,6 +221,13 @@ int std_int_pow(int base, int exp) {
     return result;
 }
 
+StdColor std_parse_color(const char* value) {
+    if (*value == '#') value++;
+    unsigned char r = 0x00, g = 0x00, b = 0x00, a = 0xff;
+    sscanf(value, "%02hhx%02hhx%02hhx%02hhx", &r, &g, &b, &a);
+    return (StdColor) { r, g, b, a };
+}
+
 List* std_list_new(Gc* gc) {
     List* list = gc_malloc(gc, sizeof(List), DATA_TYPE_LIST);
     list->size = 0;
@@ -251,6 +258,9 @@ static AnyValue std_get_any(DataType data_type, va_list va) {
         break;
     case DATA_TYPE_ANY:
         return *va_arg(va, AnyValue*);
+    case DATA_TYPE_COLOR:
+        data.color_val = va_arg(va, StdColor);
+        break;
     default:
         data = (AnyValueData) {0};
         break;
@@ -454,8 +464,16 @@ StringHeader* std_string_from_float(Gc* gc, double value) {
     return std_string_from_literal(gc, str, len);
 }
 
+StringHeader* std_string_from_color(Gc* gc, StdColor value) {
+    char str[20];
+    unsigned int len = snprintf(str, 20, "#%02x%02x%02x%02x", value.r, value.g, value.b, value.a);
+    return std_string_from_literal(gc, str, len);
+}
+
 StringHeader* std_string_from_any(Gc* gc, AnyValue* value) {
     if (!value) return std_string_from_literal(gc, "", 0);
+    char str[32];
+    int size;
 
     switch (value->type) {
     case DATA_TYPE_INTEGER:
@@ -468,9 +486,11 @@ StringHeader* std_string_from_any(Gc* gc, AnyValue* value) {
         return value->data.str_val;
     case DATA_TYPE_BOOL:
         return std_string_from_bool(gc, value->data.integer_val);
-    case DATA_TYPE_LIST: ;
-        char str[32];
-        int size = snprintf(str, 32, "*LIST (%lu)*", value->data.list_val->size);
+    case DATA_TYPE_LIST:
+        size = snprintf(str, 32, "*LIST (%lu)*", value->data.list_val->size);
+        return std_string_from_literal(gc, str, size);
+    case DATA_TYPE_COLOR:
+        size = snprintf(str, 10, "#%02x%02x%02x%02x", value->data.color_val.r, value->data.color_val.g, value->data.color_val.b, value->data.color_val.a);
         return std_string_from_literal(gc, str, size);
     default:
         return std_string_from_literal(gc, "", 0);
@@ -490,6 +510,8 @@ int std_integer_from_any(AnyValue* value) {
         return atoi(value->data.str_val->str);
     case DATA_TYPE_LITERAL:
         return atoi(value->data.literal_val);
+    case DATA_TYPE_COLOR:
+        return *(int*)&value->data.color_val;
     default:
         return 0;
     }
@@ -508,6 +530,8 @@ double std_float_from_any(AnyValue* value) {
         return atof(value->data.str_val->str);
     case DATA_TYPE_LITERAL:
         return atof(value->data.literal_val);
+    case DATA_TYPE_COLOR:
+        return *(int*)&value->data.color_val;
     default:
         return 0;
     }
@@ -526,8 +550,32 @@ int std_bool_from_any(AnyValue* value) {
         return value->data.str_val->size > 0;
     case DATA_TYPE_LITERAL:
         return *value->data.literal_val != 0;
+    case DATA_TYPE_COLOR:
+        return *(int*)&value->data.color_val != 0;
     default:
         return 0;
+    }
+}
+
+StdColor std_color_from_any(AnyValue* value) {
+    if (!value) return (StdColor) { 0x00, 0x00, 0x00, 0xff };
+
+    switch (value->type) {
+    case DATA_TYPE_BOOL:
+        return value->data.integer_val ? (StdColor) { 0xff, 0xff, 0xff, 0xff } : (StdColor) { 0x00, 0x00, 0x00, 0xff };
+    case DATA_TYPE_INTEGER:
+        return *(StdColor*)&value->data.integer_val;
+    case DATA_TYPE_FLOAT:
+        int int_val = value->data.float_val;
+        return *(StdColor*)&int_val;
+    case DATA_TYPE_STRING:
+        return std_parse_color(value->data.str_val->str);
+    case DATA_TYPE_LITERAL:
+        return std_parse_color(value->data.literal_val);
+    case DATA_TYPE_COLOR:
+        return value->data.color_val;
+    default:
+        return (StdColor) { 0x00, 0x00, 0x00, 0xff };
     }
 }
 
@@ -559,6 +607,8 @@ bool std_any_is_eq(AnyValue* left, AnyValue* right) {
         return left->data.float_val == right->data.float_val;
     case DATA_TYPE_LIST:
         return left->data.list_val == right->data.list_val;
+    case DATA_TYPE_COLOR:
+        return memcmp(&left->data.color_val, &right->data.color_val, sizeof(left->data.color_val));
     default:
         return false;
     }
@@ -608,6 +658,8 @@ int std_term_print_any(AnyValue* any) {
         return std_term_print_float(any->data.float_val);
     case DATA_TYPE_LIST:
         return std_term_print_list(any->data.list_val);
+    case DATA_TYPE_COLOR:
+        return std_term_print_color(any->data.color_val);
     default:
         return 0;
     }
@@ -642,6 +694,12 @@ int std_term_print_float(double value) {
 
 int std_term_print_bool(bool value) {
     int len = printf("%s", value ? "true" : "false");
+    fflush(stdout);
+    return len;
+}
+
+int std_term_print_color(StdColor value) {
+    int len = printf("[Color: #%02x%02x%02x%02x]", value.r, value.g, value.b, value.a);
     fflush(stdout);
     return len;
 }
@@ -771,6 +829,10 @@ int std_term_print_float(double value) {
 
 int std_term_print_bool(bool value) {
     return term_print_bool(value);
+}
+
+int std_term_print_color(StdColor value) {
+    return term_print_color(CONVERT_COLOR(value, TermColor));
 }
 
 void std_term_set_fg_color(TermColor color) {

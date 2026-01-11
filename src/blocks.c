@@ -22,6 +22,7 @@
 #include "scrap.h"
 #include "vec.h"
 #include "util.h"
+#include "std.h"
 
 #include <unistd.h>
 #include <stdlib.h>
@@ -459,8 +460,16 @@ bool block_print(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* r
         bytes_sent += term_print_integer(argv[0].data.list_val->size);
         bytes_sent += term_print_str(")*");
         break;
-    default:
+    case DATA_TYPE_NOTHING:
         break;
+    case DATA_TYPE_COLOR:
+        bytes_sent = term_print_color(CONVERT_COLOR(argv[0].data.color_val, TermColor));
+        break;
+    case DATA_TYPE_UNKNOWN:
+    case DATA_TYPE_ANY:
+    case DATA_TYPE_BLOCKDEF:
+        exec_set_error(exec, block, gettext("Cannot print type %s"), type_to_str(argv[0].type));
+        return false;
     }
     *return_val = DATA_INTEGER(bytes_sent);
     return true;
@@ -555,29 +564,7 @@ bool block_set_fg_color(Exec* exec, Block* block, int argc, AnyValue* argv, AnyV
     (void) block;
     (void) exec;
     (void) argc;
-    if (argv[0].type != DATA_TYPE_LITERAL) {
-        exec_set_error(exec, block, gettext("Invalid data type %s, expected %s"), type_to_str(argv[0].type), type_to_str(DATA_TYPE_LITERAL));
-        return false;
-    }
-
-    if (!strcmp(argv[0].data.literal_val, "black")) {
-        term_set_fg_color(CONVERT_COLOR(BLACK, TermColor));
-    } else if (!strcmp(argv[0].data.literal_val, "red")) {
-        term_set_fg_color(CONVERT_COLOR(RED, TermColor));
-    } else if (!strcmp(argv[0].data.literal_val, "yellow")) {
-        term_set_fg_color(CONVERT_COLOR(YELLOW, TermColor));
-    } else if (!strcmp(argv[0].data.literal_val, "green")) {
-        term_set_fg_color(CONVERT_COLOR(GREEN, TermColor));
-    } else if (!strcmp(argv[0].data.literal_val, "blue")) {
-        term_set_fg_color(CONVERT_COLOR(BLUE, TermColor));
-    } else if (!strcmp(argv[0].data.literal_val, "purple")) {
-        term_set_fg_color(CONVERT_COLOR(PURPLE, TermColor));
-    } else if (!strcmp(argv[0].data.literal_val, "cyan")) {
-        term_set_fg_color((TermColor) { 0x00, 0xff, 0xff, 0xff});
-    } else if (!strcmp(argv[0].data.literal_val, "white")) {
-        term_set_fg_color(CONVERT_COLOR(WHITE, TermColor));
-    }
-
+    term_set_fg_color(CONVERT_COLOR(data_to_color(argv[0]), TermColor));
     *return_val = DATA_NOTHING;
     return true;
 }
@@ -587,29 +574,7 @@ bool block_set_bg_color(Exec* exec, Block* block, int argc, AnyValue* argv, AnyV
     (void) block;
     (void) exec;
     (void) argc;
-    if (argv[0].type != DATA_TYPE_LITERAL) {
-        exec_set_error(exec, block, gettext("Invalid data type %s, expected %s"), type_to_str(argv[0].type), type_to_str(DATA_TYPE_LITERAL));
-        return false;
-    }
-
-    if (!strcmp(argv[0].data.literal_val, "black")) {
-        term_set_bg_color(CONVERT_COLOR(BLACK, TermColor));
-    } else if (!strcmp(argv[0].data.literal_val, "red")) {
-        term_set_bg_color(CONVERT_COLOR(RED, TermColor));
-    } else if (!strcmp(argv[0].data.literal_val, "yellow")) {
-        term_set_bg_color(CONVERT_COLOR(YELLOW, TermColor));
-    } else if (!strcmp(argv[0].data.literal_val, "green")) {
-        term_set_bg_color(CONVERT_COLOR(GREEN, TermColor));
-    } else if (!strcmp(argv[0].data.literal_val, "blue")) {
-        term_set_bg_color(CONVERT_COLOR(BLUE, TermColor));
-    } else if (!strcmp(argv[0].data.literal_val, "purple")) {
-        term_set_bg_color(CONVERT_COLOR(PURPLE, TermColor));
-    } else if (!strcmp(argv[0].data.literal_val, "cyan")) {
-        term_set_bg_color((TermColor) { 0x00, 0xff, 0xff, 0xff});
-    } else if (!strcmp(argv[0].data.literal_val, "white")) {
-        term_set_bg_color(CONVERT_COLOR(WHITE, TermColor));
-    }
-
+    term_set_bg_color(CONVERT_COLOR(data_to_color(argv[0]), TermColor));
     *return_val = DATA_NOTHING;
     return true;
 }
@@ -644,29 +609,7 @@ bool block_term_set_clear(Exec* exec, Block* block, int argc, AnyValue* argv, An
     (void) block;
     (void) exec;
     (void) argc;
-    if (argv[0].type != DATA_TYPE_LITERAL) {
-        exec_set_error(exec, block, gettext("Invalid data type %s, expected %s"), type_to_str(argv[0].type), type_to_str(DATA_TYPE_LITERAL));
-        return false;
-    }
-
-    if (!strcmp(argv[0].data.literal_val, "black")) {
-        term_set_clear_color(CONVERT_COLOR(BLACK, TermColor));
-    } else if (!strcmp(argv[0].data.literal_val, "red")) {
-        term_set_clear_color(CONVERT_COLOR(RED, TermColor));
-    } else if (!strcmp(argv[0].data.literal_val, "yellow")) {
-        term_set_clear_color(CONVERT_COLOR(YELLOW, TermColor));
-    } else if (!strcmp(argv[0].data.literal_val, "green")) {
-        term_set_clear_color(CONVERT_COLOR(GREEN, TermColor));
-    } else if (!strcmp(argv[0].data.literal_val, "blue")) {
-        term_set_clear_color(CONVERT_COLOR(BLUE, TermColor));
-    } else if (!strcmp(argv[0].data.literal_val, "purple")) {
-        term_set_clear_color(CONVERT_COLOR(PURPLE, TermColor));
-    } else if (!strcmp(argv[0].data.literal_val, "cyan")) {
-        term_set_clear_color((TermColor) { 0x00, 0xff, 0xff, 0xff});
-    } else if (!strcmp(argv[0].data.literal_val, "white")) {
-        term_set_clear_color(CONVERT_COLOR(WHITE, TermColor));
-    }
-
+    term_set_clear_color(CONVERT_COLOR(data_to_color(argv[0]), TermColor));
     *return_val = DATA_NOTHING;
     return true;
 }
@@ -804,6 +747,15 @@ bool block_convert_bool(Exec* exec, Block* block, int argc, AnyValue* argv, AnyV
     (void) exec;
     (void) argc;
     *return_val = DATA_BOOL(data_to_bool(argv[0]));
+    return true;
+}
+
+bool block_convert_color(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
+    (void) control_state;
+    (void) block;
+    (void) exec;
+    (void) argc;
+    *return_val = DATA_COLOR(data_to_color(argv[0]));
     return true;
 }
 
@@ -1113,6 +1065,7 @@ bool block_eq(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* retu
     switch (argv[0].type) {
     case DATA_TYPE_BOOL:
     case DATA_TYPE_INTEGER:
+    case DATA_TYPE_COLOR:
         *return_val = DATA_BOOL(argv[0].data.integer_val == argv[1].data.integer_val);
         break;
     case DATA_TYPE_FLOAT:
@@ -1127,9 +1080,14 @@ bool block_eq(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* retu
     case DATA_TYPE_NOTHING:
         *return_val = DATA_BOOL(1);
         break;
-    default:
-        *return_val = DATA_BOOL(0);
+    case DATA_TYPE_LIST:
+        *return_val = DATA_BOOL(argv[0].data.list_val == argv[1].data.list_val);
         break;
+    case DATA_TYPE_UNKNOWN:
+    case DATA_TYPE_BLOCKDEF:
+    case DATA_TYPE_ANY:
+        exec_set_error(exec, block, gettext("Cannot compare type %s"), type_to_str(argv[0].type));
+        return false;
     }
     return true;
 }
@@ -1215,6 +1173,7 @@ LLVMValueRef arg_to_value(Exec* exec, Block* block, FuncArg arg) {
     case DATA_TYPE_INTEGER:
     case DATA_TYPE_FLOAT:
     case DATA_TYPE_BOOL:
+    case DATA_TYPE_COLOR:
     case DATA_TYPE_ANY:
         return arg.data.value;
     case DATA_TYPE_BLOCKDEF:
@@ -1245,6 +1204,7 @@ LLVMValueRef arg_to_bool(Exec* exec, Block* block, FuncArg arg) {
         return build_call(exec, "std_bool_from_any", arg.data.value);
     case DATA_TYPE_BLOCKDEF:
     case DATA_TYPE_UNKNOWN:
+    case DATA_TYPE_COLOR:
         exec_set_error(exec, block, gettext("Cannot cast type %s into %s"), type_to_str(arg.type), type_to_str(DATA_TYPE_BOOL));
         return NULL;
     }
@@ -1261,6 +1221,7 @@ LLVMValueRef arg_to_integer(Exec* exec, Block* block, FuncArg arg) {
     case DATA_TYPE_NOTHING:
         return CONST_INTEGER(0);
     case DATA_TYPE_INTEGER:
+    case DATA_TYPE_COLOR:
         return arg.data.value;
     case DATA_TYPE_BOOL:
         return LLVMBuildZExt(exec->builder, arg.data.value, LLVMInt32Type(), "int_cast");
@@ -1293,6 +1254,8 @@ LLVMValueRef arg_to_float(Exec* exec, Block* block, FuncArg arg) {
         return arg.data.value;
     case DATA_TYPE_ANY:
         return build_call(exec, "std_float_from_any", arg.data.value);
+    case DATA_TYPE_COLOR:
+        return LLVMBuildSIToFP(exec->builder, arg.data.value, LLVMDoubleType(), "float_cast");
     case DATA_TYPE_BLOCKDEF:
     case DATA_TYPE_UNKNOWN:
         exec_set_error(exec, block, gettext("Cannot cast type %s into %s"), type_to_str(arg.type), type_to_str(DATA_TYPE_FLOAT));
@@ -1319,6 +1282,8 @@ LLVMValueRef arg_to_any_string(Exec* exec, Block* block, FuncArg arg) {
         return build_call(exec, "std_string_from_any", CONST_GC, arg.data.value);
     case DATA_TYPE_LIST:
         return build_call(exec, "std_string_from_literal", CONST_GC, CONST_STRING_LITERAL(""), CONST_INTEGER(0));
+    case DATA_TYPE_COLOR:
+        return build_call(exec, "std_string_from_color", CONST_GC, arg.data.value);
     case DATA_TYPE_BLOCKDEF:
     case DATA_TYPE_UNKNOWN:
         exec_set_error(exec, block, gettext("Cannot cast type %s into any string"), type_to_str(arg.type));
@@ -1345,12 +1310,41 @@ LLVMValueRef arg_to_string_ref(Exec* exec, Block* block, FuncArg arg) {
         return build_call(exec, "std_string_from_float", CONST_GC, arg.data.value);
     case DATA_TYPE_ANY:
         return build_call(exec, "std_string_from_any", CONST_GC, arg.data.value);
+    case DATA_TYPE_COLOR:
+        return build_call(exec, "std_string_from_color", CONST_GC, arg.data.value);
     case DATA_TYPE_UNKNOWN:
     case DATA_TYPE_BLOCKDEF:
         exec_set_error(exec, block, gettext("Cannot cast type %s into %s"), type_to_str(arg.type), type_to_str(DATA_TYPE_STRING));
         return NULL;
     }
     assert(false && "Unhandled cast to string ref");
+}
+
+LLVMValueRef arg_to_color(Exec* exec, Block* block, FuncArg arg) {
+    switch (arg.type) {
+    case DATA_TYPE_LITERAL: ;
+        StdColor col = std_parse_color(arg.data.str);
+        return CONST_INTEGER(*(int*)&col);
+    case DATA_TYPE_STRING:
+        return build_call(exec, "std_parse_color", build_call(exec, "std_string_get_data", arg.data.value));
+    case DATA_TYPE_LIST:
+    case DATA_TYPE_NOTHING:
+        return CONST_INTEGER(0);
+    case DATA_TYPE_INTEGER:
+    case DATA_TYPE_COLOR:
+        return arg.data.value;
+    case DATA_TYPE_BOOL:
+        return LLVMBuildSelect(exec->builder, arg.data.value, CONST_INTEGER(0xffffffff), CONST_INTEGER(0xff000000), "color_cast");
+    case DATA_TYPE_FLOAT:
+        return LLVMBuildFPToSI(exec->builder, arg.data.value, LLVMInt32Type(), "color_cast");
+    case DATA_TYPE_ANY:
+        return build_call(exec, "std_color_from_any", arg.data.value);
+    case DATA_TYPE_BLOCKDEF:
+    case DATA_TYPE_UNKNOWN:
+        exec_set_error(exec, block, gettext("Cannot cast type %s into %s"), type_to_str(arg.type), type_to_str(DATA_TYPE_COLOR));
+        return NULL;
+    }
+    assert(false && "Unhandled cast to color");
 }
 
 LLVMValueRef arg_to_list(Exec* exec, Block* block, FuncArg arg) {
@@ -1363,6 +1357,7 @@ LLVMValueRef arg_to_list(Exec* exec, Block* block, FuncArg arg) {
     case DATA_TYPE_LITERAL:
     case DATA_TYPE_UNKNOWN:
     case DATA_TYPE_BLOCKDEF:
+    case DATA_TYPE_COLOR:
         exec_set_error(exec, block, gettext("Cannot cast type %s into %s"), type_to_str(arg.type), type_to_str(DATA_TYPE_LIST));
         return NULL;
     case DATA_TYPE_LIST:
@@ -1383,6 +1378,7 @@ LLVMValueRef arg_to_any(Exec* exec, Block* block, FuncArg arg) {
     case DATA_TYPE_FLOAT:
     case DATA_TYPE_LITERAL:
     case DATA_TYPE_LIST:
+    case DATA_TYPE_COLOR:
         return build_call_count(exec, "std_any_from_value", 3, CONST_GC, CONST_INTEGER(arg.type), arg_to_value(exec, block, arg));
     case DATA_TYPE_ANY:
         return arg.data.value;
@@ -1411,6 +1407,8 @@ FuncArg arg_cast(Exec* exec, Block* block, FuncArg arg, DataType cast_to_type) {
         return DATA_LIST(arg_to_list(exec, block, arg));
     case DATA_TYPE_ANY:
         return DATA_ANY(arg_to_any(exec, block, arg));
+    case DATA_TYPE_COLOR:
+        return DATA_COLOR(arg_to_color(exec, block, arg));
     case DATA_TYPE_NOTHING:
     case DATA_TYPE_UNKNOWN:
     case DATA_TYPE_BLOCKDEF:
@@ -1537,6 +1535,7 @@ bool block_not_eq(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* re
         *return_val = DATA_BOOLEAN(LLVMBuildXor(exec->builder, eq_return, CONST_BOOLEAN(1), "string_neq"));
         break;
     case DATA_TYPE_INTEGER:
+    case DATA_TYPE_COLOR:
         *return_val = DATA_BOOLEAN(LLVMBuildICmp(exec->builder, LLVMIntNE, left.data.value, right.data.value, "int_neq"));
         break;
     case DATA_TYPE_BOOL:
@@ -1553,8 +1552,11 @@ bool block_not_eq(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* re
         LLVMValueRef eq_any_return = build_call(exec, "std_any_is_eq", left.data.value, right.data.value);
         *return_val = DATA_BOOLEAN(LLVMBuildXor(exec->builder, eq_any_return, CONST_BOOLEAN(1), "any_neq"));
         break;
-    default:
-        assert(false && "Unhandled not_eq with unknown type");
+    case DATA_TYPE_UNKNOWN:
+    case DATA_TYPE_LITERAL:
+    case DATA_TYPE_BLOCKDEF:
+        exec_set_error(exec, block, gettext("Cannot compare type %s"), type_to_str(left.type));
+        return false;
     }
 
     return true;
@@ -1597,6 +1599,7 @@ bool block_eq(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return
         break;
     case DATA_TYPE_BOOL:
     case DATA_TYPE_INTEGER:
+    case DATA_TYPE_COLOR:
         *return_val = DATA_BOOLEAN(LLVMBuildICmp(exec->builder, LLVMIntEQ, left.data.value, right.data.value, "int_eq"));
         break;
     case DATA_TYPE_FLOAT:
@@ -1609,8 +1612,11 @@ bool block_eq(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return
     case DATA_TYPE_ANY:
         *return_val = DATA_BOOLEAN(build_call(exec, "std_any_is_eq", left.data.value, right.data.value));
         break;
-    default:
-        assert(false && "Unhandled eq with unknown type");
+    case DATA_TYPE_UNKNOWN:
+    case DATA_TYPE_LITERAL:
+    case DATA_TYPE_BLOCKDEF:
+        exec_set_error(exec, block, gettext("Cannot compare type %s"), type_to_str(left.type));
+        return false;
     }
 
     return true;
@@ -2006,6 +2012,16 @@ bool block_typeof(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* re
     return true;
 }
 
+bool block_convert_color(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
+    (void) control_state;
+    (void) block;
+    MIN_ARG_COUNT(1);
+    LLVMValueRef value = arg_to_color(exec, block, argv[0]);
+    if (!value) return false;
+    *return_val = DATA_COLOR(value);
+    return true;
+}
+
 bool block_convert_bool(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
@@ -2169,43 +2185,14 @@ bool block_input(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* ret
 bool block_term_set_clear(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
-    MIN_ARG_COUNT(1);
-    if (argv[0].type != DATA_TYPE_LITERAL) return false;
+    (void) argc;
 
-    Color col;
-    bool is_set = false;
+    LLVMValueRef color = arg_to_color(exec, block, argv[0]);
+    if (!color) return false;
 
-    if (!strcmp(argv[0].data.str, "black")) {
-        col = BLACK;
-        is_set = true;
-    } else if (!strcmp(argv[0].data.str, "red")) {
-        col = RED;
-        is_set = true;
-    } else if (!strcmp(argv[0].data.str, "yellow")) {
-        col = YELLOW;
-        is_set = true;
-    } else if (!strcmp(argv[0].data.str, "green")) {
-        col = GREEN;
-        is_set = true;
-    } else if (!strcmp(argv[0].data.str, "blue")) {
-        col = BLUE;
-        is_set = true;
-    } else if (!strcmp(argv[0].data.str, "purple")) {
-        col = PURPLE;
-        is_set = true;
-    } else if (!strcmp(argv[0].data.str, "cyan")) {
-        col = (Color) { 0x00, 0xff, 0xff, 0xff};
-        is_set = true;
-    } else if (!strcmp(argv[0].data.str, "white")) {
-        col = WHITE;
-        is_set = true;
-    }
-
-    if (is_set) {
-        build_call(exec, "std_term_set_clear_color", CONST_INTEGER(*(int*)&col));
-        *return_val = DATA_NOTHING;
-    }
-    return is_set;
+    build_call(exec, "std_term_set_clear_color", color);
+    *return_val = DATA_NOTHING;
+    return true;
 }
 
 bool block_term_clear(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
@@ -2234,84 +2221,26 @@ bool block_set_bg_color(Exec* exec, Block* block, int argc, FuncArg* argv, FuncA
     (void) control_state;
     (void) block;
     MIN_ARG_COUNT(1);
-    if (argv[0].type != DATA_TYPE_LITERAL) return false;
 
-    Color col;
-    bool is_set = false;
+    LLVMValueRef color = arg_to_color(exec, block, argv[0]);
+    if (!color) return false;
 
-    if (!strcmp(argv[0].data.str, "black")) {
-        col = BLACK;
-        is_set = true;
-    } else if (!strcmp(argv[0].data.str, "red")) {
-        col = RED;
-        is_set = true;
-    } else if (!strcmp(argv[0].data.str, "yellow")) {
-        col = YELLOW;
-        is_set = true;
-    } else if (!strcmp(argv[0].data.str, "green")) {
-        col = GREEN;
-        is_set = true;
-    } else if (!strcmp(argv[0].data.str, "blue")) {
-        col = BLUE;
-        is_set = true;
-    } else if (!strcmp(argv[0].data.str, "purple")) {
-        col = PURPLE;
-        is_set = true;
-    } else if (!strcmp(argv[0].data.str, "cyan")) {
-        col = (Color) { 0x00, 0xff, 0xff, 0xff};
-        is_set = true;
-    } else if (!strcmp(argv[0].data.str, "white")) {
-        col = WHITE;
-        is_set = true;
-    }
-
-    if (is_set) {
-        build_call(exec, "std_term_set_bg_color", CONST_INTEGER(*(int*)&col));
-        *return_val = DATA_NOTHING;
-    }
-    return is_set;
+    build_call(exec, "std_term_set_bg_color", color);
+    *return_val = DATA_NOTHING;
+    return true;
 }
 
 bool block_set_fg_color(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     MIN_ARG_COUNT(1);
-    if (argv[0].type != DATA_TYPE_LITERAL) return false;
 
-    Color col;
-    bool is_set = false;
+    LLVMValueRef color = arg_to_color(exec, block, argv[0]);
+    if (!color) return false;
 
-    if (!strcmp(argv[0].data.str, "black")) {
-        col = BLACK;
-        is_set = true;
-    } else if (!strcmp(argv[0].data.str, "red")) {
-        col = RED;
-        is_set = true;
-    } else if (!strcmp(argv[0].data.str, "yellow")) {
-        col = YELLOW;
-        is_set = true;
-    } else if (!strcmp(argv[0].data.str, "green")) {
-        col = GREEN;
-        is_set = true;
-    } else if (!strcmp(argv[0].data.str, "blue")) {
-        col = BLUE;
-        is_set = true;
-    } else if (!strcmp(argv[0].data.str, "purple")) {
-        col = PURPLE;
-        is_set = true;
-    } else if (!strcmp(argv[0].data.str, "cyan")) {
-        col = (Color) { 0x00, 0xff, 0xff, 0xff};
-        is_set = true;
-    } else if (!strcmp(argv[0].data.str, "white")) {
-        col = WHITE;
-        is_set = true;
-    }
-
-    if (is_set) {
-        build_call(exec, "std_term_set_fg_color", CONST_INTEGER(*(int*)&col));
-        *return_val = DATA_NOTHING;
-    }
-    return is_set;
+    build_call(exec, "std_term_set_fg_color", color);
+    *return_val = DATA_NOTHING;
+    return true;
 }
 
 bool block_set_cursor(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
@@ -2395,6 +2324,9 @@ bool block_print(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* ret
         return true;
     case DATA_TYPE_ANY:
         *return_val = DATA_INTEGER(build_call(exec, "std_term_print_any", argv[0].data.value));
+        return true;
+    case DATA_TYPE_COLOR:
+        *return_val = DATA_INTEGER(build_call(exec, "std_term_print_color", argv[0].data.value));
         return true;
     case DATA_TYPE_UNKNOWN:
     case DATA_TYPE_BLOCKDEF:
@@ -3165,14 +3097,14 @@ void register_blocks(Vm* vm) {
     Blockdef* sc_set_fg_color = blockdef_new("set_fg_color", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_TERMINAL_COLOR, block_set_fg_color);
     blockdef_add_image(sc_set_fg_color, term_img);
     blockdef_add_text(sc_set_fg_color, gettext("Set text color"));
-    blockdef_add_dropdown(sc_set_fg_color, DROPDOWN_SOURCE_LISTREF, term_color_list_access);
+    blockdef_add_color_input(sc_set_fg_color, (BlockdefColor) { 0xff, 0xff, 0xff, 0xff });
     blockdef_register(vm, sc_set_fg_color);
     block_category_add_blockdef(cat_terminal, sc_set_fg_color);
 
     Blockdef* sc_set_bg_color = blockdef_new("set_bg_color", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_TERMINAL_COLOR, block_set_bg_color);
     blockdef_add_image(sc_set_bg_color, term_img);
     blockdef_add_text(sc_set_bg_color, gettext("Set background color"));
-    blockdef_add_dropdown(sc_set_bg_color, DROPDOWN_SOURCE_LISTREF, term_color_list_access);
+    blockdef_add_color_input(sc_set_bg_color, (BlockdefColor) { 0x30, 0x30, 0x30, 0xff });
     blockdef_register(vm, sc_set_bg_color);
     block_category_add_blockdef(cat_terminal, sc_set_bg_color);
 
@@ -3191,7 +3123,7 @@ void register_blocks(Vm* vm) {
     Blockdef* sc_term_set_clear = blockdef_new("term_set_clear", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_TERMINAL_COLOR, block_term_set_clear);
     blockdef_add_image(sc_term_set_clear, term_img);
     blockdef_add_text(sc_term_set_clear, gettext("Set clear color"));
-    blockdef_add_dropdown(sc_term_set_clear, DROPDOWN_SOURCE_LISTREF, term_color_list_access);
+    blockdef_add_color_input(sc_term_set_clear, (BlockdefColor) { 0x00, 0x00, 0x00, 0xff });
     blockdef_register(vm, sc_term_set_clear);
     block_category_add_blockdef(cat_terminal, sc_term_set_clear);
 
@@ -3447,6 +3379,12 @@ void register_blocks(Vm* vm) {
     blockdef_add_argument(sc_bool, "", gettext("any"), BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_bool);
     block_category_add_blockdef(cat_misc, sc_bool);
+
+    Blockdef* sc_color = blockdef_new("convert_color", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_MISC_COLOR, block_convert_color);
+    blockdef_add_text(sc_color, gettext("Color"));
+    blockdef_add_color_input(sc_color, (BlockdefColor) { 0x00, 0xff, 0x00, 0xff });
+    blockdef_register(vm, sc_color);
+    block_category_add_blockdef(cat_misc, sc_color);
 
     Blockdef* sc_typeof = blockdef_new("typeof", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_MISC_COLOR, block_typeof);
     blockdef_add_text(sc_typeof, gettext("Type of"));

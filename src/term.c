@@ -180,6 +180,12 @@ int term_print_bool(bool value) {
     return term_print_str(value ? "true" : "false");
 }
 
+int term_print_color(TermColor value) {
+    char converted[30];
+    snprintf(converted, 30, "[Color: #%02x%02x%02x%02x]", value.r, value.g, value.b, value.a);
+    return term_print_str(converted);
+}
+
 void term_clear(void) {
     mutex_lock(&term.lock);
     for (int i = 0; i < term.char_w * term.char_h; i++) {

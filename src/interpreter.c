@@ -46,6 +46,8 @@ int data_to_integer(AnyValue arg) {
         return atoi(arg.data.literal_val);
     case DATA_TYPE_STRING:
         return atoi(arg.data.str_val->str);
+    case DATA_TYPE_COLOR:
+        return *(int*)&arg.data.color_val;
     default:
         return 0;
     }
@@ -62,6 +64,8 @@ double data_to_float(AnyValue arg) {
         return atof(arg.data.literal_val);
     case DATA_TYPE_STRING:
         return atof(arg.data.str_val->str);
+    case DATA_TYPE_COLOR:
+        return *(int*)&arg.data.color_val;
     default:
         return 0.0;
     }
@@ -82,6 +86,26 @@ int data_to_bool(AnyValue arg) {
         return arg.data.list_val->size != 0;
     default:
         return 0;
+    }
+}
+
+StdColor data_to_color(AnyValue arg) {
+    switch (arg.type) {
+    case DATA_TYPE_BOOL:
+        return arg.data.integer_val ? (StdColor) { 0xff, 0xff, 0xff, 0xff } : (StdColor) { 0x00, 0x00, 0x00, 0xff };
+    case DATA_TYPE_INTEGER:
+        return *(StdColor*)&arg.data.integer_val;
+    case DATA_TYPE_FLOAT: ;
+        int int_val = arg.data.float_val;
+        return *(StdColor*)&int_val;
+    case DATA_TYPE_LITERAL:
+        return std_parse_color(arg.data.literal_val);
+    case DATA_TYPE_STRING:
+        return std_parse_color(arg.data.str_val->str);
+    case DATA_TYPE_COLOR:
+        return arg.data.color_val;
+    default:
+        return (StdColor) { 0x00, 0x00, 0x00, 0xff };
     }
 }
 
@@ -197,6 +221,9 @@ bool evaluate_argument(Exec* exec, Argument* arg, AnyValue* return_val) {
         }
         return true;
     case ARGUMENT_BLOCKDEF:
+        return true;
+    case ARGUMENT_COLOR:
+        *return_val = DATA_COLOR(CONVERT_COLOR(arg->data.color, StdColor));
         return true;
     }
     return false;

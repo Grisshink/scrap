@@ -448,16 +448,33 @@ static void deselect_all(void) {
     if (ui.hover.dropdown.type == DROPDOWN_LIST) ui.hover.dropdown.as.list.scroll = 0;
 }
 
-void show_list_dropdown(char** list, int list_len, void* ref_object, ButtonClickHandler handler) {
+void show_dropdown(DropdownType type, void* ref_object, ButtonClickHandler handler) {
     ui.hover.dropdown.ref_object = ref_object;
     ui.hover.dropdown.handler = handler;
     ui.hover.dropdown.shown = true;
-    ui.hover.dropdown.type = DROPDOWN_LIST;
+    ui.hover.dropdown.type = type;
+}
 
+void show_list_dropdown(char** list, int list_len, void* ref_object, ButtonClickHandler handler) {
+    show_dropdown(DROPDOWN_LIST, ref_object, handler);
     ui.hover.dropdown.as.list.data = list;
     ui.hover.dropdown.as.list.len = list_len;
     ui.hover.dropdown.as.list.select_ind = 0;
     ui.hover.dropdown.as.list.scroll = 0;
+}
+
+void show_color_picker_dropdown(Color* edit_color, void* ref_object, ButtonClickHandler handler) {
+    assert(edit_color != NULL);
+
+    show_dropdown(DROPDOWN_COLOR_PICKER, ref_object, handler);
+
+    Vector3 hsv = ColorToHSV(*edit_color);
+
+    ui.hover.dropdown.as.color_picker.hover_part  = COLOR_PICKER_NONE;
+    ui.hover.dropdown.as.color_picker.select_part = COLOR_PICKER_NONE;
+    ui.hover.dropdown.as.color_picker.color = *(HSV*)&hsv;
+    ui.hover.dropdown.as.color_picker.edit_color = edit_color;
+    ui.hover.dropdown.as.color_picker.color_hex[0] = 0;
 }
 
 bool handle_dropdown_close(void) {
@@ -819,7 +836,7 @@ static bool handle_code_editor_click(bool mouse_empty) {
             if (ui.hover.editor.argument) {
                 // Attach to argument
                 TraceLog(LOG_INFO, "Attach to argument");
-                if (ui.hover.editor.argument->type != ARGUMENT_TEXT) return true;
+                if (ui.hover.editor.argument->type != ARGUMENT_TEXT && ui.hover.editor.argument->type != ARGUMENT_COLOR) return true;
                 editor.mouse_blockchain.blocks[0].parent = ui.hover.editor.block;
                 argument_set_block(ui.hover.editor.argument, editor.mouse_blockchain.blocks[0]);
                 vector_clear(editor.mouse_blockchain.blocks);
@@ -883,7 +900,11 @@ static bool handle_code_editor_click(bool mouse_empty) {
                 blockchain_add_block(&editor.mouse_blockchain, *ui.hover.editor.block);
                 editor.mouse_blockchain.blocks[0].parent = NULL;
 
-                argument_set_text(ui.hover.editor.parent_argument, "");
+                if (ui.hover.editor.block->parent->blockdef->inputs[ui.hover.editor.parent_argument->input_id].type == INPUT_COLOR) {
+                    argument_set_color(ui.hover.editor.parent_argument, (BlockdefColor) { 0xff, 0xff, 0xff, 0xff });
+                } else {
+                    argument_set_text(ui.hover.editor.parent_argument, "");
+                }
                 ui.hover.editor.select_blockchain = NULL;
                 ui.hover.editor.select_block = NULL;
                 editor.project_modified = true;
@@ -1078,6 +1099,8 @@ static bool handle_mouse_click(void) {
                 char** list = block_input.data.drop.list(ui.hover.editor.block, &list_len);
 
                 show_list_dropdown(list, list_len, ui.hover.editor.argument, handle_block_dropdown_click);
+            } else if (block_input.type == INPUT_COLOR) {
+                show_color_picker_dropdown((Color*)&ui.hover.editor.argument->data.color, ui.hover.editor.argument, NULL);
             }
         }
 
