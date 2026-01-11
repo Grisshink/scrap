@@ -622,6 +622,9 @@ static LLVMValueRef register_globals(Exec* exec) {
 
     LLVMTypeRef floor_func_params[] = { LLVMDoubleType() };
     add_function(exec, "floor", LLVMDoubleType(), floor_func_params, ARRLEN(floor_func_params), floor, false, false);
+
+    LLVMTypeRef pow_func_params[] = { LLVMDoubleType(), LLVMDoubleType() };
+    add_function(exec, "pow", LLVMDoubleType(), pow_func_params, ARRLEN(pow_func_params), pow, false, false);
     
     LLVMTypeRef get_char_func_params[] = { LLVMInt64Type() };
     add_function(exec, "std_term_get_char", LLVMPointerType(LLVMInt8Type(), 0), get_char_func_params, ARRLEN(get_char_func_params), std_term_get_char, true, false);

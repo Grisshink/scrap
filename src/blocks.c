@@ -1828,12 +1828,20 @@ bool block_pow(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* retur
     (void) control_state;
     (void) block;
     MIN_ARG_COUNT(2);
-    LLVMValueRef left = arg_to_integer(exec, block, argv[0]);
-    if (!left) return false;
-    LLVMValueRef right = arg_to_integer(exec, block, argv[1]);
-    if (!right) return false;
 
-    *return_val = DATA_INTEGER(build_call(exec, "std_int_pow", left, right));
+    if (argv[0].type != DATA_TYPE_FLOAT) {
+        LLVMValueRef left = arg_to_integer(exec, block, argv[0]);
+        if (!left) return false;
+        LLVMValueRef right = arg_to_integer(exec, block, argv[1]);
+        if (!right) return false;
+
+        *return_val = DATA_INTEGER(build_call(exec, "std_int_pow", left, right));
+    } else {
+        LLVMValueRef right = arg_to_float(exec, block, argv[1]);
+        if (!right) return false;
+        *return_val = DATA_FLOAT(build_call(exec, "pow", argv[0].data.value, right));
+    }
+
     return true;
 }
 
