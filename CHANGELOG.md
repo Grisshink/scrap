@@ -3,9 +3,13 @@
 ## What's new?
 - Scrap now shows comfirmation window when trying to close scrap with unsaved changes
 - Blocks inside block pallete are now split into subcategories
+- Added new color type and integrated it with color related blocks
+- Added new example (neon.scrp) featuring new color system
 
 ## Fixes
 - Fixed block definitions being able to be edited in block palette
+- Fixed pow block not working with float values in compiler
+- Dropdowns now close when dragging code area with middle mouse button. This prevents a bunch of crashes related to dropdowns
 
 # v0.5.1-beta *(27-12-2025)*
 
