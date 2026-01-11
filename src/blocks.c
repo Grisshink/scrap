@@ -46,20 +46,10 @@ char* block_math_list[MATH_LIST_LEN] = {
     "asin", "acos", "atan",
 };
 
-char* term_color_list[TERM_COLOR_LIST_LEN] = {
-    "black", "red", "yellow", "green", "blue", "purple", "cyan", "white",
-};
-
 char** math_list_access(Block* block, size_t* list_len) {
     (void) block;
     *list_len = MATH_LIST_LEN;
     return block_math_list;
-}
-
-char** term_color_list_access(Block* block, size_t* list_len) {
-    (void) block;
-    *list_len = TERM_COLOR_LIST_LEN;
-    return term_color_list;
 }
 
 #ifdef USE_INTERPRETER
