@@ -775,6 +775,13 @@ bool handle_editor_close_button(void) {
     return true;
 }
 
+bool handle_editor_color_button(void) {
+    assert(ui.hover.editor.edit_blockdef != NULL);
+
+    show_color_picker_dropdown((Color*)&ui.hover.editor.edit_blockdef->color, &ui.hover.editor.edit_blockdef->color, NULL);
+    return true;
+}
+
 static void remove_blockdef(void) {
     for (size_t i = 0; i < vector_size(editor.mouse_blockchain.blocks); i++) {
         for (size_t j = 0; j < vector_size(editor.mouse_blockchain.blocks[i].arguments); j++) {

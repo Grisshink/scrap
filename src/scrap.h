@@ -460,6 +460,7 @@ bool handle_category_click(void);
 bool handle_jump_to_block_button_click(void);
 bool handle_error_window_close_button_click(void);
 bool handle_color_picker_click(void);
+bool handle_editor_color_button(void);
 
 // save.c
 void config_new(Config* config);

@@ -217,6 +217,18 @@ static void editor_button_on_hover(GuiElement* el) {
     ui.hover.button.handler = el->custom_data;
 }
 
+static void editor_color_on_hover(GuiElement* el) {
+    if (ui.hover.is_panel_edit_mode) return;
+    if (gui_window_is_shown()) return;
+    if (ui.hover.button.handler) return;
+
+    el->draw_type = DRAWTYPE_BORDER;
+    el->draw_subtype = SUBTYPE_DEFAULT;
+    el->color = (GuiColor) { 0xa0, 0xa0, 0xa0, 0xff };
+    el->data.border_width = BLOCK_OUTLINE_SIZE;
+    ui.hover.button.handler = handle_editor_color_button;
+}
+
 static void draw_editor_button(Texture2D* texture, ButtonClickHandler handler) {
     gui_element_begin(gui);
         gui_set_rect(gui, (GuiColor) { 0xff, 0xff, 0xff, 0x40 });
@@ -349,6 +361,7 @@ static void draw_blockdef(Blockdef* blockdef, bool editing) {
             gui_image(gui, input->data.image.image_ptr, BLOCK_IMAGE_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
             break;
         case INPUT_ARGUMENT:
+            input->data.arg.blockdef->color = blockdef->color;
             draw_blockdef(input->data.arg.blockdef, editing);
             break;
         default:
@@ -598,6 +611,22 @@ static void draw_block(Block* block, bool highlight, bool can_hover, bool ghost,
                     if (ui.hover.editor.edit_blockdef == arg->data.blockdef) {
                         draw_editor_button(&assets.textures.button_add_arg, handle_editor_add_arg_button);
                         draw_editor_button(&assets.textures.button_add_text, handle_editor_add_text_button);
+
+                        gui_element_begin(gui);
+                            if (can_hover) gui_on_hover(gui, editor_color_on_hover);
+
+                            if (ui.dropdown.ref_object == &arg->data.blockdef->color) {
+                                ui.dropdown.element = gui_get_element(gui);
+                                gui_set_border(gui, (GuiColor) { 0x30, 0x30, 0x30, 0xff }, BLOCK_OUTLINE_SIZE);
+                                gui_on_render(gui, argument_on_render);
+                            }
+
+                            gui_element_begin(gui);
+                                gui_set_fixed(gui, BLOCK_IMAGE_SIZE, BLOCK_IMAGE_SIZE);
+                                gui_set_rect(gui, CONVERT_COLOR(arg->data.blockdef->color, GuiColor));
+                            gui_element_end(gui);
+                        gui_element_end(gui);
+
                         draw_editor_button(&assets.textures.button_close, handle_editor_close_button);
                     } else {
                         draw_editor_button(&assets.textures.button_edit, handle_editor_edit_button);
