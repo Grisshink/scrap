@@ -1030,6 +1030,7 @@ static void draw_category(BlockCategory* category) {
     color.a = 0x40;
 
     gui_element_begin(gui);
+        gui_set_scissor(gui);
         gui_set_grow(gui, DIRECTION_HORIZONTAL);
         gui_set_rect(gui, color);
         gui_on_hover(gui, category_on_hover);
@@ -2015,10 +2016,10 @@ static void scrap_gui_render(void) {
                 break;
             }
             break;
-        case DRAWTYPE_SCISSOR_BEGIN:
+        case DRAWTYPE_SCISSOR_SET:
             BeginScissorMode(command->pos_x, command->pos_y, command->width, command->height);
             break;
-        case DRAWTYPE_SCISSOR_END:
+        case DRAWTYPE_SCISSOR_RESET:
             EndScissorMode();
             break;
         case DRAWTYPE_SHADER_BEGIN:

@@ -260,7 +260,7 @@ static void gui_render(Gui* gui, GuiElement* el) {
     if (SCISSOR(el) || FLOATING(el) || el->shader) flush_aux_buffers(gui);
 
     if (SCISSOR(el)) {
-        new_draw_command(gui, el_bounds, DRAWTYPE_SCISSOR_BEGIN, SUBTYPE_DEFAULT, (GuiDrawData) {0}, (GuiColor) {0});
+        new_draw_command(gui, el_bounds, DRAWTYPE_SCISSOR_SET, SUBTYPE_DEFAULT, (GuiDrawData) {0}, (GuiColor) {0});
         gui->scissor_stack[gui->scissor_stack_len++] = (GuiBounds) { el_bounds.x, el_bounds.y, el_bounds.w, el_bounds.h };
     }
     if (el->shader) new_draw_command(gui, el_bounds, DRAWTYPE_SHADER_BEGIN, SUBTYPE_DEFAULT, (GuiDrawData) { .shader = el->shader }, (GuiColor) {0});
@@ -341,8 +341,12 @@ static void gui_render(Gui* gui, GuiElement* el) {
     if (FLOATING(el) || SCISSOR(el)) flush_aux_buffers(gui);
 
     if (SCISSOR(el)) {
-        new_draw_command(gui, el_bounds, DRAWTYPE_SCISSOR_END, SUBTYPE_DEFAULT, (GuiDrawData) {0}, (GuiColor) {0});
         gui->scissor_stack_len--;
+        if (gui->scissor_stack_len == 0) {
+            new_draw_command(gui, el_bounds, DRAWTYPE_SCISSOR_RESET, SUBTYPE_DEFAULT, (GuiDrawData) {0}, (GuiColor) {0});
+        } else {
+            new_draw_command(gui, el_bounds, DRAWTYPE_SCISSOR_SET, SUBTYPE_DEFAULT, (GuiDrawData) {0}, (GuiColor) {0});
+        }
     }
 }
 
