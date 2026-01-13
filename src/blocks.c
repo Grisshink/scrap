@@ -2952,12 +2952,10 @@ void register_blocks(Vm* vm) {
     BlockCategory* cat_math = block_category_register(cat);
     cat = block_category_new(gettext("Logic"),    (Color) CATEGORY_LOGIC_COLOR);
     BlockCategory* cat_logic = block_category_register(cat);
-    cat = block_category_new(gettext("Strings"),  (Color) CATEGORY_STRING_COLOR);
-    BlockCategory* cat_string = block_category_register(cat);
-    cat = block_category_new(gettext("Misc."),    (Color) CATEGORY_MISC_COLOR);
-    BlockCategory* cat_misc = block_category_register(cat);
     cat = block_category_new(gettext("Data"),     (Color) CATEGORY_DATA_COLOR);
     BlockCategory* cat_data = block_category_register(cat);
+    cat = block_category_new(gettext("Misc."),    (Color) CATEGORY_MISC_COLOR);
+    BlockCategory* cat_misc = block_category_register(cat);
 
     BlockdefImage term_img = (BlockdefImage) {
         .image_ptr = &assets.textures.icon_term,
@@ -3303,51 +3301,6 @@ void register_blocks(Vm* vm) {
     blockdef_register(vm, sc_random);
     block_category_add_blockdef(cat_logic, sc_random);
 
-    Blockdef* sc_join = blockdef_new("join", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_STRING_COLOR, block_join);
-    blockdef_add_text(sc_join, gettext("Join"));
-    blockdef_add_argument(sc_join, gettext("left and "), gettext("Abc"), BLOCKCONSTR_UNLIMITED);
-    blockdef_add_argument(sc_join, gettext("right"), gettext("Abc"), BLOCKCONSTR_UNLIMITED);
-    blockdef_register(vm, sc_join);
-    block_category_add_blockdef(cat_string, sc_join);
-
-    Blockdef* sc_letter_in = blockdef_new("letter_in", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_STRING_COLOR, block_letter_in);
-    blockdef_add_text(sc_letter_in, gettext("Letter"));
-    blockdef_add_argument(sc_letter_in, "1", "0", BLOCKCONSTR_UNLIMITED);
-    blockdef_add_text(sc_letter_in, gettext("in"));
-    blockdef_add_argument(sc_letter_in, gettext("string"), gettext("Abc"), BLOCKCONSTR_UNLIMITED);
-    blockdef_register(vm, sc_letter_in);
-    block_category_add_blockdef(cat_string, sc_letter_in);
-
-    Blockdef* sc_substring = blockdef_new("substring", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_STRING_COLOR, block_substring);
-    blockdef_add_text(sc_substring, gettext("Substring"));
-    blockdef_add_argument(sc_substring, "2", "0", BLOCKCONSTR_UNLIMITED);
-    blockdef_add_text(sc_substring, gettext("to"));
-    blockdef_add_argument(sc_substring, "4", "0", BLOCKCONSTR_UNLIMITED);
-    blockdef_add_text(sc_substring, gettext("in"));
-    blockdef_add_argument(sc_substring, gettext("string"), gettext("Abc"), BLOCKCONSTR_UNLIMITED);
-    blockdef_register(vm, sc_substring);
-    block_category_add_blockdef(cat_string, sc_substring);
-
-    Blockdef* sc_length = blockdef_new("length", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_STRING_COLOR, block_length);
-    blockdef_add_text(sc_length, gettext("Length"));
-    blockdef_add_argument(sc_length, gettext("string"), gettext("Abc"), BLOCKCONSTR_UNLIMITED);
-    blockdef_register(vm, sc_length);
-    block_category_add_blockdef(cat_string, sc_length);
-
-    block_category_add_label(cat_string, gettext("Unicode conversion"), (Color) CATEGORY_STRING_COLOR);
-
-    Blockdef* sc_ord = blockdef_new("ord", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_STRING_COLOR, block_ord);
-    blockdef_add_text(sc_ord, gettext("Ord"));
-    blockdef_add_argument(sc_ord, "A", gettext("Abc"), BLOCKCONSTR_UNLIMITED);
-    blockdef_register(vm, sc_ord);
-    block_category_add_blockdef(cat_string, sc_ord);
-
-    Blockdef* sc_chr = blockdef_new("chr", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_STRING_COLOR, block_chr);
-    blockdef_add_text(sc_chr, gettext("Chr"));
-    blockdef_add_argument(sc_chr, "65", "0", BLOCKCONSTR_UNLIMITED);
-    blockdef_register(vm, sc_chr);
-    block_category_add_blockdef(cat_string, sc_chr);
-
     block_category_add_label(cat_misc, gettext("System"), (Color) CATEGORY_MISC_COLOR);
 
     Blockdef* sc_sleep = blockdef_new("sleep", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_MISC_COLOR, block_sleep);
@@ -3452,6 +3405,51 @@ void register_blocks(Vm* vm) {
     blockdef_add_argument(sc_set_var, "", gettext("any"), BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_set_var);
     block_category_add_blockdef(cat_data, sc_set_var);
+
+    block_category_add_label(cat_data, gettext("Strings"), (Color) CATEGORY_STRING_COLOR);
+
+    Blockdef* sc_join = blockdef_new("join", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_STRING_COLOR, block_join);
+    blockdef_add_text(sc_join, gettext("Join"));
+    blockdef_add_argument(sc_join, gettext("left and "), gettext("Abc"), BLOCKCONSTR_UNLIMITED);
+    blockdef_add_argument(sc_join, gettext("right"), gettext("Abc"), BLOCKCONSTR_UNLIMITED);
+    blockdef_register(vm, sc_join);
+    block_category_add_blockdef(cat_data, sc_join);
+
+    Blockdef* sc_letter_in = blockdef_new("letter_in", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_STRING_COLOR, block_letter_in);
+    blockdef_add_text(sc_letter_in, gettext("Letter"));
+    blockdef_add_argument(sc_letter_in, "1", "0", BLOCKCONSTR_UNLIMITED);
+    blockdef_add_text(sc_letter_in, gettext("in"));
+    blockdef_add_argument(sc_letter_in, gettext("string"), gettext("Abc"), BLOCKCONSTR_UNLIMITED);
+    blockdef_register(vm, sc_letter_in);
+    block_category_add_blockdef(cat_data, sc_letter_in);
+
+    Blockdef* sc_substring = blockdef_new("substring", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_STRING_COLOR, block_substring);
+    blockdef_add_text(sc_substring, gettext("Substring"));
+    blockdef_add_argument(sc_substring, "2", "0", BLOCKCONSTR_UNLIMITED);
+    blockdef_add_text(sc_substring, gettext("to"));
+    blockdef_add_argument(sc_substring, "4", "0", BLOCKCONSTR_UNLIMITED);
+    blockdef_add_text(sc_substring, gettext("in"));
+    blockdef_add_argument(sc_substring, gettext("string"), gettext("Abc"), BLOCKCONSTR_UNLIMITED);
+    blockdef_register(vm, sc_substring);
+    block_category_add_blockdef(cat_data, sc_substring);
+
+    Blockdef* sc_length = blockdef_new("length", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_STRING_COLOR, block_length);
+    blockdef_add_text(sc_length, gettext("Length"));
+    blockdef_add_argument(sc_length, gettext("string"), gettext("Abc"), BLOCKCONSTR_UNLIMITED);
+    blockdef_register(vm, sc_length);
+    block_category_add_blockdef(cat_data, sc_length);
+
+    Blockdef* sc_ord = blockdef_new("ord", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_STRING_COLOR, block_ord);
+    blockdef_add_text(sc_ord, gettext("Ord"));
+    blockdef_add_argument(sc_ord, "A", gettext("Abc"), BLOCKCONSTR_UNLIMITED);
+    blockdef_register(vm, sc_ord);
+    block_category_add_blockdef(cat_data, sc_ord);
+
+    Blockdef* sc_chr = blockdef_new("chr", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_STRING_COLOR, block_chr);
+    blockdef_add_text(sc_chr, gettext("Chr"));
+    blockdef_add_argument(sc_chr, "65", "0", BLOCKCONSTR_UNLIMITED);
+    blockdef_register(vm, sc_chr);
+    block_category_add_blockdef(cat_data, sc_chr);
 
     block_category_add_label(cat_data, gettext("Lists"), (Color) { 0xff, 0x44, 0x00, 0xff });
 
