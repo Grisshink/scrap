@@ -5,6 +5,7 @@
 - Blocks inside block pallete are now split into subcategories
 - Added new color type and integrated it with color related blocks
 - Added new example (neon.scrp) featuring new color system
+- Added ability to change colors of custom blocks
 
 ## Fixes
 - Fixed block definitions being able to be edited in block palette
