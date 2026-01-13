@@ -1680,7 +1680,7 @@ void scrap_gui_process(void) {
 
         gui_element_begin(gui);
             gui_set_floating(gui);
-            gui_set_position(gui, gui->mouse_x + 5, gui->mouse_y + 5);
+            gui_set_position(gui, gui->mouse_x, gui->mouse_y);
 
             draw_blockchain(&editor.mouse_blockchain, false, false, true);
         gui_element_end(gui);
