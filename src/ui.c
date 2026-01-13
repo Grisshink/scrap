@@ -1575,7 +1575,11 @@ void scrap_gui_process_ui(void) {
             ui.hover.editor.select_blockchain = NULL;
         }
 
-        if (vector_size(editor.mouse_blockchain.blocks) > 0) {
+        if (vector_size(editor.mouse_blockchain.blocks) > 0 &&
+            // This small hack allows to transfer mouse blockchain contents between projects
+            ui.hover.button.handler != handle_file_button_click &&
+            ui.hover.button.handler != handle_file_menu_click)
+        {
             ui.hover.button.handler = NULL;
         }
     }
