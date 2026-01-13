@@ -3291,16 +3291,6 @@ void register_blocks(Vm* vm) {
     blockdef_register(vm, sc_bit_xor);
     block_category_add_blockdef(cat_logic, sc_bit_xor);
 
-    block_category_add_label(cat_logic, gettext("Random"), (Color) CATEGORY_LOGIC_COLOR);
-
-    Blockdef* sc_random = blockdef_new("random", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_LOGIC_COLOR, block_random);
-    blockdef_add_text(sc_random, gettext("Random from"));
-    blockdef_add_argument(sc_random, "0", "0", BLOCKCONSTR_UNLIMITED);
-    blockdef_add_text(sc_random, gettext("to"));
-    blockdef_add_argument(sc_random, "10", "0", BLOCKCONSTR_UNLIMITED);
-    blockdef_register(vm, sc_random);
-    block_category_add_blockdef(cat_logic, sc_random);
-
     block_category_add_label(cat_misc, gettext("System"), (Color) CATEGORY_MISC_COLOR);
 
     Blockdef* sc_sleep = blockdef_new("sleep", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_MISC_COLOR, block_sleep);
@@ -3309,6 +3299,14 @@ void register_blocks(Vm* vm) {
     blockdef_add_text(sc_sleep, gettext("μs"));
     blockdef_register(vm, sc_sleep);
     block_category_add_blockdef(cat_misc, sc_sleep);
+
+    Blockdef* sc_random = blockdef_new("random", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_MISC_COLOR, block_random);
+    blockdef_add_text(sc_random, gettext("Random from"));
+    blockdef_add_argument(sc_random, "0", "0", BLOCKCONSTR_UNLIMITED);
+    blockdef_add_text(sc_random, gettext("to"));
+    blockdef_add_argument(sc_random, "10", "0", BLOCKCONSTR_UNLIMITED);
+    blockdef_register(vm, sc_random);
+    block_category_add_blockdef(cat_misc, sc_random);
 
     Blockdef* sc_unix_time = blockdef_new("unix_time", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_MISC_COLOR, block_unix_time);
     blockdef_add_text(sc_unix_time, gettext("Time since 1970"));
