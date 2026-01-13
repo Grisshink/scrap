@@ -18,6 +18,8 @@
 //    misrepresented as being the original software.
 // 3. This notice may not be removed or altered from any source distribution.
 
+#define SCRAP_SAVE_VERSION 4
+
 #define EDITOR_DEFAULT_PROJECT_NAME "project.scrp"
 
 #define DROP_TEX_WIDTH ((float)(config.ui_size - BLOCK_OUTLINE_SIZE * 4) / (float)drop_tex.height * (float)drop_tex.width)

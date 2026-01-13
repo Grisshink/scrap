@@ -29,6 +29,8 @@
 
 #include "../external/cfgpath.h"
 
+#define STR(v) #v
+
 typedef struct {
     void* ptr;
     size_t size;
@@ -555,7 +557,7 @@ void collect_all_code_ids(BlockChain* code) {
 void save_code(const char* file_path, ProjectConfig* config, BlockChain* code) {
     (void) config;
     SaveData save = {0};
-    ver = 3;
+    ver = SCRAP_SAVE_VERSION;
     int chains_count = vector_size(code);
 
     Blockdef** blockdefs = vector_create();
@@ -832,8 +834,8 @@ BlockChain* load_code(const char* file_path, ProjectConfig* out_config) {
     save.capacity = save_size;
 
     if (!save_read_varint(&save, &ver)) goto load_fail;
-    if (ver < 1 || ver > 3) {
-        TraceLog(LOG_ERROR, "[LOAD] Unsupported version %d. Current scrap build expects save versions from 1 to 3", ver);
+    if (ver < 1 || ver > SCRAP_SAVE_VERSION) {
+        TraceLog(LOG_ERROR, "[LOAD] Unsupported version %d. Current scrap build expects save versions from 1 to " STR(SCRAP_SAVE_VERSION), ver);
         goto load_fail;
     }
 
