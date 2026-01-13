@@ -40,12 +40,6 @@ its forks such as [Turbowarp](https://turbowarp.org).
 - Press `Enter` to enter the highlighted text box and `Esc` to leave that text box
 - Press `S` to open block search menu
 
-## Screenshots
-
-![Screenshot1](/extras/scrap_screenshot1.png)
-![Screenshot2](/extras/scrap_screenshot2.png)
-![Screenshot3](/extras/scrap_screenshot3.png)
-
 ## Binary Installation
 
 ### Github releases
@@ -173,6 +167,12 @@ make -j$(nproc) TARGET=OSX
 ```
 
 Thanks to [@arducat](https://github.com/arducat) for MacOS support.
+
+## Screenshots
+
+![Screenshot1](/extras/scrap_screenshot1.png)
+![Screenshot2](/extras/scrap_screenshot2.png)
+![Screenshot3](/extras/scrap_screenshot3.png)
 
 ## Wait, there is more?
 
