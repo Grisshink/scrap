@@ -1330,6 +1330,8 @@ void update_search(void) {
 }
 
 static void handle_key_press(void) {
+    if (vector_size(editor.mouse_blockchain.blocks) > 0) return;
+
     if (IsKeyPressed(KEY_F5)) {
 #ifdef USE_INTERPRETER
         vm_start();
@@ -1344,7 +1346,6 @@ static void handle_key_press(void) {
     }
     if (IsKeyPressed(KEY_S) &&
         ui.hover.select_input != &editor.search_list_search &&
-        vector_size(editor.mouse_blockchain.blocks) == 0 &&
         !ui.hover.is_panel_edit_mode &&
         ui.hover.panels.panel &&
         ui.hover.panels.panel->type == PANEL_CODE &&
@@ -1572,6 +1573,10 @@ void scrap_gui_process_ui(void) {
             TraceLog(LOG_WARNING, "Invalid selection: %p", ui.hover.editor.select_block);
             ui.hover.editor.select_block = NULL;
             ui.hover.editor.select_blockchain = NULL;
+        }
+
+        if (vector_size(editor.mouse_blockchain.blocks) > 0) {
+            ui.hover.button.handler = NULL;
         }
     }
 
