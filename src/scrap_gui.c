@@ -63,26 +63,26 @@ static bool mouse_inside(Gui* gui, GuiBounds rect) {
 void gui_init(Gui* gui) {
     gui->measure_text = NULL;
     gui->measure_image = NULL;
-    gui->command_stack_len = 0;
-    gui->element_stack_len = 0;
+    gui->command_list_len = 0;
+    gui->elements_arena_len = 0;
     gui->win_w = 0;
     gui->win_h = 0;
     gui->mouse_x = 0;
     gui->mouse_y = 0;
     gui->mouse_scroll = 0;
-    gui->command_stack_iter = 0;
+    gui->command_list_iter = 0;
 }
 
 void gui_begin(Gui* gui) {
-    gui->command_stack_len = 0;
-    gui->command_stack_iter = 0;
+    gui->command_list_len = 0;
+    gui->command_list_iter = 0;
     gui->rect_stack_len = 0;
     gui->border_stack_len = 0;
     gui->image_stack_len = 0;
     gui->text_stack_len = 0;
-    gui->element_stack_len = 0;
+    gui->elements_arena_len = 0;
     gui->scissor_stack_len = 0;
-    gui->state_stack_len = 0;
+    gui->state_arena_len = 0;
     gui->current_element = NULL;
 
     gui_element_begin(gui);
@@ -91,7 +91,7 @@ void gui_begin(Gui* gui) {
 
 void gui_end(Gui* gui) {
     gui_element_end(gui);
-    gui_render(gui, &gui->element_stack[0]);
+    gui_render(gui, &gui->elements_arena[0]);
     flush_aux_buffers(gui);
 }
 
@@ -158,10 +158,10 @@ static void flush_aux_buffers(Gui* gui) {
     sort_commands(gui->text_stack, 0, gui->text_stack_len - 1, true);
     sort_commands(gui->image_stack, 0, gui->image_stack_len - 1, false);
 
-    for (size_t i = 0; i < gui->rect_stack_len; i++)   gui->command_stack[gui->command_stack_len++] = gui->rect_stack[i];
-    for (size_t i = 0; i < gui->border_stack_len; i++) gui->command_stack[gui->command_stack_len++] = gui->border_stack[i];
-    for (size_t i = 0; i < gui->image_stack_len; i++)  gui->command_stack[gui->command_stack_len++] = gui->image_stack[i];
-    for (size_t i = 0; i < gui->text_stack_len; i++)   gui->command_stack[gui->command_stack_len++] = gui->text_stack[i];
+    for (size_t i = 0; i < gui->rect_stack_len; i++)   gui->command_list[gui->command_list_len++] = gui->rect_stack[i];
+    for (size_t i = 0; i < gui->border_stack_len; i++) gui->command_list[gui->command_list_len++] = gui->border_stack[i];
+    for (size_t i = 0; i < gui->image_stack_len; i++)  gui->command_list[gui->command_list_len++] = gui->image_stack[i];
+    for (size_t i = 0; i < gui->text_stack_len; i++)   gui->command_list[gui->command_list_len++] = gui->text_stack[i];
 
     gui->rect_stack_len = 0;
     gui->border_stack_len = 0;
@@ -170,7 +170,7 @@ static void flush_aux_buffers(Gui* gui) {
 }
 
 static GuiDrawCommand* new_draw_command(Gui* gui, GuiDrawBounds bounds, GuiDrawType draw_type, unsigned char draw_subtype, GuiDrawData data, GuiColor color) {
-    GuiDrawCommand* command = &gui->command_stack[gui->command_stack_len++];
+    GuiDrawCommand* command = &gui->command_list[gui->command_list_len++];
     command->pos_x = bounds.x;
     command->pos_y = bounds.y;
     command->width = bounds.w;
@@ -313,7 +313,7 @@ static void gui_render(Gui* gui, GuiElement* el) {
 
         if (max > 0) {
             flush_aux_buffers(gui);
-            GuiDrawCommand* command = &gui->command_stack[gui->command_stack_len++];
+            GuiDrawCommand* command = &gui->command_list[gui->command_list_len++];
             command->type = DRAWTYPE_RECT;
             command->subtype = SUBTYPE_DEFAULT;
             command->color = (GuiColor) { 0xff, 0xff, 0xff, 0x80 };
@@ -351,9 +351,9 @@ static void gui_render(Gui* gui, GuiElement* el) {
 }
 
 static GuiElement* gui_element_new(Gui* gui) {
-    assert(gui->element_stack_len < ELEMENT_STACK_SIZE);
+    assert(gui->elements_arena_len < ELEMENT_STACK_SIZE);
 
-    GuiElement* el = &gui->element_stack[gui->element_stack_len++];
+    GuiElement* el = &gui->elements_arena[gui->elements_arena_len++];
     memset(el, 0, sizeof(*el));
 
     el->scaling = 1.0;
@@ -587,11 +587,11 @@ void gui_scale_element(Gui* gui, float scaling) {
 void* gui_set_state(Gui* gui, void* state, unsigned short state_len) {
     GuiElement* el = gui->current_element;
     if (el->custom_state) return el->custom_state;
-    assert(gui->state_stack_len + state_len <= STATE_STACK_SIZE);
+    assert(gui->state_arena_len + state_len <= STATE_STACK_SIZE);
 
-    memcpy(&gui->state_stack[gui->state_stack_len], state, state_len);
-    el->custom_state = &gui->state_stack[gui->state_stack_len];
-    gui->state_stack_len += state_len;
+    memcpy(&gui->state_arena[gui->state_arena_len], state, state_len);
+    el->custom_state = &gui->state_arena[gui->state_arena_len];
+    gui->state_arena_len += state_len;
     return el->custom_state;
 }
 

@@ -2060,7 +2060,7 @@ static void write_debug_buffer(void) {
     print_debug(&i, "Drag cancelled: %d", ui.hover.drag_cancelled);
     print_debug(&i, "Palette scroll: %d", editor.palette.scroll_amount);
     print_debug(&i, "Editor: %d, Editing: %p, Blockdef: %p, input: %zu", ui.hover.editor.part, ui.hover.editor.edit_blockdef, ui.hover.editor.blockdef, ui.hover.editor.blockdef_input);
-    print_debug(&i, "Elements: %zu/%zu, Draw: %zu/%zu", gui->element_stack_len, ELEMENT_STACK_SIZE, gui->command_stack_len, COMMAND_STACK_SIZE);
+    print_debug(&i, "Elements: %zu/%zu, Draw: %zu/%zu", gui->elements_arena_len, ELEMENT_STACK_SIZE, gui->command_list_len, COMMAND_STACK_SIZE);
     print_debug(&i, "Slider: %p, min: %d, max: %d", ui.hover.hover_slider.value, ui.hover.hover_slider.min, ui.hover.hover_slider.max);
     print_debug(&i, "Input: %p, Select: %p, Pos: (%.3f, %.3f), ind: (%d, %d)", ui.hover.input_info.input, ui.hover.select_input, ui.hover.input_info.rel_pos.x, ui.hover.input_info.rel_pos.y, ui.hover.select_input_cursor, ui.hover.select_input_mark);
     print_debug(&i, "UI time: %.3f", ui.ui_time);

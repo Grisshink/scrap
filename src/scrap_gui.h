@@ -165,8 +165,8 @@ typedef GuiMeasurement (*GuiMeasureTextSliceFunc)(void* font, const char* text, 
 typedef GuiMeasurement (*GuiMeasureImageFunc)(void* image, unsigned short size);
 
 struct Gui {
-    GuiDrawCommand command_stack[COMMAND_STACK_SIZE];
-    size_t command_stack_len; size_t command_stack_iter;
+    GuiDrawCommand command_list[COMMAND_STACK_SIZE];
+    size_t command_list_len; size_t command_list_iter;
 
     GuiDrawCommand rect_stack[AUX_STACK_SIZE];
     size_t rect_stack_len;
@@ -180,11 +180,11 @@ struct Gui {
     GuiDrawCommand text_stack[AUX_STACK_SIZE];
     size_t text_stack_len;
 
-    GuiElement element_stack[ELEMENT_STACK_SIZE];
-    size_t element_stack_len;
+    GuiElement elements_arena[ELEMENT_STACK_SIZE];
+    size_t elements_arena_len;
 
-    void* state_stack[STATE_STACK_SIZE];
-    size_t state_stack_len;
+    void* state_arena[STATE_STACK_SIZE];
+    size_t state_arena_len;
 
     GuiBounds scissor_stack[COMMAND_STACK_SIZE];
     size_t scissor_stack_len;
@@ -199,7 +199,7 @@ struct Gui {
     int mouse_scroll;
 };
 
-#define GUI_GET_COMMANDS(gui, command) while (gui->command_stack_iter < gui->command_stack_len && (command = &gui->command_stack[gui->command_stack_iter++]))
+#define GUI_GET_COMMANDS(gui, command) while (gui->command_list_iter < gui->command_list_len && (command = &gui->command_list[gui->command_list_iter++]))
 #define TRANSPARENT (GuiColor) {0}
 #define NO_BORDER TRANSPARENT, 0
 #define NO_COLOR TRANSPARENT, NO_BORDER
