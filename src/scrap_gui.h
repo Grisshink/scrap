@@ -25,7 +25,6 @@
 
 #define ELEMENT_STACK_SIZE 32768
 #define COMMAND_STACK_SIZE 4096
-#define AUX_STACK_SIZE 4096
 #define STATE_STACK_SIZE 32768
 typedef struct Gui Gui;
 typedef struct GuiElement GuiElement;
@@ -55,10 +54,10 @@ typedef struct {
 
 typedef enum {
     DRAWTYPE_UNKNOWN = 0,
-    DRAWTYPE_RECT,
-    DRAWTYPE_BORDER,
-    DRAWTYPE_IMAGE,
-    DRAWTYPE_TEXT,
+    DRAWTYPE_RECT = 1,
+    DRAWTYPE_BORDER = 2,
+    DRAWTYPE_IMAGE = 3,
+    DRAWTYPE_TEXT = 4,
     DRAWTYPE_SCISSOR_SET,
     DRAWTYPE_SCISSOR_RESET,
     DRAWTYPE_SHADER_BEGIN,
@@ -166,27 +165,18 @@ typedef GuiMeasurement (*GuiMeasureImageFunc)(void* image, unsigned short size);
 
 struct Gui {
     GuiDrawCommand command_list[COMMAND_STACK_SIZE];
-    size_t command_list_len; size_t command_list_iter;
-
-    GuiDrawCommand rect_stack[AUX_STACK_SIZE];
-    size_t rect_stack_len;
-
-    GuiDrawCommand border_stack[AUX_STACK_SIZE];
-    size_t border_stack_len;
-
-    GuiDrawCommand image_stack[AUX_STACK_SIZE];
-    size_t image_stack_len;
-
-    GuiDrawCommand text_stack[AUX_STACK_SIZE];
-    size_t text_stack_len;
+    GuiDrawCommand aux_command_list[COMMAND_STACK_SIZE];
 
     GuiElement elements_arena[ELEMENT_STACK_SIZE];
-    size_t elements_arena_len;
-
     void* state_arena[STATE_STACK_SIZE];
-    size_t state_arena_len;
-
     GuiBounds scissor_stack[COMMAND_STACK_SIZE];
+
+    size_t command_list_len;
+    size_t command_list_iter;
+    size_t command_list_last_batch;
+
+    size_t elements_arena_len;
+    size_t state_arena_len;
     size_t scissor_stack_len;
 
     GuiMeasureTextSliceFunc measure_text;

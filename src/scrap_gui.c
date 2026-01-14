@@ -48,11 +48,11 @@
 #define SET_ANCHOR(el, x, y) (el->anchor = x | (y << 4))
 
 static void gui_render(Gui* gui, GuiElement* el);
-static void flush_aux_buffers(Gui* gui);
+static void flush_command_batch(Gui* gui);
 
-static bool inside_window(Gui* gui, GuiDrawCommand* command) {
-    return (command->pos_x + command->width  > 0) && (command->pos_x < gui->win_w) &&
-           (command->pos_y + command->height > 0) && (command->pos_y < gui->win_h);
+static bool inside_window(Gui* gui, GuiDrawBounds rect) {
+    return (rect.x + rect.w > 0) && (rect.x < gui->win_w) &&
+           (rect.y + rect.h > 0) && (rect.y < gui->win_h);
 }
 
 static bool mouse_inside(Gui* gui, GuiBounds rect) {
@@ -76,14 +76,11 @@ void gui_init(Gui* gui) {
 void gui_begin(Gui* gui) {
     gui->command_list_len = 0;
     gui->command_list_iter = 0;
-    gui->rect_stack_len = 0;
-    gui->border_stack_len = 0;
-    gui->image_stack_len = 0;
-    gui->text_stack_len = 0;
     gui->elements_arena_len = 0;
     gui->scissor_stack_len = 0;
     gui->state_arena_len = 0;
     gui->current_element = NULL;
+    gui->command_list_last_batch = 0;
 
     gui_element_begin(gui);
     gui_set_fixed(gui, gui->win_w, gui->win_h);
@@ -92,7 +89,7 @@ void gui_begin(Gui* gui) {
 void gui_end(Gui* gui) {
     gui_element_end(gui);
     gui_render(gui, &gui->elements_arena[0]);
-    flush_aux_buffers(gui);
+    flush_command_batch(gui);
 }
 
 void gui_set_measure_text_func(Gui* gui, GuiMeasureTextSliceFunc measure_text) {
@@ -117,56 +114,53 @@ void gui_update_window_size(Gui* gui, unsigned short win_w, unsigned short win_h
     gui->win_h = win_h;
 }
 
-static int partition_image(GuiDrawCommand* array, int begin, int end) {
-    GuiDrawCommand pivot = array[(begin + end) / 2];
-    int left = begin - 1;
-    int right = end + 1;
-
-    for (;;) {
-        do left++; while (array[left].data.image < pivot.data.image);
-        do right--; while (array[right].data.image > pivot.data.image);
-        if (left >= right) return right;
-        GuiDrawCommand temp = array[left];
-        array[left] = array[right];
-        array[right] = temp;
+static bool is_command_lesseq(GuiDrawCommand* left, GuiDrawCommand* right) {
+    if (left->type != right->type) return left->type <= right->type;
+    
+    switch (left->type) {
+    case DRAWTYPE_IMAGE:
+        return left->data.image <= right->data.image;
+    case DRAWTYPE_TEXT:
+        return left->data.text.font <= right->data.text.font;
+    default:
+        return true; // Equal
     }
 }
 
-static int partition_font(GuiDrawCommand* array, int begin, int end) {
-    GuiDrawCommand pivot = array[(begin + end) / 2];
-    int left = begin - 1;
-    int right = end + 1;
+static void merge(GuiDrawCommand* list, GuiDrawCommand* aux_list, int start, int middle, int end) {
+    int left_pos  = start,
+        right_pos = middle;
 
-    for (;;) {
-        do left++; while (array[left].data.text.font < pivot.data.text.font);
-        do right--; while (array[right].data.text.font > pivot.data.text.font);
-        if (left >= right) return right;
-        GuiDrawCommand temp = array[left];
-        array[left] = array[right];
-        array[right] = temp;
+    for (int i = start; i < end; i++) {
+        if (left_pos < middle && (right_pos >= end || is_command_lesseq(&list[left_pos], &list[right_pos]))) {
+            aux_list[i] = list[left_pos++];
+        } else {
+            aux_list[i] = list[right_pos++];
+        }
     }
 }
 
-static void sort_commands(GuiDrawCommand* array, int begin, int end, bool is_font) {
-    if (begin >= end || begin < 0 || end < 0) return;
-    int pos = is_font ? partition_font(array, begin, end) : partition_image(array, begin, end);
-    sort_commands(array, begin, pos, is_font);
-    sort_commands(array, pos + 1, end, is_font);
+static void split_and_merge_commands(GuiDrawCommand* list, GuiDrawCommand* aux_list, int start, int end) {
+    if (end - start <= 1) return;
+    int middle = (start + end) / 2;
+
+    split_and_merge_commands(aux_list, list, start,  middle);
+    split_and_merge_commands(aux_list, list, middle, end);
+    merge(list, aux_list, start, middle, end);
 }
 
-static void flush_aux_buffers(Gui* gui) {
-    sort_commands(gui->text_stack, 0, gui->text_stack_len - 1, true);
-    sort_commands(gui->image_stack, 0, gui->image_stack_len - 1, false);
+static void sort_commands(GuiDrawCommand* list, GuiDrawCommand* aux_list, int start, int end) {
+    for (int i = start; i < end; i++) aux_list[i] = list[i];
+    split_and_merge_commands(aux_list, list, start, end);
+}
 
-    for (size_t i = 0; i < gui->rect_stack_len; i++)   gui->command_list[gui->command_list_len++] = gui->rect_stack[i];
-    for (size_t i = 0; i < gui->border_stack_len; i++) gui->command_list[gui->command_list_len++] = gui->border_stack[i];
-    for (size_t i = 0; i < gui->image_stack_len; i++)  gui->command_list[gui->command_list_len++] = gui->image_stack[i];
-    for (size_t i = 0; i < gui->text_stack_len; i++)   gui->command_list[gui->command_list_len++] = gui->text_stack[i];
+static void flush_command_batch(Gui* gui) {
+    if (gui->command_list_last_batch >= gui->command_list_len) return;
+    // Skip sorting unwanted elements
+    while (gui->command_list[gui->command_list_last_batch].type > 4) gui->command_list_last_batch++;
 
-    gui->rect_stack_len = 0;
-    gui->border_stack_len = 0;
-    gui->image_stack_len = 0;
-    gui->text_stack_len = 0;
+    sort_commands(gui->command_list, gui->aux_command_list, gui->command_list_last_batch, gui->command_list_len);
+    gui->command_list_last_batch = gui->command_list_len;
 }
 
 static GuiDrawCommand* new_draw_command(Gui* gui, GuiDrawBounds bounds, GuiDrawType draw_type, unsigned char draw_subtype, GuiDrawData data, GuiColor color) {
@@ -257,7 +251,7 @@ static void gui_render(Gui* gui, GuiElement* el) {
         (float)el->h * el->scaling,
     };
 
-    if (SCISSOR(el) || FLOATING(el) || el->shader) flush_aux_buffers(gui);
+    if (SCISSOR(el) || FLOATING(el) || el->shader) flush_command_batch(gui);
 
     if (SCISSOR(el)) {
         new_draw_command(gui, el_bounds, DRAWTYPE_SCISSOR_SET, SUBTYPE_DEFAULT, (GuiDrawData) {0}, (GuiColor) {0});
@@ -265,45 +259,17 @@ static void gui_render(Gui* gui, GuiElement* el) {
     }
     if (el->shader) new_draw_command(gui, el_bounds, DRAWTYPE_SHADER_BEGIN, SUBTYPE_DEFAULT, (GuiDrawData) { .shader = el->shader }, (GuiColor) {0});
 
-    if (el->draw_type != DRAWTYPE_UNKNOWN) {
-        GuiDrawCommand command;
-        command.pos_x = el_bounds.x;
-        command.pos_y = el_bounds.y;
-        command.width = el_bounds.w;
-        command.height = el_bounds.h;
-        command.type = el->draw_type;
-        command.color = el->color;
-        command.data = el->data;
-        command.subtype = el->draw_subtype;
-
-        if (inside_window(gui, &command)) {
-            switch (el->draw_type) {
-            case DRAWTYPE_RECT:
-                gui->rect_stack[gui->rect_stack_len++] = command;
-                break;
-            case DRAWTYPE_BORDER:
-                gui->border_stack[gui->border_stack_len++] = command;
-                break;
-            case DRAWTYPE_IMAGE:
-                gui->image_stack[gui->image_stack_len++] = command;
-                break;
-            case DRAWTYPE_TEXT:
-                gui->text_stack[gui->text_stack_len++] = command;
-                break;
-            default:
-                assert(false && "Unhandled render draw type");
-                break;
-            }
-        }
+    if (el->draw_type != DRAWTYPE_UNKNOWN && inside_window(gui, el_bounds)) {
+        new_draw_command(gui, el_bounds, el->draw_type, el->draw_subtype, el->data, el->color);
     }
 
     if (el->shader) {
-        flush_aux_buffers(gui);
+        flush_command_batch(gui);
         new_draw_command(gui, el_bounds, DRAWTYPE_SHADER_END, SUBTYPE_DEFAULT, (GuiDrawData) { .shader = el->shader }, (GuiColor) {0});
     }
 
     for (GuiElement* iter = el->child_elements_begin; iter; iter = iter->next) {
-        gui_render(gui, iter); // , pos_x + ((float)el->x - anchor_x) * parent_scaling, pos_y + ((float)el->y - anchor_y) * parent_scaling, el->scaling);
+        gui_render(gui, iter);
     }
 
     if (el->scroll_value) {
@@ -312,7 +278,7 @@ static void gui_render(Gui* gui, GuiElement* el) {
         int max = content_size - el_size;
 
         if (max > 0) {
-            flush_aux_buffers(gui);
+            flush_command_batch(gui);
             GuiDrawCommand* command = &gui->command_list[gui->command_list_len++];
             command->type = DRAWTYPE_RECT;
             command->subtype = SUBTYPE_DEFAULT;
@@ -338,7 +304,7 @@ static void gui_render(Gui* gui, GuiElement* el) {
         if (*el->scroll_value > 0) *el->scroll_value = 0;
     }
 
-    if (FLOATING(el) || SCISSOR(el)) flush_aux_buffers(gui);
+    if (FLOATING(el) || SCISSOR(el)) flush_command_batch(gui);
 
     if (SCISSOR(el)) {
         gui->scissor_stack_len--;
