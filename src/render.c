@@ -193,7 +193,7 @@ static void blockdef_input_on_hover(GuiElement* el) {
     el->draw_type = DRAWTYPE_BORDER;
     el->color = (GuiColor) { 0xa0, 0xa0, 0xa0, 0xff };
     el->data.border_width = BLOCK_OUTLINE_SIZE;
-    el->draw_subtype = SUBTYPE_DEFAULT;
+    el->draw_subtype = GUI_SUBTYPE_DEFAULT;
 }
 
 static void editor_del_button_on_hover(GuiElement* el) {
@@ -201,7 +201,7 @@ static void editor_del_button_on_hover(GuiElement* el) {
     if (gui_window_is_shown()) return;
     if (ui.hover.button.handler) return;
     el->draw_type = DRAWTYPE_RECT;
-    el->draw_subtype = SUBTYPE_DEFAULT;
+    el->draw_subtype = GUI_SUBTYPE_DEFAULT;
     el->color = (GuiColor) { 0xff, 0xff, 0xff, 0x80 };
     ui.hover.editor.blockdef_input = (size_t)el->custom_data;
     ui.hover.button.handler = handle_editor_del_arg_button;
@@ -212,7 +212,7 @@ static void editor_button_on_hover(GuiElement* el) {
     if (gui_window_is_shown()) return;
     if (ui.hover.button.handler) return;
     el->draw_type = DRAWTYPE_RECT;
-    el->draw_subtype = SUBTYPE_DEFAULT;
+    el->draw_subtype = GUI_SUBTYPE_DEFAULT;
     el->color = (GuiColor) { 0xff, 0xff, 0xff, 0x80 };
     ui.hover.button.handler = el->custom_data;
 }
@@ -223,7 +223,7 @@ static void editor_color_on_hover(GuiElement* el) {
     if (ui.hover.button.handler) return;
 
     el->draw_type = DRAWTYPE_BORDER;
-    el->draw_subtype = SUBTYPE_DEFAULT;
+    el->draw_subtype = GUI_SUBTYPE_DEFAULT;
     el->color = (GuiColor) { 0xa0, 0xa0, 0xa0, 0xff };
     el->data.border_width = BLOCK_OUTLINE_SIZE;
     ui.hover.button.handler = handle_editor_color_button;
@@ -235,7 +235,7 @@ static void draw_editor_button(Texture2D* texture, ButtonClickHandler handler) {
         gui_on_hover(gui, editor_button_on_hover);
         gui_set_custom_data(gui, handler);
 
-        gui_image(gui, texture, BLOCK_IMAGE_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+        gui_image(gui, texture, BLOCK_IMAGE_SIZE, GUI_WHITE);
     gui_element_end(gui);
 }
 
@@ -341,7 +341,7 @@ static void draw_blockdef(Blockdef* blockdef, bool editing) {
         case INPUT_TEXT_DISPLAY:
             if (editing) {
                 gui_element_begin(gui);
-                    gui_set_rect(gui, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+                    gui_set_rect(gui, GUI_WHITE);
 
                     gui_element_begin(gui);
                         gui_set_direction(gui, DIRECTION_HORIZONTAL);
@@ -350,22 +350,22 @@ static void draw_blockdef(Blockdef* blockdef, bool editing) {
                         if (ui.hover.select_input == &input->data.text) gui_set_border(gui, (GuiColor) { 0x30, 0x30, 0x30, 0xff }, BLOCK_OUTLINE_SIZE);
                         gui_on_hover(gui, blockdef_input_on_hover);
 
-                        draw_input(&assets.fonts.font_cond, &input->data.text, "", BLOCK_TEXT_SIZE, (GuiColor) { 0x00, 0x00, 0x00, 0xff }, true);
+                        draw_input(&assets.fonts.font_cond, &input->data.text, "", BLOCK_TEXT_SIZE, GUI_WHITE, true);
                     gui_element_end(gui);
                 gui_element_end(gui);
             } else {
-                gui_text(gui, &assets.fonts.font_cond_shadow, input->data.text, BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+                gui_text(gui, &assets.fonts.font_cond_shadow, input->data.text, BLOCK_TEXT_SIZE, GUI_WHITE);
             }
             break;
         case INPUT_IMAGE_DISPLAY:
-            gui_image(gui, input->data.image.image_ptr, BLOCK_IMAGE_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+            gui_image(gui, input->data.image.image_ptr, BLOCK_IMAGE_SIZE, GUI_WHITE);
             break;
         case INPUT_ARGUMENT:
             input->data.arg.blockdef->color = blockdef->color;
             draw_blockdef(input->data.arg.blockdef, editing);
             break;
         default:
-            gui_text(gui, &assets.fonts.font_cond_shadow, "NODEF", BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+            gui_text(gui, &assets.fonts.font_cond_shadow, "NODEF", BLOCK_TEXT_SIZE, GUI_WHITE);
             break;
         }
 
@@ -375,7 +375,7 @@ static void draw_blockdef(Blockdef* blockdef, bool editing) {
                     gui_on_hover(gui, editor_del_button_on_hover);
                     gui_set_custom_data(gui, (void*)i);
 
-                    gui_image(gui, &assets.textures.button_del_arg, BLOCK_IMAGE_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+                    gui_image(gui, &assets.textures.button_del_arg, BLOCK_IMAGE_SIZE, GUI_WHITE);
                 gui_element_end(gui);
             gui_element_end(gui);
         }
@@ -418,7 +418,7 @@ static void argument_on_hover(GuiElement* el) {
     ui.hover.editor.blockchain = ui.hover.editor.prev_blockchain;
     if (el->draw_type != DRAWTYPE_UNKNOWN) return;
     el->draw_type = DRAWTYPE_BORDER;
-    el->draw_subtype = SUBTYPE_DEFAULT;
+    el->draw_subtype = GUI_SUBTYPE_DEFAULT;
     el->color = (GuiColor) { 0xa0, 0xa0, 0xa0, 0xff };
     el->data.border_width = BLOCK_OUTLINE_SIZE;
 }
@@ -583,8 +583,8 @@ static void draw_block(Block* block, bool highlight, bool can_hover, bool ghost,
                         gui_set_custom_data(gui, arg);
                     }
 
-                    gui_text(gui, &assets.fonts.font_cond_shadow, arg->data.text, BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
-                    gui_image(gui, &assets.textures.dropdown, BLOCK_IMAGE_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+                    gui_text(gui, &assets.fonts.font_cond_shadow, arg->data.text, BLOCK_TEXT_SIZE, GUI_WHITE);
+                    gui_image(gui, &assets.textures.dropdown, BLOCK_IMAGE_SIZE, GUI_WHITE);
 
                 gui_element_end(gui);
             gui_element_end(gui);
@@ -722,7 +722,7 @@ static void tab_button_add_on_hover(GuiElement* el) {
     if (ui.hover.button.handler) return;
     if (el->draw_type == DRAWTYPE_RECT) return;
     el->draw_type = DRAWTYPE_RECT;
-    el->draw_subtype = SUBTYPE_DEFAULT;
+    el->draw_subtype = GUI_SUBTYPE_DEFAULT;
     el->color = (GuiColor) { 0x40, 0x40, 0x40, 0xff };
     ui.hover.button.handler = handle_add_tab_button;
     ui.hover.button.data = el->custom_data;
@@ -733,7 +733,7 @@ static void tab_button_on_hover(GuiElement* el) {
     if (ui.hover.button.handler) return;
     if (el->draw_type == DRAWTYPE_RECT) return;
     el->draw_type = DRAWTYPE_RECT;
-    el->draw_subtype = SUBTYPE_DEFAULT;
+    el->draw_subtype = GUI_SUBTYPE_DEFAULT;
     el->color = (GuiColor) { 0x40, 0x40, 0x40, 0xff };
     ui.hover.button.handler = handle_tab_button;
     ui.hover.button.data = el->custom_data;
@@ -745,7 +745,7 @@ static void button_on_hover(GuiElement* el) {
     if (ui.hover.button.handler) return;
     if (el->draw_type == DRAWTYPE_RECT) return;
     el->draw_type = DRAWTYPE_RECT;
-    el->draw_subtype = SUBTYPE_DEFAULT;
+    el->draw_subtype = GUI_SUBTYPE_DEFAULT;
     el->color = (GuiColor) { 0x40, 0x40, 0x40, 0xff };
     ui.hover.button.handler = el->custom_data;
 }
@@ -769,7 +769,7 @@ static void draw_panel_editor_button(const char* text, int size, GuiColor color,
         gui_on_hover(gui, panel_editor_button_on_hover);
         gui_set_custom_data(gui, handler);
 
-        gui_text(gui, &assets.fonts.font_cond, text, BLOCK_TEXT_SIZE, (GuiColor) { 0x00, 0x00, 0x00, 0xff });
+        gui_text(gui, &assets.fonts.font_cond, text, BLOCK_TEXT_SIZE, GUI_WHITE);
     gui_element_end(gui);
 }
 
@@ -780,12 +780,12 @@ static GuiElement* draw_button(const char* text, int size, bool selected, GuiHan
         gui_set_align(gui, ALIGN_CENTER);
         gui_set_min_size(gui, 0, size);
         gui_set_padding(gui, config.ui_size * 0.3, 0);
-        if (selected) gui_set_rect(gui, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+        if (selected) gui_set_rect(gui, GUI_WHITE);
         gui_on_hover(gui, on_hover);
         gui_set_custom_data(gui, custom_data);
         el = gui_get_element(gui);
 
-        gui_text(gui, &assets.fonts.font_cond, text, BLOCK_TEXT_SIZE, selected ? (GuiColor) { 0x00, 0x00, 0x00, 0xff } : (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+        gui_text(gui, &assets.fonts.font_cond, text, BLOCK_TEXT_SIZE, selected ? GUI_WHITE : GUI_WHITE);
     gui_element_end(gui);
     return el;
 }
@@ -852,8 +852,8 @@ static void draw_tab_bar(void) {
             gui_set_custom_data(gui, handle_stop_button_click);
 
             if (vm.thread.state == THREAD_STATE_STOPPING) {
-                gui_set_rect(gui, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
-                gui_image(gui, &assets.textures.button_stop, tab_bar_size, (GuiColor) { 0x00, 0x00, 0x00, 0xff });
+                gui_set_rect(gui, GUI_WHITE);
+                gui_image(gui, &assets.textures.button_stop, tab_bar_size, GUI_WHITE);
             } else {
                 gui_image(gui, &assets.textures.button_stop, tab_bar_size, (GuiColor) { 0xff, 0x40, 0x30, 0xff });
             }
@@ -866,8 +866,8 @@ static void draw_tab_bar(void) {
             gui_set_custom_data(gui, handle_run_button_click);
 
             if (thread_is_running(&vm.thread)) {
-                gui_set_rect(gui, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
-                gui_image(gui, &assets.textures.button_run, tab_bar_size, (GuiColor) { 0x00, 0x00, 0x00, 0xff });
+                gui_set_rect(gui, GUI_WHITE);
+                gui_image(gui, &assets.textures.button_run, tab_bar_size, GUI_WHITE);
             } else {
                 gui_image(gui, &assets.textures.button_run, tab_bar_size, (GuiColor) { 0x60, 0xff, 0x00, 0xff });
             }
@@ -1051,7 +1051,7 @@ static void draw_category(BlockCategory* category) {
                 gui_set_rect(gui, color);
             gui_element_end(gui);
 
-            gui_text(gui, &assets.fonts.font_cond_shadow, category->name, BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+            gui_text(gui, &assets.fonts.font_cond_shadow, category->name, BLOCK_TEXT_SIZE, GUI_WHITE);
         gui_element_end(gui);
     gui_element_end(gui);
 }
@@ -1117,14 +1117,14 @@ static void draw_block_palette(void) {
                             gui_set_rect(gui, CONVERT_COLOR(cat->items[i].data.label.color, GuiColor));
                         gui_element_end(gui);
 
-                        gui_text(gui, &assets.fonts.font_cond_shadow, cat->items[i].data.label.text, BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+                        gui_text(gui, &assets.fonts.font_cond_shadow, cat->items[i].data.label.text, BLOCK_TEXT_SIZE, GUI_WHITE);
                     gui_element_end(gui);
                     break;
                 }
             }
         } else {
             gui_set_align(gui, ALIGN_CENTER);
-            gui_text(gui, &assets.fonts.font_cond_shadow, "No category currently selected", BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+            gui_text(gui, &assets.fonts.font_cond_shadow, "No category currently selected", BLOCK_TEXT_SIZE, GUI_WHITE);
         }
     gui_element_end(gui);
 }
@@ -1207,7 +1207,7 @@ static void draw_color_picker(void) {
             gui_element_end(gui);
 
             gui_element_begin(gui);
-                gui_set_image(gui, &assets.textures.spectrum, 0, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+                gui_set_image(gui, &assets.textures.spectrum, 0, GUI_WHITE);
                 gui_set_min_size(gui, config.ui_size * 0.75, 0);
                 gui_set_grow(gui, DIRECTION_VERTICAL);
                 gui_set_draw_subtype(gui, IMAGE_STRETCHED);
@@ -1230,7 +1230,7 @@ static void draw_color_picker(void) {
                     gui_set_padding(gui, config.ui_size * 0.2, config.ui_size * 0.2);
 
                     snprintf(ui.dropdown.as.color_picker.color_hex, 10, "#%02x%02x%02x%02x", col.r, col.g, col.b, col.a);
-                    gui_text(gui, &assets.fonts.font_cond, ui.dropdown.as.color_picker.color_hex, BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+                    gui_text(gui, &assets.fonts.font_cond, ui.dropdown.as.color_picker.color_hex, BLOCK_TEXT_SIZE, GUI_WHITE);
                 gui_element_end(gui);
 
                 gui_element_begin(gui);
@@ -1289,7 +1289,7 @@ static void draw_code_area(void) {
                     gui_set_direction(gui, DIRECTION_VERTICAL);
                     gui_set_align(gui, ALIGN_CENTER);
 
-                    gui_text(gui, &assets.fonts.font_eb, "!", config.ui_size, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+                    gui_text(gui, &assets.fonts.font_eb, "!", config.ui_size, GUI_WHITE);
                 gui_element_end(gui);
 
                 gui_element_begin(gui);
@@ -1297,7 +1297,7 @@ static void draw_code_area(void) {
 
                     gui_text(gui, &assets.fonts.font_cond, gettext("Got compiler error!"), config.ui_size * 0.6, (GuiColor) { 0xff, 0x33, 0x33, 0xff });
                     for (size_t i = 0; i < vector_size(vm.compile_error); i++) {
-                        gui_text(gui, &assets.fonts.font_cond, vm.compile_error[i], config.ui_size * 0.6, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+                        gui_text(gui, &assets.fonts.font_cond, vm.compile_error[i], config.ui_size * 0.6, GUI_WHITE);
                     }
 
                     gui_spacer(gui, 0, config.ui_size * 0.5);
@@ -1399,7 +1399,7 @@ static void draw_term_panel(void) {
         gui_element_begin(gui);
             gui_set_grow(gui, DIRECTION_HORIZONTAL);
             gui_set_grow(gui, DIRECTION_VERTICAL);
-            gui_set_rect(gui, (GuiColor) { 0x00, 0x00, 0x00, 0xff });
+            gui_set_rect(gui, GUI_WHITE);
             gui_set_draw_subtype(gui, RECT_TERMINAL);
         gui_element_end(gui);
     gui_element_end(gui);
@@ -1539,7 +1539,7 @@ static void list_dropdown_on_hover(GuiElement* el) {
     assert(ui.dropdown.type == DROPDOWN_LIST);
 
     el->draw_type = DRAWTYPE_RECT;
-    el->draw_subtype = SUBTYPE_DEFAULT;
+    el->draw_subtype = GUI_SUBTYPE_DEFAULT;
     el->color = (GuiColor) { 0x40, 0x40, 0x40, 0xff };
     // Double cast to avoid warning. In our case this operation is safe because el->custom_data currently stores a value of type int
     ui.dropdown.as.list.select_ind = (int)(size_t)el->custom_data;
@@ -1578,7 +1578,7 @@ static void draw_list_dropdown(void) {
                 gui_set_custom_data(gui, (void*)(size_t)i);
 
                 const char* list_value = sgettext(ui.dropdown.as.list.data[i]);
-                gui_text(gui, &assets.fonts.font_cond, list_value, BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+                gui_text(gui, &assets.fonts.font_cond, list_value, BLOCK_TEXT_SIZE, GUI_WHITE);
             gui_element_end(gui);
         }
     gui_element_end(gui);
@@ -1627,7 +1627,7 @@ static void draw_search_list(void) {
             gui_set_align(gui, ALIGN_CENTER);
 
             gui_element_begin(gui);
-                draw_input(&assets.fonts.font_cond, &editor.search_list_search, "Search...", BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff }, true);
+                draw_input(&assets.fonts.font_cond, &editor.search_list_search, "Search...", BLOCK_TEXT_SIZE, GUI_WHITE, true);
             gui_element_end(gui);
         gui_element_end(gui);
 
@@ -1723,12 +1723,12 @@ void scrap_gui_process(void) {
                     gui_set_align(gui, ALIGN_CENTER);
                     gui_on_hover(gui, panel_editor_on_hover);
 
-                    gui_text(gui, &assets.fonts.font_eb, gettext("Panel edit mode"), config.ui_size * 0.8, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+                    gui_text(gui, &assets.fonts.font_eb, gettext("Panel edit mode"), config.ui_size * 0.8, GUI_WHITE);
 
                     gui_spacer(gui, 0, config.ui_size * 0.25);
 
-                    gui_text(gui, &assets.fonts.font_cond_shadow, gettext("Click on panels to reposition them"), BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
-                    gui_text(gui, &assets.fonts.font_cond_shadow, gettext("Drag panel edges to resize them"), BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+                    gui_text(gui, &assets.fonts.font_cond_shadow, gettext("Click on panels to reposition them"), BLOCK_TEXT_SIZE, GUI_WHITE);
+                    gui_text(gui, &assets.fonts.font_cond_shadow, gettext("Drag panel edges to resize them"), BLOCK_TEXT_SIZE, GUI_WHITE);
 
                     gui_spacer(gui, 0, config.ui_size * 0.25);
 

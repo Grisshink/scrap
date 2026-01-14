@@ -183,7 +183,7 @@ static void close_button_on_hover(GuiElement* el) {
     if (ui.hover.button.handler) return;
     if (el->draw_type == DRAWTYPE_RECT) return;
     el->draw_type = DRAWTYPE_RECT;
-    el->draw_subtype = SUBTYPE_DEFAULT;
+    el->draw_subtype = GUI_SUBTYPE_DEFAULT;
     el->color = (GuiColor) { 0x40, 0x40, 0x40, 0xff };
     ui.hover.button.handler = window_on_close_button_click;
 }
@@ -222,7 +222,7 @@ static void begin_window(const char* title, int w, int h, float scaling) {
             gui_set_align(gui, ALIGN_CENTER);
 
             gui_grow(gui, DIRECTION_HORIZONTAL);
-            gui_text(gui, &assets.fonts.font_eb, title, config.ui_size * 0.8, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+            gui_text(gui, &assets.fonts.font_eb, title, config.ui_size * 0.8, GUI_WHITE);
             gui_grow(gui, DIRECTION_HORIZONTAL);
         gui_element_end(gui);
 
@@ -261,7 +261,7 @@ static void end_window(void) {
                 gui_set_direction(gui, DIRECTION_HORIZONTAL);
                 gui_set_align(gui, ALIGN_CENTER);
 
-                gui_text(gui, &assets.fonts.font_cond, "X", config.ui_size * 0.8, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+                gui_text(gui, &assets.fonts.font_cond, "X", config.ui_size * 0.8, GUI_WHITE);
             gui_element_end(gui);
         gui_element_end(gui);
     gui_element_end(gui);
@@ -287,12 +287,12 @@ static void begin_setting(const char* name, bool warning) {
             gui_set_align(gui, ALIGN_CENTER);
 
             gui_grow(gui, DIRECTION_HORIZONTAL);
-            gui_text(gui, &assets.fonts.font_cond, name, config.ui_size * 0.6, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+            gui_text(gui, &assets.fonts.font_cond, name, config.ui_size * 0.6, GUI_WHITE);
         gui_element_end(gui);
 
         if (warning) {
             gui_element_begin(gui);
-                gui_set_image(gui, &assets.textures.icon_warning, config.ui_size, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+                gui_set_image(gui, &assets.textures.icon_warning, config.ui_size, GUI_WHITE);
                 gui_on_hover(gui, warning_on_hover);
             gui_element_end(gui);
         } else {
@@ -317,7 +317,7 @@ static void slider_button_on_hover(GuiElement* el) {
     if (ui.hover.button.handler) return;
     el->draw_type = DRAWTYPE_RECT;
     el->color = (GuiColor) { 0x60, 0x60, 0x60, 0xff };
-    el->draw_subtype = SUBTYPE_DEFAULT;
+    el->draw_subtype = GUI_SUBTYPE_DEFAULT;
     ui.hover.button.handler = el->custom_data;
 }
 
@@ -355,12 +355,12 @@ static void draw_slider(int min, int max, int* value) {
                 gui_set_direction(gui, DIRECTION_HORIZONTAL);
                 gui_set_align(gui, ALIGN_CENTER);
 
-                gui_image(gui, &assets.textures.button_arrow_left, BLOCK_IMAGE_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+                gui_image(gui, &assets.textures.button_arrow_left, BLOCK_IMAGE_SIZE, GUI_WHITE);
             gui_element_end(gui);
 
             gui_grow(gui, DIRECTION_HORIZONTAL);
 
-            gui_text(gui, &assets.fonts.font_cond, state->value_str, config.ui_size * 0.6, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+            gui_text(gui, &assets.fonts.font_cond, state->value_str, config.ui_size * 0.6, GUI_WHITE);
 
             gui_grow(gui, DIRECTION_HORIZONTAL);
 
@@ -371,7 +371,7 @@ static void draw_slider(int min, int max, int* value) {
                 gui_set_direction(gui, DIRECTION_HORIZONTAL);
                 gui_set_align(gui, ALIGN_CENTER);
 
-                gui_image(gui, &assets.textures.button_arrow_right, BLOCK_IMAGE_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+                gui_image(gui, &assets.textures.button_arrow_right, BLOCK_IMAGE_SIZE, GUI_WHITE);
             gui_element_end(gui);
         gui_element_end(gui);
     gui_element_end(gui);
@@ -427,9 +427,9 @@ static void draw_dropdown_input(int* value, char** list, int list_len) {
             gui_set_scissor(gui);
 
             gui_grow(gui, DIRECTION_HORIZONTAL);
-            gui_text(gui, &assets.fonts.font_cond, sgettext(list[*value]), config.ui_size * 0.6, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+            gui_text(gui, &assets.fonts.font_cond, sgettext(list[*value]), config.ui_size * 0.6, GUI_WHITE);
             gui_grow(gui, DIRECTION_HORIZONTAL);
-            gui_image(gui, &assets.textures.dropdown, BLOCK_IMAGE_SIZE, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+            gui_image(gui, &assets.textures.dropdown, BLOCK_IMAGE_SIZE, GUI_WHITE);
         gui_element_end(gui);
     gui_element_end(gui);
 }
@@ -459,7 +459,7 @@ static void draw_text_input(char** input, const char* hint, int* scroll, bool ed
             gui_set_scissor(gui);
 
             gui_element_begin(gui);
-                draw_input(&assets.fonts.font_cond, input, hint, config.ui_size * 0.6, (GuiColor) { 0xff, 0xff, 0xff, 0xff }, editable);
+                draw_input(&assets.fonts.font_cond, input, hint, config.ui_size * 0.6, GUI_WHITE, editable);
             gui_element_end(gui);
         gui_element_end(gui);
     gui_element_end(gui);
@@ -483,7 +483,7 @@ static void draw_button(const char* label, ButtonClickHandler handler) {
                 gui_set_shader(gui, &assets.line_shader);
             }
 
-            gui_text(gui, &assets.fonts.font_cond, label, config.ui_size * 0.6, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+            gui_text(gui, &assets.fonts.font_cond, label, config.ui_size * 0.6, GUI_WHITE);
         gui_element_end(gui);
     gui_element_end(gui);
 }
@@ -568,7 +568,7 @@ void draw_settings_window(void) {
             gui_set_min_size(gui, 0, config.ui_size * 0.6);
 
             gui_grow(gui, DIRECTION_HORIZONTAL);
-            if (settings_applied) gui_text(gui, &assets.fonts.font_cond, "Settings applied", config.ui_size * 0.6, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+            if (settings_applied) gui_text(gui, &assets.fonts.font_cond, "Settings applied", config.ui_size * 0.6, GUI_WHITE);
         gui_element_end(gui);
 
         gui_element_begin(gui);
@@ -590,7 +590,7 @@ void draw_settings_window(void) {
             gui_set_position(gui, gui->mouse_x + 10, gui->mouse_y + 10);
             gui_set_padding(gui, WINDOW_ELEMENT_PADDING * 0.5, WINDOW_ELEMENT_PADDING * 0.5);
 
-            gui_text(gui, &assets.fonts.font_cond, gettext("Needs restart for changes to take effect"), config.ui_size * 0.6, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+            gui_text(gui, &assets.fonts.font_cond, gettext("Needs restart for changes to take effect"), config.ui_size * 0.6, GUI_WHITE);
         gui_element_end(gui);
     }
 
@@ -650,14 +650,14 @@ void draw_about_window(void) {
             gui_set_align(gui, ALIGN_CENTER);
             gui_set_gap(gui, WINDOW_ELEMENT_PADDING);
 
-            gui_image(gui, &assets.textures.icon_logo, config.ui_size, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
-            gui_text(gui, &assets.fonts.font_eb, "Scrap v" SCRAP_VERSION, config.ui_size * 0.8, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+            gui_image(gui, &assets.textures.icon_logo, config.ui_size, GUI_WHITE);
+            gui_text(gui, &assets.fonts.font_eb, "Scrap v" SCRAP_VERSION, config.ui_size * 0.8, GUI_WHITE);
         gui_element_end(gui);
 
         gui_element_begin(gui);
             if (about_text_split) {
                 for (size_t i = 0; i < vector_size(about_text_split); i++) {
-                    gui_text_slice(gui, &assets.fonts.font_cond, about_text_split[i], vector_size(about_text_split[i]), config.ui_size * 0.6, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+                    gui_text_slice(gui, &assets.fonts.font_cond, about_text_split[i], vector_size(about_text_split[i]), config.ui_size * 0.6, GUI_WHITE);
                 }
             } else {
                 gui_text(gui, &assets.fonts.font_cond, "ERROR", config.ui_size * 0.6, (GuiColor) { 0xff, 0x20, 0x20, 0xff });
@@ -679,7 +679,7 @@ void draw_about_window(void) {
 
 void draw_save_confirmation_window(void) {
     begin_window(gettext("Confirm save"), 500 * config.ui_size / 32.0, 0, window.animation_ease);
-        gui_text(gui, &assets.fonts.font_cond, gettext("Project is modified. Save the changes and quit?"), config.ui_size * 0.6, (GuiColor) { 0xff, 0xff, 0xff, 0xff });
+        gui_text(gui, &assets.fonts.font_cond, gettext("Project is modified. Save the changes and quit?"), config.ui_size * 0.6, GUI_WHITE);
 
         gui_grow(gui, DIRECTION_VERTICAL);
 

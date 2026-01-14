@@ -190,10 +190,9 @@ struct Gui {
 };
 
 #define GUI_GET_COMMANDS(gui, command) while (gui->command_list_iter < gui->command_list_len && (command = &gui->command_list[gui->command_list_iter++]))
-#define TRANSPARENT (GuiColor) {0}
-#define NO_BORDER TRANSPARENT, 0
-#define NO_COLOR TRANSPARENT, NO_BORDER
-#define SUBTYPE_DEFAULT 0
+#define GUI_BLACK (GuiColor) { 0x00, 0x00, 0x00, 0xff }
+#define GUI_WHITE (GuiColor) { 0xff, 0xff, 0xff, 0xff }
+#define GUI_SUBTYPE_DEFAULT 0
 
 void gui_init(Gui* gui);
 void gui_begin(Gui* gui);

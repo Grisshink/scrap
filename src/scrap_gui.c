@@ -254,10 +254,10 @@ static void gui_render(Gui* gui, GuiElement* el) {
     if (SCISSOR(el) || FLOATING(el) || el->shader) flush_command_batch(gui);
 
     if (SCISSOR(el)) {
-        new_draw_command(gui, el_bounds, DRAWTYPE_SCISSOR_SET, SUBTYPE_DEFAULT, (GuiDrawData) {0}, (GuiColor) {0});
+        new_draw_command(gui, el_bounds, DRAWTYPE_SCISSOR_SET, GUI_SUBTYPE_DEFAULT, (GuiDrawData) {0}, (GuiColor) {0});
         gui->scissor_stack[gui->scissor_stack_len++] = (GuiBounds) { el_bounds.x, el_bounds.y, el_bounds.w, el_bounds.h };
     }
-    if (el->shader) new_draw_command(gui, el_bounds, DRAWTYPE_SHADER_BEGIN, SUBTYPE_DEFAULT, (GuiDrawData) { .shader = el->shader }, (GuiColor) {0});
+    if (el->shader) new_draw_command(gui, el_bounds, DRAWTYPE_SHADER_BEGIN, GUI_SUBTYPE_DEFAULT, (GuiDrawData) { .shader = el->shader }, (GuiColor) {0});
 
     if (el->draw_type != DRAWTYPE_UNKNOWN && inside_window(gui, el_bounds)) {
         new_draw_command(gui, el_bounds, el->draw_type, el->draw_subtype, el->data, el->color);
@@ -265,7 +265,7 @@ static void gui_render(Gui* gui, GuiElement* el) {
 
     if (el->shader) {
         flush_command_batch(gui);
-        new_draw_command(gui, el_bounds, DRAWTYPE_SHADER_END, SUBTYPE_DEFAULT, (GuiDrawData) { .shader = el->shader }, (GuiColor) {0});
+        new_draw_command(gui, el_bounds, DRAWTYPE_SHADER_END, GUI_SUBTYPE_DEFAULT, (GuiDrawData) { .shader = el->shader }, (GuiColor) {0});
     }
 
     for (GuiElement* iter = el->child_elements_begin; iter; iter = iter->next) {
@@ -281,7 +281,7 @@ static void gui_render(Gui* gui, GuiElement* el) {
             flush_command_batch(gui);
             GuiDrawCommand* command = &gui->command_list[gui->command_list_len++];
             command->type = DRAWTYPE_RECT;
-            command->subtype = SUBTYPE_DEFAULT;
+            command->subtype = GUI_SUBTYPE_DEFAULT;
             command->color = (GuiColor) { 0xff, 0xff, 0xff, 0x80 };
 
             float scroll_size = (float)el_size / ((float)content_size / (float)el_size);
@@ -309,9 +309,9 @@ static void gui_render(Gui* gui, GuiElement* el) {
     if (SCISSOR(el)) {
         gui->scissor_stack_len--;
         if (gui->scissor_stack_len == 0) {
-            new_draw_command(gui, el_bounds, DRAWTYPE_SCISSOR_RESET, SUBTYPE_DEFAULT, (GuiDrawData) {0}, (GuiColor) {0});
+            new_draw_command(gui, el_bounds, DRAWTYPE_SCISSOR_RESET, GUI_SUBTYPE_DEFAULT, (GuiDrawData) {0}, (GuiColor) {0});
         } else {
-            new_draw_command(gui, el_bounds, DRAWTYPE_SCISSOR_SET, SUBTYPE_DEFAULT, (GuiDrawData) {0}, (GuiColor) {0});
+            new_draw_command(gui, el_bounds, DRAWTYPE_SCISSOR_SET, GUI_SUBTYPE_DEFAULT, (GuiDrawData) {0}, (GuiColor) {0});
         }
     }
 }
