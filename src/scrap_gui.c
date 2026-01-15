@@ -576,8 +576,7 @@ void* gui_set_state(Gui* gui, void* state, unsigned short state_len) {
     return el->custom_state;
 }
 
-void* gui_get_state(GuiElement* el, unsigned short* state_len) {
-    *state_len = el->state_len;
+void* gui_get_state(GuiElement* el) {
     return el->custom_state;
 }
 

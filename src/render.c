@@ -245,8 +245,7 @@ void input_on_hover(GuiElement* el) {
     if (ui.hover.button.handler) return;
     if (ui.hover.is_panel_edit_mode) return;
 
-    unsigned short len;
-    ui.hover.input_info = *(InputHoverInfo*)gui_get_state(el, &len);
+    ui.hover.input_info = *(InputHoverInfo*)gui_get_state(el);
     ui.hover.input_info.rel_pos = (Vector2) { 
         gui->mouse_x - el->abs_x - ui.hover.input_info.rel_pos.x, 
         gui->mouse_y - el->abs_y - ui.hover.input_info.rel_pos.y,

@@ -149,7 +149,6 @@ struct GuiElement {
     void* custom_data;
     void* custom_state;
     void* shader;
-    unsigned short state_len;
 
     GuiElement* child_elements_begin;
     GuiElement* child_elements_end;
@@ -233,7 +232,7 @@ void gui_set_scroll_scaling(Gui* gui, int scroll_scaling);
 void gui_set_shader(Gui* gui, void* shader);
 void gui_scale_element(Gui* gui, float scaling);
 void* gui_set_state(Gui* gui, void* state, unsigned short state_len);
-void* gui_get_state(GuiElement* el, unsigned short* state_len);
+void* gui_get_state(GuiElement* el);
 GuiElement* gui_get_element(Gui* gui);
 
 void gui_on_hover(Gui* gui, GuiHandler handler);

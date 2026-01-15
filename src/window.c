@@ -296,8 +296,7 @@ static void begin_setting(const char* name, bool warning) {
 
 static void slider_on_hover(GuiElement* el) {
     if (ui.hover.button.handler) return;
-    unsigned short len;
-    ui.hover.hover_slider = *(SliderHoverInfo*)gui_get_state(el, &len);
+    ui.hover.hover_slider = *(SliderHoverInfo*)gui_get_state(el);
     if (ui.hover.hover_slider.value == ui.hover.dragged_slider.value) {
         el->color = (GuiColor) { 0x2b, 0x2b, 0x2b, 0xff };
         settings_applied = false;
@@ -381,8 +380,7 @@ static void text_input_on_hover(GuiElement* el) {
 
 static void dropdown_input_on_hover(GuiElement* el) {
     if (ui.hover.button.handler) return;
-    unsigned short len;
-    ui.hover.settings_dropdown_data = *(DropdownData*)gui_get_state(el, &len);
+    ui.hover.settings_dropdown_data = *(DropdownData*)gui_get_state(el);
     ui.hover.button.handler = settings_on_dropdown_click;
     if (el->color.r == 0x30) el->color = (GuiColor) { 0x40, 0x40, 0x40, 0xff };
 }
