@@ -219,7 +219,7 @@ static void begin_window(const char* title, int w, int h, float scaling) {
             gui_set_min_size(gui, 0, config.ui_size * 1.2);
             gui_set_rect(gui, (GuiColor) { 0x30, 0x30, 0x30, 0xff });
             gui_set_direction(gui, DIRECTION_HORIZONTAL);
-            gui_set_align(gui, ALIGN_CENTER);
+            gui_set_align(gui, ALIGN_LEFT, ALIGN_CENTER);
 
             gui_grow(gui, DIRECTION_HORIZONTAL);
             gui_text(gui, &assets.fonts.font_eb, title, config.ui_size * 0.8, GUI_WHITE);
@@ -253,16 +253,10 @@ static void end_window(void) {
             gui_set_floating(gui);
             gui_set_position(gui, el->w - config.ui_size * 1.2, 0);
             gui_set_fixed(gui, config.ui_size * 1.2, config.ui_size * 1.2);
-            gui_set_align(gui, ALIGN_CENTER);
+            gui_set_align(gui, ALIGN_CENTER, ALIGN_CENTER);
             gui_on_hover(gui, close_button_on_hover);
 
-            gui_element_begin(gui);
-                gui_set_grow(gui, DIRECTION_VERTICAL);
-                gui_set_direction(gui, DIRECTION_HORIZONTAL);
-                gui_set_align(gui, ALIGN_CENTER);
-
-                gui_text(gui, &assets.fonts.font_cond, "X", config.ui_size * 0.8, GUI_WHITE);
-            gui_element_end(gui);
+            gui_text(gui, &assets.fonts.font_cond, "X", config.ui_size * 0.8, GUI_WHITE);
         gui_element_end(gui);
     gui_element_end(gui);
 }
@@ -284,9 +278,8 @@ static void begin_setting(const char* name, bool warning) {
             gui_set_grow(gui, DIRECTION_HORIZONTAL);
             gui_set_grow(gui, DIRECTION_VERTICAL);
             gui_set_direction(gui, DIRECTION_HORIZONTAL);
-            gui_set_align(gui, ALIGN_CENTER);
+            gui_set_align(gui, ALIGN_RIGHT, ALIGN_CENTER);
 
-            gui_grow(gui, DIRECTION_HORIZONTAL);
             gui_text(gui, &assets.fonts.font_cond, name, config.ui_size * 0.6, GUI_WHITE);
         gui_element_end(gui);
 
@@ -340,7 +333,7 @@ static void draw_slider(int min, int max, int* value) {
             gui_set_grow(gui, DIRECTION_HORIZONTAL);
             gui_set_grow(gui, DIRECTION_VERTICAL);
             gui_set_direction(gui, DIRECTION_HORIZONTAL);
-            gui_set_align(gui, ALIGN_CENTER);
+            gui_set_align(gui, ALIGN_LEFT, ALIGN_CENTER);
             if (IsShaderValid(assets.line_shader)) {
                 gui_set_border(gui, (GuiColor) { 0x60, 0x60, 0x60, 0xff }, 2);
                 gui_set_shader(gui, &assets.line_shader);
@@ -353,7 +346,7 @@ static void draw_slider(int min, int max, int* value) {
                 gui_set_custom_data(gui, settings_on_left_slider_button_click);
                 gui_set_grow(gui, DIRECTION_VERTICAL);
                 gui_set_direction(gui, DIRECTION_HORIZONTAL);
-                gui_set_align(gui, ALIGN_CENTER);
+                gui_set_align(gui, ALIGN_LEFT, ALIGN_CENTER);
 
                 gui_image(gui, &assets.textures.button_arrow_left, BLOCK_IMAGE_SIZE, GUI_WHITE);
             gui_element_end(gui);
@@ -369,7 +362,7 @@ static void draw_slider(int min, int max, int* value) {
                 gui_set_custom_data(gui, settings_on_right_slider_button_click);
                 gui_set_grow(gui, DIRECTION_VERTICAL);
                 gui_set_direction(gui, DIRECTION_HORIZONTAL);
-                gui_set_align(gui, ALIGN_CENTER);
+                gui_set_align(gui, ALIGN_LEFT, ALIGN_CENTER);
 
                 gui_image(gui, &assets.textures.button_arrow_right, BLOCK_IMAGE_SIZE, GUI_WHITE);
             gui_element_end(gui);
@@ -418,7 +411,7 @@ static void draw_dropdown_input(int* value, char** list, int list_len) {
             gui_set_grow(gui, DIRECTION_HORIZONTAL);
             gui_set_grow(gui, DIRECTION_VERTICAL);
             gui_set_direction(gui, DIRECTION_HORIZONTAL);
-            gui_set_align(gui, ALIGN_CENTER);
+            gui_set_align(gui, ALIGN_LEFT, ALIGN_CENTER);
             if (IsShaderValid(assets.line_shader)) {
                 gui_set_border(gui, (GuiColor) { 0x60, 0x60, 0x60, 0xff }, 2);
                 gui_set_shader(gui, &assets.line_shader);
@@ -449,7 +442,7 @@ static void draw_text_input(char** input, const char* hint, int* scroll, bool ed
             gui_set_grow(gui, DIRECTION_HORIZONTAL);
             gui_set_grow(gui, DIRECTION_VERTICAL);
             gui_set_direction(gui, DIRECTION_HORIZONTAL);
-            gui_set_align(gui, ALIGN_CENTER);
+            gui_set_align(gui, ALIGN_LEFT, ALIGN_CENTER);
             if (IsShaderValid(assets.line_shader)) {
                 gui_set_border(gui, (GuiColor) { 0x60, 0x60, 0x60, 0xff }, 2);
                 gui_set_shader(gui, &assets.line_shader);
@@ -486,7 +479,7 @@ static void draw_button(const char* label, ButtonClickHandler handler) {
             gui_set_grow(gui, DIRECTION_VERTICAL);
             gui_set_padding(gui, WINDOW_ELEMENT_PADDING, 0);
             gui_set_direction(gui, DIRECTION_HORIZONTAL);
-            gui_set_align(gui, ALIGN_CENTER);
+            gui_set_align(gui, ALIGN_LEFT, ALIGN_CENTER);
             if (IsShaderValid(assets.line_shader)) {
                 gui_set_border(gui, (GuiColor) { 0x60, 0x60, 0x60, 0xff }, 2);
                 gui_set_shader(gui, &assets.line_shader);
@@ -656,7 +649,7 @@ void draw_about_window(void) {
     begin_window(gettext("About"), 500 * config.ui_size / 32.0, 0, window.animation_ease);
         gui_element_begin(gui);
             gui_set_direction(gui, DIRECTION_HORIZONTAL);
-            gui_set_align(gui, ALIGN_CENTER);
+            gui_set_align(gui, ALIGN_LEFT, ALIGN_CENTER);
             gui_set_gap(gui, WINDOW_ELEMENT_PADDING);
 
             gui_image(gui, &assets.textures.icon_logo, config.ui_size, GUI_WHITE);

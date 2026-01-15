@@ -317,7 +317,7 @@ static void draw_argument_input(Argument* arg, char** input, const char* hint, b
             }
 
             gui_set_direction(gui, DIRECTION_HORIZONTAL);
-            gui_set_align(gui, ALIGN_CENTER);
+            gui_set_align(gui, ALIGN_CENTER, ALIGN_CENTER);
             gui_set_padding(gui, BLOCK_STRING_PADDING / 2, 0);
             gui_set_min_size(gui, config.ui_size - BLOCK_OUTLINE_SIZE * 4, config.ui_size - BLOCK_OUTLINE_SIZE * 4);
 
@@ -342,7 +342,7 @@ static void draw_blockdef(Blockdef* blockdef, bool editing) {
     gui_element_begin(gui);
         gui_set_direction(gui, DIRECTION_HORIZONTAL);
         gui_set_border(gui, CONVERT_COLOR(outline_color, GuiColor), BLOCK_OUTLINE_SIZE);
-        gui_set_align(gui, ALIGN_CENTER);
+        gui_set_align(gui, ALIGN_LEFT, ALIGN_CENTER);
         gui_set_min_size(gui, 0, config.ui_size);
         gui_set_padding(gui, BLOCK_OUTLINE_SIZE * 2, BLOCK_OUTLINE_SIZE * 2);
         gui_set_gap(gui, BLOCK_PADDING);
@@ -354,7 +354,7 @@ static void draw_blockdef(Blockdef* blockdef, bool editing) {
             gui_element_begin(gui);
                 gui_set_direction(gui, DIRECTION_HORIZONTAL);
                 gui_set_rect(gui, CONVERT_COLOR(dropdown_color, GuiColor));
-                gui_set_align(gui, ALIGN_CENTER);
+                gui_set_align(gui, ALIGN_LEFT, ALIGN_CENTER);
                 gui_set_padding(gui, BLOCK_PADDING, BLOCK_PADDING);
                 gui_set_gap(gui, BLOCK_PADDING);
         }
@@ -463,7 +463,7 @@ static void draw_block(Block* block, bool highlight, bool can_hover, bool ghost,
     gui_element_begin(gui);
         gui_set_direction(gui, DIRECTION_HORIZONTAL);
         gui_set_border(gui, CONVERT_COLOR(outline_color, GuiColor), BLOCK_OUTLINE_SIZE);
-        gui_set_align(gui, ALIGN_CENTER);
+        gui_set_align(gui, ALIGN_LEFT, ALIGN_CENTER);
         gui_set_min_size(gui, 0, config.ui_size);
         gui_set_padding(gui, BLOCK_OUTLINE_SIZE * 2, BLOCK_OUTLINE_SIZE * 2);
         gui_set_gap(gui, BLOCK_PADDING);
@@ -558,7 +558,7 @@ static void draw_block(Block* block, bool highlight, bool can_hover, bool ghost,
 
                 gui_element_begin(gui);
                     gui_set_min_size(gui, 0, config.ui_size - BLOCK_OUTLINE_SIZE * 4);
-                    gui_set_align(gui, ALIGN_CENTER);
+                    gui_set_align(gui, ALIGN_LEFT, ALIGN_CENTER);
                     gui_set_padding(gui, BLOCK_STRING_PADDING / 2, 0);
                     gui_set_direction(gui, DIRECTION_HORIZONTAL);
                     if (editable) {
@@ -584,7 +584,7 @@ static void draw_block(Block* block, bool highlight, bool can_hover, bool ghost,
             gui_element_begin(gui);
                 gui_set_direction(gui, DIRECTION_HORIZONTAL);
                 gui_set_rect(gui, CONVERT_COLOR(dropdown_color, GuiColor));
-                gui_set_align(gui, ALIGN_CENTER);
+                gui_set_align(gui, ALIGN_LEFT, ALIGN_CENTER);
                 gui_set_gap(gui, BLOCK_PADDING);
                 gui_set_custom_data(gui, arg);
                 if (can_hover) gui_on_hover(gui, argument_on_hover);
@@ -746,14 +746,14 @@ static void panel_editor_button_on_hover(GuiElement* el) {
 static void draw_panel_editor_button(const char* text, int size, GuiColor color, ButtonClickHandler handler) {
     gui_element_begin(gui);
         gui_set_direction(gui, DIRECTION_HORIZONTAL);
-        gui_set_align(gui, ALIGN_CENTER);
+        gui_set_align(gui, ALIGN_LEFT, ALIGN_CENTER);
         gui_set_min_size(gui, 0, size);
         gui_set_padding(gui, config.ui_size * 0.3, 0);
         gui_set_rect(gui, color);
         gui_on_hover(gui, panel_editor_button_on_hover);
         gui_set_custom_data(gui, handler);
 
-        gui_text(gui, &assets.fonts.font_cond, text, BLOCK_TEXT_SIZE, GUI_WHITE);
+        gui_text(gui, &assets.fonts.font_cond, text, BLOCK_TEXT_SIZE, GUI_BLACK);
     gui_element_end(gui);
 }
 
@@ -761,7 +761,7 @@ static GuiElement* draw_button(const char* text, int size, bool selected, GuiHan
     GuiElement* el;
     gui_element_begin(gui);
         gui_set_direction(gui, DIRECTION_HORIZONTAL);
-        gui_set_align(gui, ALIGN_CENTER);
+        gui_set_align(gui, ALIGN_LEFT, ALIGN_CENTER);
         gui_set_min_size(gui, 0, size);
         gui_set_padding(gui, config.ui_size * 0.3, 0);
         if (selected) gui_set_rect(gui, GUI_WHITE);
@@ -781,7 +781,7 @@ static void draw_top_bar(void) {
         gui_set_direction(gui, DIRECTION_HORIZONTAL);
         gui_set_rect(gui, (GuiColor) { 0x30, 0x30, 0x30, 0xff });
         gui_set_min_size(gui, 0, top_bar_size);
-        gui_set_align(gui, ALIGN_CENTER);
+        gui_set_align(gui, ALIGN_LEFT, ALIGN_CENTER);
 
         gui_spacer(gui, 5, 0);
         gui_image(gui, &assets.textures.icon_logo, config.ui_size, CONVERT_COLOR(WHITE, GuiColor));
@@ -803,7 +803,7 @@ static void draw_tab_bar(void) {
         gui_set_direction(gui, DIRECTION_HORIZONTAL);
         gui_set_rect(gui, (GuiColor) { 0x2b, 0x2b, 0x2b, 0xff });
         gui_set_min_size(gui, 0, tab_bar_size);
-        gui_set_align(gui, ALIGN_CENTER);
+        gui_set_align(gui, ALIGN_LEFT, ALIGN_CENTER);
 
         if (ui.hover.is_panel_edit_mode && ui.hover.panels.mouse_panel != PANEL_NONE) {
             draw_button("+", tab_bar_size, false, tab_button_add_on_hover, (void*)0);
@@ -1027,7 +1027,7 @@ static void draw_category(BlockCategory* category) {
             gui_set_direction(gui, DIRECTION_HORIZONTAL);
             gui_set_padding(gui, BLOCK_PADDING, BLOCK_PADDING);
             gui_set_min_size(gui, 0, config.ui_size);
-            gui_set_align(gui, ALIGN_CENTER);
+            gui_set_align(gui, ALIGN_LEFT, ALIGN_CENTER);
             gui_set_gap(gui, BLOCK_PADDING);
 
             gui_element_begin(gui);
@@ -1093,7 +1093,7 @@ static void draw_block_palette(void) {
                     gui_element_begin(gui);
                         gui_set_direction(gui, DIRECTION_HORIZONTAL);
                         gui_set_gap(gui, BLOCK_OUTLINE_SIZE * 4);
-                        gui_set_align(gui, ALIGN_CENTER);
+                        gui_set_align(gui, ALIGN_LEFT, ALIGN_CENTER);
                         // gui_set_min_size(gui, 0, config.ui_size);
 
                         gui_element_begin(gui);
@@ -1107,7 +1107,7 @@ static void draw_block_palette(void) {
                 }
             }
         } else {
-            gui_set_align(gui, ALIGN_CENTER);
+            gui_set_align(gui, ALIGN_CENTER, ALIGN_CENTER);
             gui_text(gui, &assets.fonts.font_cond_shadow, "No category currently selected", BLOCK_TEXT_SIZE, GUI_WHITE);
         }
     gui_element_end(gui);
@@ -1241,7 +1241,7 @@ static void draw_code_area(void) {
         gui_set_grow(gui, DIRECTION_VERTICAL);
         gui_set_direction(gui, DIRECTION_VERTICAL);
         gui_set_padding(gui, 0, 0);
-        gui_set_align(gui, ALIGN_RIGHT);
+        gui_set_align(gui, ALIGN_RIGHT, ALIGN_TOP);
         gui_set_scissor(gui);
         gui_on_render(gui, code_area_on_render);
 
@@ -1261,7 +1261,7 @@ static void draw_code_area(void) {
         if (!thread_is_running(&vm.thread) && vector_size(vm.compile_error) > 0) {
             gui_element_begin(gui);
                 gui_set_direction(gui, DIRECTION_HORIZONTAL);
-                gui_set_align(gui, ALIGN_CENTER);
+                gui_set_align(gui, ALIGN_LEFT, ALIGN_CENTER);
                 gui_set_gap(gui, config.ui_size * 0.5);
                 gui_set_padding(gui, config.ui_size * 0.4, config.ui_size * 0.4);
                 gui_set_rect(gui, (GuiColor) { 0x00, 0x00, 0x00, 0x80 });
@@ -1271,7 +1271,7 @@ static void draw_code_area(void) {
                     gui_set_rect(gui, (GuiColor) { 0xff, 0x20, 0x20, animation });
                     gui_set_fixed(gui, config.ui_size, config.ui_size);
                     gui_set_direction(gui, DIRECTION_VERTICAL);
-                    gui_set_align(gui, ALIGN_CENTER);
+                    gui_set_align(gui, ALIGN_CENTER, ALIGN_CENTER);
 
                     gui_text(gui, &assets.fonts.font_eb, "!", config.ui_size, GUI_WHITE);
                 gui_element_end(gui);
@@ -1312,7 +1312,7 @@ static void draw_code_area(void) {
             gui_element_begin(gui);
                 gui_set_grow(gui, DIRECTION_HORIZONTAL);
                 gui_set_direction(gui, DIRECTION_VERTICAL);
-                gui_set_align(gui, ALIGN_CENTER);
+                gui_set_align(gui, ALIGN_LEFT, ALIGN_CENTER);
                 
                 Color color = YELLOW;
                 color.a = editor.actionbar.show_time / 3.0 * 255.0;
@@ -1554,7 +1554,7 @@ static void draw_list_dropdown(void) {
             gui_element_begin(gui);
                 gui_set_grow(gui, DIRECTION_HORIZONTAL);
                 gui_set_direction(gui, DIRECTION_HORIZONTAL);
-                gui_set_align(gui, ALIGN_CENTER);
+                gui_set_align(gui, ALIGN_LEFT, ALIGN_CENTER);
                 gui_set_min_size(gui, 0, config.ui_size);
                 gui_set_padding(gui, config.ui_size * 0.3, 0);
                 gui_set_rect(gui, (GuiColor) { 0x2b, 0x2b, 0x2b, 0xff });
@@ -1608,7 +1608,7 @@ static void draw_search_list(void) {
             gui_set_padding(gui, BLOCK_OUTLINE_SIZE, 0);
             gui_set_min_size(gui, 0, config.ui_size);
             gui_set_direction(gui, DIRECTION_HORIZONTAL);
-            gui_set_align(gui, ALIGN_CENTER);
+            gui_set_align(gui, ALIGN_LEFT, ALIGN_CENTER);
 
             draw_input_text(&assets.fonts.font_cond, &editor.search_list_search, "Search...", BLOCK_TEXT_SIZE, GUI_WHITE);
         gui_element_end(gui);
@@ -1696,13 +1696,13 @@ void scrap_gui_process(void) {
                 gui_set_grow(gui, DIRECTION_HORIZONTAL);
                 gui_set_position(gui, 0, 0);
                 gui_set_parent_anchor(gui, tab_bar_anchor);
-                gui_set_align(gui, ALIGN_CENTER);
+                gui_set_align(gui, ALIGN_CENTER, ALIGN_TOP);
                 gui_set_padding(gui, 0, config.ui_size);
 
                 gui_element_begin(gui);
                     gui_set_padding(gui, config.ui_size * 0.3, config.ui_size * 0.3);
                     gui_set_rect(gui, (GuiColor) { 0x00, 0x00, 0x00, 0x80 });
-                    gui_set_align(gui, ALIGN_CENTER);
+                    gui_set_align(gui, ALIGN_CENTER, ALIGN_TOP);
                     gui_on_hover(gui, panel_editor_on_hover);
 
                     gui_text(gui, &assets.fonts.font_eb, gettext("Panel edit mode"), config.ui_size * 0.8, GUI_WHITE);

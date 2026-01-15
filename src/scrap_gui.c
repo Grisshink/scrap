@@ -35,7 +35,8 @@
 #define NEED_RESIZE(el) ((el->flags >> 5) & 1)
 #define SCISSOR(el) ((el->flags >> 4) & 1)
 #define FLOATING(el) ((el->flags >> 3) & 1)
-#define ALIGN(el) (GuiAlignmentType)((el->flags >> 1) & 3)
+#define ALIGN_X(el) (GuiAlignmentType)((el->flags >> 6) & 3)
+#define ALIGN_Y(el) (GuiAlignmentType)((el->flags >> 1) & 3)
 #define DIRECTION(el) (GuiElementDirection)(el->flags & 1)
 
 #define SET_SIZING_X(el, size) (el->sizing = (el->sizing & 0xf0) | size)
@@ -43,7 +44,8 @@
 #define SET_NEED_RESIZE(el, resize) (el->flags = (el->flags & ~(1 << 5)) | ((resize & 1) << 5))
 #define SET_SCISSOR(el, scissor) (el->flags = (el->flags & ~(1 << 4)) | ((scissor & 1) << 4))
 #define SET_FLOATING(el, floating) (el->flags = (el->flags & ~(1 << 3)) | ((floating & 1) << 3))
-#define SET_ALIGN(el, ali) (el->flags = (el->flags & 0xf9) | (ali << 1))
+#define SET_ALIGN_X(el, ali) (el->flags = (el->flags & 0x3f) | (ali << 6))
+#define SET_ALIGN_Y(el, ali) (el->flags = (el->flags & 0xf9) | (ali << 1))
 #define SET_DIRECTION(el, dir) (el->flags = (el->flags & 0xfe) | dir)
 #define SET_ANCHOR(el, x, y) (el->anchor = x | (y << 4))
 
@@ -358,16 +360,37 @@ static void gui_element_offset(GuiElement* el, int offset_x, int offset_y) {
 }
 
 static void gui_element_realign(GuiElement* el) {
-    if (ALIGN(el) == ALIGN_TOP) return;
+    int align_div;
 
-    int align_div = ALIGN(el) == ALIGN_CENTER ? 2 : 1;
-    for (GuiElement* iter = el->child_elements_begin; iter; iter = iter->next) {
-        if (!FLOATING(iter)) {
+    if (ALIGN_X(el) != ALIGN_TOP) {
+        align_div = ALIGN_X(el) == ALIGN_CENTER ? 2 : 1;
+        for (GuiElement* iter = el->child_elements_begin; iter; iter = iter->next) {
+            if (FLOATING(iter)) continue;
             if (DIRECTION(el) == DIRECTION_VERTICAL) {
                 iter->x = (el->w - iter->w) / align_div;
             } else {
+                iter->x += MAX(0, (el->w - el->pad_w + el->gap - el->cursor_x) / align_div);
+            }
+        }
+    }
+
+    if (ALIGN_Y(el) != ALIGN_TOP) {
+        align_div = ALIGN_Y(el) == ALIGN_CENTER ? 2 : 1;
+        for (GuiElement* iter = el->child_elements_begin; iter; iter = iter->next) {
+            if (FLOATING(iter)) continue;
+            if (DIRECTION(el) == DIRECTION_VERTICAL) {
+                iter->y += MAX(0, (el->h - el->pad_h + el->gap - el->cursor_y) / align_div);
+            } else {
                 iter->y = (el->h - iter->h) / align_div;
             }
+        }
+    }
+
+    if (el->scroll_value) {
+        if (DIRECTION(el) == DIRECTION_HORIZONTAL) {
+            gui_element_offset(el, *el->scroll_value, 0);
+        } else {
+            gui_element_offset(el, 0, *el->scroll_value);
         }
     }
 }
@@ -443,13 +466,6 @@ static void gui_element_resize(Gui* gui, GuiElement* el, unsigned short new_w, u
     }
 
     gui_element_realign(el);
-    if (el->scroll_value) {
-        if (DIRECTION(el) == DIRECTION_HORIZONTAL) {
-            gui_element_offset(el, *el->scroll_value, 0);
-        } else {
-            gui_element_offset(el, 0, *el->scroll_value);
-        }
-    }
 }
 
 static void gui_element_advance(GuiElement* el, GuiMeasurement ms) {
@@ -489,13 +505,6 @@ void gui_element_end(Gui* gui) {
         gui_element_resize(gui, el, el->w, el->h);
     } else {
         gui_element_realign(el);
-        if (el->scroll_value) {
-            if (DIRECTION(el) == DIRECTION_HORIZONTAL) {
-                gui_element_offset(el, *el->scroll_value, 0);
-            } else {
-                gui_element_offset(el, 0, *el->scroll_value);
-            }
-        }
     }
 
     gui->current_element = parent;
@@ -686,9 +695,10 @@ void gui_set_image(Gui* gui, void* image, unsigned short size, GuiColor color) {
     el->h = image_size.h;
 }
 
-void gui_set_align(Gui* gui, GuiAlignmentType align) {
+void gui_set_align(Gui* gui, GuiAlignmentType align_x, GuiAlignmentType align_y) {
     GuiElement* el = gui->current_element;
-    SET_ALIGN(el, align);
+    SET_ALIGN_X(el, align_x);
+    SET_ALIGN_Y(el, align_y);
 }
 
 void gui_set_min_size(Gui* gui, unsigned short min_w, unsigned short min_h) {

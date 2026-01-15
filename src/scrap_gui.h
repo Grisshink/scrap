@@ -132,10 +132,11 @@ struct GuiElement {
     //   Y - GuiAlignmentType for vertical alignment
     unsigned char anchor;
     // Flags layout:
-    // 00GSFAAD
+    // XXGSFYYD
     // Where:
     //   D - GuiElementDirection
-    //   A - GuiAlignmentType
+    //   X - GuiAlignmentType for horizontal alignment
+    //   Y - GuiAlignmentType for vertical alignment
     //   F - Is floating element
     //   S - Is scissoring on
     //   G - Does this element need to be resized? (internal flag)
@@ -218,7 +219,7 @@ void gui_set_text_slice(Gui* gui, void* font, const char* text, unsigned int tex
 void gui_set_text(Gui* gui, void* font, const char* text, unsigned short size, GuiColor color);
 void gui_set_image(Gui* gui, void* image, unsigned short size, GuiColor color);
 void gui_set_min_size(Gui* gui, unsigned short min_w, unsigned short min_h);
-void gui_set_align(Gui* gui, GuiAlignmentType align);
+void gui_set_align(Gui* gui, GuiAlignmentType align_x, GuiAlignmentType align_y);
 void gui_set_padding(Gui* gui, unsigned short pad_w, unsigned short pad_h);
 void gui_set_gap(Gui* gui, unsigned short gap);
 void gui_set_custom_data(Gui* gui, void* custom_data);
