@@ -785,7 +785,7 @@ static GuiElement* draw_button(const char* text, int size, bool selected, GuiHan
         gui_set_custom_data(gui, custom_data);
         el = gui_get_element(gui);
 
-        gui_text(gui, &assets.fonts.font_cond, text, BLOCK_TEXT_SIZE, selected ? GUI_WHITE : GUI_WHITE);
+        gui_text(gui, &assets.fonts.font_cond, text, BLOCK_TEXT_SIZE, selected ? GUI_BLACK : GUI_WHITE);
     gui_element_end(gui);
     return el;
 }
