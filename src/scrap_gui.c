@@ -52,9 +52,9 @@
 static void gui_render(Gui* gui, GuiElement* el);
 static void flush_command_batch(Gui* gui);
 
-static bool inside_window(Gui* gui, GuiDrawBounds rect) {
-    return (rect.x + rect.w > 0) && (rect.x < gui->win_w) &&
-           (rect.y + rect.h > 0) && (rect.y < gui->win_h);
+static bool inside_scissor(GuiDrawBounds rect, GuiBounds scissor) {
+    return (rect.x + rect.w > scissor.x) && (rect.x < scissor.x + scissor.w) &&
+           (rect.y + rect.h > scissor.y) && (rect.y < scissor.y + scissor.h);
 }
 
 static bool mouse_inside(Gui* gui, GuiBounds rect) {
@@ -211,7 +211,7 @@ static void gui_get_anchor_pos(GuiElement* el, float* anchor_x, float* anchor_y)
 }
 
 static void gui_render(Gui* gui, GuiElement* el) {
-    GuiBounds scissor = gui->scissor_stack_len > 0 ? gui->scissor_stack[gui->scissor_stack_len - 1] : (GuiBounds) { 0, 0, gui->win_w, gui->win_h };
+    GuiBounds prev_scissor = gui->scissor_stack_len > 0 ? gui->scissor_stack[gui->scissor_stack_len - 1] : (GuiBounds) { 0, 0, gui->win_w, gui->win_h };
     bool hover = false;
 
     float parent_pos_x   = 0,
@@ -239,7 +239,7 @@ static void gui_render(Gui* gui, GuiElement* el) {
         (el->x - anchor_x) * parent_scaling + parent_pos_x,
         (el->y - anchor_y) * parent_scaling + parent_pos_y,
         el->w * el->scaling,
-        el->h * el->scaling }, scissor)))
+        el->h * el->scaling }, prev_scissor)))
     {
         if (el->handle_hover) el->handle_hover(el);
         hover = true;
@@ -255,13 +255,17 @@ static void gui_render(Gui* gui, GuiElement* el) {
 
     if (SCISSOR(el) || FLOATING(el) || el->shader) flush_command_batch(gui);
 
+    GuiBounds scissor = prev_scissor;
     if (SCISSOR(el)) {
-        new_draw_command(gui, el_bounds, DRAWTYPE_SCISSOR_SET, GUI_SUBTYPE_DEFAULT, (GuiDrawData) {0}, (GuiColor) {0});
-        gui->scissor_stack[gui->scissor_stack_len++] = (GuiBounds) { el_bounds.x, el_bounds.y, el_bounds.w, el_bounds.h };
+        scissor = scissor_rect(prev_scissor, (GuiBounds) { el_bounds.x, el_bounds.y, el_bounds.w, el_bounds.h });
+        if (scissor.w > 0 && scissor.h > 0) {
+            new_draw_command(gui, (GuiDrawBounds) { scissor.x, scissor.y, scissor.w, scissor.h }, DRAWTYPE_SCISSOR_SET, GUI_SUBTYPE_DEFAULT, (GuiDrawData) {0}, (GuiColor) {0});
+        }
+        gui->scissor_stack[gui->scissor_stack_len++] = scissor;
     }
     if (el->shader) new_draw_command(gui, el_bounds, DRAWTYPE_SHADER_BEGIN, GUI_SUBTYPE_DEFAULT, (GuiDrawData) { .shader = el->shader }, (GuiColor) {0});
 
-    if (el->draw_type != DRAWTYPE_UNKNOWN && inside_window(gui, el_bounds)) {
+    if (el->draw_type != DRAWTYPE_UNKNOWN && inside_scissor(el_bounds, scissor)) {
         new_draw_command(gui, el_bounds, el->draw_type, el->draw_subtype, el->data, el->color);
     }
 
@@ -313,7 +317,9 @@ static void gui_render(Gui* gui, GuiElement* el) {
         if (gui->scissor_stack_len == 0) {
             new_draw_command(gui, el_bounds, DRAWTYPE_SCISSOR_RESET, GUI_SUBTYPE_DEFAULT, (GuiDrawData) {0}, (GuiColor) {0});
         } else {
-            new_draw_command(gui, el_bounds, DRAWTYPE_SCISSOR_SET, GUI_SUBTYPE_DEFAULT, (GuiDrawData) {0}, (GuiColor) {0});
+            if (prev_scissor.w > 0 && prev_scissor.h > 0) {
+                new_draw_command(gui, (GuiDrawBounds) { prev_scissor.x, prev_scissor.y, prev_scissor.w, prev_scissor.h }, DRAWTYPE_SCISSOR_SET, GUI_SUBTYPE_DEFAULT, (GuiDrawData) {0}, (GuiColor) {0});
+            }
         }
     }
 }
