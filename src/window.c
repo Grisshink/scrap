@@ -458,9 +458,18 @@ static void draw_text_input(char** input, const char* hint, int* scroll, bool ed
             gui_set_scroll(gui, scroll);
             gui_set_scissor(gui);
 
-            gui_element_begin(gui);
-                draw_input(&assets.fonts.font_cond, input, hint, config.ui_size * 0.6, GUI_WHITE, editable);
-            gui_element_end(gui);
+            if (editable) {
+                InputHoverInfo info = (InputHoverInfo) {
+                    .input = input,
+                    .rel_pos = (Vector2) { WINDOW_ELEMENT_PADDING + *scroll, 0 },
+                    .font = &assets.fonts.font_cond,
+                    .font_size = config.ui_size * 0.6,
+                };
+                gui_set_state(gui, &info, sizeof(info));
+                gui_on_hover(gui, input_on_hover);
+            }
+
+            draw_input_text(&assets.fonts.font_cond, input, hint, config.ui_size * 0.6, GUI_WHITE);
         gui_element_end(gui);
     gui_element_end(gui);
 }

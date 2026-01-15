@@ -58,6 +58,8 @@ typedef enum {
 
 static void draw_code(void);
 static void draw_blockchain(BlockChain* chain, bool ghost, bool show_previews, bool editable_arguments);
+static void argument_on_hover(GuiElement* el);
+static void argument_on_render(GuiElement* el);
 
 bool rl_vec_equal(Color lhs, Color rhs) {
     return lhs.r == rhs.r && lhs.g == rhs.g && lhs.b == rhs.b && lhs.a == rhs.a;
@@ -239,67 +241,87 @@ static void draw_editor_button(Texture2D* texture, ButtonClickHandler handler) {
     gui_element_end(gui);
 }
 
-static void input_on_hover(GuiElement* el) {
+void input_on_hover(GuiElement* el) {
     if (ui.hover.button.handler) return;
     if (ui.hover.is_panel_edit_mode) return;
 
     unsigned short len;
     ui.hover.input_info = *(InputHoverInfo*)gui_get_state(el, &len);
-    ui.hover.input_info.rel_pos = (Vector2) { gui->mouse_x - el->abs_x, gui->mouse_y - el->abs_y };
+    ui.hover.input_info.rel_pos = (Vector2) { 
+        gui->mouse_x - el->abs_x - ui.hover.input_info.rel_pos.x, 
+        gui->mouse_y - el->abs_y - ui.hover.input_info.rel_pos.y,
+    };
 }
 
-void draw_input(Font* font, char** input, const char* hint, unsigned short font_size, GuiColor font_color, bool editable) {
-    gui_element_begin(gui);
-        gui_set_direction(gui, DIRECTION_VERTICAL);
-        gui_set_grow(gui, DIRECTION_VERTICAL);
-        gui_set_grow(gui, DIRECTION_HORIZONTAL);
-        gui_set_align(gui, ALIGN_CENTER);
-        if (editable) {
-            gui_on_hover(gui, input_on_hover);
-            InputHoverInfo info = (InputHoverInfo) {
-                .input = input,
-                .rel_pos = (Vector2) {0},
-                .font = font,
-                .font_size = font_size,
-            };
-            gui_set_state(gui, &info, sizeof(info));
+void draw_input_text(Font* font, char** input, const char* hint, unsigned short font_size, GuiColor font_color) {
+    if (ui.hover.select_input == input) {
+        if (ui.hover.select_input_cursor == ui.hover.select_input_mark) ui.hover.select_input_mark = -1;
+
+        if (ui.hover.select_input_mark == -1) {
+            gui_text_slice(gui, font, *input, ui.hover.select_input_cursor, font_size, font_color);
+            gui_element_begin(gui);
+                gui_set_rect(gui, font_color);
+                gui_set_min_size(gui, BLOCK_OUTLINE_SIZE, BLOCK_TEXT_SIZE);
+            gui_element_end(gui);
+
+            gui_text(gui, font, *input + ui.hover.select_input_cursor, font_size, font_color);
+        } else {
+            int select_start = MIN(ui.hover.select_input_cursor, ui.hover.select_input_mark),
+                select_end   = MAX(ui.hover.select_input_cursor, ui.hover.select_input_mark);
+            gui_text_slice(gui, font, *input, select_start, font_size, font_color);
+
+            gui_element_begin(gui);
+                gui_set_rect(gui, (GuiColor) TEXT_SELECTION_COLOR);
+                gui_text_slice(gui, font, *input + select_start, select_end - select_start, font_size, font_color);
+            gui_element_end(gui);
+
+            gui_text(gui, font, *input + select_end, font_size, font_color);
         }
+    } else {
+        if (**input == 0) {
+            gui_text(gui, font, hint, font_size, (GuiColor) { font_color.r, font_color.g, font_color.b, font_color.a * 0.3 });
+        } else {
+            gui_text(gui, font, *input, font_size, font_color);
+        }
+    }
+}
+
+static void argument_input_on_hover(GuiElement* el) {
+    if (el->custom_data) {
+        argument_on_hover(el);
+    } else {
+        blockdef_input_on_hover(el);
+    }
+    input_on_hover(el);
+}
+
+static void draw_argument_input(Argument* arg, char** input, const char* hint, bool can_hover, bool editable, GuiColor font_color, GuiColor bg_color) {
+    gui_element_begin(gui);
+        gui_set_rect(gui, bg_color);
 
         gui_element_begin(gui);
+            if (editable) {
+                if ((arg && ui.hover.editor.select_argument == arg) || ui.hover.select_input == input) {
+                    gui_set_border(gui, (GuiColor) { 0x30, 0x30, 0x30, 0xff }, BLOCK_OUTLINE_SIZE);
+                    if (arg) gui_on_render(gui, argument_on_render);
+                }
+                InputHoverInfo info = (InputHoverInfo) {
+                    .input = input,
+                    .rel_pos = (Vector2) { BLOCK_STRING_PADDING / 2, 0 },
+                    .font = &assets.fonts.font_cond_shadow,
+                    .font_size = BLOCK_TEXT_SIZE,
+                };
+                gui_set_state(gui, &info, sizeof(info));
+                gui_set_custom_data(gui, arg);
+                if (can_hover) gui_on_hover(gui, argument_input_on_hover);
+            }
+
             gui_set_direction(gui, DIRECTION_HORIZONTAL);
             gui_set_align(gui, ALIGN_CENTER);
-            gui_set_grow(gui, DIRECTION_VERTICAL);
+            gui_set_padding(gui, BLOCK_STRING_PADDING / 2, 0);
+            gui_set_min_size(gui, config.ui_size - BLOCK_OUTLINE_SIZE * 4, config.ui_size - BLOCK_OUTLINE_SIZE * 4);
 
-            if (ui.hover.select_input == input) {
-                if (ui.hover.select_input_cursor == ui.hover.select_input_mark) ui.hover.select_input_mark = -1;
-
-                if (ui.hover.select_input_mark == -1) {
-                    gui_text_slice(gui, font, *input, ui.hover.select_input_cursor, font_size, font_color);
-                    gui_element_begin(gui);
-                        gui_set_rect(gui, font_color);
-                        gui_set_min_size(gui, BLOCK_OUTLINE_SIZE, BLOCK_TEXT_SIZE);
-                    gui_element_end(gui);
-
-                    gui_text(gui, font, *input + ui.hover.select_input_cursor, font_size, font_color);
-                } else {
-                    int select_start = MIN(ui.hover.select_input_cursor, ui.hover.select_input_mark),
-                        select_end   = MAX(ui.hover.select_input_cursor, ui.hover.select_input_mark);
-                    gui_text_slice(gui, font, *input, select_start, font_size, font_color);
-
-                    gui_element_begin(gui);
-                        gui_set_rect(gui, (GuiColor) TEXT_SELECTION_COLOR);
-                        gui_text_slice(gui, font, *input + select_start, select_end - select_start, font_size, font_color);
-                    gui_element_end(gui);
-
-                    gui_text(gui, font, *input + select_end, font_size, font_color);
-                }
-            } else {
-                if (**input == 0) {
-                    gui_text(gui, font, hint, font_size, (GuiColor) { font_color.r, font_color.g, font_color.b, font_color.a * 0.3 });
-                } else {
-                    gui_text(gui, font, *input, font_size, font_color);
-                }
-            }
+            draw_input_text(&assets.fonts.font_cond, input, hint, BLOCK_TEXT_SIZE, font_color);
         gui_element_end(gui);
     gui_element_end(gui);
 }
@@ -340,19 +362,7 @@ static void draw_blockdef(Blockdef* blockdef, bool editing) {
         switch (input->type) {
         case INPUT_TEXT_DISPLAY:
             if (editing) {
-                gui_element_begin(gui);
-                    gui_set_rect(gui, GUI_WHITE);
-
-                    gui_element_begin(gui);
-                        gui_set_direction(gui, DIRECTION_HORIZONTAL);
-                        gui_set_min_size(gui, config.ui_size - BLOCK_OUTLINE_SIZE * 4, config.ui_size - BLOCK_OUTLINE_SIZE * 4);
-                        gui_set_padding(gui, BLOCK_STRING_PADDING / 2, 0);
-                        if (ui.hover.select_input == &input->data.text) gui_set_border(gui, (GuiColor) { 0x30, 0x30, 0x30, 0xff }, BLOCK_OUTLINE_SIZE);
-                        gui_on_hover(gui, blockdef_input_on_hover);
-
-                        draw_input(&assets.fonts.font_cond, &input->data.text, "", BLOCK_TEXT_SIZE, GUI_WHITE, true);
-                    gui_element_end(gui);
-                gui_element_end(gui);
+                draw_argument_input(NULL, &input->data.text, "", true, true, GUI_BLACK, GUI_WHITE);
             } else {
                 gui_text(gui, &assets.fonts.font_cond_shadow, input->data.text, BLOCK_TEXT_SIZE, GUI_WHITE);
             }
@@ -497,52 +507,26 @@ static void draw_block(Block* block, bool highlight, bool can_hover, bool ghost,
 
             switch (arg->type) {
             case ARGUMENT_CONST_STRING:
+                draw_argument_input(
+                    arg,
+                    &arg->data.text,
+                    input->data.arg.hint_text,
+                    can_hover,
+                    editable,
+                    (GuiColor) { 0xff, 0xff, 0xff, ghost ? BLOCK_GHOST_OPACITY : 0xff },
+                    CONVERT_COLOR(dropdown_color, GuiColor)
+                );
+                break;
             case ARGUMENT_TEXT:
-                gui_element_begin(gui);
-                    if (arg->type == ARGUMENT_TEXT) {
-                        gui_set_rect(gui, (GuiColor) { 0xff, 0xff, 0xff, ghost ? BLOCK_GHOST_OPACITY : BLOCK_ARG_OPACITY });
-                    } else {
-                        gui_set_rect(gui, CONVERT_COLOR(dropdown_color, GuiColor));
-                    }
-
-                    gui_element_begin(gui);
-                        gui_set_direction(gui, DIRECTION_HORIZONTAL);
-                        gui_set_min_size(gui, config.ui_size - BLOCK_OUTLINE_SIZE * 4, config.ui_size - BLOCK_OUTLINE_SIZE * 4);
-                        gui_set_padding(gui, BLOCK_STRING_PADDING / 2, 0);
-                        if (editable) {
-                            if (ui.hover.editor.select_argument == arg) {
-                                gui_set_border(gui, (GuiColor) { 0x30, 0x30, 0x30, 0xff }, BLOCK_OUTLINE_SIZE);
-                                gui_on_render(gui, argument_on_render);
-                            }
-                            gui_set_custom_data(gui, arg);
-                            if (can_hover) gui_on_hover(gui, argument_on_hover);
-                        }
-
-                        if (arg->type == ARGUMENT_TEXT) {
-                            if (can_hover) {
-                                draw_input(
-                                    &assets.fonts.font_cond, 
-                                    &arg->data.text, 
-                                    input->data.arg.hint_text, 
-                                    BLOCK_TEXT_SIZE, 
-                                    (GuiColor) { 0x00, 0x00, 0x00, ghost ? BLOCK_GHOST_OPACITY : 0xff }, 
-                                    editable
-                                );
-                            }
-                        } else {
-                            if (can_hover) {
-                                draw_input(
-                                    &assets.fonts.font_cond_shadow, 
-                                    &arg->data.text, 
-                                    input->data.arg.hint_text, 
-                                    BLOCK_TEXT_SIZE, 
-                                    (GuiColor) { 0xff, 0xff, 0xff, ghost ? BLOCK_GHOST_OPACITY : 0xff }, 
-                                    editable
-                                );
-                            }
-                        }
-                    gui_element_end(gui);
-                gui_element_end(gui);
+                draw_argument_input(
+                    arg,
+                    &arg->data.text,
+                    input->data.arg.hint_text,
+                    can_hover,
+                    editable,
+                    (GuiColor) { 0x00, 0x00, 0x00, ghost ? BLOCK_GHOST_OPACITY : 0xff },
+                    (GuiColor) { 0xff, 0xff, 0xff, ghost ? BLOCK_GHOST_OPACITY : BLOCK_ARG_OPACITY }
+                );
                 break;
             case ARGUMENT_BLOCK:
                 gui_element_begin(gui);
@@ -1626,9 +1610,7 @@ static void draw_search_list(void) {
             gui_set_direction(gui, DIRECTION_HORIZONTAL);
             gui_set_align(gui, ALIGN_CENTER);
 
-            gui_element_begin(gui);
-                draw_input(&assets.fonts.font_cond, &editor.search_list_search, "Search...", BLOCK_TEXT_SIZE, GUI_WHITE, true);
-            gui_element_end(gui);
+            draw_input_text(&assets.fonts.font_cond, &editor.search_list_search, "Search...", BLOCK_TEXT_SIZE, GUI_WHITE);
         gui_element_end(gui);
 
         gui_element_begin(gui);
