@@ -20,6 +20,7 @@
 
 #include "raylib.h"
 #include "scrap.h"
+#include "../external/tinyfiledialogs.h"
 
 #include <stdbool.h>
 #include <stdlib.h>
@@ -44,6 +45,8 @@ static bool settings_tooltip = false;
 static bool settings_applied = false;
 static char** about_text_split = NULL;
 
+static void draw_button(const char* label, ButtonClickHandler handler, void* data);
+
 // https://easings.net/#easeOutExpo
 float ease_out_expo(float x) {
     return x == 1.0 ? 1.0 : 1 - powf(2.0, -10.0 * x);
@@ -56,6 +59,28 @@ static bool about_on_license_button_click(void) {
 
 static bool window_on_close_button_click(void) {
     gui_window_hide();
+    return true;
+}
+
+static void vector_append(char** vec, const char* str) {
+    if (vector_size(*vec) > 0 && (*vec)[vector_size(*vec) - 1] == 0) vector_pop(*vec);
+    for (size_t i = 0; str[i]; i++) vector_add(vec, str[i]);
+    vector_add(vec, 0);
+}
+
+static bool settings_on_browse_button_click(void) {
+    char const* filters[] = { "*.ttf", "*.otf" };
+    char** path_input = ui.hover.button.data;
+    char* path = tinyfd_openFileDialog(NULL, *path_input, ARRLEN(filters), filters, "Font files", 0);
+    if (!path) return true;
+
+    vector_clear(*path_input);
+    vector_append(path_input, path);
+
+    ui.hover.select_input_cursor = 0;
+    ui.hover.select_input_mark = -1;
+    ui.render_surface_needs_redraw = true;
+
     return true;
 }
 
@@ -176,7 +201,7 @@ void gui_window_hide_immediate(void) {
 static void settings_button_on_hover(GuiElement* el) {
     if (ui.hover.button.handler) return;
     el->color = (GuiColor) { 0x40, 0x40, 0x40, 0xff };
-    ui.hover.button.handler = el->custom_data;
+    ui.hover.button = *(ButtonHoverInfo*)gui_get_state(el);
 }
 
 static void close_button_on_hover(GuiElement* el) {
@@ -292,6 +317,11 @@ static void begin_setting(const char* name, bool warning) {
             gui_spacer(gui, config.ui_size, config.ui_size);
         }
 
+        gui_element_begin(gui);
+            gui_set_grow(gui, DIRECTION_HORIZONTAL);
+            gui_set_direction(gui, DIRECTION_HORIZONTAL);
+            gui_set_gap(gui, WINDOW_ELEMENT_PADDING);
+            gui_set_min_size(gui, 0, config.ui_size);
 }
 
 static void slider_on_hover(GuiElement* el) {
@@ -371,6 +401,7 @@ static void draw_slider(int min, int max, int* value) {
 
 static void end_setting(void) {
     gui_element_end(gui);
+    gui_element_end(gui);
 }
 
 static void text_input_on_hover(GuiElement* el) {
@@ -425,7 +456,7 @@ static void draw_dropdown_input(int* value, char** list, int list_len) {
     gui_element_end(gui);
 }
 
-static void draw_text_input(char** input, const char* hint, int* scroll, bool editable) {
+static void draw_text_input(char** input, const char* hint, int* scroll, bool editable, bool path_input) {
     gui_element_begin(gui);
         gui_set_grow(gui, DIRECTION_HORIZONTAL);
         gui_set_grow(gui, DIRECTION_VERTICAL);
@@ -463,14 +494,20 @@ static void draw_text_input(char** input, const char* hint, int* scroll, bool ed
             draw_input_text(&assets.fonts.font_cond, input, hint, config.ui_size * 0.6, GUI_WHITE);
         gui_element_end(gui);
     gui_element_end(gui);
+
+    if (path_input) draw_button("Browse", settings_on_browse_button_click, input);
 }
 
-static void draw_button(const char* label, ButtonClickHandler handler) {
+static void draw_button(const char* label, ButtonClickHandler handler, void* data) {
     gui_element_begin(gui);
         gui_set_min_size(gui, 0, config.ui_size);
         gui_set_rect(gui, (GuiColor) { 0x30, 0x30, 0x30, 0xff });
         gui_on_hover(gui, settings_button_on_hover);
-        gui_set_custom_data(gui, handler);
+        ButtonHoverInfo info = (ButtonHoverInfo) {
+            .handler = handler,
+            .data = data,
+        };
+        gui_set_state(gui, &info, sizeof(info));
 
         gui_element_begin(gui);
             gui_set_grow(gui, DIRECTION_HORIZONTAL);
@@ -539,15 +576,15 @@ void draw_settings_window(void) {
         end_setting();
 
         begin_setting(gettext("Font path"), true);
-            draw_text_input(&window_config.font_path, gettext("path"), &font_path_scroll, true);
+            draw_text_input(&window_config.font_path, gettext("path"), &font_path_scroll, true, true);
         end_setting();
 
         begin_setting(gettext("Bold font path"), true);
-            draw_text_input(&window_config.font_bold_path, gettext("path"), &font_bold_path_scroll, true);
+            draw_text_input(&window_config.font_bold_path, gettext("path"), &font_bold_path_scroll, true, true);
         end_setting();
 
         begin_setting(gettext("Monospaced font path"), true);
-            draw_text_input(&window_config.font_mono_path, gettext("path"), &font_mono_path_scroll, true);
+            draw_text_input(&window_config.font_mono_path, gettext("path"), &font_mono_path_scroll, true, true);
         end_setting();
 
         begin_setting(gettext("Panel editor"), false);
@@ -556,7 +593,7 @@ void draw_settings_window(void) {
                 gui_set_grow(gui, DIRECTION_VERTICAL);
                 gui_set_direction(gui, DIRECTION_HORIZONTAL);
 
-                draw_button(gettext("Open"), settings_on_panel_editor_button_click);
+                draw_button(gettext("Open"), settings_on_panel_editor_button_click, NULL);
             gui_element_end(gui);
         end_setting();
 
@@ -577,9 +614,9 @@ void draw_settings_window(void) {
             gui_set_gap(gui, WINDOW_ELEMENT_PADDING);
 
             gui_grow(gui, DIRECTION_HORIZONTAL);
-            draw_button(gettext("Reset panels"), settings_on_reset_panels_button_click);
-            draw_button(gettext("Reset"), settings_on_reset_button_click);
-            draw_button(gettext("Apply"), settings_on_apply_button_click);
+            draw_button(gettext("Reset panels"), settings_on_reset_panels_button_click, NULL);
+            draw_button(gettext("Reset"), settings_on_reset_button_click, NULL);
+            draw_button(gettext("Apply"), settings_on_apply_button_click, NULL);
         gui_element_end(gui);
     end_window();
 
@@ -603,11 +640,11 @@ void draw_project_settings_window(void) {
 
     begin_window(gettext("Build settings"), MIN(600, gui->win_w - config.ui_size), 0, window.animation_ease);
         begin_setting(gettext("Executable name"), false);
-            draw_text_input(&project_config.executable_name, gettext("name"), &executable_name_scroll, true);
+            draw_text_input(&project_config.executable_name, gettext("name"), &executable_name_scroll, true, false);
         end_setting();
 
         begin_setting(gettext("Linker name (Linux only)"), false);
-            draw_text_input(&project_config.linker_name, gettext("name"), &linker_name_scroll, true);
+            draw_text_input(&project_config.linker_name, gettext("name"), &linker_name_scroll, true, false);
         end_setting();
 
         gui_grow(gui, DIRECTION_VERTICAL);
@@ -619,7 +656,7 @@ void draw_project_settings_window(void) {
 
             gui_grow(gui, DIRECTION_HORIZONTAL);
 
-            draw_button(gettext("Build!"), project_settings_on_build_button_click);
+            draw_button(gettext("Build!"), project_settings_on_build_button_click, NULL);
         gui_element_end(gui);
     end_window();
 }
@@ -672,7 +709,7 @@ void draw_about_window(void) {
             gui_set_gap(gui, WINDOW_ELEMENT_PADDING);
 
             gui_grow(gui, DIRECTION_HORIZONTAL);
-            draw_button(gettext("License"), about_on_license_button_click);
+            draw_button(gettext("License"), about_on_license_button_click, NULL);
         gui_element_end(gui);
     end_window();
 }
@@ -690,9 +727,9 @@ void draw_save_confirmation_window(void) {
 
             gui_grow(gui, DIRECTION_HORIZONTAL);
 
-            draw_button(gettext("Yes"),    save_confirmation_on_yes_button_click);
-            draw_button(gettext("No"),     save_confirmation_on_no_button_click);
-            draw_button(gettext("Cancel"), save_confirmation_on_cancel_button_click);
+            draw_button(gettext("Yes"),    save_confirmation_on_yes_button_click, NULL);
+            draw_button(gettext("No"),     save_confirmation_on_no_button_click, NULL);
+            draw_button(gettext("Cancel"), save_confirmation_on_cancel_button_click, NULL);
         gui_element_end(gui);
     end_window();
 }
