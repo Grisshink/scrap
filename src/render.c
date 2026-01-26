@@ -1313,7 +1313,7 @@ static void draw_code_area(void) {
             gui_element_begin(gui);
                 gui_set_grow(gui, DIRECTION_HORIZONTAL);
                 gui_set_direction(gui, DIRECTION_VERTICAL);
-                gui_set_align(gui, ALIGN_LEFT, ALIGN_CENTER);
+                gui_set_align(gui, ALIGN_CENTER, ALIGN_TOP);
                 
                 Color color = YELLOW;
                 color.a = editor.actionbar.show_time / 3.0 * 255.0;
