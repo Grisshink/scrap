@@ -6,6 +6,8 @@
 - Added new color type and integrated it with color related blocks
 - Added new example (neon.scrp) featuring new color system
 - Added ability to change colors of custom blocks
+- Added browse button for path text inputs
+- Added various icons to buttons and windows
 
 ## Fixes
 - Fixed block definitions being able to be edited in block palette
