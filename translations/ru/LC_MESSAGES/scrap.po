@@ -492,8 +492,8 @@ msgid "Monospaced font path"
 msgstr "Путь моноширинного шрифта"
 
 #: window.c
-msgid "Panel editor"
-msgstr "Редактор панелей"
+msgid "Panel layout"
+msgstr "Расположение панелей"
 
 #: window.c
 msgid "Open"
@@ -541,6 +541,10 @@ msgstr "Имя линковщика (только для Linux)"
 msgid "Build!"
 msgstr "Собрать!"
 
+#: window.c
+msgid "Edit"
+msgstr "Изменить"
+
 #: render.c
 msgid "Panel edit mode"
 msgstr "Режим редактирования панелей"
@@ -576,6 +580,62 @@ msgstr "усл."
 #: blocks.c
 msgid "Abc"
 msgstr "Абв"
+
+#: blocks.c
+msgid "Conditionals"
+msgstr "Условия"
+
+#: blocks.c
+msgid "Loops"
+msgstr "Циклы"
+
+#: blocks.c
+msgid "Functions"
+msgstr "Функции"
+
+#: blocks.c
+msgid "Input/Output"
+msgstr "Ввод/Вывод"
+
+#: blocks.c
+msgid "Cursor"
+msgstr "Курсор"
+
+#: blocks.c
+msgid "Colors"
+msgstr "Цвета"
+
+#: blocks.c
+msgid "Comparisons"
+msgstr "Сравнения"
+
+#: blocks.c
+msgid "Boolean math"
+msgstr "Булевая математика"
+
+#: blocks.c
+msgid "Bitwise math"
+msgstr "Побитовые операторы"
+
+#: blocks.c
+msgid "Variables"
+msgstr "Переменные"
+
+#: blocks.c
+msgid "Lists"
+msgstr "Списки"
+
+#: blocks.c
+msgid "Type casting"
+msgstr "Преобразование типов"
+
+#: blocks.c
+msgid "Doing nothing"
+msgstr "Уголок бездельничества"
+
+#: blocks.c
+msgid "Debug blocks"
+msgstr "Дебаг-блоки"
 
 #: window.c
 msgid "path"
