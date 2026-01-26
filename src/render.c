@@ -756,19 +756,21 @@ static void draw_panel_editor_button(const char* text, int size, GuiColor color,
     gui_element_end(gui);
 }
 
-static GuiElement* draw_button(const char* text, int size, bool selected, GuiHandler on_hover, void* custom_data) {
+static GuiElement* draw_button(const char* text, Texture2D* icon, int size, bool selected, GuiHandler on_hover, void* custom_data) {
     GuiElement* el;
     gui_element_begin(gui);
         gui_set_direction(gui, DIRECTION_HORIZONTAL);
         gui_set_align(gui, ALIGN_LEFT, ALIGN_CENTER);
         gui_set_min_size(gui, 0, size);
         gui_set_padding(gui, config.ui_size * 0.3, 0);
+        gui_set_gap(gui, WINDOW_ELEMENT_PADDING/2);
         if (selected) gui_set_rect(gui, GUI_WHITE);
         gui_on_hover(gui, on_hover);
         gui_set_custom_data(gui, custom_data);
         el = gui_get_element(gui);
 
-        gui_text(gui, &assets.fonts.font_cond, text, BLOCK_TEXT_SIZE, selected ? GUI_BLACK : GUI_WHITE);
+        if (icon) gui_image(gui, icon, BLOCK_IMAGE_SIZE, selected ? GUI_BLACK : GUI_WHITE);
+        if (text) gui_text(gui, &assets.fonts.font_cond, text, BLOCK_TEXT_SIZE, selected ? GUI_BLACK : GUI_WHITE);
     gui_element_end(gui);
     return el;
 }
@@ -788,10 +790,10 @@ static void draw_top_bar(void) {
         gui_text(gui, &assets.fonts.font_eb, gettext("Scrap"), config.ui_size * 0.8, CONVERT_COLOR(WHITE, GuiColor));
         gui_spacer(gui, 10, 0);
 
-        GuiElement* el = draw_button(gettext("File"), top_bar_size, false, button_on_hover, handle_file_button_click);
+        GuiElement* el = draw_button(gettext("File"), &assets.textures.icon_file, top_bar_size, false, button_on_hover, handle_file_button_click);
         if (ui.dropdown.handler == handle_file_menu_click) ui.dropdown.element = el;
-        draw_button(gettext("Settings"), top_bar_size, false, button_on_hover, handle_settings_button_click);
-        draw_button(gettext("About"), top_bar_size, false, button_on_hover, handle_about_button_click);
+        draw_button(gettext("Settings"), &assets.textures.icon_settings, top_bar_size, false, button_on_hover, handle_settings_button_click);
+        draw_button(gettext("About"), &assets.textures.icon_about, top_bar_size, false, button_on_hover, handle_about_button_click);
     gui_element_end(gui);
 }
 
@@ -805,12 +807,12 @@ static void draw_tab_bar(void) {
         gui_set_align(gui, ALIGN_LEFT, ALIGN_CENTER);
 
         if (ui.hover.is_panel_edit_mode && ui.hover.panels.mouse_panel != PANEL_NONE) {
-            draw_button("+", tab_bar_size, false, tab_button_add_on_hover, (void*)0);
+            draw_button("+", NULL, tab_bar_size, false, tab_button_add_on_hover, (void*)0);
         }
         for (size_t i = 0; i < vector_size(editor.tabs); i++) {
-            draw_button(gettext(editor.tabs[i].name), tab_bar_size, editor.current_tab == (int)i, tab_button_on_hover, (void*)i);
+            draw_button(gettext(editor.tabs[i].name), NULL, tab_bar_size, editor.current_tab == (int)i, tab_button_on_hover, (void*)i);
             if (ui.hover.is_panel_edit_mode && ui.hover.panels.mouse_panel != PANEL_NONE) {
-                draw_button("+", tab_bar_size, false, tab_button_add_on_hover, (void*)(i + 1));
+                draw_button("+", NULL, tab_bar_size, false, tab_button_add_on_hover, (void*)(i + 1));
             }
         }
 
@@ -1292,13 +1294,13 @@ static void draw_code_area(void) {
                         if (vm.compile_error_block) {
                             gui_element_begin(gui);
                                 gui_set_border(gui, (GuiColor) { 0x40, 0x40, 0x40, 0xff }, BLOCK_OUTLINE_SIZE);
-                                draw_button(gettext("Jump to block"), config.ui_size, false, button_on_hover, handle_jump_to_block_button_click);
+                                draw_button(gettext("Jump to block"), NULL, config.ui_size, false, button_on_hover, handle_jump_to_block_button_click);
                             gui_element_end(gui);
                         }
 
                         gui_element_begin(gui);
                             gui_set_border(gui, (GuiColor) { 0x40, 0x40, 0x40, 0xff }, BLOCK_OUTLINE_SIZE);
-                            draw_button(gettext("Close"), config.ui_size, false, button_on_hover, handle_error_window_close_button_click);
+                            draw_button(gettext("Close"), NULL, config.ui_size, false, button_on_hover, handle_error_window_close_button_click);
                         gui_element_end(gui);
                     gui_element_end(gui);
                 gui_element_end(gui);

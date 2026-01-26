@@ -274,9 +274,13 @@ typedef struct {
     Texture2D button_run;
     Texture2D button_stop;
     Texture2D dropdown;
+    Texture2D icon_about;
+    Texture2D icon_file;
+    Texture2D icon_folder;
     Texture2D icon_list;
     Texture2D icon_logo;
     Texture2D icon_pi;
+    Texture2D icon_settings;
     Texture2D icon_special;
     Texture2D icon_term;
     Texture2D icon_variable;
