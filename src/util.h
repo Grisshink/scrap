@@ -37,6 +37,15 @@
 #define LERP(min, max, t) (((max) - (min)) * (t) + (min))
 #define UNLERP(min, max, v) (((float)(v) - (float)(min)) / ((float)(max) - (float)(min)))
 
+#define LOG_ALL 0
+#define LOG_TRACE 1
+#define LOG_DEBUG 2
+#define LOG_INFO 3
+#define LOG_WARNING 4
+#define LOG_ERROR 5
+#define LOG_FATAL 6
+#define LOG_NONE 7
+
 typedef struct {
     struct timespec start;
     const char* name;
@@ -44,6 +53,7 @@ typedef struct {
 
 Timer start_timer(const char* name);
 double end_timer(Timer timer);
-void scrap_log(int log_level, const char *text, va_list args);
+void scrap_log(int log_level, const char *text, ...);
+void scrap_log_va(int log_level, const char *text, va_list args);
 
 #endif // SCRAP_UTIL_H

@@ -25,15 +25,6 @@
 #include <string.h>
 #include <stdio.h>
 
-#define LOG_ALL 0
-#define LOG_TRACE 1
-#define LOG_DEBUG 2
-#define LOG_INFO 3
-#define LOG_WARNING 4
-#define LOG_ERROR 5
-#define LOG_FATAL 6
-#define LOG_NONE 7
-
 Timer start_timer(const char* name) {
     Timer timer;
     timer.name = name;
@@ -54,7 +45,14 @@ double end_timer(Timer timer) {
 #define CSI_RED "\e[91m"
 #define CSI_RESET "\e[0m"
 
-void scrap_log(int log_level, const char *text, va_list args) {
+void scrap_log(int log_level, const char *text, ...) {
+    va_list va;
+    va_start(va, text);
+    scrap_log_va(log_level, text, va);
+    va_end(va);
+}
+
+void scrap_log_va(int log_level, const char *text, va_list args) {
     switch (log_level) {
     case LOG_TRACE:
         printf(CSI_DARK_GRAY "[TRACE] ");

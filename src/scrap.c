@@ -126,7 +126,7 @@ const char* get_shared_dir_path(void) {
     snprintf(out_path, SHARED_DIR_BUF_LEN, "%s", GetApplicationDirectory());
 
 end:
-    TraceLog(LOG_INFO, "Using \"%s\" as shared directory path", out_path);
+    scrap_log(LOG_INFO, "Using \"%s\" as shared directory path", out_path);
     return out_path;
 }
 
@@ -147,7 +147,7 @@ const char* get_locale_path(void) {
     }
 
 end:
-    TraceLog(LOG_INFO, "Using \"%s\" as locale directory path", out_path);
+    scrap_log(LOG_INFO, "Using \"%s\" as locale directory path", out_path);
     return out_path;
 }
 
@@ -273,7 +273,7 @@ Image setup(void) {
     gui_set_measure_text_func(gui, scrap_gui_measure_text);
     gui_set_measure_image_func(gui, scrap_gui_measure_image);
     gui_update_window_size(gui, GetScreenWidth(), GetScreenHeight());
-    TraceLog(LOG_INFO, "Allocated %.2f KiB for gui", (float)sizeof(Gui) / 1024.0f);
+    scrap_log(LOG_INFO, "Allocated %.2f KiB for gui", (float)sizeof(Gui) / 1024.0f);
     init_gui_window();
 
     editor.blockchain_render_layer_widths = vector_create();
@@ -310,7 +310,7 @@ void cleanup(void) {
 
 // Main function: Initializes configurations, sets up window, processes input, renders GUI, and cleans up resources on exit
 int main(void) {
-    SetTraceLogCallback(scrap_log);
+    SetTraceLogCallback(scrap_log_va);
     config_new(&config);
     config_new(&window_config);
     project_config_new(&project_config);

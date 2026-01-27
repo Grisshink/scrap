@@ -18,7 +18,6 @@
 //    misrepresented as being the original software.
 // 3. This notice may not be removed or altered from any source distribution.
 
-#include "raylib.h"
 #include "scrap.h"
 #include "../external/tinyfiledialogs.h"
 
@@ -667,7 +666,7 @@ void draw_project_settings_window(void) {
 
 void draw_about_window(void) {
     if (!about_text_split) {
-        TraceLog(LOG_INFO, "Split about text");
+        scrap_log(LOG_INFO, "Split about text");
         about_text_split = vector_create();
         const char* about_text = gettext("Scrap is a project that allows anyone to build\n"
                                          "software using simple, block based interface.");

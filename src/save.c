@@ -250,7 +250,7 @@ PanelTree* load_panel_config(char** config) {
         return panel_new(PANEL_BLOCK_CATEGORIES);
     }
 
-    TraceLog(LOG_ERROR, "Unknown panel type: %s", name);
+    scrap_log(LOG_ERROR, "Unknown panel type: %s", name);
     return NULL;
 }
 
@@ -294,7 +294,7 @@ void add_missing_panels(void) {
 
     PanelTree* palette = find_panel_in_all_tabs(PANEL_BLOCK_PALETTE);
     if (!palette) {
-        TraceLog(LOG_ERROR, "Failed to insert missing panel PANEL_BLOCK_CATEGORIES: panel PANEL_BLOCK_PALETTE is missing");
+        scrap_log(LOG_ERROR, "Failed to insert missing panel PANEL_BLOCK_CATEGORIES: panel PANEL_BLOCK_PALETTE is missing");
         return;
     }
     panel_split(palette, SPLIT_SIDE_TOP, PANEL_BLOCK_CATEGORIES, 0.35);
@@ -358,7 +358,7 @@ void load_config(Config* config) {
             Language lang = code_to_language(value);
             config->language = lang;
         } else {
-            TraceLog(LOG_WARNING, "Unknown key: %s", field);
+            scrap_log(LOG_WARNING, "Unknown key: %s", field);
         }
     }
 
@@ -373,7 +373,7 @@ void load_config(Config* config) {
 
 void* save_read_item(SaveData* save, size_t data_size) {
     if (save->size + data_size > save->capacity) {
-        TraceLog(LOG_ERROR, "[LOAD] Unexpected EOF reading data");
+        scrap_log(LOG_ERROR, "[LOAD] Unexpected EOF reading data");
         return NULL;
     }
     void* ptr = save->ptr + save->size;
@@ -590,7 +590,7 @@ void save_code(const char* file_path, ProjectConfig* config, BlockChain* code) {
     for (int i = 0; i < chains_count; i++) save_blockchain(&save, &code[i]);
 
     SaveFileData(file_path, save.ptr, save.size);
-    TraceLog(LOG_INFO, "%zu bytes written into %s", save.size, file_path);
+    scrap_log(LOG_INFO, "%zu bytes written into %s", save.size, file_path);
 
     vector_free(save_block_ids);
     vector_free(blockdefs);
@@ -639,7 +639,7 @@ bool load_blockdef_input(SaveData* save, Input* input) {
         vector_add(&save_blockdefs, input->data.arg.blockdef);
         break;
     default:
-        TraceLog(LOG_ERROR, "[LOAD] Unimplemented input load");
+        scrap_log(LOG_ERROR, "[LOAD] Unimplemented input load");
         return false;
         break;
     }
@@ -719,7 +719,7 @@ bool load_block_argument(SaveData* save, Argument* arg) {
     case ARGUMENT_BLOCKDEF:
         if (!save_read_varint(save, &blockdef_id)) return false;
         if (blockdef_id >= vector_size(save_block_ids)) {
-            TraceLog(LOG_ERROR, "[LOAD] Out of bounds read of save_block_id at %u", blockdef_id);
+            scrap_log(LOG_ERROR, "[LOAD] Out of bounds read of save_block_id at %u", blockdef_id);
             return false;
         }
 
@@ -730,7 +730,7 @@ bool load_block_argument(SaveData* save, Argument* arg) {
         arg->data.blockdef->ref_count++;
         break;
     default:
-        TraceLog(LOG_ERROR, "[LOAD] Unimplemented argument load");
+        scrap_log(LOG_ERROR, "[LOAD] Unimplemented argument load");
         return false;
     }
     return true;
@@ -746,7 +746,7 @@ bool load_block(SaveData* save, Block* block) {
     if (!blockdef) {
         blockdef = find_blockdef(vm.blockdefs, save_block_ids[block_id]);
         if (!blockdef) {
-            TraceLog(LOG_WARNING, "[LOAD] No blockdef matched id: %s", save_block_ids[block_id]);
+            scrap_log(LOG_WARNING, "[LOAD] No blockdef matched id: %s", save_block_ids[block_id]);
             unknown_blockdef = true;
 
             blockdef = blockdef_new(save_block_ids[block_id], BLOCKTYPE_NORMAL, (BlockdefColor) { 0x66, 0x66, 0x66, 0xff }, NULL);
@@ -826,7 +826,7 @@ BlockChain* load_code(const char* file_path, ProjectConfig* out_config) {
     int save_size;
     void* file_data = LoadFileData(file_path, &save_size);
     if (!file_data) goto load_fail;
-    TraceLog(LOG_INFO, "%zu bytes read from %s", save_size, file_path);
+    scrap_log(LOG_INFO, "%zu bytes read from %s", save_size, file_path);
 
     SaveData save;
     save.ptr = file_data;
@@ -835,7 +835,7 @@ BlockChain* load_code(const char* file_path, ProjectConfig* out_config) {
 
     if (!save_read_varint(&save, &ver)) goto load_fail;
     if (ver < 1 || ver > SCRAP_SAVE_VERSION) {
-        TraceLog(LOG_ERROR, "[LOAD] Unsupported version %d. Current scrap build expects save versions from 1 to " STR(SCRAP_SAVE_VERSION), ver);
+        scrap_log(LOG_ERROR, "[LOAD] Unsupported version %d. Current scrap build expects save versions from 1 to " STR(SCRAP_SAVE_VERSION), ver);
         goto load_fail;
     }
 
@@ -845,7 +845,7 @@ BlockChain* load_code(const char* file_path, ProjectConfig* out_config) {
     if (ident_len == 0) goto load_fail;
 
     if (ident[ident_len - 1] != 0 || ident_len != sizeof(scrap_ident) || strncmp(ident, scrap_ident, sizeof(scrap_ident))) {
-        TraceLog(LOG_ERROR, "[LOAD] Not valid scrap save");
+        scrap_log(LOG_ERROR, "[LOAD] Not valid scrap save");
         goto load_fail;
     }
 

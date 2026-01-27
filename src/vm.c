@@ -45,7 +45,7 @@ Block block_new_ms(Blockdef* blockdef) {
 }
 
 size_t blockdef_register(Vm* vm, Blockdef* blockdef) {
-    if (!blockdef->func) TraceLog(LOG_WARNING, "[VM] Block \"%s\" has not defined its implementation!", blockdef->id);
+    if (!blockdef->func) scrap_log(LOG_WARNING, "[VM] Block \"%s\" has not defined its implementation!", blockdef->id);
 
     vector_add(&vm->blockdefs, blockdef);
     blockdef->ref_count++;
@@ -207,7 +207,7 @@ bool vm_start(CompilerMode mode) {
 
 bool vm_stop(void) {
     if (!thread_is_running(&vm.thread)) return false;
-    TraceLog(LOG_INFO, "STOP");
+    scrap_log(LOG_INFO, "STOP");
     thread_stop(&vm.thread);
     ui.render_surface_needs_redraw = true;
     return true;

@@ -115,7 +115,7 @@ void exec_set_error(Exec* exec, Block* block, const char* fmt, ...) {
     va_start(va, fmt);
     vsnprintf(exec->current_error, MAX_ERROR_LEN, fmt, va);
     va_end(va);
-    TraceLog(LOG_ERROR, "[EXEC] %s", exec->current_error);
+    scrap_log(LOG_ERROR, "[EXEC] %s", exec->current_error);
 }
 
 static bool control_stack_push(Exec* exec, Block* block) {
@@ -229,7 +229,7 @@ static bool evaluate_block(Exec* exec, Block* block, FuncArg* return_val, Contro
                 break;
             case ARGUMENT_BLOCK:
                 if (!evaluate_block(exec, &block->arguments[i].data.block, &block_return, CONTROL_STATE_NORMAL, DATA_NOTHING)) {
-                    TraceLog(LOG_ERROR, "[LLVM] While compiling block id: \"%s\" (argument #%d) (at block %p)", block->blockdef->id, i + 1, block);
+                    scrap_log(LOG_ERROR, "[LLVM] While compiling block id: \"%s\" (argument #%d) (at block %p)", block->blockdef->id, i + 1, block);
                     vector_free(args);
                     return false;
                 }
@@ -255,7 +255,7 @@ static bool evaluate_block(Exec* exec, Block* block, FuncArg* return_val, Contro
 
     if (!compile_block(exec, block, vector_size(args), args, return_val, control_state)) {
         vector_free(args);
-        TraceLog(LOG_ERROR, "[LLVM] Got error while compiling block id: \"%s\" (at block %p)", block->blockdef->id, block);
+        scrap_log(LOG_ERROR, "[LLVM] Got error while compiling block id: \"%s\" (at block %p)", block->blockdef->id, block);
         return false;
     }
 
@@ -892,7 +892,7 @@ static bool build_program(Exec* exec) {
         return false;
     }
     LLVMDisposeTargetMachine(machine);
-    TraceLog(LOG_INFO, "Built object file successfully");
+    scrap_log(LOG_INFO, "Built object file successfully");
 
     char link_error[1024];
     char* command = vector_create();
@@ -909,11 +909,11 @@ static bool build_program(Exec* exec) {
 
     char* crt_begin_dir = find_crt_begin();
 
-    TraceLog(LOG_INFO, "Crt dir: %s", crt_dir);
+    scrap_log(LOG_INFO, "Crt dir: %s", crt_dir);
     if (crt_begin_dir) {
-        TraceLog(LOG_INFO, "Crtbegin dir: %s", crt_begin_dir);
+        scrap_log(LOG_INFO, "Crtbegin dir: %s", crt_begin_dir);
     } else {
-        TraceLog(LOG_WARNING, "Crtbegin dir is not found!");
+        scrap_log(LOG_WARNING, "Crtbegin dir is not found!");
     }
 
     vector_append(&command, TextFormat("%s ", project_config.linker_name));
@@ -927,12 +927,12 @@ static bool build_program(Exec* exec) {
     vector_append(&command, "output.o ");
     vector_append(&command, TextFormat("-L. -L%s -lscrapstd -L/usr/lib -L/lib -L/usr/local/lib -lm -lc", GetApplicationDirectory()));
 
-    TraceLog(LOG_INFO, "Full command: \"%s\"", command);
+    scrap_log(LOG_INFO, "Full command: \"%s\"", command);
 #endif
     
     bool res = spawn_process(command, link_error, 1024);
     if (res) {
-        TraceLog(LOG_INFO, "Linked successfully");
+        scrap_log(LOG_INFO, "Linked successfully");
     } else {
         exec_set_error(exec, NULL, link_error);
     }

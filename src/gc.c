@@ -37,9 +37,9 @@
 
 #else
 
-#include "raylib.h"
+#include "util.h"
 #define EXIT longjmp(gc->run_jump_buf, 1)
-#define TRACE_LOG(loglevel, ...) TraceLog(loglevel, __VA_ARGS__)
+#define TRACE_LOG(loglevel, ...) scrap_log(loglevel, __VA_ARGS__)
 
 #endif // STANDALONE_STD
 

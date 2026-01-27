@@ -107,7 +107,7 @@ struct Exec {
 
 #define control_stack_push_data(data, type) do { \
     if (exec->control_stack_len + sizeof(type) > VM_CONTROL_STACK_SIZE) { \
-        TraceLog(LOG_ERROR, "[VM] Control stack overflow"); \
+        scrap_log(LOG_ERROR, "[VM] Control stack overflow"); \
         thread_exit(exec->thread, false); \
     } \
     *(type *)(exec->control_stack + exec->control_stack_len) = (data); \
@@ -116,7 +116,7 @@ struct Exec {
 
 #define control_stack_pop_data(data, type) do { \
     if (sizeof(type) > exec->control_stack_len) { \
-        TraceLog(LOG_ERROR, "[VM] Control stack underflow"); \
+        scrap_log(LOG_ERROR, "[VM] Control stack underflow"); \
         thread_exit(exec->thread, false); \
     } \
     exec->control_stack_len -= sizeof(type); \

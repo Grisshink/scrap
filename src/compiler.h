@@ -36,7 +36,7 @@
 
 #define control_data_stack_push_data(data, type) \
     if (exec->control_data_stack_len + sizeof(type) > VM_CONTROL_DATA_STACK_SIZE) { \
-        TraceLog(LOG_ERROR, "[LLVM] Control stack overflow"); \
+        scrap_log(LOG_ERROR, "[LLVM] Control stack overflow"); \
         return false; \
     } \
     *(type *)(exec->control_data_stack + exec->control_data_stack_len) = (data); \
@@ -44,7 +44,7 @@
 
 #define control_data_stack_pop_data(data, type) \
     if (sizeof(type) > exec->control_data_stack_len) { \
-        TraceLog(LOG_ERROR, "[LLVM] Control stack underflow"); \
+        scrap_log(LOG_ERROR, "[LLVM] Control stack underflow"); \
         return false; \
     } \
     exec->control_data_stack_len -= sizeof(type); \

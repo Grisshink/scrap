@@ -127,7 +127,7 @@ void exec_set_error(Exec* exec, Block* block, const char* fmt, ...) {
     va_start(va, fmt);
     vsnprintf(exec->current_error, MAX_ERROR_LEN, fmt, va);
     va_end(va);
-    TraceLog(LOG_ERROR, "[EXEC] %s", exec->current_error);
+    scrap_log(LOG_ERROR, "[EXEC] %s", exec->current_error);
 }
 
 bool evaluate_argument(Exec* exec, Argument* arg, AnyValue* return_val) {
@@ -174,7 +174,7 @@ bool exec_block(Exec* exec, Block* block, AnyValue* block_return, ControlState c
         for (vec_size_t i = 0; i < vector_size(block->arguments); i++) {
             AnyValue arg;
             if (!evaluate_argument(exec, &block->arguments[i], &arg)) {
-                TraceLog(LOG_ERROR, "[VM] From block id: \"%s\" (at block %p)", block->blockdef->id, &block);
+                scrap_log(LOG_ERROR, "[VM] From block id: \"%s\" (at block %p)", block->blockdef->id, &block);
                 return false;
             }
             arg_stack_push_arg(exec, arg);
@@ -182,7 +182,7 @@ bool exec_block(Exec* exec, Block* block, AnyValue* block_return, ControlState c
     }
 
     if (!execute_block(exec, block, exec->arg_stack_len - stack_begin, exec->arg_stack + stack_begin, block_return, control_state)) {
-        TraceLog(LOG_ERROR, "[VM] Error from block id: \"%s\" (at block %p)", block->blockdef->id, &block);
+        scrap_log(LOG_ERROR, "[VM] Error from block id: \"%s\" (at block %p)", block->blockdef->id, &block);
         return false;
     }
 
@@ -281,7 +281,7 @@ void exec_set_skip_block(Exec* exec) {
 
 Variable* variable_stack_push_var(Exec* exec, const char* name, AnyValue arg) {
     if (exec->variable_stack_len >= VM_VARIABLE_STACK_SIZE) {
-        TraceLog(LOG_ERROR, "[VM] Variable stack overflow");
+        scrap_log(LOG_ERROR, "[VM] Variable stack overflow");
         thread_exit(exec->thread, false);
     }
     if (*name == 0) return NULL;
@@ -327,7 +327,7 @@ Variable* variable_stack_get_variable(Exec* exec, const char* name) {
 
 void chain_stack_push(Exec* exec, ChainStackData data) {
     if (exec->chain_stack_len >= VM_CHAIN_STACK_SIZE) {
-        TraceLog(LOG_ERROR, "[VM] Chain stack overflow");
+        scrap_log(LOG_ERROR, "[VM] Chain stack overflow");
         thread_exit(exec->thread, false);
     }
     exec->chain_stack[exec->chain_stack_len++] = data;
@@ -335,7 +335,7 @@ void chain_stack_push(Exec* exec, ChainStackData data) {
 
 void chain_stack_pop(Exec* exec) {
     if (exec->chain_stack_len == 0) {
-        TraceLog(LOG_ERROR, "[VM] Chain stack underflow");
+        scrap_log(LOG_ERROR, "[VM] Chain stack underflow");
         thread_exit(exec->thread, false);
     }
     exec->chain_stack_len--;
@@ -343,7 +343,7 @@ void chain_stack_pop(Exec* exec) {
 
 void arg_stack_push_arg(Exec* exec, AnyValue arg) {
     if (exec->arg_stack_len >= VM_ARG_STACK_SIZE) {
-        TraceLog(LOG_ERROR, "[VM] Arg stack overflow");
+        scrap_log(LOG_ERROR, "[VM] Arg stack overflow");
         thread_exit(exec->thread, false);
     }
     exec->arg_stack[exec->arg_stack_len++] = arg;
@@ -351,7 +351,7 @@ void arg_stack_push_arg(Exec* exec, AnyValue arg) {
 
 void arg_stack_undo_args(Exec* exec, size_t count) {
     if (count > exec->arg_stack_len) {
-        TraceLog(LOG_ERROR, "[VM] Arg stack underflow");
+        scrap_log(LOG_ERROR, "[VM] Arg stack underflow");
         thread_exit(exec->thread, false);
     }
     exec->arg_stack_len -= count;

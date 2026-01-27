@@ -18,7 +18,6 @@
 //    misrepresented as being the original software.
 // 3. This notice may not be removed or altered from any source distribution.
 
-#include "raylib.h"
 #include "scrap.h"
 #include "vec.h"
 #include "term.h"
@@ -66,7 +65,7 @@ bool rl_vec_equal(Color lhs, Color rhs) {
 }
 
 void actionbar_show(const char* text) {
-    TraceLog(LOG_INFO, "[ACTION] %s", text);
+    scrap_log(LOG_INFO, "[ACTION] %s", text);
     strncpy(editor.actionbar.text, text, sizeof(editor.actionbar.text) - 1);
     editor.actionbar.show_time = 3.0;
 }
@@ -1574,7 +1573,7 @@ static void draw_dropdown(void) {
     ui.hover.button.handler = handle_dropdown_close;
 
     if (!ui.dropdown.element) {
-        TraceLog(LOG_WARNING, "[DROPDOWN] Anchor is not set or gone");
+        scrap_log(LOG_WARNING, "[DROPDOWN] Anchor is not set or gone");
         handle_dropdown_close();
         return;
     }
@@ -1739,7 +1738,7 @@ bool svg_load(const char* file_name, size_t width, size_t height, Image* out_ima
     // i am using nsvgParseFromFile() here instead
     NSVGimage* svg = nsvgParseFromFile(file_name, "px", 96.0);
     if (!svg) {
-        TraceLog(LOG_WARNING, "[SVG] Could not load \"%s\"", file_name);
+        scrap_log(LOG_WARNING, "[SVG] Could not load \"%s\"", file_name);
         return false;
     }
     unsigned char* image_data = malloc(width * height * 4);
