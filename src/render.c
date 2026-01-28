@@ -1163,9 +1163,6 @@ static void draw_color_picker(void) {
     *ui.dropdown.as.color_picker.edit_color = col;
 
     gui_element_begin(gui);
-        gui_set_floating(gui);
-        gui_set_parent_anchor(gui, ui.dropdown.element);
-        gui_set_position(gui, 0, ui.dropdown.element->h);
         gui_set_rect(gui, (GuiColor) { 0x20, 0x20, 0x20, 0xff });
         gui_on_hover(gui, color_picker_on_hover);
 
@@ -1535,12 +1532,9 @@ static void draw_list_dropdown(void) {
     const int max_list_size = 10;
 
     gui_element_begin(gui);
-        gui_set_floating(gui);
         gui_set_rect(gui, (GuiColor) { 0x40, 0x40, 0x40, 0xff });
         gui_set_gap(gui, 2);
         gui_set_padding(gui, 2, 2);
-        gui_set_parent_anchor(gui, ui.dropdown.element);
-        gui_set_position(gui, 0, ui.dropdown.element->h);
         if (ui.dropdown.as.list.len > max_list_size) {
             gui_set_scissor(gui);
             gui_set_fixed(gui, ui.dropdown.element->w + 5, max_list_size * (config.ui_size + 2) + 4);
@@ -1568,6 +1562,16 @@ static void draw_list_dropdown(void) {
     gui_element_end(gui);
 }
 
+static void dropdown_on_render(GuiElement* el) {
+    int off_x = MAX(el->abs_x + el->w - gui->win_w, 0);
+    int off_y = MAX(el->abs_y + el->h - gui->win_h, 0);
+    el->x -= off_x;
+    el->abs_x -= off_x;
+
+    el->y -= off_y;
+    el->abs_y -= off_y;
+}
+
 static void draw_dropdown(void) {
     if (!ui.dropdown.shown) return;
     ui.hover.button.handler = handle_dropdown_close;
@@ -1578,15 +1582,24 @@ static void draw_dropdown(void) {
         return;
     }
 
-    switch (ui.dropdown.type) {
-    case DROPDOWN_COLOR_PICKER:
-        draw_color_picker();
-        return;
-    case DROPDOWN_LIST:
-        draw_list_dropdown();
-        return;
-    }
-    assert(false && "Unhandled dropdown type");
+    gui_element_begin(gui);
+        gui_set_floating(gui);
+        gui_set_parent_anchor(gui, ui.dropdown.element);
+        gui_set_position(gui, 0, ui.dropdown.element->h);
+        gui_on_render(gui, dropdown_on_render);
+
+        switch (ui.dropdown.type) {
+        case DROPDOWN_COLOR_PICKER:
+            draw_color_picker();
+            break;
+        case DROPDOWN_LIST:
+            draw_list_dropdown();
+            break;
+        default:
+            assert(false && "Unhandled dropdown type");
+            break;
+        }
+    gui_element_end(gui);
 }
 
 static void search_on_hover(GuiElement* el) {
