@@ -350,6 +350,7 @@ typedef struct {
     int blockchain_select_counter;
 
     char debug_buffer[DEBUG_BUFFER_LINES][DEBUG_BUFFER_LINE_SIZE];
+    bool show_debug;
 } Editor;
 
 typedef struct {

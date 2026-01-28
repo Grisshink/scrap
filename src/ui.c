@@ -190,6 +190,7 @@ static GuiMeasurement measure_slice(Font font, const char *text, unsigned int te
     int index = 0; // Index position in sprite font
 
     for (unsigned int i = 0; i < text_size;) {
+        if (!text[i]) break;
         int next = 0;
         codepoint = GetCodepointNext(&text[i], &next);
         index = search_glyph(codepoint);

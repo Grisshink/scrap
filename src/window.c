@@ -137,6 +137,12 @@ static bool settings_on_apply_button_click(void) {
     return true;
 }
 
+static bool settings_on_toggle_button_click(void) {
+    bool* toggle_value = ui.hover.button.data;
+    *toggle_value = !*toggle_value;
+    return true;
+}
+
 static bool project_settings_on_build_button_click(void) {
 #ifdef USE_INTERPRETER
     vm_start();
@@ -528,6 +534,32 @@ static void draw_button(const char* label, Texture2D* icon, ButtonClickHandler h
     gui_element_end(gui);
 }
 
+static void toggle_on_hover(GuiElement* el) {
+    el->color = (GuiColor) { 0x40, 0x40, 0x40, 0xff };
+    ui.hover.button.handler = settings_on_toggle_button_click;
+    ui.hover.button.data = el->custom_data;
+}
+
+static void draw_toggle(bool* value) {
+    gui_element_begin(gui);
+        gui_set_border(gui, (GuiColor) { 0x30, 0x30, 0x30, 0xff }, 2);
+        gui_element_begin(gui);
+            gui_set_fixed(gui, config.ui_size * 2, config.ui_size);
+            gui_set_rect(gui, (GuiColor) { 0x20, 0x20, 0x20, 0xff });
+            gui_set_direction(gui, DIRECTION_HORIZONTAL);
+            gui_on_hover(gui, toggle_on_hover);
+            gui_set_custom_data(gui, value);
+
+            if (*value) gui_spacer(gui, config.ui_size, 0);
+
+            gui_element_begin(gui);
+                gui_set_fixed(gui, config.ui_size, config.ui_size);
+                gui_set_rect(gui, *value ? (GuiColor) { 0x30, 0xff, 0x30, 0xff } : (GuiColor) { 0xff, 0x30, 0x30, 0xff });
+            gui_element_end(gui);
+        gui_element_end(gui);
+    gui_element_end(gui);
+}
+
 void handle_window(void) {
     if (window.is_hiding) {
         window.shown = false;
@@ -599,6 +631,18 @@ void draw_settings_window(void) {
                 draw_button(gettext("Edit"), &assets.textures.button_edit, settings_on_panel_editor_button_click, NULL);
             gui_element_end(gui);
         end_setting();
+
+#ifdef DEBUG
+        begin_setting(gettext("Show debug info"), false);
+            gui_element_begin(gui);
+                gui_set_grow(gui, DIRECTION_HORIZONTAL);
+                gui_set_grow(gui, DIRECTION_VERTICAL);
+                gui_set_direction(gui, DIRECTION_HORIZONTAL);
+
+                draw_toggle(&editor.show_debug);
+            gui_element_end(gui);
+        end_setting();
+#endif
 
         gui_grow(gui, DIRECTION_VERTICAL);
 

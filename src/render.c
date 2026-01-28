@@ -1935,6 +1935,7 @@ static void draw_text_slice(Font font, const char *text, float pos_x, float pos_
     float scale_factor = font_size / font.baseSize;
 
     for (unsigned int i = 0; i < text_size;) {
+        if (!text[i]) break;
         int next = 0;
         codepoint = GetCodepointNext(&text[i], &next);
         index = search_glyph(codepoint);
@@ -1966,7 +1967,7 @@ static void scrap_gui_render(void) {
             switch (command->subtype) {
             case BORDER_NORMAL:
                 DrawRectangleLinesEx(
-                    (Rectangle) { command->pos_x, command->pos_y, command->width, command->height },
+                    (Rectangle) { floor(command->pos_x), floor(command->pos_y), command->width, command->height },
                     command->data.border_width,
                     CONVERT_COLOR(command->color, Color)
                 );
@@ -2080,7 +2081,16 @@ static void print_debug(int* num, char* fmt, ...) {
 
 static void write_debug_buffer(void) {
     int i = 0;
+    print_debug(&i, "Scrap v" SCRAP_VERSION);
+    print_debug(&i, "FPS: %d, Frame time: %.3f", GetFPS(), GetFrameTime());
+
 #ifdef DEBUG
+    if (!editor.show_debug) return;
+    print_debug(&i, "UI time: %.3f", ui.ui_time);
+    print_debug(&i, "Elements: %zu/%zu, Draw: %zu/%zu", gui->elements_arena_len, ELEMENT_STACK_SIZE, gui->command_list_len, COMMAND_STACK_SIZE);
+    print_debug(&i, " ");
+
+    print_debug(&i, "Button handler: %p", ui.hover.button.handler);
     print_debug(&i, "Block: %p, Parent: %p, Parent Arg: %p", ui.hover.editor.block, ui.hover.editor.block ? ui.hover.editor.block->parent : NULL, ui.hover.editor.parent_argument);
     print_debug(&i, "Argument: %p", ui.hover.editor.argument);
     print_debug(&i, "BlockChain: %p", ui.hover.editor.blockchain);
@@ -2091,20 +2101,12 @@ static void write_debug_buffer(void) {
     print_debug(&i, "Mouse: %p, Time: %.3f, Pos: (%d, %d), Click: (%d, %d)", editor.mouse_blockchain.blocks, ui.hover.time_at_last_pos, GetMouseX(), GetMouseY(), (int)ui.hover.mouse_click_pos.x, (int)ui.hover.mouse_click_pos.y);
     print_debug(&i, "Camera: (%.3f, %.3f), Click: (%.3f, %.3f)", editor.camera_pos.x, editor.camera_pos.y, editor.camera_click_pos.x, editor.camera_click_pos.y);
     print_debug(&i, "Drag cancelled: %d", ui.hover.drag_cancelled);
-    print_debug(&i, "Palette scroll: %d", editor.palette.scroll_amount);
     print_debug(&i, "Editor: %d, Editing: %p, Blockdef: %p, input: %zu", ui.hover.editor.part, ui.hover.editor.edit_blockdef, ui.hover.editor.blockdef, ui.hover.editor.blockdef_input);
-    print_debug(&i, "Elements: %zu/%zu, Draw: %zu/%zu", gui->elements_arena_len, ELEMENT_STACK_SIZE, gui->command_list_len, COMMAND_STACK_SIZE);
     print_debug(&i, "Slider: %p, min: %d, max: %d", ui.hover.hover_slider.value, ui.hover.hover_slider.min, ui.hover.hover_slider.max);
     print_debug(&i, "Input: %p, Select: %p, Pos: (%.3f, %.3f), ind: (%d, %d)", ui.hover.input_info.input, ui.hover.select_input, ui.hover.input_info.rel_pos.x, ui.hover.input_info.rel_pos.y, ui.hover.select_input_cursor, ui.hover.select_input_mark);
-    print_debug(&i, "UI time: %.3f", ui.ui_time);
-    print_debug(&i, "FPS: %d, Frame time: %.3f", GetFPS(), GetFrameTime());
     print_debug(&i, "Panel: %p, side: %d", ui.hover.panels.panel, ui.hover.panels.panel_side);
     print_debug(&i, "Part: %d, Select: %d", ui.dropdown.as.color_picker.hover_part, ui.dropdown.as.color_picker.select_part);
-    print_debug(&i, "Handler: %p", ui.hover.button.handler);
     print_debug(&i, "Anchor: %p, Ref: %p", ui.dropdown.element, ui.dropdown.ref_object);
-#else
-    print_debug(&i, "Scrap v" SCRAP_VERSION);
-    print_debug(&i, "FPS: %d, Frame time: %.3f", GetFPS(), GetFrameTime());
 #endif
 }
 
@@ -2115,6 +2117,7 @@ void scrap_gui_process_render(void) {
     ClearBackground(GetColor(0x202020ff));
     draw_dots();
 
+    for (int i = 0; i < DEBUG_BUFFER_LINES; i++) editor.debug_buffer[i][0] = 0;
     write_debug_buffer();
     scrap_gui_render();
 

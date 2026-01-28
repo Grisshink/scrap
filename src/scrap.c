@@ -248,6 +248,7 @@ Image setup(void) {
     vm = vm_new();
     register_blocks(&vm);
 
+    editor.show_debug = true;
     editor.mouse_blockchain = blockchain_new();
     editor.code = vector_create();
 
