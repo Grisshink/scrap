@@ -99,67 +99,6 @@ const char* gradient_shader_fragment =
     "    finalColor = mix(left, right, fragCoord.x);\n"
     "}";
 
-#define SHARED_DIR_BUF_LEN 512
-#define LOCALE_DIR_BUF_LEN 768
-
-const char* get_shared_dir_path(void) {
-    static char out_path[SHARED_DIR_BUF_LEN] = {0};
-    if (*out_path) return out_path;
-
-#ifndef _WIN32
-    snprintf(out_path, SHARED_DIR_BUF_LEN, "%sdata", GetApplicationDirectory());
-    if (DirectoryExists(out_path)) {
-        snprintf(out_path, SHARED_DIR_BUF_LEN, "%s", GetApplicationDirectory());
-        goto end;
-    }
-
-    snprintf(out_path, SHARED_DIR_BUF_LEN, "%s../share/scrap/", GetApplicationDirectory());
-    if (DirectoryExists(out_path)) goto end;
-
-    snprintf(out_path, SHARED_DIR_BUF_LEN, "/usr/share/scrap/");
-    if (DirectoryExists(out_path)) goto end;
-
-    snprintf(out_path, SHARED_DIR_BUF_LEN, "/usr/local/share/scrap/");
-    if (DirectoryExists(out_path)) goto end;
-#endif
-
-    snprintf(out_path, SHARED_DIR_BUF_LEN, "%s", GetApplicationDirectory());
-
-end:
-    scrap_log(LOG_INFO, "Using \"%s\" as shared directory path", out_path);
-    return out_path;
-}
-
-const char* get_locale_path(void) {
-    static char out_path[LOCALE_DIR_BUF_LEN] = {0};
-    if (*out_path) return out_path;
-
-#ifndef _WIN32
-    snprintf(out_path, LOCALE_DIR_BUF_LEN, "%slocale", GetApplicationDirectory());
-    if (DirectoryExists(out_path)) goto end;
-#endif
-
-    const char* shared_path = get_shared_dir_path();
-    if (!strcmp(shared_path, GetApplicationDirectory())) {
-        snprintf(out_path, LOCALE_DIR_BUF_LEN, "%slocale", shared_path);
-    } else {
-        snprintf(out_path, LOCALE_DIR_BUF_LEN, "%s../locale", shared_path);
-    }
-
-end:
-    scrap_log(LOG_INFO, "Using \"%s\" as locale directory path", out_path);
-    return out_path;
-}
-
-const char* into_shared_dir_path(const char* path) {
-    return TextFormat("%s%s", get_shared_dir_path(), path);
-}
-
-// Returns the absolute path to the font, converting the relative path to a path inside the data directory
-const char* get_font_path(char* font_path) {
-    return font_path[0] != '/' && font_path[1] != ':' ? into_shared_dir_path(font_path) : font_path;
-}
-
 Image setup(void) {
     SetExitKey(KEY_NULL);
 
@@ -213,27 +152,7 @@ Image setup(void) {
         UnloadImage(svg_img);
     }
 
-    int* codepoints = vector_create();
-    for (int i = 0; i < CODEPOINT_REGION_COUNT; i++) {
-        codepoint_start_ranges[i] = vector_size(codepoints);
-        for (int j = codepoint_regions[i][0]; j <= codepoint_regions[i][1]; j++) {
-            vector_add(&codepoints, j);
-        }
-    }
-    int codepoints_count = vector_size(codepoints);
-
-    assets.fonts.font_cond = LoadFontEx(get_font_path(config.font_path), config.ui_size, codepoints, codepoints_count);
-    assets.fonts.font_cond_shadow = LoadFontEx(get_font_path(config.font_path), BLOCK_TEXT_SIZE, codepoints, codepoints_count);
-    assets.fonts.font_eb = LoadFontEx(get_font_path(config.font_bold_path), config.ui_size * 0.8, codepoints, codepoints_count);
-    assets.fonts.font_mono = LoadFontEx(get_font_path(config.font_mono_path), config.ui_size, codepoints, codepoints_count);
-    vector_free(codepoints);
-
-    SetTextureFilter(assets.fonts.font_cond.texture, TEXTURE_FILTER_BILINEAR);
-    SetTextureFilter(assets.fonts.font_cond_shadow.texture, TEXTURE_FILTER_BILINEAR);
-    SetTextureFilter(assets.fonts.font_eb.texture, TEXTURE_FILTER_BILINEAR);
-    SetTextureFilter(assets.fonts.font_mono.texture, TEXTURE_FILTER_BILINEAR);
-
-    prerender_font_shadow(&assets.fonts.font_cond_shadow);
+    reload_fonts();
 
     assets.line_shader = LoadShaderFromMemory(line_shader_vertex, line_shader_fragment);
     ui.shader_time_loc = GetShaderLocation(assets.line_shader, "time");

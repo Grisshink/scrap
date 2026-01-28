@@ -26,10 +26,14 @@
 #include <assert.h>
 #include <stdio.h>
 #include <libintl.h>
+#include <math.h>
 
 #include "../external/cfgpath.h"
 
 #define STR(v) #v
+
+#define SHARED_DIR_BUF_LEN 512
+#define LOCALE_DIR_BUF_LEN 768
 
 typedef struct {
     void* ptr;
@@ -90,6 +94,95 @@ Language code_to_language(const char* code) {
     }
 }
 
+const char* get_shared_dir_path(void) {
+    static char out_path[SHARED_DIR_BUF_LEN] = {0};
+    if (*out_path) return out_path;
+
+#ifndef _WIN32
+    snprintf(out_path, SHARED_DIR_BUF_LEN, "%sdata", GetApplicationDirectory());
+    if (DirectoryExists(out_path)) {
+        snprintf(out_path, SHARED_DIR_BUF_LEN, "%s", GetApplicationDirectory());
+        goto end;
+    }
+
+    snprintf(out_path, SHARED_DIR_BUF_LEN, "%s../share/scrap/", GetApplicationDirectory());
+    if (DirectoryExists(out_path)) goto end;
+
+    snprintf(out_path, SHARED_DIR_BUF_LEN, "/usr/share/scrap/");
+    if (DirectoryExists(out_path)) goto end;
+
+    snprintf(out_path, SHARED_DIR_BUF_LEN, "/usr/local/share/scrap/");
+    if (DirectoryExists(out_path)) goto end;
+#endif
+
+    snprintf(out_path, SHARED_DIR_BUF_LEN, "%s", GetApplicationDirectory());
+
+end:
+    scrap_log(LOG_INFO, "Using \"%s\" as shared directory path", out_path);
+    return out_path;
+}
+
+const char* get_locale_path(void) {
+    static char out_path[LOCALE_DIR_BUF_LEN] = {0};
+    if (*out_path) return out_path;
+
+#ifndef _WIN32
+    snprintf(out_path, LOCALE_DIR_BUF_LEN, "%slocale", GetApplicationDirectory());
+    if (DirectoryExists(out_path)) goto end;
+#endif
+
+    const char* shared_path = get_shared_dir_path();
+    if (!strcmp(shared_path, GetApplicationDirectory())) {
+        snprintf(out_path, LOCALE_DIR_BUF_LEN, "%slocale", shared_path);
+    } else {
+        snprintf(out_path, LOCALE_DIR_BUF_LEN, "%s../locale", shared_path);
+    }
+
+end:
+    scrap_log(LOG_INFO, "Using \"%s\" as locale directory path", out_path);
+    return out_path;
+}
+
+const char* into_shared_dir_path(const char* path) {
+    return TextFormat("%s%s", get_shared_dir_path(), path);
+}
+
+// Returns the absolute path to the font, converting the relative path to a path inside the data directory
+const char* get_font_path(char* font_path) {
+    return font_path[0] != '/' && font_path[1] != ':' ? into_shared_dir_path(font_path) : font_path;
+}
+
+void reload_fonts(void) {
+    int* codepoints = vector_create();
+    for (int i = 0; i < CODEPOINT_REGION_COUNT; i++) {
+        codepoint_start_ranges[i] = vector_size(codepoints);
+        for (int j = codepoint_regions[i][0]; j <= codepoint_regions[i][1]; j++) {
+            vector_add(&codepoints, j);
+        }
+    }
+
+    int codepoints_count = vector_size(codepoints);
+    if (IsFontValid(assets.fonts.font_cond)) UnloadFont(assets.fonts.font_cond);
+    assets.fonts.font_cond = LoadFontEx(get_font_path(config.font_path), config.ui_size, codepoints, codepoints_count);
+    SetTextureFilter(assets.fonts.font_cond.texture, TEXTURE_FILTER_BILINEAR);
+
+    if (IsFontValid(assets.fonts.font_cond_shadow)) UnloadFont(assets.fonts.font_cond_shadow);
+    assets.fonts.font_cond_shadow = LoadFontEx(get_font_path(config.font_path), BLOCK_TEXT_SIZE, codepoints, codepoints_count);
+    SetTextureFilter(assets.fonts.font_cond_shadow.texture, TEXTURE_FILTER_BILINEAR);
+
+    if (IsFontValid(assets.fonts.font_eb)) UnloadFont(assets.fonts.font_eb);
+    assets.fonts.font_eb = LoadFontEx(get_font_path(config.font_bold_path), config.ui_size * 0.8, codepoints, codepoints_count);
+    SetTextureFilter(assets.fonts.font_eb.texture, TEXTURE_FILTER_BILINEAR);
+
+    if (IsFontValid(assets.fonts.font_mono)) UnloadFont(assets.fonts.font_mono);
+    assets.fonts.font_mono = LoadFontEx(get_font_path(config.font_mono_path), config.ui_size, codepoints, codepoints_count);
+    SetTextureFilter(assets.fonts.font_mono.texture, TEXTURE_FILTER_BILINEAR);
+
+    vector_free(codepoints);
+
+    prerender_font_shadow(&assets.fonts.font_cond_shadow);
+}
+
 void vector_set_string(char** vec, char* str) {
     vector_clear(*vec);
     for (char* i = str; *i; i++) vector_add(vec, *i);
@@ -146,6 +239,17 @@ void project_config_set_default(ProjectConfig* config) {
 void apply_config(Config* dst, Config* src) {
     dst->fps_limit = src->fps_limit; SetTargetFPS(dst->fps_limit);
     dst->block_size_threshold = src->block_size_threshold;
+    dst->ui_size = src->ui_size;
+
+    vector_free(dst->font_path);
+    vector_free(dst->font_bold_path);
+    vector_free(dst->font_mono_path);
+
+    dst->font_path = vector_copy(src->font_path);
+    dst->font_bold_path = vector_copy(src->font_bold_path);
+    dst->font_mono_path = vector_copy(src->font_mono_path);
+
+    reload_fonts();
 }
 
 void save_panel_config(char* file_str, int* cursor, PanelTree* panel) {

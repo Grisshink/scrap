@@ -488,6 +488,12 @@ void project_config_set_default(ProjectConfig* config);
 const char* language_to_code(Language lang);
 Language code_to_language(const char* code);
 
+const char* get_locale_path(void);
+const char* get_shared_dir_path(void);
+const char* into_shared_dir_path(const char* path);
+
+void reload_fonts(void);
+
 // window.c
 void init_gui_window(void);
 void gui_window_show(WindowGuiRenderFunc func);

@@ -602,7 +602,7 @@ void draw_settings_window(void) {
             draw_dropdown_input((int*)&window_config.language, language_list, ARRLEN(language_list));
         end_setting();
 
-        begin_setting(gettext("UI size"), true);
+        begin_setting(gettext("UI size"), false);
             draw_slider(8, 64, &window_config.ui_size);
         end_setting();
 
@@ -610,15 +610,15 @@ void draw_settings_window(void) {
             draw_slider(0, 240, &window_config.fps_limit);
         end_setting();
 
-        begin_setting(gettext("Font path"), true);
+        begin_setting(gettext("Font path"), false);
             draw_text_input(&window_config.font_path, gettext("path"), &font_path_scroll, true, true);
         end_setting();
 
-        begin_setting(gettext("Bold font path"), true);
+        begin_setting(gettext("Bold font path"), false);
             draw_text_input(&window_config.font_bold_path, gettext("path"), &font_bold_path_scroll, true, true);
         end_setting();
 
-        begin_setting(gettext("Monospaced font path"), true);
+        begin_setting(gettext("Monospaced font path"), false);
             draw_text_input(&window_config.font_mono_path, gettext("path"), &font_mono_path_scroll, true, true);
         end_setting();
 
