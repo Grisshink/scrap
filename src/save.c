@@ -209,6 +209,7 @@ void config_copy(Config* dst, Config* src) {
     dst->font_path = vector_copy(src->font_path);
     dst->font_bold_path = vector_copy(src->font_bold_path);
     dst->font_mono_path = vector_copy(src->font_mono_path);
+    dst->show_blockchain_previews = src->show_blockchain_previews;
 }
 
 void set_default_config(Config* config) {
@@ -219,6 +220,7 @@ void set_default_config(Config* config) {
     vector_set_string(&config->font_path, DATA_PATH "nk57-cond.otf");
     vector_set_string(&config->font_bold_path, DATA_PATH "nk57-eb.otf");
     vector_set_string(&config->font_mono_path, DATA_PATH "nk57.otf");
+    config->show_blockchain_previews = true;
 }
 
 void project_config_new(ProjectConfig* config) {
@@ -254,6 +256,8 @@ void apply_config(Config* dst, Config* src) {
     dst->font_mono_path = vector_copy(src->font_mono_path);
 
     reload_fonts();
+
+    dst->show_blockchain_previews = src->show_blockchain_previews;
 }
 
 void save_panel_config(char* file_str, int* cursor, PanelTree* panel) {
@@ -374,6 +378,7 @@ void save_config(Config* config) {
     cursor += sprintf(file_str + cursor, "FONT_PATH=%s\n", config->font_path);
     cursor += sprintf(file_str + cursor, "FONT_BOLD_PATH=%s\n", config->font_bold_path);
     cursor += sprintf(file_str + cursor, "FONT_MONO_PATH=%s\n", config->font_mono_path);
+    cursor += sprintf(file_str + cursor, "SHOW_BLOCKCHAIN_PREVIEWS=%u\n", config->show_blockchain_previews);
     for (size_t i = 0; i < vector_size(editor.tabs); i++) {
         cursor += sprintf(file_str + cursor, "CONFIG_TAB_%s=", editor.tabs[i].name);
         save_panel_config(file_str, &cursor, editor.tabs[i].root_panel);
@@ -459,6 +464,8 @@ void load_config(Config* config) {
             vector_set_string(&config->font_bold_path, value);
         } else if (!strcmp(field, "FONT_MONO_PATH")) {
             vector_set_string(&config->font_mono_path, value);
+        } else if (!strcmp(field, "SHOW_BLOCKCHAIN_PREVIEWS")) {
+            config->show_blockchain_previews = atoi(value) != 0;
         } else if (!strncmp(field, "CONFIG_TAB_", sizeof("CONFIG_TAB_") - 1)) {
             char* panel_value = value;
             tab_new(field + sizeof("CONFIG_TAB_") - 1, load_panel_config(&panel_value));

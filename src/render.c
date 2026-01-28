@@ -1547,7 +1547,7 @@ static void draw_code(void) {
             gui_set_floating(gui);
             gui_set_position(gui, chain_pos.x, chain_pos.y);
 
-            draw_blockchain(&editor.code[i], false, true, true);
+            draw_blockchain(&editor.code[i], false, config.show_blockchain_previews, true);
         gui_element_end(gui);
         editor.code[i].width = el->w;
         editor.code[i].height = el->h;

@@ -57,6 +57,7 @@ typedef struct {
     char* font_path;
     char* font_bold_path;
     char* font_mono_path;
+    bool show_blockchain_previews;
 } Config;
 
 typedef struct {

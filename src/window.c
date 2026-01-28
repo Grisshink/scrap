@@ -632,6 +632,16 @@ void draw_settings_window(void) {
             gui_element_end(gui);
         end_setting();
 
+        begin_setting(gettext("Show block previews"), false);
+            gui_element_begin(gui);
+                gui_set_grow(gui, DIRECTION_HORIZONTAL);
+                gui_set_grow(gui, DIRECTION_VERTICAL);
+                gui_set_direction(gui, DIRECTION_HORIZONTAL);
+
+                draw_toggle(&window_config.show_blockchain_previews);
+            gui_element_end(gui);
+        end_setting();
+
 #ifdef DEBUG
         begin_setting(gettext("Show debug info"), false);
             gui_element_begin(gui);
