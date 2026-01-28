@@ -887,6 +887,8 @@ static bool handle_code_editor_click(bool mouse_empty) {
             scrap_log(LOG_INFO, "Put block");
             editor.mouse_blockchain.x += editor.camera_pos.x - ui.hover.panels.panel_size.x;
             editor.mouse_blockchain.y += editor.camera_pos.y - ui.hover.panels.panel_size.y;
+            editor.mouse_blockchain.x /= config.ui_size / 32.0;
+            editor.mouse_blockchain.y /= config.ui_size / 32.0;
             vector_add(&editor.code, editor.mouse_blockchain);
             editor.mouse_blockchain = blockchain_new();
             ui.hover.editor.select_blockchain = &editor.code[vector_size(editor.code) - 1];

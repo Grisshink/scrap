@@ -1534,8 +1534,8 @@ static void draw_panel(PanelTree* panel) {
 static void draw_code(void) {
     for (size_t i = 0; i < vector_size(editor.code); i++) {
         Vector2 chain_pos = (Vector2) {
-            editor.code[i].x - editor.camera_pos.x,
-            editor.code[i].y - editor.camera_pos.y,
+            editor.code[i].x * config.ui_size / 32.0 - editor.camera_pos.x,
+            editor.code[i].y * config.ui_size / 32.0 - editor.camera_pos.y,
         };
         Rectangle code_size = ui.hover.panels.code_panel_bounds;
         if (&editor.code[i] != ui.hover.editor.select_blockchain) {
