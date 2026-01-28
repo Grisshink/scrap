@@ -597,7 +597,7 @@ void draw_settings_window(void) {
     static int font_bold_path_scroll = 0;
     static int font_mono_path_scroll = 0;
 
-    begin_window(gettext("Settings"), &assets.textures.icon_settings, MIN(600, gui->win_w - config.ui_size), 0, window.animation_ease);
+    begin_window(gettext("Settings"), &assets.textures.icon_settings, MIN(600 * config.ui_size / 32.0, gui->win_w - config.ui_size), 0, window.animation_ease);
         begin_setting(gettext("Language"), true);
             draw_dropdown_input((int*)&window_config.language, language_list, ARRLEN(language_list));
         end_setting();
@@ -685,7 +685,7 @@ void draw_project_settings_window(void) {
     static int executable_name_scroll = 0;
     static int linker_name_scroll = 0;
 
-    begin_window(gettext("Build settings"), &assets.textures.button_build, MIN(600, gui->win_w - config.ui_size), 0, window.animation_ease);
+    begin_window(gettext("Build settings"), &assets.textures.button_build, MIN(600 * config.ui_size / 32.0, gui->win_w - config.ui_size), 0, window.animation_ease);
         begin_setting(gettext("Executable name"), false);
             draw_text_input(&project_config.executable_name, gettext("name"), &executable_name_scroll, true, false);
         end_setting();
