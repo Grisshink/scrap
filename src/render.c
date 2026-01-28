@@ -251,6 +251,42 @@ void input_on_hover(GuiElement* el) {
     };
 }
 
+static const int input_cursor_scrolloff = 5;
+
+void input_selection_on_render(GuiElement* el) {
+    if (!el->parent) return;
+    if (!el->parent->scroll_value) return;
+
+    int cursor_pos = ui.hover.select_input_cursor > ui.hover.select_input_mark ? el->x + el->w : el->x;
+
+    int right_off_x = cursor_pos + input_cursor_scrolloff - el->parent->w;
+    int left_off_x  = -cursor_pos + input_cursor_scrolloff;
+
+    if (left_off_x > 0) {
+        *el->parent->scroll_value += left_off_x;
+        ui.render_surface_redraw_next = true;
+    } else if (right_off_x > 0) {
+        *el->parent->scroll_value -= right_off_x;
+        ui.render_surface_redraw_next = true;
+    }
+}
+
+void input_cursor_on_render(GuiElement* el) {
+    if (!el->parent) return;
+    if (!el->parent->scroll_value) return;
+
+    int right_off_x = el->x + el->w + input_cursor_scrolloff - el->parent->w;
+    int left_off_x  = -el->x + input_cursor_scrolloff;
+
+    if (left_off_x > 0) {
+        *el->parent->scroll_value += left_off_x;
+        ui.render_surface_redraw_next = true;
+    } else if (right_off_x > 0) {
+        *el->parent->scroll_value -= right_off_x;
+        ui.render_surface_redraw_next = true;
+    }
+}
+
 void draw_input_text(Font* font, char** input, const char* hint, unsigned short font_size, GuiColor font_color) {
     if (ui.hover.select_input == input) {
         if (ui.hover.select_input_cursor == ui.hover.select_input_mark) ui.hover.select_input_mark = -1;
@@ -260,6 +296,7 @@ void draw_input_text(Font* font, char** input, const char* hint, unsigned short 
             gui_element_begin(gui);
                 gui_set_rect(gui, font_color);
                 gui_set_min_size(gui, BLOCK_OUTLINE_SIZE, BLOCK_TEXT_SIZE);
+                gui_on_render(gui, input_cursor_on_render);
             gui_element_end(gui);
 
             gui_text(gui, font, *input + ui.hover.select_input_cursor, font_size, font_color);
@@ -271,6 +308,7 @@ void draw_input_text(Font* font, char** input, const char* hint, unsigned short 
             gui_element_begin(gui);
                 gui_set_rect(gui, (GuiColor) TEXT_SELECTION_COLOR);
                 gui_text_slice(gui, font, *input + select_start, select_end - select_start, font_size, font_color);
+                gui_on_render(gui, input_selection_on_render);
             gui_element_end(gui);
 
             gui_text(gui, font, *input + select_end, font_size, font_color);

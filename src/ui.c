@@ -1530,6 +1530,11 @@ void scrap_gui_process_ui(void) {
 
     if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT) || IsMouseButtonReleased(MOUSE_BUTTON_MIDDLE)) ui.render_surface_needs_redraw = true;
 
+    if (ui.render_surface_redraw_next) {
+        ui.render_surface_needs_redraw = true;
+        ui.render_surface_redraw_next = false;
+    }
+
     handle_window();
 
     if (ui.render_surface_needs_redraw) {

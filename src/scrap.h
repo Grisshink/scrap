@@ -357,6 +357,7 @@ typedef struct {
 
     RenderTexture2D render_surface;
     bool render_surface_needs_redraw;
+    bool render_surface_redraw_next;
 
     int shader_time_loc;
     float shader_time;
