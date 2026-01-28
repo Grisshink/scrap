@@ -40,10 +40,18 @@ typedef struct {
     size_t cap;
 } String;
 
+typedef double (*MathFunc)(double);
+
 char* block_math_list[MATH_LIST_LEN] = {
     "sqrt", "round", "floor", "ceil",
     "sin", "cos", "tan",
     "asin", "acos", "atan",
+};
+
+static MathFunc block_math_func_list[MATH_LIST_LEN] = {
+    sqrt, round, floor, ceil,
+    sin, cos, tan,
+    asin, acos, atan,
 };
 
 char** math_list_access(Block* block, size_t* list_len) {
@@ -863,31 +871,14 @@ bool block_math(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* re
         return false;
     }
 
-    if (!strcmp(argv[0].data.literal_val, "sin")) {
-        *return_val = DATA_FLOAT(sin(std_float_from_any(&argv[1])));
-    } else if (!strcmp(argv[0].data.literal_val, "cos")) {
-        *return_val = DATA_FLOAT(cos(std_float_from_any(&argv[1])));
-    } else if (!strcmp(argv[0].data.literal_val, "tan")) {
-        *return_val = DATA_FLOAT(tan(std_float_from_any(&argv[1])));
-    } else if (!strcmp(argv[0].data.literal_val, "asin")) {
-        *return_val = DATA_FLOAT(asin(std_float_from_any(&argv[1])));
-    } else if (!strcmp(argv[0].data.literal_val, "acos")) {
-        *return_val = DATA_FLOAT(acos(std_float_from_any(&argv[1])));
-    } else if (!strcmp(argv[0].data.literal_val, "atan")) {
-        *return_val = DATA_FLOAT(atan(std_float_from_any(&argv[1])));
-    } else if (!strcmp(argv[0].data.literal_val, "sqrt")) {
-        *return_val = DATA_FLOAT(sqrt(std_float_from_any(&argv[1])));
-    } else if (!strcmp(argv[0].data.literal_val, "round")) {
-        *return_val = DATA_FLOAT(round(std_float_from_any(&argv[1])));
-    } else if (!strcmp(argv[0].data.literal_val, "floor")) {
-        *return_val = DATA_FLOAT(floor(std_float_from_any(&argv[1])));
-    } else if (!strcmp(argv[0].data.literal_val, "ceil")) {
-        *return_val = DATA_FLOAT(ceil(std_float_from_any(&argv[1])));
-    } else {
-        exec_set_error(exec, block, gettext("Invalid argument %s"), argv[0].data.literal_val);
-        return false;
+    for (int i = 0; i < MATH_LIST_LEN; i++) {
+        if (strcmp(argv[0].data.literal_val, block_math_list[i])) continue;
+        *return_val = DATA_FLOAT(block_math_func_list[i](std_float_from_any(&argv[1])));
+        return true;
     }
-    return true;
+
+    exec_set_error(exec, block, gettext("Invalid argument %s"), argv[0].data.literal_val);
+    return false;
 }
 
 bool block_pi(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
