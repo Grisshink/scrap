@@ -56,7 +56,7 @@ typedef enum {
 } ImageType;
 
 static void draw_code(void);
-static void draw_blockchain(BlockChain* chain, bool ghost, bool show_previews, bool editable_arguments);
+static GuiElement* draw_blockchain(BlockChain* chain, bool ghost, bool show_previews, bool editable_arguments);
 static void argument_on_hover(GuiElement* el);
 static void argument_on_render(GuiElement* el);
 
@@ -910,9 +910,9 @@ static void draw_block_preview(void) {
     draw_blockchain(&editor.mouse_blockchains[0], true, false, false);
 }
 
-static void draw_blockchain(BlockChain* chain, bool ghost, bool show_previews, bool editable_arguments) {
+static GuiElement* draw_blockchain(BlockChain* chain, bool ghost, bool show_previews, bool editable_arguments) {
     int layer = 0;
-    gui_element_begin(gui);
+    GuiElement* el = gui_element_begin(gui);
         gui_set_direction(gui, DIRECTION_VERTICAL);
         gui_on_hover(gui, blockchain_on_hover);
         gui_set_custom_data(gui, chain);
@@ -1034,6 +1034,7 @@ static void draw_blockchain(BlockChain* chain, bool ghost, bool show_previews, b
     }
 
     gui_element_end(gui);
+    return el;
 }
 
 static void category_on_hover(GuiElement* el) {
@@ -1711,14 +1712,38 @@ void scrap_gui_process(void) {
         draw_panel(editor.tabs[editor.current_tab].root_panel);
         draw_window();
 
-        for (size_t i = 0; i < vector_size(editor.mouse_blockchains); i++) {
-            gui_element_begin(gui);
-                gui_set_floating(gui);
-                gui_set_position(gui, gui->mouse_x + i * config.ui_size, gui->mouse_y + i * config.ui_size);
+        gui_element_begin(gui);
+            gui_set_floating(gui);
+            gui_set_position(gui, gui->mouse_x, gui->mouse_y);
+            gui_set_gap(gui, config.ui_size);
 
-                draw_blockchain(&editor.mouse_blockchains[i], false, false, true);
+            int x_i = 0,
+                x_i_max = ceil(sqrt(vector_size(editor.mouse_blockchains))),
+                y_max = 0;
+
+            gui_element_begin(gui);
+                gui_set_direction(gui, DIRECTION_HORIZONTAL);
+                gui_set_gap(gui, config.ui_size);
+
+                for (size_t i = 0; i < vector_size(editor.mouse_blockchains); i++) {
+                    GuiElement* el = draw_blockchain(&editor.mouse_blockchains[i], false, false, true);
+                    editor.mouse_blockchains[i].width  = el->w;
+                    editor.mouse_blockchains[i].height = el->h;
+
+                    x_i++;
+                    y_max = MAX(y_max, editor.mouse_blockchains[i].height);
+
+                    if (x_i >= x_i_max) {
+                        gui_element_end(gui);
+                        gui_element_begin(gui);
+                            gui_set_direction(gui, DIRECTION_HORIZONTAL);
+                            gui_set_gap(gui, config.ui_size);
+                        y_max = 0;
+                        x_i = 0;
+                    }
+                }
             gui_element_end(gui);
-        }
+        gui_element_end(gui);
 
         if (ui.hover.select_input == &editor.search_list_search) {
             draw_search_list();
