@@ -902,13 +902,12 @@ static void blockchain_on_hover(GuiElement* el) {
     ui.hover.editor.prev_blockchain = el->custom_data;
 }
 
-static void draw_block_preview(BlockChain* chain) {
-    if (chain == &editor.mouse_blockchain) return;
-    if (vector_size(editor.mouse_blockchain.blocks) == 0) return;
+static void draw_block_preview(void) {
+    if (vector_size(editor.mouse_blockchains) != 1) return;
     if (ui.hover.editor.prev_argument != NULL) return;
-    if (editor.mouse_blockchain.blocks[0].blockdef->type == BLOCKTYPE_HAT) return;
+    if (editor.mouse_blockchains[0].blocks[0].blockdef->type == BLOCKTYPE_HAT) return;
 
-    draw_blockchain(&editor.mouse_blockchain, true, false, false);
+    draw_blockchain(&editor.mouse_blockchains[0], true, false, false);
 }
 
 static void draw_blockchain(BlockChain* chain, bool ghost, bool show_previews, bool editable_arguments) {
@@ -1018,11 +1017,11 @@ static void draw_blockchain(BlockChain* chain, bool ghost, bool show_previews, b
                     gui_set_direction(gui, DIRECTION_VERTICAL);
 
                     if (ui.hover.editor.prev_block == &chain->blocks[i] && show_previews) {
-                        draw_block_preview(chain);
+                        draw_block_preview();
                     }
         } else {
             if (ui.hover.editor.prev_block == &chain->blocks[i] && show_previews) {
-                draw_block_preview(chain);
+                draw_block_preview();
             }
         }
     }
@@ -1712,12 +1711,14 @@ void scrap_gui_process(void) {
         draw_panel(editor.tabs[editor.current_tab].root_panel);
         draw_window();
 
-        gui_element_begin(gui);
-            gui_set_floating(gui);
-            gui_set_position(gui, gui->mouse_x, gui->mouse_y);
+        for (size_t i = 0; i < vector_size(editor.mouse_blockchains); i++) {
+            gui_element_begin(gui);
+                gui_set_floating(gui);
+                gui_set_position(gui, gui->mouse_x + i * config.ui_size, gui->mouse_y + i * config.ui_size);
 
-            draw_blockchain(&editor.mouse_blockchain, false, false, true);
-        gui_element_end(gui);
+                draw_blockchain(&editor.mouse_blockchains[i], false, false, true);
+            gui_element_end(gui);
+        }
 
         if (ui.hover.select_input == &editor.search_list_search) {
             draw_search_list();
@@ -2098,7 +2099,7 @@ static void write_debug_buffer(void) {
     print_debug(&i, "Select block pos: (%.3f, %.3f)", ui.hover.editor.select_block_pos.x, ui.hover.editor.select_block_pos.y);
     print_debug(&i, "Select block bounds Pos: (%.3f, %.3f), Size: (%.3f, %.3f)", ui.hover.panels.code_panel_bounds.x, ui.hover.panels.code_panel_bounds.y, ui.hover.panels.code_panel_bounds.width, ui.hover.panels.code_panel_bounds.height);
     print_debug(&i, "Category: %p", ui.hover.category);
-    print_debug(&i, "Mouse: %p, Time: %.3f, Pos: (%d, %d), Click: (%d, %d)", editor.mouse_blockchain.blocks, ui.hover.time_at_last_pos, GetMouseX(), GetMouseY(), (int)ui.hover.mouse_click_pos.x, (int)ui.hover.mouse_click_pos.y);
+    print_debug(&i, "Mouse chains: %zu, Time: %.3f, Pos: (%d, %d), Click: (%d, %d)", vector_size(editor.mouse_blockchains), ui.hover.time_at_last_pos, GetMouseX(), GetMouseY(), (int)ui.hover.mouse_click_pos.x, (int)ui.hover.mouse_click_pos.y);
     print_debug(&i, "Camera: (%.3f, %.3f), Click: (%.3f, %.3f)", editor.camera_pos.x, editor.camera_pos.y, editor.camera_click_pos.x, editor.camera_click_pos.y);
     print_debug(&i, "Drag cancelled: %d", ui.hover.drag_cancelled);
     print_debug(&i, "Editor: %d, Editing: %p, Blockdef: %p, input: %zu", ui.hover.editor.part, ui.hover.editor.edit_blockdef, ui.hover.editor.blockdef, ui.hover.editor.blockdef_input);

@@ -168,7 +168,7 @@ Image setup(void) {
     register_blocks(&vm);
 
     editor.show_debug = true;
-    editor.mouse_blockchain = blockchain_new();
+    editor.mouse_blockchains = vector_create();
     editor.code = vector_create();
 
     editor.search_list = vector_create();
@@ -204,7 +204,8 @@ Image setup(void) {
 void cleanup(void) {
     term_free();
 
-    blockchain_free(&editor.mouse_blockchain);
+    for (size_t i = 0; i < vector_size(editor.mouse_blockchains); i++) blockchain_free(&editor.mouse_blockchains[i]);
+    vector_free(editor.mouse_blockchains);
     for (vec_size_t i = 0; i < vector_size(editor.code); i++) blockchain_free(&editor.code[i]);
     vector_free(editor.code);
     vm_free(&vm);

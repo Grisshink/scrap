@@ -344,7 +344,7 @@ typedef struct {
     Vector2 search_list_pos;
 
     ActionBar actionbar;
-    BlockChain mouse_blockchain;
+    BlockChain* mouse_blockchains;
     SplitPreview split_preview;
     int* blockchain_render_layer_widths;
     int current_tab;
