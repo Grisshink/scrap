@@ -806,7 +806,8 @@ static bool handle_block_palette_click(bool mouse_empty) {
         deselect_all();
         return true;
     }
-    if (mouse_empty && ui.hover.editor.block) {
+    bool shift_down = IsKeyDown(KEY_LEFT_SHIFT) || IsKeyDown(KEY_RIGHT_SHIFT);
+    if ((mouse_empty || shift_down) && ui.hover.editor.block) {
         // Pickup block
         scrap_log(LOG_INFO, "Pickup block");
         assert(editor.palette.current_category != NULL);
@@ -828,11 +829,10 @@ static bool handle_blockdef_editor_click(void) {
     scrap_log(LOG_INFO, "Pickup blockdef");
 
     if (!ui.hover.editor.blockdef) return true;
-    if (vector_size(editor.mouse_blockchains) > 0) return true;
     if (ui.hover.editor.edit_blockdef == ui.hover.editor.argument->data.blockdef) return false;
 
     vector_add(&editor.mouse_blockchains, blockchain_new());
-    blockchain_add_block(&editor.mouse_blockchains[0], block_new_ms(ui.hover.editor.blockdef));
+    blockchain_add_block(&editor.mouse_blockchains[vector_size(editor.mouse_blockchains) - 1], block_new_ms(ui.hover.editor.blockdef));
     deselect_all();
     return true;
 }
@@ -1149,7 +1149,7 @@ static bool handle_mouse_click(void) {
 
     if (ui.hover.panels.panel->type == PANEL_BLOCK_PALETTE) return handle_block_palette_click(mouse_empty);
 
-    if (mouse_empty && ui.hover.editor.argument && ui.hover.editor.argument->type == ARGUMENT_BLOCKDEF) {
+    if (ui.hover.editor.argument && ui.hover.editor.argument->type == ARGUMENT_BLOCKDEF) {
         if (handle_blockdef_editor_click()) return true;
     }
 
