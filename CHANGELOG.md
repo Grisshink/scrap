@@ -8,6 +8,9 @@
 - Added ability to change colors of custom blocks
 - Added browse button for path text inputs
 - Added various icons to buttons and windows
+- Added multiple block pickup system. You can now pickup and drop multiple block chains using `shift` button
+- Added a settings option to toggle block previews
+- UI size and Font settings can now be applied without reloading the app
 
 ## Fixes
 - Fixed block definitions being able to be edited in block palette
