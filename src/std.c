@@ -562,6 +562,13 @@ int std_bool_from_any(AnyValue* value) {
     }
 }
 
+#define INT_TO_COLOR(v) ((StdColor) { \
+    ((v) >> 0 ) & 255, \
+    ((v) >> 8 ) & 255, \
+    ((v) >> 16) & 255, \
+    ((v) >> 24) & 255, \
+})
+
 StdColor std_color_from_any(AnyValue* value) {
     if (!value) return (StdColor) { 0x00, 0x00, 0x00, 0xff };
 
@@ -569,10 +576,10 @@ StdColor std_color_from_any(AnyValue* value) {
     case DATA_TYPE_BOOL:
         return value->data.integer_val ? (StdColor) { 0xff, 0xff, 0xff, 0xff } : (StdColor) { 0x00, 0x00, 0x00, 0xff };
     case DATA_TYPE_INTEGER:
-        return *(StdColor*)&value->data.integer_val;
+        return INT_TO_COLOR(value->data.integer_val);
     case DATA_TYPE_FLOAT:
         int int_val = value->data.float_val;
-        return *(StdColor*)&int_val;
+        return INT_TO_COLOR(int_val);
     case DATA_TYPE_STRING:
         return std_parse_color(value->data.str_val->str);
     case DATA_TYPE_LITERAL:

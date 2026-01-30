@@ -222,6 +222,7 @@ TermVec term_measure_text(void* font, const char* text, unsigned int text_size, 
     return (TermVec) { .x = m.w, .y = m.h };
 }
 
+#ifdef DEBUG
 static void sanitize_block(Block* block) {
     for (vec_size_t i = 0; i < vector_size(block->arguments); i++) {
         if (block->arguments[i].type != ARGUMENT_BLOCK) continue;
@@ -249,6 +250,7 @@ static void sanitize_links(void) {
         }
     }
 }
+#endif
 
 static void switch_tab_to_panel(PanelType panel) {
     for (size_t i = 0; i < vector_size(editor.tabs); i++) {
@@ -472,11 +474,12 @@ void show_color_picker_dropdown(Color* edit_color, void* ref_object, ButtonClick
 
     show_dropdown(DROPDOWN_COLOR_PICKER, ref_object, handler);
 
-    Vector3 hsv = ColorToHSV(*edit_color);
+    Vector3 hsv_vec = ColorToHSV(*edit_color);
+    HSV hsv = (HSV) { hsv_vec.x, hsv_vec.y, hsv_vec.z };
 
     ui.dropdown.as.color_picker.hover_part  = COLOR_PICKER_NONE;
     ui.dropdown.as.color_picker.select_part = COLOR_PICKER_NONE;
-    ui.dropdown.as.color_picker.color = *(HSV*)&hsv;
+    ui.dropdown.as.color_picker.color = hsv;
     ui.dropdown.as.color_picker.edit_color = edit_color;
     ui.dropdown.as.color_picker.color_hex[0] = 0;
 }

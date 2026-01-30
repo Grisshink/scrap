@@ -48,12 +48,6 @@ char* block_math_list[MATH_LIST_LEN] = {
     "asin", "acos", "atan",
 };
 
-static MathFunc block_math_func_list[MATH_LIST_LEN] = {
-    sqrt, round, floor, ceil,
-    sin, cos, tan,
-    asin, acos, atan,
-};
-
 char** math_list_access(Block* block, size_t* list_len) {
     (void) block;
     *list_len = MATH_LIST_LEN;
@@ -61,6 +55,12 @@ char** math_list_access(Block* block, size_t* list_len) {
 }
 
 #ifdef USE_INTERPRETER
+
+static MathFunc block_math_func_list[MATH_LIST_LEN] = {
+    sqrt, round, floor, ceil,
+    sin, cos, tan,
+    asin, acos, atan,
+};
 
 #include "std.h"
 
