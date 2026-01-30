@@ -875,7 +875,7 @@ static void draw_tab_bar(void) {
 
             if (vm.thread.state == THREAD_STATE_STOPPING) {
                 gui_set_rect(gui, GUI_WHITE);
-                gui_image(gui, &assets.textures.button_stop, tab_bar_size, GUI_WHITE);
+                gui_image(gui, &assets.textures.button_stop, tab_bar_size, GUI_BLACK);
             } else {
                 gui_image(gui, &assets.textures.button_stop, tab_bar_size, (GuiColor) { 0xff, 0x40, 0x30, 0xff });
             }
@@ -889,7 +889,7 @@ static void draw_tab_bar(void) {
 
             if (thread_is_running(&vm.thread)) {
                 gui_set_rect(gui, GUI_WHITE);
-                gui_image(gui, &assets.textures.button_run, tab_bar_size, GUI_WHITE);
+                gui_image(gui, &assets.textures.button_run, tab_bar_size, GUI_BLACK);
             } else {
                 gui_image(gui, &assets.textures.button_run, tab_bar_size, (GuiColor) { 0x60, 0xff, 0x00, 0xff });
             }
