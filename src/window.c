@@ -597,7 +597,7 @@ void draw_settings_window(void) {
     static int font_bold_path_scroll = 0;
     static int font_mono_path_scroll = 0;
 
-    begin_window(gettext("Settings"), &assets.textures.icon_settings, MIN(600 * config.ui_size / 32.0, gui->win_w - config.ui_size), 0, window.animation_ease);
+    begin_window(gettext("Settings"), &assets.textures.icon_settings, MIN(700 * config.ui_size / 32.0, gui->win_w - config.ui_size), 0, window.animation_ease);
         begin_setting(gettext("Language"), true);
             draw_dropdown_input((int*)&window_config.language, language_list, ARRLEN(language_list));
         end_setting();
@@ -662,7 +662,7 @@ void draw_settings_window(void) {
             gui_set_min_size(gui, 0, config.ui_size * 0.6);
 
             gui_grow(gui, DIRECTION_HORIZONTAL);
-            if (settings_applied) gui_text(gui, &assets.fonts.font_cond, "Settings applied", config.ui_size * 0.6, GUI_WHITE);
+            if (settings_applied) gui_text(gui, &assets.fonts.font_cond, gettext("Settings applied"), config.ui_size * 0.6, GUI_WHITE);
         gui_element_end(gui);
 
         gui_element_begin(gui);

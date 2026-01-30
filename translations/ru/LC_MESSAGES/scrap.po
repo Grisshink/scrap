@@ -645,6 +645,38 @@ msgstr "путь"
 msgid "Language"
 msgstr "Язык"
 
+#: window.c
+msgid "Show block previews"
+msgstr "Показывать предпросмотр блоков"
+
+#: window.c
+msgid "Show debug info"
+msgstr "Показывать отладочную информацию"
+
+#: window.c
+msgid "Settings applied"
+msgstr "Настройки применены"
+
+#: window.c
+msgid "Confirm save"
+msgstr "Подтвердите сохранение"
+
+#: window.c
+msgid "Project is modified. Save the changes and quit?"
+msgstr "Проект изменён. Сохранить изменения и выйти?"
+
+#: window.c
+msgid "Yes"
+msgstr "Да"
+
+#: window.c
+msgid "No"
+msgstr "Нет"
+
+#: window.c
+msgid "Cancel"
+msgstr "Отмена"
+
 #: save.c
 msgid "LanguageList|System"
 msgstr "Системный"
