@@ -816,9 +816,17 @@ static bool handle_block_palette_click(bool mouse_empty) {
     } else if (!mouse_empty) {
         // Drop block
         scrap_log(LOG_INFO, "Drop block");
-        remove_blockdef(&editor.mouse_blockchains[0]);
-        blockchain_free(&editor.mouse_blockchains[0]);
-        vector_remove(editor.mouse_blockchains, 0);
+        if (shift_down) {
+            for (size_t i = 0; i < vector_size(editor.mouse_blockchains); i++) {
+                remove_blockdef(&editor.mouse_blockchains[i]);
+                blockchain_free(&editor.mouse_blockchains[i]);
+            }
+            vector_clear(editor.mouse_blockchains);
+        } else {
+            remove_blockdef(&editor.mouse_blockchains[0]);
+            blockchain_free(&editor.mouse_blockchains[0]);
+            vector_remove(editor.mouse_blockchains, 0);
+        }
         return true;
     }
     return true;
@@ -837,13 +845,176 @@ static bool handle_blockdef_editor_click(void) {
     return true;
 }
 
+static void code_put_blocks(bool single) {
+    scrap_log(LOG_INFO, "Put block(s)");
+
+    if (single) {
+        BlockChain* chain = &editor.mouse_blockchains[0];
+        chain->x += editor.camera_pos.x - ui.hover.panels.panel_size.x;
+        chain->y += editor.camera_pos.y - ui.hover.panels.panel_size.y;
+        chain->x /= config.ui_size / 32.0;
+        chain->y /= config.ui_size / 32.0;
+        vector_add(&editor.code, *chain);
+        vector_remove(editor.mouse_blockchains, 0);
+    } else {
+        for (size_t i = 0; i < vector_size(editor.mouse_blockchains); i++) {
+            BlockChain* chain = &editor.mouse_blockchains[i];
+            chain->x += editor.camera_pos.x - ui.hover.panels.panel_size.x;
+            chain->y += editor.camera_pos.y - ui.hover.panels.panel_size.y;
+            chain->x /= config.ui_size / 32.0;
+            chain->y /= config.ui_size / 32.0;
+            vector_add(&editor.code, *chain);
+        }
+        vector_clear(editor.mouse_blockchains);
+    }
+
+    ui.hover.editor.select_blockchain = &editor.code[vector_size(editor.code) - 1];
+    ui.hover.editor.select_block = &ui.hover.editor.select_blockchain->blocks[0];
+    editor.project_modified = true;
+}
+
+static void code_attach_to_argument(void) {
+    scrap_log(LOG_INFO, "Attach to argument");
+
+    BlockChain* chain = &editor.mouse_blockchains[0];
+
+    if (vector_size(chain->blocks) > 1) return;
+    if (chain->blocks[0].blockdef->type == BLOCKTYPE_CONTROLEND) return;
+    if (chain->blocks[0].blockdef->type == BLOCKTYPE_HAT) return;
+    if (ui.hover.editor.argument->type != ARGUMENT_TEXT && ui.hover.editor.argument->type != ARGUMENT_COLOR) return;
+
+    chain->blocks[0].parent = ui.hover.editor.block;
+    argument_set_block(ui.hover.editor.argument, chain->blocks[0]);
+
+    vector_clear(chain->blocks);
+    blockchain_free(chain);
+    vector_remove(editor.mouse_blockchains, 0);
+
+    ui.hover.editor.select_blockchain = ui.hover.editor.blockchain;
+    ui.hover.editor.select_block = &ui.hover.editor.argument->data.block;
+    ui.hover.select_input = NULL;
+    editor.project_modified = true;
+}
+
+static void code_copy_argument(void) {
+    scrap_log(LOG_INFO, "Copy argument");
+
+    vector_add(&editor.mouse_blockchains, blockchain_new());
+    blockchain_add_block(&editor.mouse_blockchains[vector_size(editor.mouse_blockchains) - 1], block_copy(ui.hover.editor.block, NULL));
+}
+
+static void code_swap_argument(void) {
+    scrap_log(LOG_INFO, "Swap argument");
+
+    BlockChain* chain = &editor.mouse_blockchains[0];
+
+    if (vector_size(chain->blocks) > 1) return;
+    if (chain->blocks[0].blockdef->type == BLOCKTYPE_CONTROLEND) return;
+    if (chain->blocks[0].blockdef->type == BLOCKTYPE_HAT) return;
+    if (ui.hover.editor.parent_argument->type != ARGUMENT_BLOCK) return;
+
+    chain->blocks[0].parent = ui.hover.editor.block->parent;
+    Block temp = chain->blocks[0];
+    chain->blocks[0] = *ui.hover.editor.block;
+    chain->blocks[0].parent = NULL;
+    block_update_parent_links(&chain->blocks[0]);
+
+    argument_set_block(ui.hover.editor.parent_argument, temp);
+
+    ui.hover.editor.select_block = &ui.hover.editor.parent_argument->data.block;
+    ui.hover.editor.select_blockchain = ui.hover.editor.blockchain;
+    editor.project_modified = true;
+}
+
+static void code_detach_argument(void) {
+    scrap_log(LOG_INFO, "Detach argument");
+
+    assert(ui.hover.editor.parent_argument != NULL);
+
+    vector_add(&editor.mouse_blockchains, blockchain_new());
+    BlockChain* chain = &editor.mouse_blockchains[vector_size(editor.mouse_blockchains) - 1];
+
+    blockchain_add_block(chain, *ui.hover.editor.block);
+    chain->blocks[0].parent = NULL;
+
+    if (ui.hover.editor.block->parent->blockdef->inputs[ui.hover.editor.parent_argument->input_id].type == INPUT_COLOR) {
+        argument_set_color(ui.hover.editor.parent_argument, (BlockdefColor) { 0xff, 0xff, 0xff, 0xff });
+    } else {
+        argument_set_text(ui.hover.editor.parent_argument, "");
+    }
+
+    ui.hover.editor.select_blockchain = NULL;
+    ui.hover.editor.select_block = NULL;
+    ui.hover.select_input = NULL;
+    editor.project_modified = true;
+}
+
+static void code_copy_blocks(bool single) {
+    scrap_log(LOG_INFO, "Copy block(s)");
+
+    int ind = ui.hover.editor.block - ui.hover.editor.blockchain->blocks;
+    BlockChain new_chain = single ? blockchain_copy_single(ui.hover.editor.blockchain, ind) : blockchain_copy(ui.hover.editor.blockchain, ind);
+    vector_add(&editor.mouse_blockchains, new_chain);
+    ui.hover.select_input = NULL;
+}
+
+static void code_detach_blocks(bool single) {
+    scrap_log(LOG_INFO, "Detach block(s)");
+
+    int ind = ui.hover.editor.block - ui.hover.editor.blockchain->blocks;
+    vector_add(&editor.mouse_blockchains, blockchain_new());
+    BlockChain* chain = &editor.mouse_blockchains[vector_size(editor.mouse_blockchains) - 1];
+
+    if (single) {
+        blockchain_detach_single(chain, ui.hover.editor.blockchain, ind);
+    } else {
+        blockchain_detach(chain, ui.hover.editor.blockchain, ind);
+        if (vector_size(chain->blocks) == 0) {
+            blockchain_free(chain);
+            vector_pop(editor.mouse_blockchains);
+        }
+    }
+
+    if (vector_size(ui.hover.editor.blockchain->blocks) == 0) {
+        blockchain_free(ui.hover.editor.blockchain);
+        vector_remove(editor.code, ui.hover.editor.blockchain - editor.code);
+        ui.hover.editor.block = NULL;
+    }
+
+    editor.project_modified = true;
+    ui.hover.select_input = NULL;
+}
+
+static void code_attach_block(void) {
+    scrap_log(LOG_INFO, "Attach block");
+
+    BlockChain* chain = &editor.mouse_blockchains[0];
+
+    if (chain->blocks[0].blockdef->type == BLOCKTYPE_HAT) return;
+
+    int ind = ui.hover.editor.block - ui.hover.editor.blockchain->blocks;
+    blockchain_insert(ui.hover.editor.blockchain, chain, ind);
+    blockchain_free(chain);
+    vector_remove(editor.mouse_blockchains, 0);
+
+    ui.hover.editor.block = &ui.hover.editor.blockchain->blocks[ind];
+    ui.hover.editor.select_block = ui.hover.editor.block + 1;
+    ui.hover.editor.select_blockchain = ui.hover.editor.blockchain;
+    editor.project_modified = true;
+}
+
 static bool handle_code_editor_click(bool mouse_empty) {
-    if (!mouse_empty) {
+    bool shift_down = IsKeyDown(KEY_LEFT_SHIFT) || IsKeyDown(KEY_RIGHT_SHIFT);
+    bool alt_down = IsKeyDown(KEY_LEFT_ALT) || IsKeyDown(KEY_RIGHT_ALT);
+    bool ctrl_down = IsKeyDown(KEY_LEFT_CONTROL) || IsKeyDown(KEY_RIGHT_CONTROL);
+
+    if (!mouse_empty && !ui.hover.editor.block) {
         int x   = 0, 
             y   = 0,
             x_i = 0,
             x_i_max = ceil(sqrt(vector_size(editor.mouse_blockchains))),
             y_max = 0;
+
         for (size_t i = 0; i < vector_size(editor.mouse_blockchains); i++) {
             editor.mouse_blockchains[i].x = gui->mouse_x + x;
             editor.mouse_blockchains[i].y = gui->mouse_y + y;
@@ -859,167 +1030,49 @@ static bool handle_code_editor_click(bool mouse_empty) {
                 x_i = 0;
             }
         }
-    }
 
-    bool shift_down = IsKeyDown(KEY_LEFT_SHIFT) || IsKeyDown(KEY_RIGHT_SHIFT);
-
-    if (!mouse_empty && !shift_down) {
-        if (ui.hover.editor.argument || ui.hover.editor.parent_argument) {
-            if (vector_size(editor.mouse_blockchains[0].blocks) > 1) return true;
-            if (editor.mouse_blockchains[0].blocks[0].blockdef->type == BLOCKTYPE_CONTROLEND) return true;
-            if (editor.mouse_blockchains[0].blocks[0].blockdef->type == BLOCKTYPE_HAT) return true;
-
-            if (ui.hover.editor.argument) {
-                // Attach to argument
-                scrap_log(LOG_INFO, "Attach to argument");
-                if (ui.hover.editor.argument->type != ARGUMENT_TEXT && ui.hover.editor.argument->type != ARGUMENT_COLOR) return true;
-                editor.mouse_blockchains[0].blocks[0].parent = ui.hover.editor.block;
-                argument_set_block(ui.hover.editor.argument, editor.mouse_blockchains[0].blocks[0]);
-                vector_clear(editor.mouse_blockchains[0].blocks);
-                blockchain_free(&editor.mouse_blockchains[0]);
-                vector_remove(editor.mouse_blockchains, 0);
-                ui.hover.editor.select_blockchain = ui.hover.editor.blockchain;
-                ui.hover.editor.select_block = &ui.hover.editor.argument->data.block;
-                ui.hover.select_input = NULL;
-                editor.project_modified = true;
-            } else if (ui.hover.editor.parent_argument) {
-                // Swap argument
-                scrap_log(LOG_INFO, "Swap argument");
-                if (ui.hover.editor.parent_argument->type != ARGUMENT_BLOCK) return true;
-                editor.mouse_blockchains[0].blocks[0].parent = ui.hover.editor.block->parent;
-                Block temp = editor.mouse_blockchains[0].blocks[0];
-                editor.mouse_blockchains[0].blocks[0] = *ui.hover.editor.block;
-                editor.mouse_blockchains[0].blocks[0].parent = NULL;
-                block_update_parent_links(&editor.mouse_blockchains[0].blocks[0]);
-                argument_set_block(ui.hover.editor.parent_argument, temp);
-                ui.hover.editor.select_block = &ui.hover.editor.parent_argument->data.block;
-                ui.hover.editor.select_blockchain = ui.hover.editor.blockchain;
-                editor.project_modified = true;
-            }
-        } else if (
-            ui.hover.editor.block &&
-            ui.hover.editor.blockchain &&
-            ui.hover.editor.block->parent == NULL
-        ) {
-            // Attach block
-            scrap_log(LOG_INFO, "Attach block");
-            if (editor.mouse_blockchains[0].blocks[0].blockdef->type == BLOCKTYPE_HAT) return true;
-
-            int ind = ui.hover.editor.block - ui.hover.editor.blockchain->blocks;
-            blockchain_insert(ui.hover.editor.blockchain, &editor.mouse_blockchains[0], ind);
-            blockchain_free(&editor.mouse_blockchains[0]);
-            vector_remove(editor.mouse_blockchains, 0);
-            // Update block link to make valgrind happy
-            ui.hover.editor.block = &ui.hover.editor.blockchain->blocks[ind];
-            ui.hover.editor.select_block = ui.hover.editor.block + 1;
-            ui.hover.editor.select_blockchain = ui.hover.editor.blockchain;
-            editor.project_modified = true;
-        } else {
-            // Put block
-            scrap_log(LOG_INFO, "Put block");
-            for (size_t i = 0; i < vector_size(editor.mouse_blockchains); i++) {
-                BlockChain* chain = &editor.mouse_blockchains[i];
-                chain->x += editor.camera_pos.x - ui.hover.panels.panel_size.x;
-                chain->y += editor.camera_pos.y - ui.hover.panels.panel_size.y;
-                chain->x /= config.ui_size / 32.0;
-                chain->y /= config.ui_size / 32.0;
-                vector_add(&editor.code, *chain);
-            }
-            vector_clear(editor.mouse_blockchains);
-            ui.hover.editor.select_blockchain = &editor.code[vector_size(editor.code) - 1];
-            ui.hover.editor.select_block = &ui.hover.editor.select_blockchain->blocks[0];
-            editor.project_modified = true;
-        }
-        return true;
-    } else if (ui.hover.editor.block) {
-        if (ui.hover.editor.block->parent) {
-            if (IsKeyDown(KEY_LEFT_ALT) || IsKeyDown(KEY_RIGHT_ALT)) {
-                // Copy argument
-                scrap_log(LOG_INFO, "Copy argument");
-                vector_add(&editor.mouse_blockchains, blockchain_new());
-                blockchain_add_block(&editor.mouse_blockchains[vector_size(editor.mouse_blockchains) - 1], block_copy(ui.hover.editor.block, NULL));
-            } else {
-                // Detach argument
-                scrap_log(LOG_INFO, "Detach argument");
-                assert(ui.hover.editor.parent_argument != NULL);
-
-                vector_add(&editor.mouse_blockchains, blockchain_new());
-                BlockChain* chain = &editor.mouse_blockchains[vector_size(editor.mouse_blockchains) - 1];
-
-                blockchain_add_block(chain, *ui.hover.editor.block);
-                chain->blocks[0].parent = NULL;
-
-                if (ui.hover.editor.block->parent->blockdef->inputs[ui.hover.editor.parent_argument->input_id].type == INPUT_COLOR) {
-                    argument_set_color(ui.hover.editor.parent_argument, (BlockdefColor) { 0xff, 0xff, 0xff, 0xff });
-                } else {
-                    argument_set_text(ui.hover.editor.parent_argument, "");
-                }
-                ui.hover.editor.select_blockchain = NULL;
-                ui.hover.editor.select_block = NULL;
-                ui.hover.select_input = NULL;
-                editor.project_modified = true;
-            }
-        } else if (ui.hover.editor.blockchain) {
-            int ind = ui.hover.editor.block - ui.hover.editor.blockchain->blocks;
-
-            if (IsKeyDown(KEY_LEFT_ALT) || IsKeyDown(KEY_RIGHT_ALT)) {
-                if (IsKeyDown(KEY_LEFT_CONTROL) || IsKeyDown(KEY_RIGHT_CONTROL)) {
-                    // Copy block
-                    scrap_log(LOG_INFO, "Copy block");
-                    vector_add(&editor.mouse_blockchains, blockchain_copy_single(ui.hover.editor.blockchain, ind));
-                    ui.hover.select_input = NULL;
-                } else {
-                    // Copy chain
-                    scrap_log(LOG_INFO, "Copy chain");
-                    vector_add(&editor.mouse_blockchains, blockchain_copy(ui.hover.editor.blockchain, ind));
-                    ui.hover.select_input = NULL;
-                }
-            } else {
-                ui.hover.editor.edit_blockdef = NULL;
-                ui.hover.editor.edit_block = NULL;
-                if (IsKeyDown(KEY_LEFT_CONTROL) || IsKeyDown(KEY_RIGHT_CONTROL)) {
-                    // Detach block
-                    scrap_log(LOG_INFO, "Detach block");
-
-                    vector_add(&editor.mouse_blockchains, blockchain_new());
-                    BlockChain* chain = &editor.mouse_blockchains[vector_size(editor.mouse_blockchains) - 1];
-
-                    blockchain_detach_single(chain, ui.hover.editor.blockchain, ind);
-                    if (vector_size(ui.hover.editor.blockchain->blocks) == 0) {
-                        blockchain_free(ui.hover.editor.blockchain);
-                        vector_remove(editor.code, ui.hover.editor.blockchain - editor.code);
-                        ui.hover.editor.block = NULL;
-                    }
-                    editor.project_modified = true;
-                    ui.hover.select_input = NULL;
-                } else {
-                    // Detach chain
-                    scrap_log(LOG_INFO, "Detach chain");
-                    int ind = ui.hover.editor.block - ui.hover.editor.blockchain->blocks;
-
-                    vector_add(&editor.mouse_blockchains, blockchain_new());
-                    BlockChain* chain = &editor.mouse_blockchains[vector_size(editor.mouse_blockchains) - 1];
-
-                    blockchain_detach(chain, ui.hover.editor.blockchain, ind);
-                    if (vector_size(chain->blocks) == 0) {
-                        blockchain_free(chain);
-                        vector_pop(editor.mouse_blockchains);
-                    }
-                    if (ind == 0) {
-                        blockchain_free(ui.hover.editor.blockchain);
-                        vector_remove(editor.code, ui.hover.editor.blockchain - editor.code);
-                        ui.hover.editor.block = NULL;
-                    }
-                    editor.project_modified = true;
-                    ui.hover.select_input = NULL;
-                }
-                ui.hover.editor.select_blockchain = NULL;
-                ui.hover.editor.select_block = NULL;
-            }
-        }
+        code_put_blocks(!shift_down);
         return true;
     }
-    return false;
+    if (!ui.hover.editor.block || !ui.hover.editor.blockchain) return false;
+
+    if (ui.hover.editor.argument && !mouse_empty) {
+        code_attach_to_argument();
+        return true;
+    }
+
+    if (ui.hover.editor.block->parent) {
+        if (alt_down) {
+            code_copy_argument();
+            return true;
+        } 
+
+        if (!mouse_empty && !shift_down) {
+            code_swap_argument();
+            return true;
+        }
+
+        code_detach_argument();
+        return true;
+    }
+
+    if (alt_down) {
+        code_copy_blocks(ctrl_down);
+        return true;
+    }
+
+    if (mouse_empty || shift_down) {
+        code_detach_blocks(ctrl_down);
+
+        ui.hover.editor.edit_blockdef = NULL;
+        ui.hover.editor.edit_block = NULL;
+        ui.hover.editor.select_blockchain = NULL;
+        ui.hover.editor.select_block = NULL;
+    } else {
+        code_attach_block();
+    }
+
+    return true;
 }
 
 static bool handle_editor_panel_click(void) {
