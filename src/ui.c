@@ -954,6 +954,11 @@ static void code_copy_blocks(bool single) {
 
     int ind = ui.hover.editor.block - ui.hover.editor.blockchain->blocks;
     BlockChain new_chain = single ? blockchain_copy_single(ui.hover.editor.blockchain, ind) : blockchain_copy(ui.hover.editor.blockchain, ind);
+    if (vector_size(new_chain.blocks) == 0) {
+        blockchain_free(&new_chain);
+        ui.hover.select_input = NULL;
+        return;
+    }
     vector_add(&editor.mouse_blockchains, new_chain);
     ui.hover.select_input = NULL;
 }
@@ -969,10 +974,10 @@ static void code_detach_blocks(bool single) {
         blockchain_detach_single(chain, ui.hover.editor.blockchain, ind);
     } else {
         blockchain_detach(chain, ui.hover.editor.blockchain, ind);
-        if (vector_size(chain->blocks) == 0) {
-            blockchain_free(chain);
-            vector_pop(editor.mouse_blockchains);
-        }
+    }
+    if (vector_size(chain->blocks) == 0) {
+        blockchain_free(chain);
+        vector_pop(editor.mouse_blockchains);
     }
 
     if (vector_size(ui.hover.editor.blockchain->blocks) == 0) {
