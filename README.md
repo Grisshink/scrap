@@ -31,7 +31,7 @@ its forks such as [Turbowarp](https://turbowarp.org).
 ## Controls
 
 - Click on blocks to pick up them, click again to drop them
-- You can use `Ctrl` to take only one block and `Alt` to pick up its duplicate
+- Hold `Ctrl` to take single block, `Alt` to duplicate blocks and `Shift` to pickup/drop multiple block chains
 - Hold left mouse button to move around code space
 - Holding middle mouse button will do the same, except it works everywhere
 - Press `Tab` to jump to chain in code base (Useful if you got lost in code base)
