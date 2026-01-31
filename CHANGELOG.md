@@ -1,4 +1,4 @@
-# v0.6-beta *(Upcoming)*
+# v0.6-beta *(31-01-2026)*
 
 ## What's new?
 - Scrap now shows comfirmation window when trying to close scrap with unsaved changes
