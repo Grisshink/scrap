@@ -23,7 +23,8 @@ jobs:
 
             - name: Install LLVM
               run: |
-                wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
+                wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | gpg --dearmor -o llvm-snapshot.gpg
+                sudo mv llvm-snapshot.gpg /etc/apt/trusted.gpg.d/
                 sudo add-apt-repository "deb http://apt.llvm.org/focal/ llvm-toolchain-focal-19 main"
                 sudo apt-get update -y
                 sudo apt-get install -y --no-install-recommends llvm-19-dev
