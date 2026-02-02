@@ -119,7 +119,7 @@ translations:
 windows-build: translations target std
 	mkdir -p $(BUILD_FOLDER)$(WINDOWS_DIR)
 	cp -r $(BUNDLE_FILES) $(EXE_NAME).exe $(STD_NAME) $(BUILD_FOLDER)$(WINDOWS_DIR)
-	cp libzstd.dll $(BUILD_FOLDER)$(WINDOWS_DIR)
+	cp $(BUILD_FOLDER)$(WINDOWS_DIR)
 	cd $(BUILD_FOLDER); zip -r $(WINDOWS_DIR).zip $(WINDOWS_DIR); cd ..
 
 linux-build: translations target std
