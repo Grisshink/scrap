@@ -1,0 +1,46 @@
+name: (Windows) Makefile CI
+
+on:
+    push:
+        branches: [ "main" ]
+    pull_request:
+        branches: [ "main" ]
+
+jobs:
+    build:
+        runs-on: windows-latest
+
+        defaults:
+          run:
+            shell: msys2 {0}
+
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v6
+              with:
+                submodules: recursive
+
+            - name: Install dependencies
+              uses: msys2/setup-msys2@v2
+              with:
+                msystem: UCRT64
+                update: true
+                install: >-
+                    mingw-w64-ucrt-x86_64-gcc 
+                    mingw-w64-ucrt-x86_64-llvm 
+                    make 
+                    gettext
+
+            - name: Setup windres
+              run: | 
+                ln -sf "${MSYSTEM_PREFIX}/bin/windres.exe" "${MSYSTEM_PREFIX}/bin/x86_64-w64-mingw32-windres"
+
+            - name: Build project (With compiler)
+              run: |
+                make clean
+                make USE_COMPILER=TRUE TARGET=WINDOWS
+
+            - name: Build project (With interpreter)
+              run: |
+                make clean
+                make TARGET=WINDOWS

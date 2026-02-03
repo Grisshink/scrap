@@ -248,6 +248,10 @@ msgid "Bool"
 msgstr "Булевое"
 
 #: blocks.c
+msgid "Color"
+msgstr "Цвет"
+
+#: blocks.c
 msgid "Nothing"
 msgstr "Ничего"
 
