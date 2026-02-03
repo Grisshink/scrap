@@ -73,18 +73,17 @@ else
 	OBJFILES += $(addprefix $(BUILD_FOLDER),compiler.o)
 	SCRAP_HEADERS += src/compiler.h
 
+	LLVM_LDFLAGS := --ldflags --system-libs --libs core executionengine mcjit analysis native
 	ifeq ($(TARGET), WINDOWS)
-		LDFLAGS += -lLLVMX86TargetMCA -lLLVMMCA -lLLVMX86Disassembler -lLLVMX86AsmParser -lLLVMX86CodeGen -lLLVMX86Desc -lLLVMX86Info -lLLVMMCDisassembler -lLLVMInstrumentation -lLLVMIRPrinter -lLLVMGlobalISel -lLLVMSelectionDAG -lLLVMCFGuard -lLLVMAsmPrinter -lLLVMCodeGen -lLLVMScalarOpts -lLLVMInstCombine -lLLVMAggressiveInstCombine -lLLVMObjCARCOpts -lLLVMTransformUtils -lLLVMCodeGenTypes -lLLVMCGData -lLLVMBitWriter -lLLVMMCJIT -lLLVMExecutionEngine -lLLVMTarget -lLLVMAnalysis -lLLVMProfileData -lLLVMSymbolize -lLLVMDebugInfoBTF -lLLVMDebugInfoPDB -lLLVMDebugInfoMSF -lLLVMDebugInfoDWARF -lLLVMRuntimeDyld -lLLVMOrcTargetProcess -lLLVMOrcShared -lLLVMObject -lLLVMTextAPI -lLLVMMCParser -lLLVMIRReader -lLLVMAsmParser -lLLVMBitReader -lLLVMMC -lLLVMDebugInfoCodeView -lLLVMCore -lLLVMRemarks -lLLVMBitstreamReader -lLLVMBinaryFormat -lLLVMTargetParser -lLLVMSupport -lLLVMDemangle -lm -lz -lzstd -lxml2 -limagehlp -lntdll -lole32 -luuid
-		CFLAGS += -D__STDC_CONSTANT_MACROS -D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS
+		LDFLAGS += `$(LLVM_CONFIG) $(LLVM_FLAGS) --link-static $(LLVM_LDFLAGS)`
 	else
-		LLVM_LDFLAGS := --ldflags --system-libs --libs core executionengine mcjit analysis native
 		ifeq ($(LLVM_LINK_STATIC), TRUE)
 			LDFLAGS += -Wl,-Bstatic `$(LLVM_CONFIG) $(LLVM_FLAGS) --link-static $(LLVM_LDFLAGS)` -Wl,-Bdynamic
 		else
 			LDFLAGS += `$(LLVM_CONFIG) $(LLVM_FLAGS) $(LLVM_LDFLAGS)`
 		endif
-		CFLAGS += `$(LLVM_CONFIG) --cflags`
 	endif
+	CFLAGS += `$(LLVM_CONFIG) --cflags`
 
 	LDFLAGS += -lstdc++
 endif
