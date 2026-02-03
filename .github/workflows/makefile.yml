@@ -8,6 +8,7 @@ on:
 
 jobs:
     build-windows:
+        name: Windows build
         runs-on: windows-latest
 
         defaults:
@@ -46,6 +47,7 @@ jobs:
                 make TARGET=WINDOWS
 
     build-linux:
+        name: Linux build
         runs-on: ubuntu-22.04
 
         steps:
