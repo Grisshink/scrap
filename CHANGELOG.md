@@ -1,7 +1,7 @@
 # v0.6-beta *(31-01-2026)*
 
 ## What's new?
-- Scrap now shows comfirmation window when trying to close scrap with unsaved changes
+- Scrap now shows confirmation window when trying to close scrap with unsaved changes
 - Blocks inside block pallete are now split into subcategories
 - Added new color type and integrated it with color related blocks
 - Added new example (neon.scrp) featuring new color system
