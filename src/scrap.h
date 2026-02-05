@@ -433,7 +433,7 @@ void show_list_dropdown(char** list, int list_len, void* ref_object, ButtonClick
 GuiMeasurement scrap_gui_measure_image(void* image, unsigned short size);
 GuiMeasurement scrap_gui_measure_text(void* font, const char* text, unsigned int text_size, unsigned short font_size);
 TermVec term_measure_text(void* font, const char* text, unsigned int text_size, unsigned short font_size);
-int search_glyph(int codepoint);
+int search_glyph(Font font, int codepoint);
 
 size_t tab_new(char* name, PanelTree* root_panel);
 void delete_all_tabs(void);

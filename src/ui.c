@@ -171,12 +171,14 @@ void init_panels(void) {
     tab_new("Output", panel_new(PANEL_TERM));
 }
 
-int search_glyph(int codepoint) {
+int search_glyph(Font font, int codepoint) {
     // We assume that ASCII region is the first region, so this index should correspond to char '?' in the glyph table
     const int fallback = 31;
     for (int i = 0; i < CODEPOINT_REGION_COUNT; i++) {
         if (codepoint < codepoint_regions[i][0] || codepoint > codepoint_regions[i][1]) continue;
-        return codepoint - codepoint_regions[i][0] + codepoint_start_ranges[i];
+        int glyph = codepoint - codepoint_regions[i][0] + codepoint_start_ranges[i];
+        if (glyph >= font.glyphCount) return fallback;
+        return glyph;
     }
     return fallback;
 }
@@ -193,7 +195,7 @@ static GuiMeasurement measure_slice(Font font, const char *text, unsigned int te
         if (!text[i]) break;
         int next = 0;
         codepoint = GetCodepointNext(&text[i], &next);
-        index = search_glyph(codepoint);
+        index = search_glyph(font, codepoint);
         i += next;
 
         if (font.glyphs[index].advanceX != 0) {
@@ -1142,7 +1144,7 @@ static void get_input_ind(void) {
     while (i < text_size && (width * scale_factor) < ui.hover.input_info.rel_pos.x) {
         int next = 0;
         codepoint = GetCodepointNext(&(*ui.hover.input_info.input)[i], &next);
-        index = search_glyph(codepoint);
+        index = search_glyph(*ui.hover.input_info.font, codepoint);
 
         prev_width = width;
         prev_i = i;

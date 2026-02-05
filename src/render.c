@@ -1964,7 +1964,7 @@ static void draw_text_slice(Font font, const char *text, float pos_x, float pos_
         if (!text[i]) break;
         int next = 0;
         codepoint = GetCodepointNext(&text[i], &next);
-        index = search_glyph(codepoint);
+        index = search_glyph(font, codepoint);
         i += next;
 
         if (codepoint != ' ') DrawTextCodepoint(font, codepoint, pos, font_size, color);
