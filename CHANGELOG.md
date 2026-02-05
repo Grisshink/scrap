@@ -1,3 +1,8 @@
+# v0.6.1-beta *(Upcoming)*
+
+## Fixes
+- Fixed buffer overflow when rendering glyphs that are not present in font (This also fixes text in Kazakh language being absolutely broken)
+
 # v0.6-beta *(31-01-2026)*
 
 ## What's new?
