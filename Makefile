@@ -1,4 +1,4 @@
-SCRAP_VERSION := 0.6-beta
+SCRAP_VERSION ?= dev
 
 MAKE ?= make
 TARGET ?= LINUX
@@ -88,10 +88,6 @@ else
 	LDFLAGS += -lstdc++
 endif
 
-LINUX_DIR := $(EXE_NAME)-v$(SCRAP_VERSION)-linux
-MACOS_DIR := $(EXE_NAME)-v$(SCRAP_VERSION)-macos
-WINDOWS_DIR := $(EXE_NAME)-v$(SCRAP_VERSION)-windows64
-
 .PHONY: all clean target translations
 
 all: target std translations
@@ -114,27 +110,6 @@ translations:
 	rm locale/kk/LC_MESSAGES/scrap.po
 	msgfmt -o locale/uk/LC_MESSAGES/scrap.mo locale/uk/LC_MESSAGES/scrap.po
 	rm locale/uk/LC_MESSAGES/scrap.po
-
-windows-build: translations target std
-	mkdir -p $(BUILD_FOLDER)$(WINDOWS_DIR)
-	cp -r $(BUNDLE_FILES) $(EXE_NAME).exe $(STD_NAME) $(BUILD_FOLDER)$(WINDOWS_DIR)
-	cd $(BUILD_FOLDER); zip -r $(WINDOWS_DIR).zip $(WINDOWS_DIR); cd ..
-
-linux-build: translations target std
-	mkdir -p $(BUILD_FOLDER)$(LINUX_DIR)
-	cp -r $(BUNDLE_FILES) $(EXE_NAME) $(STD_NAME) $(BUILD_FOLDER)$(LINUX_DIR)
-	tar czvf $(BUILD_FOLDER)$(LINUX_DIR).tar.gz --directory=$(BUILD_FOLDER) $(LINUX_DIR)
-
-macos-build: translations target std
-	mkdir -p $(BUILD_FOLDER)$(MACOS_DIR)
-	cp -r $(BUNDLE_FILES) $(EXE_NAME) $(STD_NAME) $(BUILD_FOLDER)$(MACOS_DIR)
-	cd $(BUILD_FOLDER); zip -r $(MACOS_DIR).zip $(MACOS_DIR); cd ..
-
-appimage: translations target std
-	mkdir -p $(BUILD_FOLDER)scrap.AppDir
-	cp $(EXE_NAME) $(BUILD_FOLDER)scrap.AppDir/AppRun
-	cp -r data locale scrap.desktop $(STD_NAME) extras/scrap.png $(BUILD_FOLDER)scrap.AppDir
-	./appimagetool-x86_64.AppImage --appimage-extract-and-run $(BUILD_FOLDER)scrap.AppDir $(BUILD_FOLDER)/Scrap-v$(SCRAP_VERSION).AppImage
 
 install: translations target std
 	mkdir -p $(PREFIX)/share/scrap
