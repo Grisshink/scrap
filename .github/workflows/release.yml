@@ -146,7 +146,7 @@ jobs:
            make USE_COMPILER=TRUE TARGET=WINDOWS
            mkdir -p build/scrap-${SCRAP_VERSION}-llvm-windows64
            cp -r locale data examples extras build/scrap-${SCRAP_VERSION}-llvm-windows64/
-           cp CHANGELOG.md LICENSE README.md libscrapstd-win.a scrap.exe "${MSYSTEM_PREFIX}/bin/libzstd.dll" build/scrap-${SCRAP_VERSION}-llvm-windows64/
+           cp CHANGELOG.md LICENSE README.md libscrapstd-win.a scrap.exe build/scrap-${SCRAP_VERSION}-llvm-windows64/
            powershell.exe -Command "Compress-Archive -Path build/scrap-${SCRAP_VERSION}-llvm-windows64 -DestinationPath build/scrap-${SCRAP_VERSION}-llvm-windows64.zip -Force"
            mkdir -p dist
            mv build/*.zip dist/
