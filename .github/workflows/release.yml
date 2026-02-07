@@ -181,12 +181,15 @@ jobs:
           path: dist
           pattern: 'scrap-*'
       
+      - name: Generate release notes
+        run: |
+          python "$GITHUB_WORKSPACE/.github/generate_notes.py" > release_notes.md
+
       - name: Create a draft release
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
-        
-          gh release create "$SCRAP_VERSION" --draft --title "$SCRAP_VERSION" --notes-file "$GITHUB_WORKSPACE/.github/release-notes.md"
+          gh release create "$SCRAP_VERSION" --draft --title "$SCRAP_VERSION" --notes-file release_notes.md
           gh release upload "$SCRAP_VERSION" dist/scrap-v0.4-test-appimage/* 
           gh release upload "$SCRAP_VERSION" dist/scrap-v0.4-test-linux/* 
           gh release upload "$SCRAP_VERSION" dist/scrap-v0.4-test-windows64/*
