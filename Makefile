@@ -75,7 +75,7 @@ else
 
 	LLVM_LDFLAGS := --ldflags --system-libs --libs core executionengine mcjit analysis native
 	ifeq ($(TARGET), WINDOWS)
-		LDFLAGS += `$(LLVM_CONFIG) $(LLVM_FLAGS) --link-static $(LLVM_LDFLAGS)`
+		LDFLAGS += `$(LLVM_CONFIG) $(LLVM_FLAGS) --link-static $(LLVM_LDFLAGS) | sed 's/\.dll//'`
 	else
 		ifeq ($(LLVM_LINK_STATIC), TRUE)
 			LDFLAGS += -Wl,-Bstatic `$(LLVM_CONFIG) $(LLVM_FLAGS) --link-static $(LLVM_LDFLAGS)` -Wl,-Bdynamic
