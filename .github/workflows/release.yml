@@ -1,0 +1,192 @@
+name: Build Scrap
+
+on:
+  push:
+    tags:
+      - 'v*.*-*'
+
+permissions:
+  contents: write
+
+env:
+  SCRAP_VERSION: ${{ github.ref_name }}
+
+jobs:
+  linux:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          submodules: recursive
+      
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -y
+          sudo apt-get upgrade -y
+          sudo apt-get install -y libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev gettext zlib1g-dev libzstd-dev libxml2-dev
+
+      - name: Install LLVM
+        run: |
+          wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | gpg --dearmor -o llvm-snapshot.gpg
+          sudo mv llvm-snapshot.gpg /etc/apt/trusted.gpg.d/
+          sudo add-apt-repository "deb http://apt.llvm.org/focal/ llvm-toolchain-focal-19 main"
+          sudo apt-get update -y
+          sudo apt-get install -y --no-install-recommends llvm-19-dev
+
+      - name: Build Scrap compiler
+        run: |
+          make clean
+          make USE_COMPILER=TRUE LLVM_CONFIG=llvm-config-19 LLVM_LINK_STATIC=TRUE
+          mkdir -p build/scrap-${SCRAP_VERSION}-llvm-linux
+          cp -r data examples extras locale build/scrap-${SCRAP_VERSION}-llvm-linux/
+          cp LICENSE README.md CHANGELOG.md scrap libscrapstd.a build/scrap-${SCRAP_VERSION}-llvm-linux/
+          tar --directory=build -czf build/scrap-${SCRAP_VERSION}-llvm-linux.tar.gz scrap-${SCRAP_VERSION}-llvm-linux
+          mkdir -p dist
+          mv build/*.gz dist/
+      
+      - name: Build Scrap interpreter
+        run: |
+          make clean
+          make
+          mkdir -p build/scrap-${SCRAP_VERSION}-linux
+          cp -r data examples extras locale build/scrap-${SCRAP_VERSION}-linux/
+          cp LICENSE README.md CHANGELOG.md scrap libscrapstd.a build/scrap-${SCRAP_VERSION}-linux/
+          tar --directory=build -czf build/scrap-${SCRAP_VERSION}-linux.tar.gz scrap-${SCRAP_VERSION}-linux
+          mv build/*.gz dist/
+          
+      - name: Upload Linux artifacts
+        uses: actions/upload-artifact@v6
+        with:
+          name: scrap-${{ env.SCRAP_VERSION }}-linux
+          path: dist/*
+          retention-days: 10
+      
+  appimage:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          submodules: recursive
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -y
+          sudo apt-get upgrade -y
+          sudo apt-get install -y libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev gettext zlib1g-dev libzstd-dev libxml2-dev
+
+      - name: Install LLVM
+        run: |
+          wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | gpg --dearmor -o llvm-snapshot.gpg
+          sudo mv llvm-snapshot.gpg /etc/apt/trusted.gpg.d/
+          sudo add-apt-repository "deb http://apt.llvm.org/focal/ llvm-toolchain-focal-19 main"
+          sudo apt-get update -y
+          sudo apt-get install -y --no-install-recommends llvm-19-dev
+      
+      - name: Install AppImageTool
+        run: |
+          wget -O appimagetool https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage
+          chmod +x appimagetool
+          sudo mv appimagetool /usr/bin/appimagetool
+        
+      - name: Build Scrap compiler
+        run: |
+          make clean
+          make USE_COMPILER=TRUE LLVM_CONFIG=llvm-config-19 LLVM_LINK_STATIC=TRUE
+          mkdir -p build/scrap.AppDir
+          cp scrap build/scrap.AppDir/AppRun
+          cp -r data locale build/scrap.AppDir/
+          cp scrap.desktop libscrapstd.a extras/scrap.png build/scrap.AppDir/
+          mkdir -p dist
+          appimagetool --appimage-extract-and-run build/scrap.AppDir build/Scrap-${SCRAP_VERSION}-llvm.AppImage
+          mv build/Scrap-${SCRAP_VERSION}-llvm.AppImage dist/
+
+      - name: Build Scrap interpreter
+        run: |
+          make clean
+          make
+          mkdir -p build/scrap.AppDir
+          cp scrap build/scrap.AppDir/AppRun
+          cp -r data locale build/scrap.AppDir/
+          cp scrap.desktop libscrapstd.a extras/scrap.png build/scrap.AppDir/
+          appimagetool --appimage-extract-and-run build/scrap.AppDir build/Scrap-${SCRAP_VERSION}.AppImage
+          mv build/Scrap-${SCRAP_VERSION}.AppImage dist/
+          
+      - name: Upload AppImage artifacts
+        uses: actions/upload-artifact@v6
+        with:
+          name: scrap-${{ env.SCRAP_VERSION }}-appimage
+          path: dist/*
+          retention-days: 10
+  windows:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          submodules: recursive
+
+      - name: Install dependencies
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          install: mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-llvm make gettext
+
+      - name: Setup windres
+        run: ln -sf "${MSYSTEM_PREFIX}/bin/windres.exe" "${MSYSTEM_PREFIX}/bin/x86_64-w64-mingw32-windres"
+
+      - name: Build Scrap compiler
+        run: |
+           make clean
+           make USE_COMPILER=TRUE TARGET=WINDOWS
+           mkdir -p build/scrap-${SCRAP_VERSION}-llvm-windows64
+           cp -r locale data examples extras build/scrap-${SCRAP_VERSION}-llvm-windows64/
+           cp CHANGELOG.md LICENSE README.md libscrapstd-win.a scrap.exe "${MSYSTEM_PREFIX}/bin/libzstd.dll" build/scrap-${SCRAP_VERSION}-llvm-windows64/
+           powershell.exe -Command "Compress-Archive -Path build/scrap-${SCRAP_VERSION}-llvm-windows64 -DestinationPath build/scrap-${SCRAP_VERSION}-llvm-windows64.zip -Force"
+           mkdir -p dist
+           mv build/*.zip dist/
+           
+      - name: Build Scrap interpreter
+        run: |
+          make clean
+          make TARGET=WINDOWS
+          mkdir -p build/scrap-${SCRAP_VERSION}-windows64
+          cp -r locale data examples extras build/scrap-${SCRAP_VERSION}-windows64/
+          cp CHANGELOG.md LICENSE README.md libscrapstd-win.a scrap.exe build/scrap-${SCRAP_VERSION}-windows64/
+          powershell.exe -Command "Compress-Archive -Path build/scrap-${SCRAP_VERSION}-windows64 -DestinationPath build/scrap-${SCRAP_VERSION}-windows64.zip -Force"
+          mv build/*.zip dist/
+
+      - name: Upload Windows artifacts
+        uses: actions/upload-artifact@v6
+        with:
+          name: scrap-${{ env.SCRAP_VERSION }}-windows64
+          path: dist/*
+          retention-days: 10
+
+  release:
+    needs: [linux, appimage, windows]
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v7
+        with:
+          path: dist
+          pattern: 'scrap-*'
+      
+      - name: Create a draft release
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+        
+          gh release create "$SCRAP_VERSION" --draft --title "$SCRAP_VERSION" --notes-file "$GITHUB_WORKSPACE/.github/release-notes.md"
+          gh release upload "$SCRAP_VERSION" dist/scrap-v0.4-test-appimage/* 
+          gh release upload "$SCRAP_VERSION" dist/scrap-v0.4-test-linux/* 
+          gh release upload "$SCRAP_VERSION" dist/scrap-v0.4-test-windows64/*
