@@ -2107,7 +2107,7 @@ static void print_debug(int* num, char* fmt, ...) {
 
 static void write_debug_buffer(void) {
     int i = 0;
-    print_debug(&i, "Scrap v" SCRAP_VERSION);
+    print_debug(&i, "Scrap " SCRAP_VERSION);
     print_debug(&i, "FPS: %d, Frame time: %.3f", GetFPS(), GetFrameTime());
 
 #ifdef DEBUG
