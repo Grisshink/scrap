@@ -195,7 +195,6 @@ bool exec_block(Exec* exec, Block* block, AnyValue* block_return, ControlState c
 
 #define BLOCKDEF chain->blocks[i].blockdef
 bool exec_run_chain(Exec* exec, BlockChain* chain, int argc, AnyValue* argv, AnyValue* return_val) {
-    int skip_layer = -1;
     size_t base_len = exec->control_stack_len;
     chain_stack_push(exec, (ChainStackData) {
         .skip_block = false,
@@ -213,36 +212,46 @@ bool exec_run_chain(Exec* exec, BlockChain* chain, int argc, AnyValue* argv, Any
     exec->running_chain = chain;
     AnyValue block_return;
     for (size_t i = 0; i < vector_size(chain->blocks); i++) {
+        ChainStackData* chain_data = &exec->chain_stack[exec->chain_stack_len - 1];
+
+        if (chain_data->skip_block) {
+            int layer = chain_data->layer;
+            while (i < vector_size(chain->blocks)) {
+                if (BLOCKDEF->type == BLOCKTYPE_END || BLOCKDEF->type == BLOCKTYPE_CONTROLEND) {
+                    layer--;
+                    if (layer < chain_data->layer) break;
+                }
+                if (BLOCKDEF->type == BLOCKTYPE_CONTROL || BLOCKDEF->type == BLOCKTYPE_CONTROLEND) {
+                    layer++;
+                }
+                i++;
+            }
+            chain_data->skip_block = false;
+        }
+
         thread_handle_stopping_state(exec->thread);
 
         size_t block_ind = i;
-        ChainStackData* chain_data = &exec->chain_stack[exec->chain_stack_len - 1];
         chain_data->running_ind = i;
         ControlState control_state = BLOCKDEF->type == BLOCKTYPE_CONTROL ? CONTROL_STATE_BEGIN : CONTROL_STATE_NORMAL;
         if (chain_data->is_returning) break;
 
         if (BLOCKDEF->type == BLOCKTYPE_END || BLOCKDEF->type == BLOCKTYPE_CONTROLEND) {
-            if (BLOCKDEF->type == BLOCKTYPE_CONTROLEND && chain_data->layer == 0) continue;
+            if (chain_data->layer == 0) continue;
             variable_stack_pop_layer(exec);
             chain_data->layer--;
             control_stack_pop_data(block_ind, size_t);
             control_stack_pop_data(block_return, AnyValue);
             gc_root_end(&exec->gc);
             control_state = CONTROL_STATE_END;
-            if (chain_data->skip_block && skip_layer == chain_data->layer) {
-                chain_data->skip_block = false;
-                skip_layer = -1;
-            }
         }
         
-        if (!chain_data->skip_block) {
-            if (!exec_block(exec, &chain->blocks[block_ind], &block_return, control_state, (AnyValue){0})) {
-                chain_stack_pop(exec);
-                return false;
-            }
-            exec->running_chain = chain;
-            if (chain_data->running_ind != i) i = chain_data->running_ind;
+        if (!exec_block(exec, &chain->blocks[block_ind], &block_return, control_state, (AnyValue){0})) {
+            chain_stack_pop(exec);
+            return false;
         }
+        exec->running_chain = chain;
+        if (chain_data->running_ind != i) i = chain_data->running_ind;
 
         if (BLOCKDEF->type == BLOCKTYPE_CONTROLEND && block_ind != i) {
             control_state = CONTROL_STATE_BEGIN;
@@ -257,7 +266,6 @@ bool exec_run_chain(Exec* exec, BlockChain* chain, int argc, AnyValue* argv, Any
             control_stack_push_data(block_return, AnyValue);
             control_stack_push_data(i, size_t);
             gc_root_begin(&exec->gc);
-            if (chain_data->skip_block && skip_layer == -1) skip_layer = chain_data->layer;
             chain_data->layer++;
         }
     }
