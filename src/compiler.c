@@ -50,10 +50,6 @@ bool compiler_run(void* e) {
 
     bytecode_push_label(&compiler->bytecode, "entry");
 
-    bytecode_push_op(&compiler->bytecode, IR_RET);
-    bytecode_print(&compiler->bytecode);
-    return true;
-
     for (size_t i = 0; i < vector_size(compiler->code); i++) {
         Block* block = &compiler->code[i].blocks[0];
         if (block->blockdef->type != BLOCKTYPE_HAT) continue;
@@ -63,6 +59,9 @@ bool compiler_run(void* e) {
             return false;
         }
     }
+
+    bytecode_push_op(&compiler->bytecode, IR_RET);
+    bytecode_print(&compiler->bytecode);
 
     return true;
 }

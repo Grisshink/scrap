@@ -41,6 +41,13 @@ struct Compiler {
     Thread* thread;
 };
 
+#define DATA_UNKNOWN (AnyValue) {0}
+
+#define DATA_NOTHING (AnyValue) { \
+    .type = DATA_TYPE_NOTHING, \
+    .data = (AnyValueData) {0}, \
+}
+
 Compiler compiler_new(Thread* thread);
 bool compiler_run(void* e);
 void compiler_cleanup(void* e);
