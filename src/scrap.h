@@ -517,8 +517,8 @@ void register_blocks(Vm* vm);
 bool block_custom_arg(Compiler* compiler, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state);
 bool block_exec_custom(Compiler* compiler, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state);
 #else
-bool block_custom_arg(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state);
-bool block_exec_custom(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state);
+AnyValue block_custom_arg(Compiler* compiler, Block* block);
+AnyValue block_exec_custom(Compiler* compiler, Block* block);
 #endif
 
 // vm.c

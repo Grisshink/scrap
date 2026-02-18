@@ -283,6 +283,7 @@ double exec_pop_float(IrExec* exec);
 bool exec_pop_bool(IrExec* exec);
 IrLabel exec_pop_label(IrExec* exec);
 IrFunction exec_pop_func(IrExec* exec);
+#endif // SCRAP_IR_H
 
 #ifdef SCRAP_IR_IMPLEMENTATION
 
@@ -1559,4 +1560,3 @@ void exec_print_variables(IrExec* exec) {
 }
 
 #endif // SCRAP_IR_IMPLEMENTATION
-#endif // SCRAP_IR_H

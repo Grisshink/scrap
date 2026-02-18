@@ -64,1086 +64,448 @@ static MathFunc block_math_func_list[MATH_LIST_LEN] = {
 
 #include "std.h"
 
-bool block_do_nothing(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
-    (void) control_state;
-    (void) block;
-    (void) compiler;
-    (void) argc;
-    (void) argv;
-    *return_val = DATA_NOTHING;
-    return true;
-}
-
-bool block_noop(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
-    (void) control_state;
-    (void) block;
-    (void) compiler;
-    (void) argc;
-    (void) argv;
-    *return_val = DATA_NOTHING;
-    return true;
-}
-
-bool block_on_start(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
-    (void) control_state;
-    (void) block;
-    (void) compiler;
-    (void) argc;
-    (void) argv;
-    *return_val = DATA_NOTHING;
-    return true;
-}
-
-bool block_define_block(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
-    (void) control_state;
-    (void) block;
-    (void) compiler;
-    (void) argc;
-    (void) argv;
-    *return_val = DATA_NOTHING;
-    return true;
-}
-
-bool block_loop(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
-    (void) block;
-    (void) argc;
-    (void) argv;
-
-    if (control_state == CONTROL_STATE_BEGIN) {
-        control_stack_push_data(compiler->chain_stack[compiler->chain_stack_len - 1].running_ind, size_t);
-    } else if (control_state == CONTROL_STATE_END) {
-        control_stack_pop_data(compiler->chain_stack[compiler->chain_stack_len - 1].running_ind, size_t);
-        control_stack_push_data(compiler->chain_stack[compiler->chain_stack_len - 1].running_ind, size_t);
-    }
-
-    *return_val = DATA_BOOL(1);
-    return true;
-}
-
-bool block_if(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
-    (void) block;
-
-    if (control_state == CONTROL_STATE_BEGIN) {
-        if (argc < 1 || !std_bool_from_any(&argv[0])) {
-            compiler_set_skip_block(compiler);
-            control_stack_push_data((int)0, int);
-        } else {
-            control_stack_push_data((int)1, int);
-        }
-        *return_val = DATA_NOTHING;
-    } else if (control_state == CONTROL_STATE_END) {
-        int is_success = 0;
-        control_stack_pop_data(is_success, int);
-        *return_val = DATA_BOOL(is_success);
-    } else {
-        compiler_set_error(compiler, block, "Invalid control state");
-        return false;
-    }
-
-    return true;
-}
-
-bool block_else_if(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
-    (void) block;
-
-    if (control_state == CONTROL_STATE_BEGIN) {
-        if (argc < 2 || std_bool_from_any(&argv[0])) {
-            compiler_set_skip_block(compiler);
-            control_stack_push_data((int)1, int);
-        } else {
-            int condition = std_bool_from_any(&argv[1]);
-            if (!condition) compiler_set_skip_block(compiler);
-            control_stack_push_data(condition, int);
-        }
-        *return_val = DATA_NOTHING;
-    } else if (control_state == CONTROL_STATE_END) {
-        int is_success = 0;
-        control_stack_pop_data(is_success, int);
-        *return_val = DATA_BOOL(is_success);
-    } else {
-        compiler_set_error(compiler, block, "Invalid control state");
-        return false;
-    }
-    return true;
-}
-
-bool block_else(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
-    (void) block;
-
-    if (control_state == CONTROL_STATE_BEGIN) {
-        if (argc < 1 || std_bool_from_any(&argv[0])) {
-            compiler_set_skip_block(compiler);
-        }
-        *return_val = DATA_NOTHING;
-    } else if (control_state == CONTROL_STATE_END) {
-        *return_val = DATA_BOOL(1);
-    } else {
-        compiler_set_error(compiler, block, "Invalid control state");
-        return false;
-    }
-
-    return true;
-}
-
-// Visualization of control stack (stack grows downwards):
-// - loop block index
-// - cycles left to loop
-// - 1 <- indicator for end block to do looping
-//
-// If the loop should not loop then the stack will look like this:
-// - 0 <- indicator for end block that it should stop immediately
-bool block_repeat(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
-    (void) block;
-
-    if (control_state == CONTROL_STATE_BEGIN) {
-        int cycles = argc < 1 ? 0 : std_integer_from_any(&argv[0]);
-        if (cycles <= 0) {
-            compiler_set_skip_block(compiler);
-            control_stack_push_data((int)0, int); // This indicates the end block that it should NOT loop
-            *return_val = DATA_NOTHING;
-            return true;
-        }
-        control_stack_push_data(compiler->chain_stack[compiler->chain_stack_len - 1].running_ind, size_t);
-        control_stack_push_data(cycles - 1, int);
-        control_stack_push_data((int)1, int); // This indicates the end block that it should loop
-    } else if (control_state == CONTROL_STATE_END) {
-        int should_loop = 0;
-        control_stack_pop_data(should_loop, int);
-        if (!should_loop) {
-            *return_val = DATA_BOOL(0);
-            return true;
-        }
-
-        int left = -1;
-        control_stack_pop_data(left, int);
-        if (left <= 0) {
-            size_t bin;
-            control_stack_pop_data(bin, size_t);
-            (void) bin; // Cleanup stack
-            *return_val = DATA_BOOL(1);
-            return true;
-        }
-
-        control_stack_pop_data(compiler->chain_stack[compiler->chain_stack_len - 1].running_ind, size_t);
-        control_stack_push_data(compiler->chain_stack[compiler->chain_stack_len - 1].running_ind, size_t);
-        control_stack_push_data(left - 1, int);
-        control_stack_push_data((int)1, int);
-    } else {
-        compiler_set_error(compiler, block, "Invalid control state");
-        return false;
-    }
-
-    *return_val = DATA_NOTHING;
-    return true;
-}
-
-bool block_while(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
-    if (control_state == CONTROL_STATE_BEGIN) {
-        if (argc < 1 || !std_bool_from_any(&argv[0])) {
-            compiler_set_skip_block(compiler);
-        }
-        control_stack_push_data(compiler->chain_stack[compiler->chain_stack_len - 1].running_ind, size_t);
-    } else if (control_state == CONTROL_STATE_END) {
-        AnyValue out_val;
-        if (!compiler_evaluate_argument(compiler, &block->arguments[0], &out_val)) return false;
-
-        if (vector_size(block->arguments) < 1 || !std_bool_from_any(&out_val)) {
-            size_t bin;
-            control_stack_pop_data(bin, size_t);
-            (void) bin;
-            *return_val = DATA_BOOL(1);
-            return true;
-        }
-
-        control_stack_pop_data(compiler->chain_stack[compiler->chain_stack_len - 1].running_ind, size_t);
-        control_stack_push_data(compiler->chain_stack[compiler->chain_stack_len - 1].running_ind, size_t);
-    } else {
-        compiler_set_error(compiler, block, "Invalid control state");
-        return false;
-    }
-
-    *return_val = DATA_NOTHING;
-    return true;
-}
-
-bool block_sleep(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
-    (void) control_state;
-    (void) block;
-    (void) compiler;
-    (void) argc;
-    int usecs = std_integer_from_any(&argv[0]);
-    if (usecs < 0) {
-        *return_val = DATA_INTEGER(0);
-        return true;
-    }
-
-    struct timespec sleep_time = {0};
-    sleep_time.tv_sec = usecs / 1000000;
-    sleep_time.tv_nsec = (usecs % 1000000) * 1000;
-
-    if (nanosleep(&sleep_time, &sleep_time) == -1) {
-        *return_val = DATA_INTEGER(0);
-        return true;
-    }
-
-    *return_val = DATA_INTEGER(usecs);
-    return true;
-}
-
-bool block_declare_var(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
-    (void) control_state;
-    (void) argc;
-
-    if (argv[0].type != DATA_TYPE_LITERAL) {
-        compiler_set_error(compiler, block, gettext("Invalid data type %s, expected %s"), type_to_str(argv[0].type), type_to_str(DATA_TYPE_LITERAL));
-        return false;
-    }
-    if (block->parent) {
-        compiler_set_error(compiler, block, gettext("Variable declarations are not allowed inside an expression"));
-        return false;
-    }
-
-    Variable* var = variable_stack_push_var(compiler, argv[0].data.literal_val, argv[1]);
-    if (!var) {
-        compiler_set_error(compiler, block, gettext("Cannot declare variable with empty name"));
-        return false;
-    }
-
-    if (argv[1].type == DATA_TYPE_LIST || argv[1].type == DATA_TYPE_ANY || argv[1].type == DATA_TYPE_STRING) {
-        gc_add_root(&compiler->gc, &var->value_ptr);
-    }
-
-    *return_val = argv[1];
-    return true;
-}
-
-bool block_get_var(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
-    (void) control_state;
-    (void) block;
-    (void) argc;
-
-    if (argv[0].type != DATA_TYPE_LITERAL) {
-        compiler_set_error(compiler, block, gettext("Invalid data type %s, expected %s"), type_to_str(argv[0].type), type_to_str(DATA_TYPE_LITERAL));
-        return false;
-    }
-    
-    char* var_name = argv[0].data.literal_val;
-    Variable* var = variable_stack_get_variable(compiler, var_name);
-    if (!var) {
-        compiler_set_error(compiler, block, gettext("Variable with name \"%s\" does not exist in the current scope"), var_name);
-        return false;
-    }
-    *return_val = var->value;
-    return true;
-}
-
-bool block_set_var(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
-    (void) control_state;
-    (void) block;
-    (void) argc;
-
-    if (argv[0].type != DATA_TYPE_LITERAL) {
-        compiler_set_error(compiler, block, gettext("Invalid data type %s, expected %s"), type_to_str(argv[0].type), type_to_str(DATA_TYPE_LITERAL));
-        return false;
-    }
-
-    char* var_name = argv[0].data.literal_val;
-    Variable* var = variable_stack_get_variable(compiler, var_name);
-    if (!var) {
-        compiler_set_error(compiler, block, gettext("Variable with name \"%s\" does not exist in the current scope"), var_name);
-        return false;
-    }
-
-    var->value = argv[1];
-
-    *return_val = var->value;
-    return true;
-}
-
-bool block_create_list(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
-    (void) control_state;
-    (void) block;
-    (void) compiler;
-    (void) argc;
-    (void) argv;
-
-    *return_val = DATA_LIST(std_list_new(&compiler->gc));
-    return true;
-}
-
-bool block_list_add(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
-    (void) control_state;
-    (void) argc;
-    if (argv[0].type != DATA_TYPE_LIST) {
-        compiler_set_error(compiler, block, gettext("Invalid data type %s, expected %s"), type_to_str(argv[0].type), type_to_str(DATA_TYPE_LIST));
-        return false;
-    }
-
-    std_list_add_any(&compiler->gc, argv[0].data.list_val, argv[1]);
-    *return_val = DATA_NOTHING;
-    return true;
-}
-
-bool block_list_get(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
-    (void) control_state;
-    (void) block;
-    (void) argc;
-    if (argv[0].type != DATA_TYPE_LIST) {
-        compiler_set_error(compiler, block, gettext("Invalid data type %s, expected %s"), type_to_str(argv[0].type), type_to_str(DATA_TYPE_LIST));
-        return false;
-    }
-
-    List* list = argv[0].data.list_val;
-    int index = std_integer_from_any(&argv[1]);
-
-    if (index >= list->size || index < 0) {
-        *return_val = DATA_NOTHING;
-        return true;
-    }
-
-    *return_val = list->values[index];
-    return true;
-}
-
-bool block_list_length(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
-    (void) control_state;
-    (void) block;
-    (void) compiler;
-    (void) argc;
-    if (argv[0].type != DATA_TYPE_LIST) {
-        compiler_set_error(compiler, block, gettext("Invalid data type %s, expected %s"), type_to_str(argv[0].type), type_to_str(DATA_TYPE_LIST));
-        return false;
-    }
-
-    *return_val = DATA_INTEGER(argv[0].data.list_val->size);
-    return true;
-}
-
-bool block_list_set(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
-    (void) control_state;
-    (void) block;
-    (void) compiler;
-    (void) argc;
-    if (argv[0].type != DATA_TYPE_LIST) {
-        compiler_set_error(compiler, block, gettext("Invalid data type %s, expected %s"), type_to_str(argv[0].type), type_to_str(DATA_TYPE_LIST));
-        return false;
-    }
-
-    int index = std_integer_from_any(&argv[1]);
-    if (index >= argv[0].data.list_val->size || index < 0) {
-        compiler_set_error(compiler, block, gettext("Tried to access index %d for list of length %d"), index, argv[0].data.list_val->size);
-        return false;
-    }
-
-    argv[0].data.list_val->values[index] = argv[2];
-    *return_val = DATA_NOTHING;
-    return true;
-}
-
-bool block_print(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
+AnyValue block_do_nothing(Compiler* compiler, Block* block) {
     (void) compiler;
     (void) block;
-    (void) control_state;
-    (void) argc;
-
-    int bytes_sent = 0;
-    switch (argv[0].type) {
-    case DATA_TYPE_INTEGER:
-        bytes_sent = term_print_integer(argv[0].data.integer_val);
-        break;
-    case DATA_TYPE_BOOL:
-        bytes_sent = term_print_str(argv[0].data.integer_val ? "true" : "false");
-        break;
-    case DATA_TYPE_LITERAL:
-        bytes_sent = term_print_str(argv[0].data.literal_val);
-        break;
-    case DATA_TYPE_STRING:
-        bytes_sent = term_print_str(argv[0].data.str_val->str);
-        break;
-    case DATA_TYPE_FLOAT:
-        bytes_sent = term_print_float(argv[0].data.float_val);
-        break;
-    case DATA_TYPE_LIST:
-        bytes_sent = term_print_str("*LIST (");
-        bytes_sent += term_print_integer(argv[0].data.list_val->size);
-        bytes_sent += term_print_str(")*");
-        break;
-    case DATA_TYPE_NOTHING:
-        break;
-    case DATA_TYPE_COLOR:
-        bytes_sent = term_print_color(CONVERT_COLOR(argv[0].data.color_val, TermColor));
-        break;
-    case DATA_TYPE_UNKNOWN:
-    case DATA_TYPE_ANY:
-    case DATA_TYPE_BLOCKDEF:
-        compiler_set_error(compiler, block, gettext("Cannot print type %s"), type_to_str(argv[0].type));
-        return false;
-    }
-    *return_val = DATA_INTEGER(bytes_sent);
-    return true;
+    return (AnyValue) {0};
 }
 
-bool block_println(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
-    if (!block_print(compiler, block, argc, argv, return_val, control_state)) return false;
-    term_print_str("\n");
-    return_val->data.integer_val++;
-    return true;
-}
-
-bool block_cursor_x(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
-    (void) control_state;
-    (void) block;
+AnyValue block_noop(Compiler* compiler, Block* block) {
     (void) compiler;
-    (void) argv;
-    (void) argc;
-
-    mutex_lock(&term.lock);
-    int cur_x = 0;
-    if (term.char_w != 0) cur_x = term.cursor_pos % term.char_w;
-    mutex_unlock(&term.lock);
-    *return_val = DATA_INTEGER(cur_x);
-    return true;
+    (void) block;
+    return (AnyValue) {0};
 }
 
-bool block_cursor_y(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
-    (void) control_state;
-    (void) block;
+AnyValue block_on_start(Compiler* compiler, Block* block) {
     (void) compiler;
-    (void) argv;
-    (void) argc;
-
-    mutex_lock(&term.lock);
-    int cur_y = 0;
-    if (term.char_w != 0) cur_y = term.cursor_pos / term.char_w;
-    mutex_unlock(&term.lock);
-
-    *return_val = DATA_INTEGER(cur_y);
-    return true;
+    (void) block;
+    return (AnyValue) {0};
 }
 
-bool block_cursor_max_x(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
-    (void) control_state;
-    (void) block;
+AnyValue block_define_block(Compiler* compiler, Block* block) {
     (void) compiler;
-    (void) argv;
-    (void) argc;
-
-    mutex_lock(&term.lock);
-    int cur_max_x = term.char_w;
-    mutex_unlock(&term.lock);
-
-    *return_val = DATA_INTEGER(cur_max_x);
-    return true;
+    (void) block;
+    return (AnyValue) {0};
 }
 
-bool block_cursor_max_y(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
-    (void) control_state;
-    (void) block;
+AnyValue block_loop(Compiler* compiler, Block* block) {
     (void) compiler;
-    (void) argv;
-    (void) argc;
-
-    mutex_lock(&term.lock);
-    int cur_max_y = term.char_h;
-    mutex_unlock(&term.lock);
-
-    *return_val = DATA_INTEGER(cur_max_y);
-    return true;
+    (void) block;
+    return (AnyValue) {0};
 }
 
-bool block_set_cursor(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
-    (void) control_state;
-    (void) block;
+AnyValue block_if(Compiler* compiler, Block* block) {
     (void) compiler;
-    (void) argc;
-
-    mutex_lock(&term.lock);
-    int x = CLAMP(std_integer_from_any(&argv[0]), 0, term.char_w - 1);
-    int y = CLAMP(std_integer_from_any(&argv[1]), 0, term.char_h - 1);
-    term.cursor_pos = x + y * term.char_w;
-    mutex_unlock(&term.lock);
-
-    *return_val = DATA_NOTHING;
-    return true;
+    (void) block;
+    return (AnyValue) {0};
 }
 
-bool block_set_fg_color(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
-    (void) control_state;
-    (void) block;
+AnyValue block_else_if(Compiler* compiler, Block* block) {
     (void) compiler;
-    (void) argc;
-    term_set_fg_color(CONVERT_COLOR(std_color_from_any(&argv[0]), TermColor));
-    *return_val = DATA_NOTHING;
-    return true;
+    (void) block;
+    return (AnyValue) {0};
 }
 
-bool block_set_bg_color(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
-    (void) control_state;
-    (void) block;
+AnyValue block_else(Compiler* compiler, Block* block) {
     (void) compiler;
-    (void) argc;
-    term_set_bg_color(CONVERT_COLOR(std_color_from_any(&argv[0]), TermColor));
-    *return_val = DATA_NOTHING;
-    return true;
+    (void) block;
+    return (AnyValue) {0};
 }
 
-bool block_reset_color(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
-    (void) control_state;
-    (void) block;
+AnyValue block_repeat(Compiler* compiler, Block* block) {
     (void) compiler;
-    (void) argv;
-    (void) argc;
-    term_set_fg_color(CONVERT_COLOR(WHITE, TermColor));
-    term_set_bg_color(CONVERT_COLOR(BLACK, TermColor));
-
-    *return_val = DATA_NOTHING;
-    return true;
+    (void) block;
+    return (AnyValue) {0};
 }
 
-bool block_term_clear(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
-    (void) control_state;
-    (void) block;
+AnyValue block_while(Compiler* compiler, Block* block) {
     (void) compiler;
-    (void) argv;
-    (void) argc;
-    term_clear();
-
-    *return_val = DATA_NOTHING;
-    return true;
+    (void) block;
+    return (AnyValue) {0};
 }
 
-bool block_term_set_clear(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
-    (void) control_state;
-    (void) block;
+AnyValue block_sleep(Compiler* compiler, Block* block) {
     (void) compiler;
-    (void) argc;
-    term_set_clear_color(CONVERT_COLOR(std_color_from_any(&argv[0]), TermColor));
-    *return_val = DATA_NOTHING;
-    return true;
+    (void) block;
+    return (AnyValue) {0};
 }
 
-bool block_input(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
-    (void) control_state;
-    (void) block;
-    (void) argv;
-    (void) argc;
-    *return_val = DATA_STRING(std_term_get_input(&compiler->gc));
-    return true;
-}
-
-bool block_get_char(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
-    (void) control_state;
-    (void) block;
-    (void) argv;
-    (void) argc;
-
-    *return_val = DATA_STRING(std_term_get_char(&compiler->gc));
-    return true;
-}
-
-bool block_random(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
-    (void) control_state;
-    (void) block;
+AnyValue block_declare_var(Compiler* compiler, Block* block) {
     (void) compiler;
-    (void) argc;
-
-    int min = std_integer_from_any(&argv[0]);
-    int max = std_integer_from_any(&argv[1]);
-    if (min > max) {
-        int temp = min;
-        min = max;
-        max = temp;
-    }
-    int val = GetRandomValue(min, max);
-    *return_val = DATA_INTEGER(val);
-    return true;
+    (void) block;
+    return (AnyValue) {0};
 }
 
-bool block_join(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
-    (void) control_state;
-    (void) argc;
-    (void) block;
-
-    *return_val = DATA_STRING(std_string_join(&compiler->gc, std_string_from_any(&compiler->gc, &argv[0]), std_string_from_any(&compiler->gc, &argv[1])));
-    return true;
-}
-
-bool block_ord(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
-    (void) control_state;
-    (void) block;
+AnyValue block_get_var(Compiler* compiler, Block* block) {
     (void) compiler;
-    (void) argc;
-
-    const char* str = std_any_string_from_any(&compiler->gc, &argv[0]);
-    int codepoint_size;
-    int codepoint = GetCodepoint(str, &codepoint_size);
-    *return_val = DATA_INTEGER(codepoint);
-    return true;
+    (void) block;
+    return (AnyValue) {0};
 }
 
-bool block_chr(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
-    (void) control_state;
-    (void) block;
-    (void) argc;
-    *return_val = DATA_STRING(std_string_chr(&compiler->gc, std_integer_from_any(&argv[0])));
-    return true;
-}
-
-bool block_letter_in(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
-    (void) control_state;
-    (void) block;
-    (void) argc;
-    *return_val = DATA_STRING(std_string_letter_in(&compiler->gc, std_integer_from_any(&argv[0]), std_string_from_any(&compiler->gc, &argv[1])));
-    return true;
-}
-
-bool block_substring(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
-    (void) control_state;
-    (void) block;
-    (void) argc;
-    *return_val = DATA_STRING(std_string_substring(&compiler->gc, std_integer_from_any(&argv[0]), std_integer_from_any(&argv[1]), std_string_from_any(&compiler->gc, &argv[2])));
-    return true;
-}
-
-bool block_length(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
-    (void) control_state;
-    (void) block;
-    (void) argc;
-    *return_val = DATA_INTEGER(std_string_length(std_string_from_any(&compiler->gc, &argv[0])));
-    return true;
-}
-
-bool block_unix_time(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
-    (void) control_state;
-    (void) block;
+AnyValue block_set_var(Compiler* compiler, Block* block) {
     (void) compiler;
-    (void) argc;
-    (void) argv;
-    *return_val = DATA_INTEGER(time(NULL));
-    return true;
+    (void) block;
+    return (AnyValue) {0};
 }
 
-bool block_convert_int(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
-    (void) control_state;
-    (void) block;
+AnyValue block_create_list(Compiler* compiler, Block* block) {
     (void) compiler;
-    (void) argc;
-    *return_val = DATA_INTEGER(std_integer_from_any(&argv[0]));
-    return true;
+    (void) block;
+    return (AnyValue) {0};
 }
 
-bool block_convert_float(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
-    (void) control_state;
-    (void) block;
+AnyValue block_list_add(Compiler* compiler, Block* block) {
     (void) compiler;
-    (void) argc;
-    *return_val = DATA_FLOAT(std_float_from_any(&argv[0]));
-    return true;
+    (void) block;
+    return (AnyValue) {0};
 }
 
-bool block_convert_str(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
-    (void) control_state;
-    (void) block;
-    (void) argc;
-    *return_val = DATA_STRING(std_string_from_any(&compiler->gc, &argv[0]));
-    return true;
-}
-
-bool block_convert_bool(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
-    (void) control_state;
-    (void) block;
+AnyValue block_list_get(Compiler* compiler, Block* block) {
     (void) compiler;
-    (void) argc;
-    *return_val = DATA_BOOL(std_bool_from_any(&argv[0]));
-    return true;
+    (void) block;
+    return (AnyValue) {0};
 }
 
-bool block_convert_color(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
-    (void) control_state;
-    (void) block;
+AnyValue block_list_length(Compiler* compiler, Block* block) {
     (void) compiler;
-    (void) argc;
-    *return_val = DATA_COLOR(std_color_from_any(&argv[0]));
-    return true;
+    (void) block;
+    return (AnyValue) {0};
 }
 
-bool block_typeof(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
-    (void) control_state;
-    (void) block;
+AnyValue block_list_set(Compiler* compiler, Block* block) {
     (void) compiler;
-    (void) argc;
-    *return_val = DATA_LITERAL((char*)type_to_str(argv[0].type));
-    return true;
+    (void) block;
+    return (AnyValue) {0};
 }
 
-bool block_plus(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
-    (void) control_state;
-    (void) block;
+AnyValue block_print(Compiler* compiler, Block* block) {
     (void) compiler;
-    (void) argc;
-    if (argv[0].type == DATA_TYPE_FLOAT) {
-        *return_val = DATA_FLOAT(argv[0].data.float_val + std_float_from_any(&argv[1]));
-    } else {
-        *return_val = DATA_INTEGER(std_integer_from_any(&argv[0]) + std_integer_from_any(&argv[1]));
-    }
-    return true;
+    (void) block;
+    return (AnyValue) {0};
 }
 
-bool block_minus(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
-    (void) control_state;
-    (void) block;
+AnyValue block_println(Compiler* compiler, Block* block) {
     (void) compiler;
-    (void) argc;
-    if (argv[0].type == DATA_TYPE_FLOAT) {
-        *return_val = DATA_FLOAT(argv[0].data.float_val - std_float_from_any(&argv[1]));
-    } else {
-        *return_val = DATA_INTEGER(std_integer_from_any(&argv[0]) - std_integer_from_any(&argv[1]));
-    }
-    return true;
+    (void) block;
+    return (AnyValue) {0};
 }
 
-bool block_mult(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
-    (void) control_state;
-    (void) block;
+AnyValue block_cursor_x(Compiler* compiler, Block* block) {
     (void) compiler;
-    (void) argc;
-    if (argv[0].type == DATA_TYPE_FLOAT) {
-        *return_val = DATA_FLOAT(argv[0].data.float_val * std_float_from_any(&argv[1]));
-    } else {
-        *return_val = DATA_INTEGER(std_integer_from_any(&argv[0]) * std_integer_from_any(&argv[1]));
-    }
-    return true;
+    (void) block;
+    return (AnyValue) {0};
 }
 
-bool block_div(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
-    (void) control_state;
-    (void) block;
+AnyValue block_cursor_y(Compiler* compiler, Block* block) {
     (void) compiler;
-    (void) argc;
-
-    if (argv[0].type == DATA_TYPE_FLOAT) {
-        *return_val = DATA_FLOAT(argv[0].data.float_val / std_float_from_any(&argv[1]));
-    } else {
-        int divisor = std_integer_from_any(&argv[1]);
-        if (divisor == 0) {
-            compiler_set_error(compiler, block, gettext("Division by zero"));
-            return false;
-        }
-        *return_val = DATA_INTEGER(std_integer_from_any(&argv[0]) / divisor);
-    }
-    return true;
+    (void) block;
+    return (AnyValue) {0};
 }
 
-bool block_pow(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
-    (void) control_state;
-    (void) block;
+AnyValue block_cursor_max_x(Compiler* compiler, Block* block) {
     (void) compiler;
-    (void) argc;
-    if (argv[0].type == DATA_TYPE_FLOAT) {
-        *return_val = DATA_FLOAT(pow(argv[0].data.float_val, std_float_from_any(&argv[1])));
-        return true;
-    }
-
-    int base = std_integer_from_any(&argv[0]);
-    unsigned int exp = std_integer_from_any(&argv[1]);
-    if (!exp) {
-        *return_val = DATA_INTEGER(1);
-        return true;
-    }
-
-    int result = 1;
-    while (exp) {
-        if (exp & 1) result *= base;
-        exp >>= 1;
-        base *= base;
-    }
-    *return_val = DATA_INTEGER(result);
-    return true;
+    (void) block;
+    return (AnyValue) {0};
 }
 
-bool block_math(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
-    (void) control_state;
-    (void) block;
+AnyValue block_cursor_max_y(Compiler* compiler, Block* block) {
     (void) compiler;
-    (void) argc;
-    if (argv[0].type != DATA_TYPE_LITERAL) {
-        compiler_set_error(compiler, block, gettext("Invalid data type %s, expected %s"), type_to_str(argv[0].type), type_to_str(DATA_TYPE_LITERAL));
-        return false;
-    }
-
-    for (int i = 0; i < MATH_LIST_LEN; i++) {
-        if (strcmp(argv[0].data.literal_val, block_math_list[i])) continue;
-        *return_val = DATA_FLOAT(block_math_func_list[i](std_float_from_any(&argv[1])));
-        return true;
-    }
-
-    compiler_set_error(compiler, block, gettext("Invalid argument %s"), argv[0].data.literal_val);
-    return false;
+    (void) block;
+    return (AnyValue) {0};
 }
 
-bool block_pi(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
-    (void) control_state;
-    (void) block;
+AnyValue block_set_cursor(Compiler* compiler, Block* block) {
     (void) compiler;
-    (void) argc;
-    (void) argv;
-    *return_val = DATA_FLOAT(M_PI);
-    return true;
+    (void) block;
+    return (AnyValue) {0};
 }
 
-bool block_bit_not(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
-    (void) control_state;
-    (void) block;
+AnyValue block_set_fg_color(Compiler* compiler, Block* block) {
     (void) compiler;
-    (void) argc;
-    *return_val = DATA_INTEGER(~std_integer_from_any(&argv[0]));
-    return true;
+    (void) block;
+    return (AnyValue) {0};
 }
 
-bool block_bit_and(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
-    (void) control_state;
-    (void) block;
+AnyValue block_set_bg_color(Compiler* compiler, Block* block) {
     (void) compiler;
-    (void) argc;
-    *return_val = DATA_INTEGER(std_integer_from_any(&argv[0]) & std_integer_from_any(&argv[1]));
-    return true;
+    (void) block;
+    return (AnyValue) {0};
 }
 
-bool block_bit_xor(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
-    (void) control_state;
-    (void) block;
+AnyValue block_reset_color(Compiler* compiler, Block* block) {
     (void) compiler;
-    (void) argc;
-    *return_val = DATA_INTEGER(std_integer_from_any(&argv[0]) ^ std_integer_from_any(&argv[1]));
-    return true;
+    (void) block;
+    return (AnyValue) {0};
 }
 
-bool block_bit_or(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
-    (void) control_state;
-    (void) block;
+AnyValue block_term_clear(Compiler* compiler, Block* block) {
     (void) compiler;
-    (void) argc;
-    *return_val = DATA_INTEGER(std_integer_from_any(&argv[0]) | std_integer_from_any(&argv[1]));
-    return true;
+    (void) block;
+    return (AnyValue) {0};
 }
 
-bool block_rem(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
-    (void) control_state;
-    (void) block;
+AnyValue block_term_set_clear(Compiler* compiler, Block* block) {
     (void) compiler;
-    (void) argc;
-    if (argv[0].type == DATA_TYPE_FLOAT) {
-        *return_val = DATA_FLOAT(fmod(argv[0].data.float_val, std_float_from_any(&argv[1])));
-    } else {
-        *return_val = DATA_INTEGER(std_integer_from_any(&argv[0]) % std_integer_from_any(&argv[1]));
-    }
-    return true;
+    (void) block;
+    return (AnyValue) {0};
 }
 
-bool block_less(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
-    (void) control_state;
-    (void) block;
+AnyValue block_input(Compiler* compiler, Block* block) {
     (void) compiler;
-    (void) argc;
-
-    if (argv[0].type == DATA_TYPE_FLOAT) {
-        *return_val = DATA_BOOL(argv[0].data.float_val < std_float_from_any(&argv[1]));
-    } else {
-        *return_val = DATA_BOOL(std_integer_from_any(&argv[0]) < std_integer_from_any(&argv[1]));
-    }
-    return true;
+    (void) block;
+    return (AnyValue) {0};
 }
 
-bool block_less_eq(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
-    (void) control_state;
-    (void) block;
+AnyValue block_get_char(Compiler* compiler, Block* block) {
     (void) compiler;
-    (void) argc;
-    if (argv[0].type == DATA_TYPE_FLOAT) {
-        *return_val = DATA_BOOL(argv[0].data.float_val <= std_float_from_any(&argv[1]));
-    } else {
-        *return_val = DATA_BOOL(std_integer_from_any(&argv[0]) <= std_integer_from_any(&argv[1]));
-    }
-    return true;
+    (void) block;
+    return (AnyValue) {0};
 }
 
-bool block_more(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
-    (void) control_state;
-    (void) block;
+AnyValue block_random(Compiler* compiler, Block* block) {
     (void) compiler;
-    (void) argc;
-    if (argv[0].type == DATA_TYPE_FLOAT) {
-        *return_val = DATA_BOOL(argv[0].data.float_val > std_float_from_any(&argv[1]));
-    } else {
-        *return_val = DATA_BOOL(std_integer_from_any(&argv[0]) > std_integer_from_any(&argv[1]));
-    }
-    return true;
+    (void) block;
+    return (AnyValue) {0};
 }
 
-bool block_more_eq(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
-    (void) control_state;
-    (void) block;
+AnyValue block_join(Compiler* compiler, Block* block) {
     (void) compiler;
-    (void) argc;
-    if (argv[0].type == DATA_TYPE_FLOAT) {
-        *return_val = DATA_BOOL(argv[0].data.float_val >= std_float_from_any(&argv[1]));
-    } else {
-        *return_val = DATA_BOOL(std_integer_from_any(&argv[0]) >= std_integer_from_any(&argv[1]));
-    }
-    return true;
+    (void) block;
+    return (AnyValue) {0};
 }
 
-bool block_not(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
-    (void) control_state;
-    (void) block;
+AnyValue block_ord(Compiler* compiler, Block* block) {
     (void) compiler;
-    (void) argc;
-    *return_val = DATA_BOOL(!std_bool_from_any(&argv[0]));
-    return true;
+    (void) block;
+    return (AnyValue) {0};
 }
 
-bool block_and(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
-    (void) control_state;
-    (void) block;
+AnyValue block_chr(Compiler* compiler, Block* block) {
     (void) compiler;
-    (void) argc;
-    *return_val = DATA_BOOL(std_bool_from_any(&argv[0]) && std_bool_from_any(&argv[1]));
-    return true;
+    (void) block;
+    return (AnyValue) {0};
 }
 
-bool block_or(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
-    (void) control_state;
-    (void) block;
+AnyValue block_letter_in(Compiler* compiler, Block* block) {
     (void) compiler;
-    (void) argc;
-    *return_val = DATA_BOOL(std_bool_from_any(&argv[0]) || std_bool_from_any(&argv[1]));
-    return true;
+    (void) block;
+    return (AnyValue) {0};
 }
 
-bool block_true(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
-    (void) control_state;
-    (void) block;
+AnyValue block_substring(Compiler* compiler, Block* block) {
     (void) compiler;
-    (void) argc;
-    (void) argv;
-    *return_val = DATA_BOOL(1);
-    return true;
+    (void) block;
+    return (AnyValue) {0};
 }
 
-bool block_false(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
-    (void) control_state;
-    (void) block;
+AnyValue block_length(Compiler* compiler, Block* block) {
     (void) compiler;
-    (void) argc;
-    (void) argv;
-    *return_val = DATA_BOOL(0);
-    return true;
+    (void) block;
+    return (AnyValue) {0};
 }
 
-bool block_eq(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
-    (void) control_state;
-    (void) block;
+AnyValue block_unix_time(Compiler* compiler, Block* block) {
     (void) compiler;
-    (void) argc;
-    if ((argv[0].type != DATA_TYPE_LITERAL && argv[0].type != DATA_TYPE_STRING) || 
-        (argv[1].type != DATA_TYPE_LITERAL && argv[1].type != DATA_TYPE_STRING)) {
-        if (argv[0].type != argv[1].type) {
-            *return_val = DATA_BOOL(0);
-            return true;
-        }
-    }
-
-    switch (argv[0].type) {
-    case DATA_TYPE_BOOL:
-    case DATA_TYPE_INTEGER:
-    case DATA_TYPE_COLOR:
-        *return_val = DATA_BOOL(argv[0].data.integer_val == argv[1].data.integer_val);
-        break;
-    case DATA_TYPE_FLOAT:
-        *return_val = DATA_BOOL(argv[0].data.float_val == argv[1].data.float_val);
-        break;
-    case DATA_TYPE_LITERAL:
-        *return_val = DATA_BOOL(!strcmp(argv[0].data.literal_val, argv[1].data.literal_val));
-        break;
-    case DATA_TYPE_STRING:
-        *return_val = DATA_BOOL(std_string_is_eq(argv[0].data.str_val, argv[1].data.str_val));
-        break;
-    case DATA_TYPE_NOTHING:
-        *return_val = DATA_BOOL(1);
-        break;
-    case DATA_TYPE_LIST:
-        *return_val = DATA_BOOL(argv[0].data.list_val == argv[1].data.list_val);
-        break;
-    case DATA_TYPE_UNKNOWN:
-    case DATA_TYPE_BLOCKDEF:
-    case DATA_TYPE_ANY:
-        compiler_set_error(compiler, block, gettext("Cannot compare type %s"), type_to_str(argv[0].type));
-        return false;
-    }
-    return true;
-}
-
-bool block_not_eq(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
-    if (!block_eq(compiler, block, argc, argv, return_val, control_state)) return false;
-    return_val->data.integer_val = !return_val->data.integer_val;
-    return true;
-}
-
-bool block_exec_custom(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
-    (void) control_state;
-    for (size_t i = 0; i < vector_size(compiler->defined_functions); i++) {
-        if (block->blockdef == compiler->defined_functions[i].blockdef) {
-            if (!compiler_evaluate_chain(compiler, compiler->defined_functions[i].run_chain, argc, argv, return_val)) return false;
-
-            if (return_val->type == DATA_TYPE_LIST || return_val->type == DATA_TYPE_ANY || return_val->type == DATA_TYPE_STRING) {
-                gc_add_temp_root(&compiler->gc, (void*)return_val->data.literal_val);
-            }
-            return true;
-        }
-    }
-
-    compiler_set_error(compiler, block, gettext("Unknown function id \"%s\""), block->blockdef->id);
-    return false;
-}
-
-// Checks the arguments and returns the value from custom_argv at index if all conditions are met
-bool block_custom_arg(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
-    (void) argc;
-    (void) argv;
-    (void) control_state;
-    for (size_t i = 0; i < vector_size(compiler->defined_functions); i++) {
-        for (size_t j = 0; j < vector_size(compiler->defined_functions[i].args); j++) {
-            DefineArgument arg = compiler->defined_functions[i].args[j];
-            if (arg.blockdef == block->blockdef) {
-                *return_val = compiler->chain_stack[compiler->chain_stack_len - 1].custom_argv[arg.arg_ind];
-                return true;
-            }
-        }
-    }
-
-    compiler_set_error(compiler, block, gettext("Unknown argument id \"%s\""), block->blockdef->id);
-    return false;
-}
-
-// Modifies the internal state of the current code chain so that it returns early with the data written to .return_arg
-bool block_return(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
-    (void) control_state;
     (void) block;
-    (void) argc;
-    compiler->chain_stack[compiler->chain_stack_len - 1].return_arg = argv[0];
-    compiler->chain_stack[compiler->chain_stack_len - 1].is_returning = true;
-    *return_val = DATA_NOTHING;
-    return true;
+    return (AnyValue) {0};
 }
 
-bool block_gc_collect(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
-    (void) control_state;
+AnyValue block_convert_int(Compiler* compiler, Block* block) {
+    (void) compiler;
     (void) block;
-    (void) argc;
-    (void) argv;
-    gc_collect(&compiler->gc);
-    *return_val = DATA_NOTHING;
-    return true;
+    return (AnyValue) {0};
+}
+
+AnyValue block_convert_float(Compiler* compiler, Block* block) {
+    (void) compiler;
+    (void) block;
+    return (AnyValue) {0};
+}
+
+AnyValue block_convert_str(Compiler* compiler, Block* block) {
+    (void) compiler;
+    (void) block;
+    return (AnyValue) {0};
+}
+
+AnyValue block_convert_bool(Compiler* compiler, Block* block) {
+    (void) compiler;
+    (void) block;
+    return (AnyValue) {0};
+}
+
+AnyValue block_convert_color(Compiler* compiler, Block* block) {
+    (void) compiler;
+    (void) block;
+    return (AnyValue) {0};
+}
+
+AnyValue block_typeof(Compiler* compiler, Block* block) {
+    (void) compiler;
+    (void) block;
+    return (AnyValue) {0};
+}
+
+AnyValue block_plus(Compiler* compiler, Block* block) {
+    (void) compiler;
+    (void) block;
+    return (AnyValue) {0};
+}
+
+AnyValue block_minus(Compiler* compiler, Block* block) {
+    (void) compiler;
+    (void) block;
+    return (AnyValue) {0};
+}
+
+AnyValue block_mult(Compiler* compiler, Block* block) {
+    (void) compiler;
+    (void) block;
+    return (AnyValue) {0};
+}
+
+AnyValue block_div(Compiler* compiler, Block* block) {
+    (void) compiler;
+    (void) block;
+    return (AnyValue) {0};
+}
+
+AnyValue block_pow(Compiler* compiler, Block* block) {
+    (void) compiler;
+    (void) block;
+    return (AnyValue) {0};
+}
+
+AnyValue block_math(Compiler* compiler, Block* block) {
+    (void) compiler;
+    (void) block;
+    return (AnyValue) {0};
+}
+
+AnyValue block_pi(Compiler* compiler, Block* block) {
+    (void) compiler;
+    (void) block;
+    return (AnyValue) {0};
+}
+
+AnyValue block_bit_not(Compiler* compiler, Block* block) {
+    (void) compiler;
+    (void) block;
+    return (AnyValue) {0};
+}
+
+AnyValue block_bit_and(Compiler* compiler, Block* block) {
+    (void) compiler;
+    (void) block;
+    return (AnyValue) {0};
+}
+
+AnyValue block_bit_xor(Compiler* compiler, Block* block) {
+    (void) compiler;
+    (void) block;
+    return (AnyValue) {0};
+}
+
+AnyValue block_bit_or(Compiler* compiler, Block* block) {
+    (void) compiler;
+    (void) block;
+    return (AnyValue) {0};
+}
+
+AnyValue block_rem(Compiler* compiler, Block* block) {
+    (void) compiler;
+    (void) block;
+    return (AnyValue) {0};
+}
+
+AnyValue block_less(Compiler* compiler, Block* block) {
+    (void) compiler;
+    (void) block;
+    return (AnyValue) {0};
+}
+
+AnyValue block_less_eq(Compiler* compiler, Block* block) {
+    (void) compiler;
+    (void) block;
+    return (AnyValue) {0};
+}
+
+AnyValue block_more(Compiler* compiler, Block* block) {
+    (void) compiler;
+    (void) block;
+    return (AnyValue) {0};
+}
+
+AnyValue block_more_eq(Compiler* compiler, Block* block) {
+    (void) compiler;
+    (void) block;
+    return (AnyValue) {0};
+}
+
+AnyValue block_not(Compiler* compiler, Block* block) {
+    (void) compiler;
+    (void) block;
+    return (AnyValue) {0};
+}
+
+AnyValue block_and(Compiler* compiler, Block* block) {
+    (void) compiler;
+    (void) block;
+    return (AnyValue) {0};
+}
+
+AnyValue block_or(Compiler* compiler, Block* block) {
+    (void) compiler;
+    (void) block;
+    return (AnyValue) {0};
+}
+
+AnyValue block_true(Compiler* compiler, Block* block) {
+    (void) compiler;
+    (void) block;
+    return (AnyValue) {0};
+}
+
+AnyValue block_false(Compiler* compiler, Block* block) {
+    (void) compiler;
+    (void) block;
+    return (AnyValue) {0};
+}
+
+AnyValue block_eq(Compiler* compiler, Block* block) {
+    (void) compiler;
+    (void) block;
+    return (AnyValue) {0};
+}
+
+AnyValue block_not_eq(Compiler* compiler, Block* block) {
+    (void) compiler;
+    (void) block;
+    return (AnyValue) {0};
+}
+
+AnyValue block_exec_custom(Compiler* compiler, Block* block) {
+    (void) compiler;
+    (void) block;
+    return (AnyValue) {0};
+}
+
+AnyValue block_custom_arg(Compiler* compiler, Block* block) {
+    (void) compiler;
+    (void) block;
+    return (AnyValue) {0};
+}
+
+AnyValue block_return(Compiler* compiler, Block* block) {
+    (void) compiler;
+    (void) block;
+    return (AnyValue) {0};
+}
+
+AnyValue block_gc_collect(Compiler* compiler, Block* block) {
+    (void) compiler;
+    (void) block;
+    return (AnyValue) {0};
 }
 
 #else
