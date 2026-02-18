@@ -245,7 +245,7 @@ bool block_while(Compiler* compiler, Block* block, int argc, AnyValue* argv, Any
         control_stack_push_data(compiler->chain_stack[compiler->chain_stack_len - 1].running_ind, size_t);
     } else if (control_state == CONTROL_STATE_END) {
         AnyValue out_val;
-        if (!evaluate_argument(compiler, &block->arguments[0], &out_val)) return false;
+        if (!compiler_evaluate_argument(compiler, &block->arguments[0], &out_val)) return false;
 
         if (vector_size(block->arguments) < 1 || !std_bool_from_any(&out_val)) {
             size_t bin;
@@ -1093,7 +1093,7 @@ bool block_exec_custom(Compiler* compiler, Block* block, int argc, AnyValue* arg
     (void) control_state;
     for (size_t i = 0; i < vector_size(compiler->defined_functions); i++) {
         if (block->blockdef == compiler->defined_functions[i].blockdef) {
-            if (!compiler_run_chain(compiler, compiler->defined_functions[i].run_chain, argc, argv, return_val)) return false;
+            if (!compiler_evaluate_chain(compiler, compiler->defined_functions[i].run_chain, argc, argv, return_val)) return false;
 
             if (return_val->type == DATA_TYPE_LIST || return_val->type == DATA_TYPE_ANY || return_val->type == DATA_TYPE_STRING) {
                 gc_add_temp_root(&compiler->gc, (void*)return_val->data.literal_val);

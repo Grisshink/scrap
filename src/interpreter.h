@@ -167,11 +167,11 @@ Compiler compiler_new(Thread* thread);
 bool compiler_run(void* e);
 void compiler_cleanup(void* e);
 void compiler_free(Compiler* compiler);
-bool compiler_run_chain(Compiler* compiler, BlockChain* chain, int argc, AnyValue* argv, AnyValue* return_val);
+bool compiler_evaluate_chain(Compiler* compiler, BlockChain* chain, int argc, AnyValue* argv, AnyValue* return_val);
 void compiler_set_skip_block(Compiler* compiler);
 void compiler_set_error(Compiler* compiler, Block* block, const char* fmt, ...);
 
-bool evaluate_argument(Compiler* compiler, Argument* arg, AnyValue* return_val);
+bool compiler_evaluate_argument(Compiler* compiler, Argument* arg, AnyValue* return_val);
 
 Variable* variable_stack_push_var(Compiler* compiler, const char* name, AnyValue arg);
 Variable* variable_stack_get_variable(Compiler* compiler, const char* name);

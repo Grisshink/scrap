@@ -33,7 +33,7 @@ void variable_stack_pop_layer(Compiler* compiler);
 void variable_stack_cleanup(Compiler* compiler);
 void chain_stack_push(Compiler* compiler, ChainStackData data);
 void chain_stack_pop(Compiler* compiler);
-bool exec_block(Compiler* compiler, Block* block, AnyValue* block_return, ControlState control_state, AnyValue control_arg);
+bool compiler_evaluate_block(Compiler* compiler, Block* block, AnyValue* block_return, ControlState control_state, AnyValue control_arg);
 
 void define_function(Compiler* compiler, Blockdef* blockdef, BlockChain* chain) {
     DefineFunction* func = vector_add_dst(&compiler->defined_functions);
@@ -100,7 +100,7 @@ bool compiler_run(void* e) {
         }
         if (cont) continue;
         AnyValue bin;
-        if (!compiler_run_chain(compiler, &compiler->code[i], -1, NULL, &bin)) {
+        if (!compiler_evaluate_chain(compiler, &compiler->code[i], -1, NULL, &bin)) {
             compiler->running_chain = NULL;
             return false;
         }
@@ -130,14 +130,14 @@ void compiler_set_error(Compiler* compiler, Block* block, const char* fmt, ...) 
     scrap_log(LOG_ERROR, "[EXEC] %s", compiler->current_error);
 }
 
-bool evaluate_argument(Compiler* compiler, Argument* arg, AnyValue* return_val) {
+bool compiler_evaluate_argument(Compiler* compiler, Argument* arg, AnyValue* return_val) {
     switch (arg->type) {
     case ARGUMENT_TEXT:
     case ARGUMENT_CONST_STRING:
         *return_val = DATA_LITERAL(arg->data.text);
         return true;
     case ARGUMENT_BLOCK:
-        if (!exec_block(compiler, &arg->data.block, return_val, CONTROL_STATE_NORMAL, (AnyValue) {0})) {
+        if (!compiler_evaluate_block(compiler, &arg->data.block, return_val, CONTROL_STATE_NORMAL, (AnyValue) {0})) {
             return false;
         }
         return true;
@@ -150,7 +150,7 @@ bool evaluate_argument(Compiler* compiler, Argument* arg, AnyValue* return_val) 
     return false;
 }
 
-bool exec_block(Compiler* compiler, Block* block, AnyValue* block_return, ControlState control_state, AnyValue control_arg) {
+bool compiler_evaluate_block(Compiler* compiler, Block* block, AnyValue* block_return, ControlState control_state, AnyValue control_arg) {
     if (!block->blockdef) {
         compiler_set_error(compiler, block, gettext("Tried to execute block without definition"));
         return false;
@@ -173,7 +173,7 @@ bool exec_block(Compiler* compiler, Block* block, AnyValue* block_return, Contro
     if (control_state != CONTROL_STATE_END) {
         for (vec_size_t i = 0; i < vector_size(block->arguments); i++) {
             AnyValue arg;
-            if (!evaluate_argument(compiler, &block->arguments[i], &arg)) {
+            if (!compiler_evaluate_argument(compiler, &block->arguments[i], &arg)) {
                 scrap_log(LOG_ERROR, "[VM] From block id: \"%s\" (at block %p)", block->blockdef->id, &block);
                 return false;
             }
@@ -194,7 +194,7 @@ bool exec_block(Compiler* compiler, Block* block, AnyValue* block_return, Contro
 }
 
 #define BLOCKDEF chain->blocks[i].blockdef
-bool compiler_run_chain(Compiler* compiler, BlockChain* chain, int argc, AnyValue* argv, AnyValue* return_val) {
+bool compiler_evaluate_chain(Compiler* compiler, BlockChain* chain, int argc, AnyValue* argv, AnyValue* return_val) {
     size_t base_len = compiler->control_stack_len;
     chain_stack_push(compiler, (ChainStackData) {
         .skip_block = false,
@@ -246,7 +246,7 @@ bool compiler_run_chain(Compiler* compiler, BlockChain* chain, int argc, AnyValu
             control_state = CONTROL_STATE_END;
         }
         
-        if (!exec_block(compiler, &chain->blocks[block_ind], &block_return, control_state, (AnyValue){0})) {
+        if (!compiler_evaluate_block(compiler, &chain->blocks[block_ind], &block_return, control_state, (AnyValue){0})) {
             chain_stack_pop(compiler);
             return false;
         }
@@ -255,7 +255,7 @@ bool compiler_run_chain(Compiler* compiler, BlockChain* chain, int argc, AnyValu
 
         if (BLOCKDEF->type == BLOCKTYPE_CONTROLEND && block_ind != i) {
             control_state = CONTROL_STATE_BEGIN;
-            if (!exec_block(compiler, &chain->blocks[i], &block_return, control_state, block_return)) {
+            if (!compiler_evaluate_block(compiler, &chain->blocks[i], &block_return, control_state, block_return)) {
                 chain_stack_pop(compiler);
                 return false;
             }
