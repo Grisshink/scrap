@@ -34,6 +34,8 @@ struct Compiler {
     BlockChain* code;
 
     IrBytecode bytecode;
+    IrExec exec;
+    bool exec_running;
 
     char current_error[MAX_ERROR_LEN];
     Block* current_error_block;
@@ -48,6 +50,13 @@ struct Compiler {
     .data = (AnyValueData) {0}, \
 }
 
+#define DATA_LITERAL(v) (AnyValue) { \
+    .type = DATA_TYPE_LITERAL, \
+    .data = (AnyValueData) { \
+        .literal_val = (v), \
+    }, \
+}
+
 Compiler compiler_new(Thread* thread);
 bool compiler_run(void* e);
 void compiler_cleanup(void* e);
@@ -55,6 +64,7 @@ void compiler_free(Compiler* compiler);
 bool compiler_evaluate_chain(Compiler* compiler, BlockChain* chain);
 bool compiler_evaluate_block(Compiler* compiler, Block* block, AnyValue* block_return);
 bool compiler_evaluate_argument(Compiler* compiler, Argument* arg, AnyValue* return_val);
+bool compiler_evaluate_value(Compiler* compiler, Block* block, AnyValue* value);
 void compiler_set_skip_block(Compiler* compiler);
 void compiler_set_error(Compiler* compiler, Block* block, const char* fmt, ...);
 

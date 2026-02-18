@@ -44,6 +44,30 @@ void compiler_free(Compiler* compiler) {
     (void) compiler;
 }
 
+bool print_str(IrExec* exec) {
+    IrList* list = exec_pop_list(exec);
+    if (!list) return false;
+    for (size_t i = 0; i < list->size; i++) {
+        IrValue c = list->items[i];
+        switch (c.type) {
+        case IR_TYPE_INT: printf("%lc", c.as.int_val); break;
+        case IR_TYPE_BYTE: printf("%c", c.as.byte_val); break;
+        default: printf("?"); break;
+        }
+    }
+    printf("\n");
+    return true;
+}
+
+IrRunFunction resolve_function(IrExec* exec, const char* hint) {
+    (void) exec;
+    TraceLog(LOG_INFO, "[EXEC] Resolve: %s", hint);
+    if (!strcmp(hint, "print_str")) {
+        return print_str;
+    }
+    return NULL;
+}
+
 bool compiler_run(void* e) {
     Compiler* compiler = e;
     compiler->bytecode = bytecode_new("main");
@@ -63,13 +87,31 @@ bool compiler_run(void* e) {
     bytecode_push_op(&compiler->bytecode, IR_RET);
     bytecode_print(&compiler->bytecode);
 
+    compiler->exec = exec_new(1024 * 1024); // 1 MB
+    if (compiler->exec.last_error[0] != 0) {
+        compiler_set_error(compiler, NULL, "Exec create error: %s", compiler->exec.last_error);
+        exec_free(&compiler->exec);
+        return false;
+    }
+    exec_set_run_function_resolver(&compiler->exec, resolve_function);
+    exec_add_bytecode(&compiler->exec, compiler->bytecode);
+    compiler->exec_running = true;
+
+    if (!exec_run(&compiler->exec, "main", "entry")) {
+        compiler_set_error(compiler, NULL, "Runtime error: %s", compiler->exec.last_error);
+        return false;
+    }
+
     return true;
 }
 
 void compiler_cleanup(void* e) {
     Compiler* compiler = e;
-
-    bytecode_free(&compiler->bytecode);
+    if (compiler->exec_running) {
+        exec_free(&compiler->exec);
+    } else {
+        bytecode_free(&compiler->bytecode);
+    }
 }
 
 void compiler_set_error(Compiler* compiler, Block* block, const char* fmt, ...) {
@@ -81,11 +123,38 @@ void compiler_set_error(Compiler* compiler, Block* block, const char* fmt, ...) 
     scrap_log(LOG_ERROR, "[COMPILER] %s", compiler->current_error);
 }
 
+bool compiler_evaluate_value(Compiler* compiler, Block* block, AnyValue* value) {
+    switch (value->type) {
+    case DATA_TYPE_UNKNOWN:
+        compiler_set_error(compiler, block, gettext("Tried to evaluate unknown type"));
+        return false;
+    case DATA_TYPE_STRING:
+    case DATA_TYPE_FLOAT:
+    case DATA_TYPE_INTEGER:
+    case DATA_TYPE_NOTHING:
+    case DATA_TYPE_BOOL:
+    case DATA_TYPE_LIST:
+    case DATA_TYPE_ANY:
+    case DATA_TYPE_BLOCKDEF:
+    case DATA_TYPE_COLOR:
+        return true;
+    case DATA_TYPE_LITERAL:
+        bytecode_push_op(&compiler->bytecode, IR_PUSHL);
+        for (size_t i = 0; value->data.literal_val[i]; i++) {
+            bytecode_push_op(&compiler->bytecode, IR_DUP);
+            bytecode_push_op_int(&compiler->bytecode, IR_PUSHI, value->data.literal_val[i]);
+            bytecode_push_op(&compiler->bytecode, IR_ADDL);
+        }
+        return true;
+    }
+    assert(false && "Unimplemented evaluate value");
+}
+
 bool compiler_evaluate_argument(Compiler* compiler, Argument* arg, AnyValue* return_val) {
     switch (arg->type) {
     case ARGUMENT_TEXT:
     case ARGUMENT_CONST_STRING:
-        // *return_val = DATA_LITERAL(arg->data.text);
+        *return_val = DATA_LITERAL(arg->data.text);
         return true;
     case ARGUMENT_BLOCK:
         if (!compiler_evaluate_block(compiler, &arg->data.block, return_val)) return false;
@@ -94,6 +163,7 @@ bool compiler_evaluate_argument(Compiler* compiler, Argument* arg, AnyValue* ret
         compiler_set_error(compiler, NULL, gettext("Tried to evaluate blockdef"));
         return false;
     case ARGUMENT_COLOR:
+        *return_val = DATA_UNKNOWN;
         // *return_val = DATA_COLOR(CONVERT_COLOR(arg->data.color, StdColor));
         return true;
     }

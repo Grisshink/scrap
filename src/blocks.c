@@ -179,9 +179,11 @@ AnyValue block_list_set(Compiler* compiler, Block* block) {
 }
 
 AnyValue block_print(Compiler* compiler, Block* block) {
-    (void) compiler;
-    (void) block;
-    return DATA_UNKNOWN;
+    AnyValue print_val;
+    if (!compiler_evaluate_argument(compiler, &block->arguments[0], &print_val)) return DATA_UNKNOWN;
+    if (!compiler_evaluate_value(compiler, block, &print_val)) return DATA_UNKNOWN;
+    bytecode_push_op_func(&compiler->bytecode, IR_RUN, ir_func_by_hint("print_str"));
+    return DATA_NOTHING;
 }
 
 AnyValue block_println(Compiler* compiler, Block* block) {
