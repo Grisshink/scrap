@@ -1,4 +1,4 @@
-name: Build Scrap
+name: Release
 
 on:
   push:
@@ -12,7 +12,8 @@ env:
   SCRAP_VERSION: ${{ github.ref_name }}
 
 jobs:
-  linux:
+  build-linux:
+    name: Build Linux release
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout code
@@ -62,7 +63,8 @@ jobs:
           path: dist/*
           retention-days: 10
       
-  appimage:
+  build-appimage:
+    name: Build Appimage release
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout code
@@ -119,7 +121,9 @@ jobs:
           name: scrap-${{ env.SCRAP_VERSION }}-appimage
           path: dist/*
           retention-days: 10
-  windows:
+
+  build-windows:
+    name: Build Windows release
     runs-on: windows-latest
     defaults:
       run:
@@ -169,7 +173,7 @@ jobs:
           retention-days: 10
 
   release:
-    needs: [linux, appimage, windows]
+    needs: [build-linux, build-appimage, build-windows]
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout
