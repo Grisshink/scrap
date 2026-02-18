@@ -1150,7 +1150,7 @@ bool block_gc_collect(Compiler* compiler, Block* block, int argc, AnyValue* argv
 
 #define MIN_ARG_COUNT(count) \
     if (argc < count) { \
-        scrap_log(LOG_ERROR, "[LLVM] Not enough arguments! Expected: %d or more, Got: %d", count, argc); \
+        scrap_log(LOG_ERROR, "Not enough arguments! Expected: %d or more, Got: %d", count, argc); \
         return false; \
     }
 

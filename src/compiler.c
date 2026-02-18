@@ -74,9 +74,9 @@ bool compiler_run(void* e) {
     compiler->chain_stack_len = 0;
     compiler->running_chain = NULL;
     compiler->defined_functions = vector_create();
-    compiler->gc = gc_new(MIN_MEMORY_LIMIT, MAX_MEMORY_LIMIT);
 
-    SetRandomSeed(time(NULL));
+    // TODO
+    // SetRandomSeed(time(NULL));
 
     for (size_t i = 0; i < vector_size(compiler->code); i++) {
         Block* block = &compiler->code[i].blocks[0];
@@ -127,7 +127,7 @@ void compiler_set_error(Compiler* compiler, Block* block, const char* fmt, ...) 
     va_start(va, fmt);
     vsnprintf(compiler->current_error, MAX_ERROR_LEN, fmt, va);
     va_end(va);
-    scrap_log(LOG_ERROR, "[EXEC] %s", compiler->current_error);
+    scrap_log(LOG_ERROR, "[COMPILER] %s", compiler->current_error);
 }
 
 bool compiler_evaluate_argument(Compiler* compiler, Argument* arg, AnyValue* return_val) {
@@ -174,7 +174,7 @@ bool compiler_evaluate_block(Compiler* compiler, Block* block, AnyValue* block_r
         for (vec_size_t i = 0; i < vector_size(block->arguments); i++) {
             AnyValue arg;
             if (!compiler_evaluate_argument(compiler, &block->arguments[i], &arg)) {
-                scrap_log(LOG_ERROR, "[VM] From block id: \"%s\" (at block %p)", block->blockdef->id, &block);
+                scrap_log(LOG_ERROR, "[COMPILER] From block id: \"%s\" (at block %p)", block->blockdef->id, &block);
                 return false;
             }
             arg_stack_push_arg(compiler, arg);
@@ -182,7 +182,7 @@ bool compiler_evaluate_block(Compiler* compiler, Block* block, AnyValue* block_r
     }
 
     if (!execute_block(compiler, block, compiler->arg_stack_len - stack_begin, compiler->arg_stack + stack_begin, block_return, control_state)) {
-        scrap_log(LOG_ERROR, "[VM] Error from block id: \"%s\" (at block %p)", block->blockdef->id, &block);
+        scrap_log(LOG_ERROR, "[COMPILER] Error from block id: \"%s\" (at block %p)", block->blockdef->id, &block);
         return false;
     }
 
@@ -288,8 +288,8 @@ void compiler_set_skip_block(Compiler* compiler) {
 }
 
 Variable* variable_stack_push_var(Compiler* compiler, const char* name, AnyValue arg) {
-    if (compiler->variable_stack_len >= VM_VARIABLE_STACK_SIZE) {
-        scrap_log(LOG_ERROR, "[VM] Variable stack overflow");
+    if (compiler->variable_stack_len >= COMPILER_VARIABLE_STACK_SIZE) {
+        scrap_log(LOG_ERROR, "[COMPILER] Variable stack overflow");
         thread_exit(compiler->thread, false);
     }
     if (*name == 0) return NULL;
@@ -334,8 +334,8 @@ Variable* variable_stack_get_variable(Compiler* compiler, const char* name) {
 }
 
 void chain_stack_push(Compiler* compiler, ChainStackData data) {
-    if (compiler->chain_stack_len >= VM_CHAIN_STACK_SIZE) {
-        scrap_log(LOG_ERROR, "[VM] Chain stack overflow");
+    if (compiler->chain_stack_len >= COMPILER_CHAIN_STACK_SIZE) {
+        scrap_log(LOG_ERROR, "[COMPILER] Chain stack overflow");
         thread_exit(compiler->thread, false);
     }
     compiler->chain_stack[compiler->chain_stack_len++] = data;
@@ -343,15 +343,15 @@ void chain_stack_push(Compiler* compiler, ChainStackData data) {
 
 void chain_stack_pop(Compiler* compiler) {
     if (compiler->chain_stack_len == 0) {
-        scrap_log(LOG_ERROR, "[VM] Chain stack underflow");
+        scrap_log(LOG_ERROR, "[COMPILER] Chain stack underflow");
         thread_exit(compiler->thread, false);
     }
     compiler->chain_stack_len--;
 }
 
 void arg_stack_push_arg(Compiler* compiler, AnyValue arg) {
-    if (compiler->arg_stack_len >= VM_ARG_STACK_SIZE) {
-        scrap_log(LOG_ERROR, "[VM] Arg stack overflow");
+    if (compiler->arg_stack_len >= COMPILER_ARG_STACK_SIZE) {
+        scrap_log(LOG_ERROR, "[COMPILER] Arg stack overflow");
         thread_exit(compiler->thread, false);
     }
     compiler->arg_stack[compiler->arg_stack_len++] = arg;
@@ -359,7 +359,7 @@ void arg_stack_push_arg(Compiler* compiler, AnyValue arg) {
 
 void arg_stack_undo_args(Compiler* compiler, size_t count) {
     if (count > compiler->arg_stack_len) {
-        scrap_log(LOG_ERROR, "[VM] Arg stack underflow");
+        scrap_log(LOG_ERROR, "[COMPILER] Arg stack underflow");
         thread_exit(compiler->thread, false);
     }
     compiler->arg_stack_len -= count;

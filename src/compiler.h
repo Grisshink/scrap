@@ -26,10 +26,10 @@
 #include "std.h"
 #include "thread.h"
 
-#define VM_ARG_STACK_SIZE 1024
-#define VM_CONTROL_STACK_SIZE 32768
-#define VM_VARIABLE_STACK_SIZE 1024
-#define VM_CHAIN_STACK_SIZE 1024
+#define COMPILER_ARG_STACK_SIZE 1024
+#define COMPILER_CONTROL_STACK_SIZE 32768
+#define COMPILER_VARIABLE_STACK_SIZE 1024
+#define COMPILER_CHAIN_STACK_SIZE 1024
 
 typedef struct Variable Variable;
 typedef struct Compiler Compiler;
@@ -82,16 +82,16 @@ typedef struct {
 struct Compiler {
     BlockChain* code;
 
-    AnyValue arg_stack[VM_ARG_STACK_SIZE];
+    AnyValue arg_stack[COMPILER_ARG_STACK_SIZE];
     size_t arg_stack_len;
 
-    unsigned char control_stack[VM_CONTROL_STACK_SIZE];
+    unsigned char control_stack[COMPILER_CONTROL_STACK_SIZE];
     size_t control_stack_len;
 
-    Variable variable_stack[VM_VARIABLE_STACK_SIZE];
+    Variable variable_stack[COMPILER_VARIABLE_STACK_SIZE];
     size_t variable_stack_len;
 
-    ChainStackData chain_stack[VM_CHAIN_STACK_SIZE];
+    ChainStackData chain_stack[COMPILER_CHAIN_STACK_SIZE];
     size_t chain_stack_len;
 
     DefineFunction* defined_functions;
@@ -101,13 +101,11 @@ struct Compiler {
 
     Thread* thread;
     BlockChain* running_chain;
-
-    Gc gc;
 };
 
 #define control_stack_push_data(data, type) do { \
-    if (compiler->control_stack_len + sizeof(type) > VM_CONTROL_STACK_SIZE) { \
-        scrap_log(LOG_ERROR, "[VM] Control stack overflow"); \
+    if (compiler->control_stack_len + sizeof(type) > COMPILER_CONTROL_STACK_SIZE) { \
+        scrap_log(LOG_ERROR, "[COMPILER] Control stack overflow"); \
         thread_exit(compiler->thread, false); \
     } \
     *(type *)(compiler->control_stack + compiler->control_stack_len) = (data); \
@@ -116,7 +114,7 @@ struct Compiler {
 
 #define control_stack_pop_data(data, type) do { \
     if (sizeof(type) > compiler->control_stack_len) { \
-        scrap_log(LOG_ERROR, "[VM] Control stack underflow"); \
+        scrap_log(LOG_ERROR, "[COMPILER] Control stack underflow"); \
         thread_exit(compiler->thread, false); \
     } \
     compiler->control_stack_len -= sizeof(type); \

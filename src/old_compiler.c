@@ -229,7 +229,7 @@ static bool evaluate_block(Compiler* compiler, Block* block, FuncArg* return_val
                 break;
             case ARGUMENT_BLOCK:
                 if (!evaluate_block(compiler, &block->arguments[i].data.block, &block_return, CONTROL_STATE_NORMAL, DATA_NOTHING)) {
-                    scrap_log(LOG_ERROR, "[LLVM] While compiling block id: \"%s\" (argument #%d) (at block %p)", block->blockdef->id, i + 1, block);
+                    scrap_log(LOG_ERROR, "While compiling block id: \"%s\" (argument #%d) (at block %p)", block->blockdef->id, i + 1, block);
                     vector_free(args);
                     return false;
                 }
@@ -255,7 +255,7 @@ static bool evaluate_block(Compiler* compiler, Block* block, FuncArg* return_val
 
     if (!compile_block(compiler, block, vector_size(args), args, return_val, control_state)) {
         vector_free(args);
-        scrap_log(LOG_ERROR, "[LLVM] Got error while compiling block id: \"%s\" (at block %p)", block->blockdef->id, block);
+        scrap_log(LOG_ERROR, "Got error while compiling block id: \"%s\" (at block %p)", block->blockdef->id, block);
         return false;
     }
 
