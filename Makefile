@@ -65,13 +65,13 @@ else
 endif
 
 ifeq ($(USE_COMPILER), FALSE)
-	OBJFILES += $(addprefix $(BUILD_FOLDER),interpreter.o)
-	SCRAP_HEADERS += src/interpreter.h
+	OBJFILES += $(addprefix $(BUILD_FOLDER),compiler.o)
+	SCRAP_HEADERS += src/compiler.h
 	CFLAGS += -DUSE_INTERPRETER
 else
 	LLVM_CONFIG ?= llvm-config
-	OBJFILES += $(addprefix $(BUILD_FOLDER),compiler.o)
-	SCRAP_HEADERS += src/compiler.h
+	OBJFILES += $(addprefix $(BUILD_FOLDER),old_compiler.o)
+	SCRAP_HEADERS += src/old_compiler.h
 
 	LLVM_LDFLAGS := --ldflags --system-libs --libs core executionengine mcjit analysis native
 	ifeq ($(TARGET), WINDOWS)
@@ -170,9 +170,9 @@ $(BUILD_FOLDER)platform.o: src/platform.c
 	$(CC) $(CFLAGS) -c -o $@ $<
 $(BUILD_FOLDER)ast.o: src/ast.c src/ast.h
 	$(CC) $(CFLAGS) -c -o $@ $<
-$(BUILD_FOLDER)interpreter.o: src/interpreter.c $(SCRAP_HEADERS)
+$(BUILD_FOLDER)compiler.o: src/compiler.c $(SCRAP_HEADERS)
 	$(CC) $(CFLAGS) -c -o $@ $<
-$(BUILD_FOLDER)compiler.o: src/compiler.c src/compiler.h src/gc.h src/ast.h $(SCRAP_HEADERS)
+$(BUILD_FOLDER)old_compiler.o: src/old_compiler.c src/old_compiler.h src/gc.h src/ast.h $(SCRAP_HEADERS)
 	$(CC) $(CFLAGS) -c -o $@ $<
 $(BUILD_FOLDER)gc.o: src/gc.c src/gc.h src/vec.h src/std.h
 	$(CC) $(CFLAGS) -c -o $@ $<

@@ -33,9 +33,9 @@
 typedef struct Vm Vm;
 
 #ifdef USE_INTERPRETER
-#include "interpreter.h"
-#else
 #include "compiler.h"
+#else
+#include "old_compiler.h"
 #endif
 
 typedef struct PanelTree PanelTree;

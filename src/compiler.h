@@ -18,37 +18,22 @@
 //    misrepresented as being the original software.
 // 3. This notice may not be removed or altered from any source distribution.
 
-#ifndef COMPILER_H
-#define COMPILER_H
+#ifndef INTERPRETER_H
+#define INTERPRETER_H
 
-#include "gc.h"
+#include "raylib.h"
 #include "ast.h"
+#include "std.h"
 #include "thread.h"
 
-#include <llvm-c/Core.h>
-#include <llvm-c/ExecutionEngine.h>
-#include <setjmp.h>
-
 #define VM_ARG_STACK_SIZE 1024
-#define VM_CONTROL_STACK_SIZE 1024
-#define VM_CONTROL_DATA_STACK_SIZE 32768
+#define VM_CONTROL_STACK_SIZE 32768
 #define VM_VARIABLE_STACK_SIZE 1024
+#define VM_CHAIN_STACK_SIZE 1024
 
-#define control_data_stack_push_data(data, type) \
-    if (compiler->control_data_stack_len + sizeof(type) > VM_CONTROL_DATA_STACK_SIZE) { \
-        scrap_log(LOG_ERROR, "[LLVM] Control stack overflow"); \
-        return false; \
-    } \
-    *(type *)(compiler->control_data_stack + compiler->control_data_stack_len) = (data); \
-    compiler->control_data_stack_len += sizeof(type);
-
-#define control_data_stack_pop_data(data, type) \
-    if (sizeof(type) > compiler->control_data_stack_len) { \
-        scrap_log(LOG_ERROR, "[LLVM] Control stack underflow"); \
-        return false; \
-    } \
-    compiler->control_data_stack_len -= sizeof(type); \
-    data = *(type*)(compiler->control_data_stack + compiler->control_data_stack_len);
+typedef struct Variable Variable;
+typedef struct Compiler Compiler;
+typedef struct ChainStackData ChainStackData;
 
 typedef enum {
     CONTROL_STATE_NORMAL = 0,
@@ -56,154 +41,139 @@ typedef enum {
     CONTROL_STATE_END,
 } ControlState;
 
-typedef union {
-    LLVMValueRef value;
-    const char* str;
-    Blockdef* blockdef;
-} FuncArgData;
+typedef bool (*BlockFunc)(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state);
 
-typedef struct {
-    DataType type;
-    FuncArgData data;
-} FuncArg;
-
-typedef struct {
-    FuncArg value;
-    LLVMTypeRef type;
+struct Variable {
     const char* name;
-} Variable;
+    // This is a pretty hacky way to make gc think this area of memory is allocated with
+    // gc_malloc even though it is not. The data_type field in header should be set to
+    // DATA_TYPE_ANY so that gc could check the potential heap references inside the any
+    // value. This essentially allows interpreter to change variable type without
+    // invalidating gc root pointers.
+    AnyValue* value_ptr;
+    GcChunkData chunk_header;
+    AnyValue value;
 
-typedef struct {
-    size_t base_size;
-    LLVMValueRef base_stack;
-} VariableStackFrame;
+    size_t chain_layer;
+    int layer;
+};
 
-typedef struct {
-    const char* name;
-    void* func;
-    LLVMTypeRef type;
-    bool dynamic;
-} CompileFunction;
+struct ChainStackData {
+    bool skip_block;
+    int layer;
+    size_t running_ind;
+    int custom_argc;
+    AnyValue* custom_argv;
+    bool is_returning;
+    AnyValue return_arg;
+};
 
 typedef struct {
     Blockdef* blockdef;
-    LLVMValueRef arg;
+    int arg_ind;
 } DefineArgument;
 
 typedef struct {
     Blockdef* blockdef;
-    LLVMValueRef func;
+    BlockChain* run_chain;
     DefineArgument* args;
 } DefineFunction;
 
-typedef enum {
-    STATE_NONE,
-    STATE_COMPILE,
-    STATE_PRE_EXEC,
-    STATE_EXEC,
-} CompilerState;
-
-typedef enum {
-    COMPILER_MODE_JIT = 0,
-    COMPILER_MODE_BUILD,
-} CompilerMode;
-
-typedef struct {
-    LLVMValueRef root_begin;
-    bool required;
-} GcBlock;
-
-typedef struct {
+struct Compiler {
     BlockChain* code;
-    LLVMModuleRef module;
-    LLVMBuilderRef builder;
-    LLVMExecutionEngineRef engine;
 
-    Block* control_stack[VM_CONTROL_STACK_SIZE];
+    AnyValue arg_stack[VM_ARG_STACK_SIZE];
+    size_t arg_stack_len;
+
+    unsigned char control_stack[VM_CONTROL_STACK_SIZE];
     size_t control_stack_len;
-
-    GcBlock gc_block_stack[VM_CONTROL_STACK_SIZE];
-    size_t gc_block_stack_len;
-
-    unsigned char control_data_stack[VM_CONTROL_DATA_STACK_SIZE];
-    size_t control_data_stack_len;
 
     Variable variable_stack[VM_VARIABLE_STACK_SIZE];
     size_t variable_stack_len;
 
-    Variable* global_variables;
+    ChainStackData chain_stack[VM_CHAIN_STACK_SIZE];
+    size_t chain_stack_len;
 
-    VariableStackFrame variable_stack_frames[VM_VARIABLE_STACK_SIZE];
-    size_t variable_stack_frames_len;
-
-    CompileFunction* compile_func_list;
     DefineFunction* defined_functions;
-
-    Gc gc;
-    LLVMValueRef gc_value;
-
-    CompilerState current_state;
 
     char current_error[MAX_ERROR_LEN];
     Block* current_error_block;
 
-    bool build_random;
-
-    // Needed for compiler to determine if some block uses gc_malloc so we could call gc_flush afterwards
-    bool gc_dirty;
-    LLVMValueRef* gc_dirty_funcs;
-
-    jmp_buf run_jump_buf;
-
     Thread* thread;
-    CompilerMode current_mode;
-} Compiler;
+    BlockChain* running_chain;
 
-#define MAIN_NAME "llvm_main"
+    Gc gc;
+};
 
-#define CONST_NOTHING LLVMConstPointerNull(LLVMVoidType())
-#define CONST_INTEGER(val) LLVMConstInt(LLVMInt32Type(), val, true)
-#define CONST_BOOLEAN(val) LLVMConstInt(LLVMInt1Type(), val, false)
-#define CONST_FLOAT(val) LLVMConstReal(LLVMDoubleType(), val)
-#define CONST_STRING_LITERAL(val) LLVMBuildGlobalStringPtr(compiler->builder, val, "")
-#define CONST_GC compiler->gc_value
-#define CONST_EXEC LLVMConstInt(LLVMInt64Type(), (unsigned long long)compiler, false)
+#define control_stack_push_data(data, type) do { \
+    if (compiler->control_stack_len + sizeof(type) > VM_CONTROL_STACK_SIZE) { \
+        scrap_log(LOG_ERROR, "[VM] Control stack overflow"); \
+        thread_exit(compiler->thread, false); \
+    } \
+    *(type *)(compiler->control_stack + compiler->control_stack_len) = (data); \
+    compiler->control_stack_len += sizeof(type); \
+} while (0)
 
-#define _DATA(t, val) (FuncArg) { \
-    .type = t, \
-    .data = (FuncArgData) { \
-        .value = val, \
-    }, \
+#define control_stack_pop_data(data, type) do { \
+    if (sizeof(type) > compiler->control_stack_len) { \
+        scrap_log(LOG_ERROR, "[VM] Control stack underflow"); \
+        thread_exit(compiler->thread, false); \
+    } \
+    compiler->control_stack_len -= sizeof(type); \
+    data = *(type*)(compiler->control_stack + compiler->control_stack_len); \
+} while (0)
+
+#define DATA_NOTHING (AnyValue) { \
+    .type = DATA_TYPE_NOTHING, \
+    .data = (AnyValueData) {0}, \
 }
 
-#define DATA_BOOLEAN(val) _DATA(DATA_TYPE_BOOL, val)
-#define DATA_STRING(val) _DATA(DATA_TYPE_STRING, val)
-#define DATA_INTEGER(val) _DATA(DATA_TYPE_INTEGER, val)
-#define DATA_FLOAT(val) _DATA(DATA_TYPE_FLOAT, val)
-#define DATA_LIST(val) _DATA(DATA_TYPE_LIST, val)
-#define DATA_COLOR(val) _DATA(DATA_TYPE_COLOR, val)
-#define DATA_ANY(val) _DATA(DATA_TYPE_ANY, val)
-#define DATA_UNKNOWN _DATA(DATA_TYPE_UNKNOWN, NULL)
-#define DATA_NOTHING _DATA(DATA_TYPE_NOTHING, CONST_NOTHING)
+#define DATA_INTEGER(val) (AnyValue) { \
+    .type = DATA_TYPE_INTEGER, \
+    .data = (AnyValueData) { .integer_val = (val) }, \
+}
 
-typedef bool (*BlockCompileFunc)(Compiler* compiler, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state);
+#define DATA_FLOAT(val) (AnyValue) { \
+    .type = DATA_TYPE_FLOAT, \
+    .data = (AnyValueData) { .float_val = (val) }, \
+}
 
-Compiler compiler_new(Thread* thread, CompilerMode mode);
+#define DATA_BOOL(val) (AnyValue) { \
+    .type = DATA_TYPE_BOOL, \
+    .data = (AnyValueData) { .integer_val = (val) }, \
+}
+
+#define DATA_LITERAL(val) (AnyValue) { \
+    .type = DATA_TYPE_LITERAL, \
+    .data = (AnyValueData) { .literal_val = (val) }, \
+}
+
+#define DATA_STRING(val) (AnyValue) { \
+    .type = DATA_TYPE_STRING, \
+    .data = (AnyValueData) { .str_val = (val) }, \
+}
+
+#define DATA_LIST(val) (AnyValue) { \
+    .type = DATA_TYPE_LIST, \
+    .data = (AnyValueData) { .list_val = (val) }, \
+}
+
+#define DATA_COLOR(val) (AnyValue) { \
+    .type = DATA_TYPE_COLOR, \
+    .data = (AnyValueData) { .color_val = (val) }, \
+}
+
+Compiler compiler_new(Thread* thread);
 bool compiler_run(void* e);
 void compiler_cleanup(void* e);
 void compiler_free(Compiler* compiler);
+bool compiler_evaluate_chain(Compiler* compiler, BlockChain* chain, int argc, AnyValue* argv, AnyValue* return_val);
+void compiler_set_skip_block(Compiler* compiler);
 void compiler_set_error(Compiler* compiler, Block* block, const char* fmt, ...);
 
-bool variable_stack_push(Compiler* compiler, Block* block, Variable variable);
-Variable* variable_get(Compiler* compiler, const char* var_name);
-void global_variable_add(Compiler* compiler, Variable variable);
+bool compiler_evaluate_argument(Compiler* compiler, Argument* arg, AnyValue* return_val);
 
-LLVMValueRef build_gc_root_begin(Compiler* compiler, Block* block);
-LLVMValueRef build_gc_root_end(Compiler* compiler, Block* block);
-LLVMValueRef build_call(Compiler* compiler, const char* func_name, ...);
-LLVMValueRef build_call_count(Compiler* compiler, const char* func_name, size_t func_param_count, ...);
+Variable* variable_stack_push_var(Compiler* compiler, const char* name, AnyValue arg);
+Variable* variable_stack_get_variable(Compiler* compiler, const char* name);
 
-DefineFunction* define_function(Compiler* compiler, Blockdef* blockdef);
-DefineArgument* get_custom_argument(Compiler* compiler, Blockdef* blockdef, DefineFunction** func);
-
-#endif // COMPILER_H
+#endif // INTERPRETER_H
