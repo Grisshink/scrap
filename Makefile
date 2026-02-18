@@ -3,11 +3,11 @@ SCRAP_VERSION ?= dev
 MAKE ?= make
 TARGET ?= LINUX
 BUILD_MODE ?= RELEASE
-USE_COMPILER ?= FALSE
+USE_LLVM ?= FALSE
 BUILD_FOLDER := build/
 PREFIX ?= /usr/local
 
-ifeq ($(USE_COMPILER), TRUE)
+ifeq ($(USE_LLVM), TRUE)
 	SCRAP_VERSION := $(SCRAP_VERSION)-llvm
 endif
 
@@ -64,10 +64,9 @@ else
 	STD_NAME := libscrapstd.a
 endif
 
-ifeq ($(USE_COMPILER), FALSE)
+ifeq ($(USE_LLVM), FALSE)
 	OBJFILES += $(addprefix $(BUILD_FOLDER),compiler.o)
 	SCRAP_HEADERS += src/compiler.h
-	CFLAGS += -DUSE_INTERPRETER
 else
 	LLVM_CONFIG ?= llvm-config
 	OBJFILES += $(addprefix $(BUILD_FOLDER),old_compiler.o)
@@ -84,6 +83,7 @@ else
 		endif
 	endif
 	CFLAGS += `$(LLVM_CONFIG) --cflags`
+	CFLAGS += -DUSE_LLVM
 
 	LDFLAGS += -lstdc++
 endif

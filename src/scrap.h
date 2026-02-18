@@ -32,10 +32,10 @@
 
 typedef struct Vm Vm;
 
-#ifdef USE_INTERPRETER
-#include "compiler.h"
-#else
+#ifdef USE_LLVM
 #include "old_compiler.h"
+#else
+#include "compiler.h"
 #endif
 
 typedef struct PanelTree PanelTree;
@@ -388,7 +388,7 @@ struct Vm {
     BlockChain* compile_error_blockchain;
 
     int start_timeout; // = -1;
-#ifndef USE_INTERPRETER
+#ifdef USE_LLVM
     CompilerMode start_mode; // = COMPILER_MODE_JIT;
 #endif
 };
@@ -513,12 +513,12 @@ void draw_save_confirmation_window(void);
 // blocks.c
 void register_blocks(Vm* vm);
 
-#ifdef USE_INTERPRETER
-bool block_custom_arg(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state);
-bool block_exec_custom(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state);
-#else
+#ifdef USE_LLVM
 bool block_custom_arg(Compiler* compiler, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state);
 bool block_exec_custom(Compiler* compiler, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state);
+#else
+bool block_custom_arg(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state);
+bool block_exec_custom(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state);
 #endif
 
 // vm.c
@@ -534,10 +534,10 @@ void unregister_categories(void);
 
 Vm vm_new(void);
 void vm_free(Vm* vm);
-#ifdef USE_INTERPRETER
-bool vm_start(void);
-#else
+#ifdef USE_LLVM
 bool vm_start(CompilerMode mode);
+#else
+bool vm_start(void);
 #endif
 bool vm_stop(void);
 void vm_handle_running_thread(void);
@@ -548,7 +548,7 @@ Block block_new_ms(Blockdef* blockdef);
 // platform.c
 void scrap_set_env(const char* name, const char* value);
 
-#ifndef USE_INTERPRETER
+#ifdef USE_LLVM
 bool spawn_process(char* command, char* error, size_t error_len);
 #endif
 

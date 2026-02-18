@@ -54,7 +54,7 @@ char** math_list_access(Block* block, size_t* list_len) {
     return block_math_list;
 }
 
-#ifdef USE_INTERPRETER
+#ifndef USE_LLVM
 
 static MathFunc block_math_func_list[MATH_LIST_LEN] = {
     sqrt, round, floor, ceil,
@@ -2930,7 +2930,7 @@ bool block_on_start(Compiler* compiler, Block* block, int argc, FuncArg* argv, F
     return true;
 }
 
-#endif // USE_INTERPRETER
+#endif // USE_LLVM
 
 // Creates and registers blocks (commands) for the Vm/Compiler virtual machine
 void register_blocks(Vm* vm) {

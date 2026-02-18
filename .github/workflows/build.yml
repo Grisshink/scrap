@@ -46,7 +46,7 @@ jobs:
             - name: Build project (With compiler)
               run: |
                 make clean
-                make USE_COMPILER=TRUE TARGET=WINDOWS
+                make USE_LLVM=TRUE TARGET=WINDOWS
 
             - name: Build project (With interpreter)
               run: |
@@ -79,7 +79,7 @@ jobs:
             - name: Build project (With compiler)
               run: |
                 make clean
-                make USE_COMPILER=TRUE LLVM_CONFIG=llvm-config-19
+                make USE_LLVM=TRUE LLVM_CONFIG=llvm-config-19
 
             - name: Build project (With interpreter)
               run: |

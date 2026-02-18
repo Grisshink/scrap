@@ -64,7 +64,7 @@ yay -S scrap-git
 
 Scrap requires these dependencies to run:
 - [gettext](https://www.gnu.org/software/gettext/)
-- [LLVM](https://llvm.org/) *(Only required if building with `USE_COMPILER=TRUE` flag)*
+- [LLVM](https://llvm.org/) *(Only required if building with `USE_LLVM=TRUE` flag)*
 
 Currently Scrap can be built for *Windows*, *Linux*, *MacOS* and *FreeBSD*. 
 
@@ -77,7 +77,7 @@ ln -sf "${MSYSTEM_PREFIX}/bin/windres.exe" "${MSYSTEM_PREFIX}/bin/x86_64-w64-min
 
 #### Download commands for Windows (LLVM) *(Experimental)*
 
-If you are going to compile with `USE_COMPILER=TRUE` flag, then you need to install additional dependencies:
+If you are going to compile with `USE_LLVM=TRUE` flag, then you need to install additional dependencies:
 
 ```bash
 pacman -S mingw-w64-ucrt-x86_64-llvm

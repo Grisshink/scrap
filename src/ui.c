@@ -611,10 +611,10 @@ bool handle_about_button_click(void) {
 }
 
 bool handle_run_button_click(void) {
-#ifdef USE_INTERPRETER
-    vm_start();
-#else
+#ifdef USE_LLVM
     vm_start(COMPILER_MODE_JIT);
+#else
+    vm_start();
 #endif
     return true;
 }
@@ -1455,10 +1455,10 @@ static void handle_key_press(void) {
     if (vector_size(editor.mouse_blockchains) > 0) return;
 
     if (IsKeyPressed(KEY_F5)) {
-#ifdef USE_INTERPRETER
-        vm_start();
-#else
+#ifdef USE_LLVM
         vm_start(COMPILER_MODE_JIT);
+#else
+        vm_start();
 #endif
         return;
     }

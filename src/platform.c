@@ -44,7 +44,7 @@ void scrap_set_env(const char* name, const char* value) {
 #endif // _WIN32
 }
 
-#ifndef USE_INTERPRETER
+#ifdef USE_LLVM
 
 #ifndef _WIN32
 static size_t next_arg(char* cmd, size_t i, char** out_arg) {
@@ -263,4 +263,4 @@ bool spawn_process(char* command, char* error, size_t error_len) {
 
     return true;
 }
-#endif // USE_INTERPRETER
+#endif // USE_LLVM

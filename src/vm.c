@@ -156,7 +156,7 @@ Vm vm_new(void) {
         .compile_error_block = NULL,
         .compile_error_blockchain = NULL,
         .start_timeout = -1,
-#ifndef USE_INTERPRETER
+#ifdef USE_LLVM
         .start_mode = COMPILER_MODE_JIT,
 #endif
     };
@@ -176,16 +176,16 @@ void vm_free(Vm* vm) {
     vector_free(vm->blockdefs);
 }
 
-#ifdef USE_INTERPRETER
-bool vm_start(void) {
-#else
+#ifdef USE_LLVM
 bool vm_start(CompilerMode mode) {
+#else
+bool vm_start(void) {
 #endif
     if (thread_is_running(&vm.thread)) return false;
 
     for (size_t i = 0; i < vector_size(editor.tabs); i++) {
         if (find_panel(editor.tabs[i].root_panel, PANEL_TERM)) {
-#ifndef USE_INTERPRETER
+#ifdef USE_LLVM
             vm.start_mode = mode;
 #endif
             if (editor.current_tab != (int)i) {

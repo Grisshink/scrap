@@ -858,7 +858,7 @@ static void draw_tab_bar(void) {
         if (editor.project_modified) gui_text(gui, &assets.fonts.font_cond, "*", BLOCK_TEXT_SIZE, (GuiColor) { 0x80, 0x80, 0x80, 0xff });
         gui_grow(gui, DIRECTION_HORIZONTAL);
 
-#ifndef USE_INTERPRETER
+#ifdef USE_LLVM
         gui_element_begin(gui);
             gui_on_hover(gui, button_on_hover);
             gui_set_custom_data(gui, handle_build_button_click);
@@ -2150,10 +2150,10 @@ void scrap_gui_process_render(void) {
     if (vm.start_timeout == 0) {
         term_restart();
         clear_compile_error();
-#ifdef USE_INTERPRETER
-        vm.compiler = compiler_new(&vm.thread);
-#else
+#ifdef USE_LLVM
         vm.compiler = compiler_new(&vm.thread, vm.start_mode);
+#else
+        vm.compiler = compiler_new(&vm.thread);
 #endif
         vm.compiler.code = editor.code;
         if (!thread_start(vm.compiler.thread, &vm.compiler)) {

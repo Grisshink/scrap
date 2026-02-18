@@ -38,7 +38,7 @@ jobs:
       - name: Build Scrap compiler
         run: |
           make clean
-          make USE_COMPILER=TRUE LLVM_CONFIG=llvm-config-19 LLVM_LINK_STATIC=TRUE
+          make USE_LLVM=TRUE LLVM_CONFIG=llvm-config-19 LLVM_LINK_STATIC=TRUE
           mkdir -p build/scrap-${SCRAP_VERSION}-llvm-linux
           cp -r data examples extras locale build/scrap-${SCRAP_VERSION}-llvm-linux/
           cp LICENSE README.md CHANGELOG.md scrap libscrapstd.a build/scrap-${SCRAP_VERSION}-llvm-linux/
@@ -95,7 +95,7 @@ jobs:
       - name: Build Scrap compiler
         run: |
           make clean
-          make USE_COMPILER=TRUE LLVM_CONFIG=llvm-config-19 LLVM_LINK_STATIC=TRUE
+          make USE_LLVM=TRUE LLVM_CONFIG=llvm-config-19 LLVM_LINK_STATIC=TRUE
           mkdir -p build/scrap.AppDir
           cp scrap build/scrap.AppDir/AppRun
           cp -r data locale build/scrap.AppDir/
@@ -147,7 +147,7 @@ jobs:
       - name: Build Scrap compiler
         run: |
            make clean
-           make USE_COMPILER=TRUE TARGET=WINDOWS
+           make USE_LLVM=TRUE TARGET=WINDOWS
            mkdir -p build/scrap-${SCRAP_VERSION}-llvm-windows64
            cp -r locale data examples extras build/scrap-${SCRAP_VERSION}-llvm-windows64/
            cp CHANGELOG.md LICENSE README.md libscrapstd-win.a scrap.exe build/scrap-${SCRAP_VERSION}-llvm-windows64/
