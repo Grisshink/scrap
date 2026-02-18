@@ -2,13 +2,17 @@ name: Makefile CI
 
 on:
   push:
-    branches: [ "main" ]
+    branches:
+      - "main"
+      - "dev_**"
     paths-ignore:
       - "README.md"
       - "LICENSE"
       - "CHANGELOG.md"
   pull_request:
-    branches: [ "main" ]
+    branches:
+      - "main"
+      - "dev_**"
     paths-ignore:
       - "README.md"
       - "LICENSE"
