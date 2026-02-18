@@ -149,6 +149,7 @@ typedef struct {
 typedef struct {
     IrValue* items;
     size_t size, capacity;
+    bool owned; // Is this list owned by gc? This should be false when the list is in constants list
 } IrList;
 
 typedef enum {
@@ -242,7 +243,12 @@ void bytecode_push_op_float(IrBytecode* bc, IrOpcode op, double float_val);
 void bytecode_push_op_bool(IrBytecode* bc, IrOpcode op, bool bool_val);
 void bytecode_push_op_func(IrBytecode* bc, IrOpcode op, IrFunction func_val);
 void bytecode_push_op_label(IrBytecode* bc, IrOpcode op, IrLabelID label_id);
+void bytecode_push_op_list(IrBytecode* bc, IrOpcode op, IrList* list_val);
 IrLabelID bytecode_push_label(IrBytecode* bc, const char* name);
+
+IrList* bytecode_const_list_new(void);
+void bytecode_const_list_append(IrList* list, IrValue val);
+void bytecode_const_list_free(IrList* list);
 
 IrFunction ir_func_by_hint(const char* hint);
 IrFunction ir_func_by_ptr(IrRunFunction func);
@@ -341,6 +347,10 @@ IrBytecode bytecode_new(const char* name) {
 
 void bytecode_free(IrBytecode* bc) {
     ir_list_free(bc->code);
+    for (size_t i = 0; i < bc->constants.size; i++) {
+        if (bc->constants.items[i].type != IR_TYPE_LIST) continue;
+        bytecode_const_list_free(bc->constants.items[i].as.list_val);
+    }
     ir_list_free(bc->constants);
     ir_list_free(bc->labels);
 }
@@ -383,8 +393,36 @@ _ir_make_bc_push_op(bytecode_push_op_int, int, int_val, IR_TYPE_INT)
 _ir_make_bc_push_op(bytecode_push_op_float, double, float_val, IR_TYPE_FLOAT)
 _ir_make_bc_push_op(bytecode_push_op_bool, bool, bool_val, IR_TYPE_BOOL)
 _ir_make_bc_push_op(bytecode_push_op_func, IrFunction, func_val, IR_TYPE_FUNC)
+_ir_make_bc_push_op(bytecode_push_op_list, IrList*, list_val, IR_TYPE_LIST)
 
 #undef _ir_make_bc_push_op
+
+IrList* bytecode_const_list_new(void) {
+    IrList* list = malloc(sizeof(IrList));
+    memset(list, 0, sizeof(IrList));
+    return list;
+}
+
+void bytecode_const_list_append(IrList* list, IrValue val) {
+    if (list->size >= list->capacity) {
+        if (list->capacity == 0) list->capacity = 4;
+        else list->capacity *= 2;
+        list->items = realloc(list->items, sizeof(IrValue) * list->capacity);
+    }
+    list->items[list->size++] = val;
+}
+
+void bytecode_const_list_free(IrList* list) {
+    if (!list) return;
+    if (list->items) {
+        for (size_t i = 0; i < list->size; i++) {
+            if (list->items[i].type != IR_TYPE_LIST) continue;
+            bytecode_const_list_free(list->items[i].as.list_val);
+        }
+        if (!list->owned) free(list->items);
+    }
+    free(list);
+}
 
 void bytecode_push_op_label(IrBytecode* bc, IrOpcode op, IrLabelID label_id) {
     IrValue constant;
@@ -420,7 +458,16 @@ void bytecode_print(IrBytecode* bc) {
         printf("    ");
 
         switch (bc->code.items[i]) {
-        case IR_PUSHL: printf("pushl\n"); break;
+        case IR_PUSHL:
+            CHECK_IMMEDIATE;
+            IrList* list = bc->constants.items[CODE_IMMEDIATE].as.list_val;
+            if (list) {
+                printf("pushl (%p, %zu/%zu)\n", list, list->size, list->capacity);
+            } else {
+                printf("pushl\n");
+            }
+            i += 2;
+            break;
         case IR_PUSHN: printf("pushn\n"); break;
         case IR_POP: printf("pop\n"); break;
         case IR_DUP: printf("dup\n"); break;
@@ -903,6 +950,7 @@ IrList* exec_list_new(IrExec* exec) {
     IrList* list = exec_malloc(exec, sizeof(IrList));
     if (!list) return NULL;
     memset(list, 0, sizeof(IrList));
+    list->owned = true;
     return list;
 }
 
@@ -1347,14 +1395,23 @@ bool exec_run_bytecode(IrExec* exec, IrBytecode* bc, size_t pos) {
             break;
 
         case IR_PUSHL:
-            list = exec_list_new(exec);
-            if (!list) IR_EXEC_FAIL;
+            list = bc->constants.items[CODE_IMMEDIATE].as.list_val;
+            if (!list) {
+                list = exec_list_new(exec);
+                if (!list) IR_EXEC_FAIL;
+            }
             exec_push_list(exec, list);
+            i += 2;
             break;
         case IR_ADDL: ;
             left_value = exec_pop_value(exec);
             list = exec_get_list(exec);
             IR_ASSERT(list != NULL);
+
+            if (!list->owned) {
+                exec_set_error(exec, "Attemt to modify constant list %p", list);
+                IR_EXEC_FAIL;
+            }
 
             if (list->size >= list->capacity) {
                 if (list->capacity == 0) list->capacity = 4;
@@ -1383,6 +1440,10 @@ bool exec_run_bytecode(IrExec* exec, IrBytecode* bc, size_t pos) {
             left_int = exec_pop_int(exec);
             list = exec_pop_list(exec);
             IR_ASSERT(list != NULL);
+            if (!list->owned) {
+                exec_set_error(exec, "Attemt to modify constant list %p", list);
+                IR_EXEC_FAIL;
+            }
             if (left_int < 0 || (size_t)left_int >= list->size) break;
             list->items[left_int] = left_value;
             break;
@@ -1391,6 +1452,11 @@ bool exec_run_bytecode(IrExec* exec, IrBytecode* bc, size_t pos) {
             left_int = exec_pop_int(exec);
             list = exec_get_list(exec);
             IR_ASSERT(list != NULL);
+
+            if (!list->owned) {
+                exec_set_error(exec, "Attemt to modify constant list %p", list);
+                IR_EXEC_FAIL;
+            }
 
             if (left_int < 0 || (size_t)left_int > list->size) break;
 
@@ -1412,6 +1478,10 @@ bool exec_run_bytecode(IrExec* exec, IrBytecode* bc, size_t pos) {
             list = exec_pop_list(exec);
             IR_ASSERT(list != NULL);
 
+            if (!list->owned) {
+                exec_set_error(exec, "Attemt to modify constant list %p", list);
+                IR_EXEC_FAIL;
+            }
             if (left_int < 0 || (size_t)left_int >= list->size) break;
             memmove(list->items + left_int, list->items + left_int + 1, (list->size - left_int - 1) * sizeof(IrValue));
             list->size--;

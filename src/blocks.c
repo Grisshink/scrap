@@ -64,6 +64,39 @@ static MathFunc block_math_func_list[MATH_LIST_LEN] = {
 
 #include "std.h"
 
+bool any_to_str(Compiler* compiler, Block* block, AnyValue value) {
+    switch (value.type) {
+    case DATA_TYPE_BLOCKDEF:
+    case DATA_TYPE_UNKNOWN:
+        compiler_set_error(compiler, block, gettext("Cannot cast type %s into %s"), type_to_str(value.type), type_to_str(DATA_TYPE_STRING));
+        return false;
+    case DATA_TYPE_STRING: return true;
+    case DATA_TYPE_FLOAT: bytecode_push_op(&compiler->bytecode, IR_FTOA); return true;
+    case DATA_TYPE_NOTHING: bytecode_push_op(&compiler->bytecode, IR_NTOA); return true;
+    case DATA_TYPE_BOOL: bytecode_push_op(&compiler->bytecode, IR_BTOA); return true;
+    case DATA_TYPE_LIST: bytecode_push_op(&compiler->bytecode, IR_LTOA); return true;
+    case DATA_TYPE_ANY: bytecode_push_op(&compiler->bytecode, IR_TOA); return true;
+    case DATA_TYPE_INTEGER:
+    case DATA_TYPE_COLOR:
+        bytecode_push_op(&compiler->bytecode, IR_ITOA);
+        return true;
+    case DATA_TYPE_LITERAL:
+        IrList* list = bytecode_const_list_new();
+        char* str = value.data.literal_val;
+        int char_size;
+        while (*str) {
+            IrValue val;
+            val.type = IR_TYPE_INT;
+            val.as.int_val = GetCodepoint(str, &char_size);
+            bytecode_const_list_append(list, val);
+            str += char_size;
+        }
+        bytecode_push_op_list(&compiler->bytecode, IR_PUSHL, list);
+        return true;
+    }
+    assert(false && "Unimplemented any_to_str");
+}
+
 AnyValue block_do_nothing(Compiler* compiler, Block* block) {
     (void) compiler;
     (void) block;
@@ -181,7 +214,7 @@ AnyValue block_list_set(Compiler* compiler, Block* block) {
 AnyValue block_print(Compiler* compiler, Block* block) {
     AnyValue print_val;
     if (!compiler_evaluate_argument(compiler, &block->arguments[0], &print_val)) return DATA_UNKNOWN;
-    if (!compiler_evaluate_value(compiler, block, &print_val)) return DATA_UNKNOWN;
+    if (!any_to_str(compiler, block, print_val)) return DATA_UNKNOWN;
     bytecode_push_op_func(&compiler->bytecode, IR_RUN, ir_func_by_hint("print_str"));
     return DATA_NOTHING;
 }

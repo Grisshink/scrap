@@ -64,7 +64,6 @@ void compiler_free(Compiler* compiler);
 bool compiler_evaluate_chain(Compiler* compiler, BlockChain* chain);
 bool compiler_evaluate_block(Compiler* compiler, Block* block, AnyValue* block_return);
 bool compiler_evaluate_argument(Compiler* compiler, Argument* arg, AnyValue* return_val);
-bool compiler_evaluate_value(Compiler* compiler, Block* block, AnyValue* value);
 void compiler_set_skip_block(Compiler* compiler);
 void compiler_set_error(Compiler* compiler, Block* block, const char* fmt, ...);
 

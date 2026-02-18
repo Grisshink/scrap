@@ -123,33 +123,6 @@ void compiler_set_error(Compiler* compiler, Block* block, const char* fmt, ...) 
     scrap_log(LOG_ERROR, "[COMPILER] %s", compiler->current_error);
 }
 
-bool compiler_evaluate_value(Compiler* compiler, Block* block, AnyValue* value) {
-    switch (value->type) {
-    case DATA_TYPE_UNKNOWN:
-        compiler_set_error(compiler, block, gettext("Tried to evaluate unknown type"));
-        return false;
-    case DATA_TYPE_STRING:
-    case DATA_TYPE_FLOAT:
-    case DATA_TYPE_INTEGER:
-    case DATA_TYPE_NOTHING:
-    case DATA_TYPE_BOOL:
-    case DATA_TYPE_LIST:
-    case DATA_TYPE_ANY:
-    case DATA_TYPE_BLOCKDEF:
-    case DATA_TYPE_COLOR:
-        return true;
-    case DATA_TYPE_LITERAL:
-        bytecode_push_op(&compiler->bytecode, IR_PUSHL);
-        for (size_t i = 0; value->data.literal_val[i]; i++) {
-            bytecode_push_op(&compiler->bytecode, IR_DUP);
-            bytecode_push_op_int(&compiler->bytecode, IR_PUSHI, value->data.literal_val[i]);
-            bytecode_push_op(&compiler->bytecode, IR_ADDL);
-        }
-        return true;
-    }
-    assert(false && "Unimplemented evaluate value");
-}
-
 bool compiler_evaluate_argument(Compiler* compiler, Argument* arg, AnyValue* return_val) {
     switch (arg->type) {
     case ARGUMENT_TEXT:

@@ -158,7 +158,7 @@ $(BUILD_FOLDER)save.o: src/save.c $(SCRAP_HEADERS) external/cfgpath.h
 	$(CC) $(CFLAGS) -c -o $@ $<
 $(BUILD_FOLDER)term.o: src/term.c src/term.h $(SCRAP_HEADERS)
 	$(CC) $(CFLAGS) -c -o $@ $<
-$(BUILD_FOLDER)blocks.o: src/blocks.c $(SCRAP_HEADERS)
+$(BUILD_FOLDER)blocks.o: src/blocks.c src/scrap_ir.h $(SCRAP_HEADERS)
 	$(CC) $(CFLAGS) -c -o $@ $<
 $(BUILD_FOLDER)vec.o: src/vec.c
 	$(CC) $(CFLAGS) -c -o $@ $<
@@ -170,7 +170,7 @@ $(BUILD_FOLDER)platform.o: src/platform.c
 	$(CC) $(CFLAGS) -c -o $@ $<
 $(BUILD_FOLDER)ast.o: src/ast.c src/ast.h
 	$(CC) $(CFLAGS) -c -o $@ $<
-$(BUILD_FOLDER)compiler.o: src/compiler.c $(SCRAP_HEADERS)
+$(BUILD_FOLDER)compiler.o: src/compiler.c src/scrap_ir.h $(SCRAP_HEADERS)
 	$(CC) $(CFLAGS) -c -o $@ $<
 $(BUILD_FOLDER)old_compiler.o: src/old_compiler.c src/old_compiler.h src/gc.h src/ast.h $(SCRAP_HEADERS)
 	$(CC) $(CFLAGS) -c -o $@ $<
