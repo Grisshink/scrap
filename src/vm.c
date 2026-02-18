@@ -149,8 +149,8 @@ Vm vm_new(void) {
     Vm vm = (Vm) {
         .blockdefs = vector_create(),
         .end_blockdef = -1,
-        .thread = thread_new(exec_run, exec_cleanup),
-        .exec = (Exec) {0},
+        .thread = thread_new(compiler_run, compiler_cleanup),
+        .compiler = (Compiler) {0},
 
         .compile_error = vector_create(),
         .compile_error_block = NULL,
@@ -167,7 +167,7 @@ void vm_free(Vm* vm) {
     if (thread_is_running(&vm->thread)) {
         thread_stop(&vm->thread);
         thread_join(&vm->thread);
-        exec_free(&vm->exec);
+        compiler_free(&vm->compiler);
     }
 
     for (ssize_t i = (ssize_t)vector_size(vm->blockdefs) - 1; i >= 0 ; i--) {
@@ -231,19 +231,19 @@ void vm_handle_running_thread(void) {
         }
 
         size_t i = 0;
-        while (vm.exec.current_error[i]) {
+        while (vm.compiler.current_error[i]) {
             vector_add(&vm.compile_error, vector_create());
             size_t line_len = 0;
-            while (line_len < 50 && vm.exec.current_error[i]) {
-                if (((unsigned char)vm.exec.current_error[i] >> 6) != 2) line_len++;
+            while (line_len < 50 && vm.compiler.current_error[i]) {
+                if (((unsigned char)vm.compiler.current_error[i] >> 6) != 2) line_len++;
                 if (line_len >= 50) break;
-                vector_add(&vm.compile_error[vector_size(vm.compile_error) - 1], vm.exec.current_error[i++]);
+                vector_add(&vm.compile_error[vector_size(vm.compile_error) - 1], vm.compiler.current_error[i++]);
             }
             vector_add(&vm.compile_error[vector_size(vm.compile_error) - 1], 0);
         }
-        vm.compile_error_block = vm.exec.current_error_block;
+        vm.compile_error_block = vm.compiler.current_error_block;
         vm.compile_error_blockchain = find_blockchain(vm.compile_error_block);
-        exec_free(&vm.exec);
+        compiler_free(&vm.compiler);
         ui.render_surface_needs_redraw = true;
     } else if (thread_is_running(&vm.thread)) {
         mutex_lock(&term.lock);

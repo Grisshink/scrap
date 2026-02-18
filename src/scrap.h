@@ -382,7 +382,7 @@ struct Vm {
 
     Thread thread;
 
-    Exec exec;
+    Compiler compiler;
     char** compile_error;
     Block* compile_error_block;
     BlockChain* compile_error_blockchain;
@@ -514,11 +514,11 @@ void draw_save_confirmation_window(void);
 void register_blocks(Vm* vm);
 
 #ifdef USE_INTERPRETER
-bool block_custom_arg(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state);
-bool block_exec_custom(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state);
+bool block_custom_arg(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state);
+bool block_exec_custom(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state);
 #else
-bool block_custom_arg(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state);
-bool block_exec_custom(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state);
+bool block_custom_arg(Compiler* compiler, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state);
+bool block_exec_custom(Compiler* compiler, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state);
 #endif
 
 // vm.c

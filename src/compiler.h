@@ -35,20 +35,20 @@
 #define VM_VARIABLE_STACK_SIZE 1024
 
 #define control_data_stack_push_data(data, type) \
-    if (exec->control_data_stack_len + sizeof(type) > VM_CONTROL_DATA_STACK_SIZE) { \
+    if (compiler->control_data_stack_len + sizeof(type) > VM_CONTROL_DATA_STACK_SIZE) { \
         scrap_log(LOG_ERROR, "[LLVM] Control stack overflow"); \
         return false; \
     } \
-    *(type *)(exec->control_data_stack + exec->control_data_stack_len) = (data); \
-    exec->control_data_stack_len += sizeof(type);
+    *(type *)(compiler->control_data_stack + compiler->control_data_stack_len) = (data); \
+    compiler->control_data_stack_len += sizeof(type);
 
 #define control_data_stack_pop_data(data, type) \
-    if (sizeof(type) > exec->control_data_stack_len) { \
+    if (sizeof(type) > compiler->control_data_stack_len) { \
         scrap_log(LOG_ERROR, "[LLVM] Control stack underflow"); \
         return false; \
     } \
-    exec->control_data_stack_len -= sizeof(type); \
-    data = *(type*)(exec->control_data_stack + exec->control_data_stack_len);
+    compiler->control_data_stack_len -= sizeof(type); \
+    data = *(type*)(compiler->control_data_stack + compiler->control_data_stack_len);
 
 typedef enum {
     CONTROL_STATE_NORMAL = 0,
@@ -157,7 +157,7 @@ typedef struct {
 
     Thread* thread;
     CompilerMode current_mode;
-} Exec;
+} Compiler;
 
 #define MAIN_NAME "llvm_main"
 
@@ -165,9 +165,9 @@ typedef struct {
 #define CONST_INTEGER(val) LLVMConstInt(LLVMInt32Type(), val, true)
 #define CONST_BOOLEAN(val) LLVMConstInt(LLVMInt1Type(), val, false)
 #define CONST_FLOAT(val) LLVMConstReal(LLVMDoubleType(), val)
-#define CONST_STRING_LITERAL(val) LLVMBuildGlobalStringPtr(exec->builder, val, "")
-#define CONST_GC exec->gc_value
-#define CONST_EXEC LLVMConstInt(LLVMInt64Type(), (unsigned long long)exec, false)
+#define CONST_STRING_LITERAL(val) LLVMBuildGlobalStringPtr(compiler->builder, val, "")
+#define CONST_GC compiler->gc_value
+#define CONST_EXEC LLVMConstInt(LLVMInt64Type(), (unsigned long long)compiler, false)
 
 #define _DATA(t, val) (FuncArg) { \
     .type = t, \
@@ -186,24 +186,24 @@ typedef struct {
 #define DATA_UNKNOWN _DATA(DATA_TYPE_UNKNOWN, NULL)
 #define DATA_NOTHING _DATA(DATA_TYPE_NOTHING, CONST_NOTHING)
 
-typedef bool (*BlockCompileFunc)(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state);
+typedef bool (*BlockCompileFunc)(Compiler* compiler, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state);
 
-Exec exec_new(Thread* thread, CompilerMode mode);
-bool exec_run(void* e);
-void exec_cleanup(void* e);
-void exec_free(Exec* exec);
-void exec_set_error(Exec* exec, Block* block, const char* fmt, ...);
+Compiler compiler_new(Thread* thread, CompilerMode mode);
+bool compiler_run(void* e);
+void compiler_cleanup(void* e);
+void compiler_free(Compiler* compiler);
+void compiler_set_error(Compiler* compiler, Block* block, const char* fmt, ...);
 
-bool variable_stack_push(Exec* exec, Block* block, Variable variable);
-Variable* variable_get(Exec* exec, const char* var_name);
-void global_variable_add(Exec* exec, Variable variable);
+bool variable_stack_push(Compiler* compiler, Block* block, Variable variable);
+Variable* variable_get(Compiler* compiler, const char* var_name);
+void global_variable_add(Compiler* compiler, Variable variable);
 
-LLVMValueRef build_gc_root_begin(Exec* exec, Block* block);
-LLVMValueRef build_gc_root_end(Exec* exec, Block* block);
-LLVMValueRef build_call(Exec* exec, const char* func_name, ...);
-LLVMValueRef build_call_count(Exec* exec, const char* func_name, size_t func_param_count, ...);
+LLVMValueRef build_gc_root_begin(Compiler* compiler, Block* block);
+LLVMValueRef build_gc_root_end(Compiler* compiler, Block* block);
+LLVMValueRef build_call(Compiler* compiler, const char* func_name, ...);
+LLVMValueRef build_call_count(Compiler* compiler, const char* func_name, size_t func_param_count, ...);
 
-DefineFunction* define_function(Exec* exec, Blockdef* blockdef);
-DefineArgument* get_custom_argument(Exec* exec, Blockdef* blockdef, DefineFunction** func);
+DefineFunction* define_function(Compiler* compiler, Blockdef* blockdef);
+DefineArgument* get_custom_argument(Compiler* compiler, Blockdef* blockdef, DefineFunction** func);
 
 #endif // COMPILER_H

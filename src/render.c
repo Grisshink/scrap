@@ -2151,12 +2151,12 @@ void scrap_gui_process_render(void) {
         term_restart();
         clear_compile_error();
 #ifdef USE_INTERPRETER
-        vm.exec = exec_new(&vm.thread);
+        vm.compiler = compiler_new(&vm.thread);
 #else
-        vm.exec = exec_new(&vm.thread, vm.start_mode);
+        vm.compiler = compiler_new(&vm.thread, vm.start_mode);
 #endif
-        vm.exec.code = editor.code;
-        if (!thread_start(vm.exec.thread, &vm.exec)) {
+        vm.compiler.code = editor.code;
+        if (!thread_start(vm.compiler.thread, &vm.compiler)) {
             actionbar_show(gettext("Start failed!"));
         } else {
             actionbar_show(gettext("Started successfully!"));

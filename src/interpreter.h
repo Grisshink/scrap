@@ -32,7 +32,7 @@
 #define VM_CHAIN_STACK_SIZE 1024
 
 typedef struct Variable Variable;
-typedef struct Exec Exec;
+typedef struct Compiler Compiler;
 typedef struct ChainStackData ChainStackData;
 
 typedef enum {
@@ -41,7 +41,7 @@ typedef enum {
     CONTROL_STATE_END,
 } ControlState;
 
-typedef bool (*BlockFunc)(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state);
+typedef bool (*BlockFunc)(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state);
 
 struct Variable {
     const char* name;
@@ -79,7 +79,7 @@ typedef struct {
     DefineArgument* args;
 } DefineFunction;
 
-struct Exec {
+struct Compiler {
     BlockChain* code;
 
     AnyValue arg_stack[VM_ARG_STACK_SIZE];
@@ -106,21 +106,21 @@ struct Exec {
 };
 
 #define control_stack_push_data(data, type) do { \
-    if (exec->control_stack_len + sizeof(type) > VM_CONTROL_STACK_SIZE) { \
+    if (compiler->control_stack_len + sizeof(type) > VM_CONTROL_STACK_SIZE) { \
         scrap_log(LOG_ERROR, "[VM] Control stack overflow"); \
-        thread_exit(exec->thread, false); \
+        thread_exit(compiler->thread, false); \
     } \
-    *(type *)(exec->control_stack + exec->control_stack_len) = (data); \
-    exec->control_stack_len += sizeof(type); \
+    *(type *)(compiler->control_stack + compiler->control_stack_len) = (data); \
+    compiler->control_stack_len += sizeof(type); \
 } while (0)
 
 #define control_stack_pop_data(data, type) do { \
-    if (sizeof(type) > exec->control_stack_len) { \
+    if (sizeof(type) > compiler->control_stack_len) { \
         scrap_log(LOG_ERROR, "[VM] Control stack underflow"); \
-        thread_exit(exec->thread, false); \
+        thread_exit(compiler->thread, false); \
     } \
-    exec->control_stack_len -= sizeof(type); \
-    data = *(type*)(exec->control_stack + exec->control_stack_len); \
+    compiler->control_stack_len -= sizeof(type); \
+    data = *(type*)(compiler->control_stack + compiler->control_stack_len); \
 } while (0)
 
 #define DATA_NOTHING (AnyValue) { \
@@ -163,17 +163,17 @@ struct Exec {
     .data = (AnyValueData) { .color_val = (val) }, \
 }
 
-Exec exec_new(Thread* thread);
-bool exec_run(void* e);
-void exec_cleanup(void* e);
-void exec_free(Exec* exec);
-bool exec_run_chain(Exec* exec, BlockChain* chain, int argc, AnyValue* argv, AnyValue* return_val);
-void exec_set_skip_block(Exec* exec);
-void exec_set_error(Exec* exec, Block* block, const char* fmt, ...);
+Compiler compiler_new(Thread* thread);
+bool compiler_run(void* e);
+void compiler_cleanup(void* e);
+void compiler_free(Compiler* compiler);
+bool compiler_run_chain(Compiler* compiler, BlockChain* chain, int argc, AnyValue* argv, AnyValue* return_val);
+void compiler_set_skip_block(Compiler* compiler);
+void compiler_set_error(Compiler* compiler, Block* block, const char* fmt, ...);
 
-bool evaluate_argument(Exec* exec, Argument* arg, AnyValue* return_val);
+bool evaluate_argument(Compiler* compiler, Argument* arg, AnyValue* return_val);
 
-Variable* variable_stack_push_var(Exec* exec, const char* name, AnyValue arg);
-Variable* variable_stack_get_variable(Exec* exec, const char* name);
+Variable* variable_stack_push_var(Compiler* compiler, const char* name, AnyValue arg);
+Variable* variable_stack_get_variable(Compiler* compiler, const char* name);
 
 #endif // INTERPRETER_H

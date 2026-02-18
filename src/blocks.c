@@ -64,68 +64,68 @@ static MathFunc block_math_func_list[MATH_LIST_LEN] = {
 
 #include "std.h"
 
-bool block_do_nothing(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
+bool block_do_nothing(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
-    (void) exec;
+    (void) compiler;
     (void) argc;
     (void) argv;
     *return_val = DATA_NOTHING;
     return true;
 }
 
-bool block_noop(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
+bool block_noop(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
-    (void) exec;
+    (void) compiler;
     (void) argc;
     (void) argv;
     *return_val = DATA_NOTHING;
     return true;
 }
 
-bool block_on_start(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
+bool block_on_start(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
-    (void) exec;
+    (void) compiler;
     (void) argc;
     (void) argv;
     *return_val = DATA_NOTHING;
     return true;
 }
 
-bool block_define_block(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
+bool block_define_block(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
-    (void) exec;
+    (void) compiler;
     (void) argc;
     (void) argv;
     *return_val = DATA_NOTHING;
     return true;
 }
 
-bool block_loop(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
+bool block_loop(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) block;
     (void) argc;
     (void) argv;
 
     if (control_state == CONTROL_STATE_BEGIN) {
-        control_stack_push_data(exec->chain_stack[exec->chain_stack_len - 1].running_ind, size_t);
+        control_stack_push_data(compiler->chain_stack[compiler->chain_stack_len - 1].running_ind, size_t);
     } else if (control_state == CONTROL_STATE_END) {
-        control_stack_pop_data(exec->chain_stack[exec->chain_stack_len - 1].running_ind, size_t);
-        control_stack_push_data(exec->chain_stack[exec->chain_stack_len - 1].running_ind, size_t);
+        control_stack_pop_data(compiler->chain_stack[compiler->chain_stack_len - 1].running_ind, size_t);
+        control_stack_push_data(compiler->chain_stack[compiler->chain_stack_len - 1].running_ind, size_t);
     }
 
     *return_val = DATA_BOOL(1);
     return true;
 }
 
-bool block_if(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
+bool block_if(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) block;
 
     if (control_state == CONTROL_STATE_BEGIN) {
         if (argc < 1 || !std_bool_from_any(&argv[0])) {
-            exec_set_skip_block(exec);
+            compiler_set_skip_block(compiler);
             control_stack_push_data((int)0, int);
         } else {
             control_stack_push_data((int)1, int);
@@ -136,23 +136,23 @@ bool block_if(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* retu
         control_stack_pop_data(is_success, int);
         *return_val = DATA_BOOL(is_success);
     } else {
-        exec_set_error(exec, block, "Invalid control state");
+        compiler_set_error(compiler, block, "Invalid control state");
         return false;
     }
 
     return true;
 }
 
-bool block_else_if(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
+bool block_else_if(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) block;
 
     if (control_state == CONTROL_STATE_BEGIN) {
         if (argc < 2 || std_bool_from_any(&argv[0])) {
-            exec_set_skip_block(exec);
+            compiler_set_skip_block(compiler);
             control_stack_push_data((int)1, int);
         } else {
             int condition = std_bool_from_any(&argv[1]);
-            if (!condition) exec_set_skip_block(exec);
+            if (!condition) compiler_set_skip_block(compiler);
             control_stack_push_data(condition, int);
         }
         *return_val = DATA_NOTHING;
@@ -161,24 +161,24 @@ bool block_else_if(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue*
         control_stack_pop_data(is_success, int);
         *return_val = DATA_BOOL(is_success);
     } else {
-        exec_set_error(exec, block, "Invalid control state");
+        compiler_set_error(compiler, block, "Invalid control state");
         return false;
     }
     return true;
 }
 
-bool block_else(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
+bool block_else(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) block;
 
     if (control_state == CONTROL_STATE_BEGIN) {
         if (argc < 1 || std_bool_from_any(&argv[0])) {
-            exec_set_skip_block(exec);
+            compiler_set_skip_block(compiler);
         }
         *return_val = DATA_NOTHING;
     } else if (control_state == CONTROL_STATE_END) {
         *return_val = DATA_BOOL(1);
     } else {
-        exec_set_error(exec, block, "Invalid control state");
+        compiler_set_error(compiler, block, "Invalid control state");
         return false;
     }
 
@@ -192,18 +192,18 @@ bool block_else(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* re
 //
 // If the loop should not loop then the stack will look like this:
 // - 0 <- indicator for end block that it should stop immediately
-bool block_repeat(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
+bool block_repeat(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) block;
 
     if (control_state == CONTROL_STATE_BEGIN) {
         int cycles = argc < 1 ? 0 : std_integer_from_any(&argv[0]);
         if (cycles <= 0) {
-            exec_set_skip_block(exec);
+            compiler_set_skip_block(compiler);
             control_stack_push_data((int)0, int); // This indicates the end block that it should NOT loop
             *return_val = DATA_NOTHING;
             return true;
         }
-        control_stack_push_data(exec->chain_stack[exec->chain_stack_len - 1].running_ind, size_t);
+        control_stack_push_data(compiler->chain_stack[compiler->chain_stack_len - 1].running_ind, size_t);
         control_stack_push_data(cycles - 1, int);
         control_stack_push_data((int)1, int); // This indicates the end block that it should loop
     } else if (control_state == CONTROL_STATE_END) {
@@ -224,12 +224,12 @@ bool block_repeat(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* 
             return true;
         }
 
-        control_stack_pop_data(exec->chain_stack[exec->chain_stack_len - 1].running_ind, size_t);
-        control_stack_push_data(exec->chain_stack[exec->chain_stack_len - 1].running_ind, size_t);
+        control_stack_pop_data(compiler->chain_stack[compiler->chain_stack_len - 1].running_ind, size_t);
+        control_stack_push_data(compiler->chain_stack[compiler->chain_stack_len - 1].running_ind, size_t);
         control_stack_push_data(left - 1, int);
         control_stack_push_data((int)1, int);
     } else {
-        exec_set_error(exec, block, "Invalid control state");
+        compiler_set_error(compiler, block, "Invalid control state");
         return false;
     }
 
@@ -237,15 +237,15 @@ bool block_repeat(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* 
     return true;
 }
 
-bool block_while(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
+bool block_while(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     if (control_state == CONTROL_STATE_BEGIN) {
         if (argc < 1 || !std_bool_from_any(&argv[0])) {
-            exec_set_skip_block(exec);
+            compiler_set_skip_block(compiler);
         }
-        control_stack_push_data(exec->chain_stack[exec->chain_stack_len - 1].running_ind, size_t);
+        control_stack_push_data(compiler->chain_stack[compiler->chain_stack_len - 1].running_ind, size_t);
     } else if (control_state == CONTROL_STATE_END) {
         AnyValue out_val;
-        if (!evaluate_argument(exec, &block->arguments[0], &out_val)) return false;
+        if (!evaluate_argument(compiler, &block->arguments[0], &out_val)) return false;
 
         if (vector_size(block->arguments) < 1 || !std_bool_from_any(&out_val)) {
             size_t bin;
@@ -255,10 +255,10 @@ bool block_while(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* r
             return true;
         }
 
-        control_stack_pop_data(exec->chain_stack[exec->chain_stack_len - 1].running_ind, size_t);
-        control_stack_push_data(exec->chain_stack[exec->chain_stack_len - 1].running_ind, size_t);
+        control_stack_pop_data(compiler->chain_stack[compiler->chain_stack_len - 1].running_ind, size_t);
+        control_stack_push_data(compiler->chain_stack[compiler->chain_stack_len - 1].running_ind, size_t);
     } else {
-        exec_set_error(exec, block, "Invalid control state");
+        compiler_set_error(compiler, block, "Invalid control state");
         return false;
     }
 
@@ -266,10 +266,10 @@ bool block_while(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* r
     return true;
 }
 
-bool block_sleep(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
+bool block_sleep(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
-    (void) exec;
+    (void) compiler;
     (void) argc;
     int usecs = std_integer_from_any(&argv[0]);
     if (usecs < 0) {
@@ -290,67 +290,67 @@ bool block_sleep(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* r
     return true;
 }
 
-bool block_declare_var(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
+bool block_declare_var(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) argc;
 
     if (argv[0].type != DATA_TYPE_LITERAL) {
-        exec_set_error(exec, block, gettext("Invalid data type %s, expected %s"), type_to_str(argv[0].type), type_to_str(DATA_TYPE_LITERAL));
+        compiler_set_error(compiler, block, gettext("Invalid data type %s, expected %s"), type_to_str(argv[0].type), type_to_str(DATA_TYPE_LITERAL));
         return false;
     }
     if (block->parent) {
-        exec_set_error(exec, block, gettext("Variable declarations are not allowed inside an expression"));
+        compiler_set_error(compiler, block, gettext("Variable declarations are not allowed inside an expression"));
         return false;
     }
 
-    Variable* var = variable_stack_push_var(exec, argv[0].data.literal_val, argv[1]);
+    Variable* var = variable_stack_push_var(compiler, argv[0].data.literal_val, argv[1]);
     if (!var) {
-        exec_set_error(exec, block, gettext("Cannot declare variable with empty name"));
+        compiler_set_error(compiler, block, gettext("Cannot declare variable with empty name"));
         return false;
     }
 
     if (argv[1].type == DATA_TYPE_LIST || argv[1].type == DATA_TYPE_ANY || argv[1].type == DATA_TYPE_STRING) {
-        gc_add_root(&exec->gc, &var->value_ptr);
+        gc_add_root(&compiler->gc, &var->value_ptr);
     }
 
     *return_val = argv[1];
     return true;
 }
 
-bool block_get_var(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
+bool block_get_var(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     (void) argc;
 
     if (argv[0].type != DATA_TYPE_LITERAL) {
-        exec_set_error(exec, block, gettext("Invalid data type %s, expected %s"), type_to_str(argv[0].type), type_to_str(DATA_TYPE_LITERAL));
+        compiler_set_error(compiler, block, gettext("Invalid data type %s, expected %s"), type_to_str(argv[0].type), type_to_str(DATA_TYPE_LITERAL));
         return false;
     }
     
     char* var_name = argv[0].data.literal_val;
-    Variable* var = variable_stack_get_variable(exec, var_name);
+    Variable* var = variable_stack_get_variable(compiler, var_name);
     if (!var) {
-        exec_set_error(exec, block, gettext("Variable with name \"%s\" does not exist in the current scope"), var_name);
+        compiler_set_error(compiler, block, gettext("Variable with name \"%s\" does not exist in the current scope"), var_name);
         return false;
     }
     *return_val = var->value;
     return true;
 }
 
-bool block_set_var(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
+bool block_set_var(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     (void) argc;
 
     if (argv[0].type != DATA_TYPE_LITERAL) {
-        exec_set_error(exec, block, gettext("Invalid data type %s, expected %s"), type_to_str(argv[0].type), type_to_str(DATA_TYPE_LITERAL));
+        compiler_set_error(compiler, block, gettext("Invalid data type %s, expected %s"), type_to_str(argv[0].type), type_to_str(DATA_TYPE_LITERAL));
         return false;
     }
 
     char* var_name = argv[0].data.literal_val;
-    Variable* var = variable_stack_get_variable(exec, var_name);
+    Variable* var = variable_stack_get_variable(compiler, var_name);
     if (!var) {
-        exec_set_error(exec, block, gettext("Variable with name \"%s\" does not exist in the current scope"), var_name);
+        compiler_set_error(compiler, block, gettext("Variable with name \"%s\" does not exist in the current scope"), var_name);
         return false;
     }
 
@@ -360,36 +360,36 @@ bool block_set_var(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue*
     return true;
 }
 
-bool block_create_list(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
+bool block_create_list(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
-    (void) exec;
+    (void) compiler;
     (void) argc;
     (void) argv;
 
-    *return_val = DATA_LIST(std_list_new(&exec->gc));
+    *return_val = DATA_LIST(std_list_new(&compiler->gc));
     return true;
 }
 
-bool block_list_add(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
+bool block_list_add(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) argc;
     if (argv[0].type != DATA_TYPE_LIST) {
-        exec_set_error(exec, block, gettext("Invalid data type %s, expected %s"), type_to_str(argv[0].type), type_to_str(DATA_TYPE_LIST));
+        compiler_set_error(compiler, block, gettext("Invalid data type %s, expected %s"), type_to_str(argv[0].type), type_to_str(DATA_TYPE_LIST));
         return false;
     }
 
-    std_list_add_any(&exec->gc, argv[0].data.list_val, argv[1]);
+    std_list_add_any(&compiler->gc, argv[0].data.list_val, argv[1]);
     *return_val = DATA_NOTHING;
     return true;
 }
 
-bool block_list_get(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
+bool block_list_get(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     (void) argc;
     if (argv[0].type != DATA_TYPE_LIST) {
-        exec_set_error(exec, block, gettext("Invalid data type %s, expected %s"), type_to_str(argv[0].type), type_to_str(DATA_TYPE_LIST));
+        compiler_set_error(compiler, block, gettext("Invalid data type %s, expected %s"), type_to_str(argv[0].type), type_to_str(DATA_TYPE_LIST));
         return false;
     }
 
@@ -405,13 +405,13 @@ bool block_list_get(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue
     return true;
 }
 
-bool block_list_length(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
+bool block_list_length(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
-    (void) exec;
+    (void) compiler;
     (void) argc;
     if (argv[0].type != DATA_TYPE_LIST) {
-        exec_set_error(exec, block, gettext("Invalid data type %s, expected %s"), type_to_str(argv[0].type), type_to_str(DATA_TYPE_LIST));
+        compiler_set_error(compiler, block, gettext("Invalid data type %s, expected %s"), type_to_str(argv[0].type), type_to_str(DATA_TYPE_LIST));
         return false;
     }
 
@@ -419,19 +419,19 @@ bool block_list_length(Exec* exec, Block* block, int argc, AnyValue* argv, AnyVa
     return true;
 }
 
-bool block_list_set(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
+bool block_list_set(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
-    (void) exec;
+    (void) compiler;
     (void) argc;
     if (argv[0].type != DATA_TYPE_LIST) {
-        exec_set_error(exec, block, gettext("Invalid data type %s, expected %s"), type_to_str(argv[0].type), type_to_str(DATA_TYPE_LIST));
+        compiler_set_error(compiler, block, gettext("Invalid data type %s, expected %s"), type_to_str(argv[0].type), type_to_str(DATA_TYPE_LIST));
         return false;
     }
 
     int index = std_integer_from_any(&argv[1]);
     if (index >= argv[0].data.list_val->size || index < 0) {
-        exec_set_error(exec, block, gettext("Tried to access index %d for list of length %d"), index, argv[0].data.list_val->size);
+        compiler_set_error(compiler, block, gettext("Tried to access index %d for list of length %d"), index, argv[0].data.list_val->size);
         return false;
     }
 
@@ -440,8 +440,8 @@ bool block_list_set(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue
     return true;
 }
 
-bool block_print(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
-    (void) exec;
+bool block_print(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
+    (void) compiler;
     (void) block;
     (void) control_state;
     (void) argc;
@@ -476,24 +476,24 @@ bool block_print(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* r
     case DATA_TYPE_UNKNOWN:
     case DATA_TYPE_ANY:
     case DATA_TYPE_BLOCKDEF:
-        exec_set_error(exec, block, gettext("Cannot print type %s"), type_to_str(argv[0].type));
+        compiler_set_error(compiler, block, gettext("Cannot print type %s"), type_to_str(argv[0].type));
         return false;
     }
     *return_val = DATA_INTEGER(bytes_sent);
     return true;
 }
 
-bool block_println(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
-    if (!block_print(exec, block, argc, argv, return_val, control_state)) return false;
+bool block_println(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
+    if (!block_print(compiler, block, argc, argv, return_val, control_state)) return false;
     term_print_str("\n");
     return_val->data.integer_val++;
     return true;
 }
 
-bool block_cursor_x(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
+bool block_cursor_x(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
-    (void) exec;
+    (void) compiler;
     (void) argv;
     (void) argc;
 
@@ -505,10 +505,10 @@ bool block_cursor_x(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue
     return true;
 }
 
-bool block_cursor_y(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
+bool block_cursor_y(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
-    (void) exec;
+    (void) compiler;
     (void) argv;
     (void) argc;
 
@@ -521,10 +521,10 @@ bool block_cursor_y(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue
     return true;
 }
 
-bool block_cursor_max_x(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
+bool block_cursor_max_x(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
-    (void) exec;
+    (void) compiler;
     (void) argv;
     (void) argc;
 
@@ -536,10 +536,10 @@ bool block_cursor_max_x(Exec* exec, Block* block, int argc, AnyValue* argv, AnyV
     return true;
 }
 
-bool block_cursor_max_y(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
+bool block_cursor_max_y(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
-    (void) exec;
+    (void) compiler;
     (void) argv;
     (void) argc;
 
@@ -551,10 +551,10 @@ bool block_cursor_max_y(Exec* exec, Block* block, int argc, AnyValue* argv, AnyV
     return true;
 }
 
-bool block_set_cursor(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
+bool block_set_cursor(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
-    (void) exec;
+    (void) compiler;
     (void) argc;
 
     mutex_lock(&term.lock);
@@ -567,30 +567,30 @@ bool block_set_cursor(Exec* exec, Block* block, int argc, AnyValue* argv, AnyVal
     return true;
 }
 
-bool block_set_fg_color(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
+bool block_set_fg_color(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
-    (void) exec;
+    (void) compiler;
     (void) argc;
     term_set_fg_color(CONVERT_COLOR(std_color_from_any(&argv[0]), TermColor));
     *return_val = DATA_NOTHING;
     return true;
 }
 
-bool block_set_bg_color(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
+bool block_set_bg_color(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
-    (void) exec;
+    (void) compiler;
     (void) argc;
     term_set_bg_color(CONVERT_COLOR(std_color_from_any(&argv[0]), TermColor));
     *return_val = DATA_NOTHING;
     return true;
 }
 
-bool block_reset_color(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
+bool block_reset_color(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
-    (void) exec;
+    (void) compiler;
     (void) argv;
     (void) argc;
     term_set_fg_color(CONVERT_COLOR(WHITE, TermColor));
@@ -600,10 +600,10 @@ bool block_reset_color(Exec* exec, Block* block, int argc, AnyValue* argv, AnyVa
     return true;
 }
 
-bool block_term_clear(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
+bool block_term_clear(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
-    (void) exec;
+    (void) compiler;
     (void) argv;
     (void) argc;
     term_clear();
@@ -612,39 +612,39 @@ bool block_term_clear(Exec* exec, Block* block, int argc, AnyValue* argv, AnyVal
     return true;
 }
 
-bool block_term_set_clear(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
+bool block_term_set_clear(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
-    (void) exec;
+    (void) compiler;
     (void) argc;
     term_set_clear_color(CONVERT_COLOR(std_color_from_any(&argv[0]), TermColor));
     *return_val = DATA_NOTHING;
     return true;
 }
 
-bool block_input(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
+bool block_input(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     (void) argv;
     (void) argc;
-    *return_val = DATA_STRING(std_term_get_input(&exec->gc));
+    *return_val = DATA_STRING(std_term_get_input(&compiler->gc));
     return true;
 }
 
-bool block_get_char(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
+bool block_get_char(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     (void) argv;
     (void) argc;
 
-    *return_val = DATA_STRING(std_term_get_char(&exec->gc));
+    *return_val = DATA_STRING(std_term_get_char(&compiler->gc));
     return true;
 }
 
-bool block_random(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
+bool block_random(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
-    (void) exec;
+    (void) compiler;
     (void) argc;
 
     int min = std_integer_from_any(&argv[0]);
@@ -659,127 +659,127 @@ bool block_random(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* 
     return true;
 }
 
-bool block_join(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
+bool block_join(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) argc;
     (void) block;
 
-    *return_val = DATA_STRING(std_string_join(&exec->gc, std_string_from_any(&exec->gc, &argv[0]), std_string_from_any(&exec->gc, &argv[1])));
+    *return_val = DATA_STRING(std_string_join(&compiler->gc, std_string_from_any(&compiler->gc, &argv[0]), std_string_from_any(&compiler->gc, &argv[1])));
     return true;
 }
 
-bool block_ord(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
+bool block_ord(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
-    (void) exec;
+    (void) compiler;
     (void) argc;
 
-    const char* str = std_any_string_from_any(&exec->gc, &argv[0]);
+    const char* str = std_any_string_from_any(&compiler->gc, &argv[0]);
     int codepoint_size;
     int codepoint = GetCodepoint(str, &codepoint_size);
     *return_val = DATA_INTEGER(codepoint);
     return true;
 }
 
-bool block_chr(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
+bool block_chr(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     (void) argc;
-    *return_val = DATA_STRING(std_string_chr(&exec->gc, std_integer_from_any(&argv[0])));
+    *return_val = DATA_STRING(std_string_chr(&compiler->gc, std_integer_from_any(&argv[0])));
     return true;
 }
 
-bool block_letter_in(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
+bool block_letter_in(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     (void) argc;
-    *return_val = DATA_STRING(std_string_letter_in(&exec->gc, std_integer_from_any(&argv[0]), std_string_from_any(&exec->gc, &argv[1])));
+    *return_val = DATA_STRING(std_string_letter_in(&compiler->gc, std_integer_from_any(&argv[0]), std_string_from_any(&compiler->gc, &argv[1])));
     return true;
 }
 
-bool block_substring(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
+bool block_substring(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     (void) argc;
-    *return_val = DATA_STRING(std_string_substring(&exec->gc, std_integer_from_any(&argv[0]), std_integer_from_any(&argv[1]), std_string_from_any(&exec->gc, &argv[2])));
+    *return_val = DATA_STRING(std_string_substring(&compiler->gc, std_integer_from_any(&argv[0]), std_integer_from_any(&argv[1]), std_string_from_any(&compiler->gc, &argv[2])));
     return true;
 }
 
-bool block_length(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
+bool block_length(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     (void) argc;
-    *return_val = DATA_INTEGER(std_string_length(std_string_from_any(&exec->gc, &argv[0])));
+    *return_val = DATA_INTEGER(std_string_length(std_string_from_any(&compiler->gc, &argv[0])));
     return true;
 }
 
-bool block_unix_time(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
+bool block_unix_time(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
-    (void) exec;
+    (void) compiler;
     (void) argc;
     (void) argv;
     *return_val = DATA_INTEGER(time(NULL));
     return true;
 }
 
-bool block_convert_int(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
+bool block_convert_int(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
-    (void) exec;
+    (void) compiler;
     (void) argc;
     *return_val = DATA_INTEGER(std_integer_from_any(&argv[0]));
     return true;
 }
 
-bool block_convert_float(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
+bool block_convert_float(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
-    (void) exec;
+    (void) compiler;
     (void) argc;
     *return_val = DATA_FLOAT(std_float_from_any(&argv[0]));
     return true;
 }
 
-bool block_convert_str(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
+bool block_convert_str(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     (void) argc;
-    *return_val = DATA_STRING(std_string_from_any(&exec->gc, &argv[0]));
+    *return_val = DATA_STRING(std_string_from_any(&compiler->gc, &argv[0]));
     return true;
 }
 
-bool block_convert_bool(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
+bool block_convert_bool(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
-    (void) exec;
+    (void) compiler;
     (void) argc;
     *return_val = DATA_BOOL(std_bool_from_any(&argv[0]));
     return true;
 }
 
-bool block_convert_color(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
+bool block_convert_color(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
-    (void) exec;
+    (void) compiler;
     (void) argc;
     *return_val = DATA_COLOR(std_color_from_any(&argv[0]));
     return true;
 }
 
-bool block_typeof(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
+bool block_typeof(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
-    (void) exec;
+    (void) compiler;
     (void) argc;
     *return_val = DATA_LITERAL((char*)type_to_str(argv[0].type));
     return true;
 }
 
-bool block_plus(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
+bool block_plus(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
-    (void) exec;
+    (void) compiler;
     (void) argc;
     if (argv[0].type == DATA_TYPE_FLOAT) {
         *return_val = DATA_FLOAT(argv[0].data.float_val + std_float_from_any(&argv[1]));
@@ -789,10 +789,10 @@ bool block_plus(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* re
     return true;
 }
 
-bool block_minus(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
+bool block_minus(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
-    (void) exec;
+    (void) compiler;
     (void) argc;
     if (argv[0].type == DATA_TYPE_FLOAT) {
         *return_val = DATA_FLOAT(argv[0].data.float_val - std_float_from_any(&argv[1]));
@@ -802,10 +802,10 @@ bool block_minus(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* r
     return true;
 }
 
-bool block_mult(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
+bool block_mult(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
-    (void) exec;
+    (void) compiler;
     (void) argc;
     if (argv[0].type == DATA_TYPE_FLOAT) {
         *return_val = DATA_FLOAT(argv[0].data.float_val * std_float_from_any(&argv[1]));
@@ -815,10 +815,10 @@ bool block_mult(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* re
     return true;
 }
 
-bool block_div(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
+bool block_div(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
-    (void) exec;
+    (void) compiler;
     (void) argc;
 
     if (argv[0].type == DATA_TYPE_FLOAT) {
@@ -826,7 +826,7 @@ bool block_div(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* ret
     } else {
         int divisor = std_integer_from_any(&argv[1]);
         if (divisor == 0) {
-            exec_set_error(exec, block, gettext("Division by zero"));
+            compiler_set_error(compiler, block, gettext("Division by zero"));
             return false;
         }
         *return_val = DATA_INTEGER(std_integer_from_any(&argv[0]) / divisor);
@@ -834,10 +834,10 @@ bool block_div(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* ret
     return true;
 }
 
-bool block_pow(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
+bool block_pow(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
-    (void) exec;
+    (void) compiler;
     (void) argc;
     if (argv[0].type == DATA_TYPE_FLOAT) {
         *return_val = DATA_FLOAT(pow(argv[0].data.float_val, std_float_from_any(&argv[1])));
@@ -861,13 +861,13 @@ bool block_pow(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* ret
     return true;
 }
 
-bool block_math(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
+bool block_math(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
-    (void) exec;
+    (void) compiler;
     (void) argc;
     if (argv[0].type != DATA_TYPE_LITERAL) {
-        exec_set_error(exec, block, gettext("Invalid data type %s, expected %s"), type_to_str(argv[0].type), type_to_str(DATA_TYPE_LITERAL));
+        compiler_set_error(compiler, block, gettext("Invalid data type %s, expected %s"), type_to_str(argv[0].type), type_to_str(DATA_TYPE_LITERAL));
         return false;
     }
 
@@ -877,60 +877,60 @@ bool block_math(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* re
         return true;
     }
 
-    exec_set_error(exec, block, gettext("Invalid argument %s"), argv[0].data.literal_val);
+    compiler_set_error(compiler, block, gettext("Invalid argument %s"), argv[0].data.literal_val);
     return false;
 }
 
-bool block_pi(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
+bool block_pi(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
-    (void) exec;
+    (void) compiler;
     (void) argc;
     (void) argv;
     *return_val = DATA_FLOAT(M_PI);
     return true;
 }
 
-bool block_bit_not(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
+bool block_bit_not(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
-    (void) exec;
+    (void) compiler;
     (void) argc;
     *return_val = DATA_INTEGER(~std_integer_from_any(&argv[0]));
     return true;
 }
 
-bool block_bit_and(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
+bool block_bit_and(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
-    (void) exec;
+    (void) compiler;
     (void) argc;
     *return_val = DATA_INTEGER(std_integer_from_any(&argv[0]) & std_integer_from_any(&argv[1]));
     return true;
 }
 
-bool block_bit_xor(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
+bool block_bit_xor(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
-    (void) exec;
+    (void) compiler;
     (void) argc;
     *return_val = DATA_INTEGER(std_integer_from_any(&argv[0]) ^ std_integer_from_any(&argv[1]));
     return true;
 }
 
-bool block_bit_or(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
+bool block_bit_or(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
-    (void) exec;
+    (void) compiler;
     (void) argc;
     *return_val = DATA_INTEGER(std_integer_from_any(&argv[0]) | std_integer_from_any(&argv[1]));
     return true;
 }
 
-bool block_rem(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
+bool block_rem(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
-    (void) exec;
+    (void) compiler;
     (void) argc;
     if (argv[0].type == DATA_TYPE_FLOAT) {
         *return_val = DATA_FLOAT(fmod(argv[0].data.float_val, std_float_from_any(&argv[1])));
@@ -940,10 +940,10 @@ bool block_rem(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* ret
     return true;
 }
 
-bool block_less(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
+bool block_less(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
-    (void) exec;
+    (void) compiler;
     (void) argc;
 
     if (argv[0].type == DATA_TYPE_FLOAT) {
@@ -954,10 +954,10 @@ bool block_less(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* re
     return true;
 }
 
-bool block_less_eq(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
+bool block_less_eq(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
-    (void) exec;
+    (void) compiler;
     (void) argc;
     if (argv[0].type == DATA_TYPE_FLOAT) {
         *return_val = DATA_BOOL(argv[0].data.float_val <= std_float_from_any(&argv[1]));
@@ -967,10 +967,10 @@ bool block_less_eq(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue*
     return true;
 }
 
-bool block_more(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
+bool block_more(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
-    (void) exec;
+    (void) compiler;
     (void) argc;
     if (argv[0].type == DATA_TYPE_FLOAT) {
         *return_val = DATA_BOOL(argv[0].data.float_val > std_float_from_any(&argv[1]));
@@ -980,10 +980,10 @@ bool block_more(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* re
     return true;
 }
 
-bool block_more_eq(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
+bool block_more_eq(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
-    (void) exec;
+    (void) compiler;
     (void) argc;
     if (argv[0].type == DATA_TYPE_FLOAT) {
         *return_val = DATA_BOOL(argv[0].data.float_val >= std_float_from_any(&argv[1]));
@@ -993,57 +993,57 @@ bool block_more_eq(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue*
     return true;
 }
 
-bool block_not(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
+bool block_not(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
-    (void) exec;
+    (void) compiler;
     (void) argc;
     *return_val = DATA_BOOL(!std_bool_from_any(&argv[0]));
     return true;
 }
 
-bool block_and(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
+bool block_and(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
-    (void) exec;
+    (void) compiler;
     (void) argc;
     *return_val = DATA_BOOL(std_bool_from_any(&argv[0]) && std_bool_from_any(&argv[1]));
     return true;
 }
 
-bool block_or(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
+bool block_or(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
-    (void) exec;
+    (void) compiler;
     (void) argc;
     *return_val = DATA_BOOL(std_bool_from_any(&argv[0]) || std_bool_from_any(&argv[1]));
     return true;
 }
 
-bool block_true(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
+bool block_true(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
-    (void) exec;
+    (void) compiler;
     (void) argc;
     (void) argv;
     *return_val = DATA_BOOL(1);
     return true;
 }
 
-bool block_false(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
+bool block_false(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
-    (void) exec;
+    (void) compiler;
     (void) argc;
     (void) argv;
     *return_val = DATA_BOOL(0);
     return true;
 }
 
-bool block_eq(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
+bool block_eq(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
-    (void) exec;
+    (void) compiler;
     (void) argc;
     if ((argv[0].type != DATA_TYPE_LITERAL && argv[0].type != DATA_TYPE_STRING) || 
         (argv[1].type != DATA_TYPE_LITERAL && argv[1].type != DATA_TYPE_STRING)) {
@@ -1077,71 +1077,71 @@ bool block_eq(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* retu
     case DATA_TYPE_UNKNOWN:
     case DATA_TYPE_BLOCKDEF:
     case DATA_TYPE_ANY:
-        exec_set_error(exec, block, gettext("Cannot compare type %s"), type_to_str(argv[0].type));
+        compiler_set_error(compiler, block, gettext("Cannot compare type %s"), type_to_str(argv[0].type));
         return false;
     }
     return true;
 }
 
-bool block_not_eq(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
-    if (!block_eq(exec, block, argc, argv, return_val, control_state)) return false;
+bool block_not_eq(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
+    if (!block_eq(compiler, block, argc, argv, return_val, control_state)) return false;
     return_val->data.integer_val = !return_val->data.integer_val;
     return true;
 }
 
-bool block_exec_custom(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
+bool block_exec_custom(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
-    for (size_t i = 0; i < vector_size(exec->defined_functions); i++) {
-        if (block->blockdef == exec->defined_functions[i].blockdef) {
-            if (!exec_run_chain(exec, exec->defined_functions[i].run_chain, argc, argv, return_val)) return false;
+    for (size_t i = 0; i < vector_size(compiler->defined_functions); i++) {
+        if (block->blockdef == compiler->defined_functions[i].blockdef) {
+            if (!compiler_run_chain(compiler, compiler->defined_functions[i].run_chain, argc, argv, return_val)) return false;
 
             if (return_val->type == DATA_TYPE_LIST || return_val->type == DATA_TYPE_ANY || return_val->type == DATA_TYPE_STRING) {
-                gc_add_temp_root(&exec->gc, (void*)return_val->data.literal_val);
+                gc_add_temp_root(&compiler->gc, (void*)return_val->data.literal_val);
             }
             return true;
         }
     }
 
-    exec_set_error(exec, block, gettext("Unknown function id \"%s\""), block->blockdef->id);
+    compiler_set_error(compiler, block, gettext("Unknown function id \"%s\""), block->blockdef->id);
     return false;
 }
 
 // Checks the arguments and returns the value from custom_argv at index if all conditions are met
-bool block_custom_arg(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
+bool block_custom_arg(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) argc;
     (void) argv;
     (void) control_state;
-    for (size_t i = 0; i < vector_size(exec->defined_functions); i++) {
-        for (size_t j = 0; j < vector_size(exec->defined_functions[i].args); j++) {
-            DefineArgument arg = exec->defined_functions[i].args[j];
+    for (size_t i = 0; i < vector_size(compiler->defined_functions); i++) {
+        for (size_t j = 0; j < vector_size(compiler->defined_functions[i].args); j++) {
+            DefineArgument arg = compiler->defined_functions[i].args[j];
             if (arg.blockdef == block->blockdef) {
-                *return_val = exec->chain_stack[exec->chain_stack_len - 1].custom_argv[arg.arg_ind];
+                *return_val = compiler->chain_stack[compiler->chain_stack_len - 1].custom_argv[arg.arg_ind];
                 return true;
             }
         }
     }
 
-    exec_set_error(exec, block, gettext("Unknown argument id \"%s\""), block->blockdef->id);
+    compiler_set_error(compiler, block, gettext("Unknown argument id \"%s\""), block->blockdef->id);
     return false;
 }
 
 // Modifies the internal state of the current code chain so that it returns early with the data written to .return_arg
-bool block_return(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
+bool block_return(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     (void) argc;
-    exec->chain_stack[exec->chain_stack_len - 1].return_arg = argv[0];
-    exec->chain_stack[exec->chain_stack_len - 1].is_returning = true;
+    compiler->chain_stack[compiler->chain_stack_len - 1].return_arg = argv[0];
+    compiler->chain_stack[compiler->chain_stack_len - 1].is_returning = true;
     *return_val = DATA_NOTHING;
     return true;
 }
 
-bool block_gc_collect(Exec* exec, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
+bool block_gc_collect(Compiler* compiler, Block* block, int argc, AnyValue* argv, AnyValue* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     (void) argc;
     (void) argv;
-    gc_collect(&exec->gc);
+    gc_collect(&compiler->gc);
     *return_val = DATA_NOTHING;
     return true;
 }
@@ -1154,7 +1154,7 @@ bool block_gc_collect(Exec* exec, Block* block, int argc, AnyValue* argv, AnyVal
         return false; \
     }
 
-LLVMValueRef arg_to_value(Exec* exec, Block* block, FuncArg arg) {
+LLVMValueRef arg_to_value(Compiler* compiler, Block* block, FuncArg arg) {
     switch (arg.type) {
     case DATA_TYPE_LITERAL:
         return CONST_STRING_LITERAL(arg.data.str);
@@ -1169,45 +1169,45 @@ LLVMValueRef arg_to_value(Exec* exec, Block* block, FuncArg arg) {
         return arg.data.value;
     case DATA_TYPE_BLOCKDEF:
     case DATA_TYPE_UNKNOWN:
-        exec_set_error(exec, block, gettext("Cannot represent %s as LLVM value"), type_to_str(arg.type));
+        compiler_set_error(compiler, block, gettext("Cannot represent %s as LLVM value"), type_to_str(arg.type));
         return NULL;
     }
     assert(false && "Unhandled arg_to_value");
 }
 
-LLVMValueRef arg_to_bool(Exec* exec, Block* block, FuncArg arg) {
+LLVMValueRef arg_to_bool(Compiler* compiler, Block* block, FuncArg arg) {
     switch (arg.type) {
     case DATA_TYPE_LITERAL:
         return CONST_BOOLEAN(*arg.data.str != 0);
     case DATA_TYPE_STRING: ;
-        LLVMValueRef first_char = LLVMBuildLoad2(exec->builder, LLVMInt8Type(), build_call(exec, "std_string_get_data", arg.data.value), "bool_cast");
-        return LLVMBuildICmp(exec->builder, LLVMIntNE, first_char, LLVMConstInt(LLVMInt8Type(), 0, true), "bool_cast");
+        LLVMValueRef first_char = LLVMBuildLoad2(compiler->builder, LLVMInt8Type(), build_call(compiler, "std_string_get_data", arg.data.value), "bool_cast");
+        return LLVMBuildICmp(compiler->builder, LLVMIntNE, first_char, LLVMConstInt(LLVMInt8Type(), 0, true), "bool_cast");
     case DATA_TYPE_LIST:
     case DATA_TYPE_NOTHING:
         return CONST_BOOLEAN(0);
     case DATA_TYPE_INTEGER:
-        return LLVMBuildICmp(exec->builder, LLVMIntNE, arg.data.value, CONST_INTEGER(0), "bool_cast");
+        return LLVMBuildICmp(compiler->builder, LLVMIntNE, arg.data.value, CONST_INTEGER(0), "bool_cast");
     case DATA_TYPE_BOOL:
         return arg.data.value;
     case DATA_TYPE_FLOAT:
-        return LLVMBuildFCmp(exec->builder, LLVMRealONE, arg.data.value, CONST_FLOAT(0.0), "bool_cast");
+        return LLVMBuildFCmp(compiler->builder, LLVMRealONE, arg.data.value, CONST_FLOAT(0.0), "bool_cast");
     case DATA_TYPE_ANY:
-        return build_call(exec, "std_bool_from_any", arg.data.value);
+        return build_call(compiler, "std_bool_from_any", arg.data.value);
     case DATA_TYPE_BLOCKDEF:
     case DATA_TYPE_UNKNOWN:
     case DATA_TYPE_COLOR:
-        exec_set_error(exec, block, gettext("Cannot cast type %s into %s"), type_to_str(arg.type), type_to_str(DATA_TYPE_BOOL));
+        compiler_set_error(compiler, block, gettext("Cannot cast type %s into %s"), type_to_str(arg.type), type_to_str(DATA_TYPE_BOOL));
         return NULL;
     }
     assert(false && "Unhandled cast to bool");
 }
 
-LLVMValueRef arg_to_integer(Exec* exec, Block* block, FuncArg arg) {
+LLVMValueRef arg_to_integer(Compiler* compiler, Block* block, FuncArg arg) {
     switch (arg.type) {
     case DATA_TYPE_LITERAL:
         return CONST_INTEGER(atoi(arg.data.str));
     case DATA_TYPE_STRING:
-        return build_call(exec, "atoi", build_call(exec, "std_string_get_data", arg.data.value));
+        return build_call(compiler, "atoi", build_call(compiler, "std_string_get_data", arg.data.value));
     case DATA_TYPE_LIST:
     case DATA_TYPE_NOTHING:
         return CONST_INTEGER(0);
@@ -1215,47 +1215,47 @@ LLVMValueRef arg_to_integer(Exec* exec, Block* block, FuncArg arg) {
     case DATA_TYPE_COLOR:
         return arg.data.value;
     case DATA_TYPE_BOOL:
-        return LLVMBuildZExt(exec->builder, arg.data.value, LLVMInt32Type(), "int_cast");
+        return LLVMBuildZExt(compiler->builder, arg.data.value, LLVMInt32Type(), "int_cast");
     case DATA_TYPE_FLOAT:
-        return LLVMBuildFPToSI(exec->builder, arg.data.value, LLVMInt32Type(), "int_cast");
+        return LLVMBuildFPToSI(compiler->builder, arg.data.value, LLVMInt32Type(), "int_cast");
     case DATA_TYPE_ANY:
-        return build_call(exec, "std_integer_from_any", arg.data.value);
+        return build_call(compiler, "std_integer_from_any", arg.data.value);
     case DATA_TYPE_BLOCKDEF:
     case DATA_TYPE_UNKNOWN:
-        exec_set_error(exec, block, gettext("Cannot cast type %s into %s"), type_to_str(arg.type), type_to_str(DATA_TYPE_INTEGER));
+        compiler_set_error(compiler, block, gettext("Cannot cast type %s into %s"), type_to_str(arg.type), type_to_str(DATA_TYPE_INTEGER));
         return NULL;
     }
     assert(false && "Unhandled cast to integer");
 }
 
-LLVMValueRef arg_to_float(Exec* exec, Block* block, FuncArg arg) {
+LLVMValueRef arg_to_float(Compiler* compiler, Block* block, FuncArg arg) {
     switch (arg.type) {
     case DATA_TYPE_LITERAL:
         return CONST_FLOAT(atof(arg.data.str));
     case DATA_TYPE_STRING:
-        return build_call(exec, "atof", build_call(exec, "std_string_get_data", arg.data.value));
+        return build_call(compiler, "atof", build_call(compiler, "std_string_get_data", arg.data.value));
     case DATA_TYPE_LIST:
     case DATA_TYPE_NOTHING:
         return CONST_FLOAT(0.0);
     case DATA_TYPE_INTEGER:
-        return LLVMBuildSIToFP(exec->builder, arg.data.value, LLVMDoubleType(), "float_cast");
+        return LLVMBuildSIToFP(compiler->builder, arg.data.value, LLVMDoubleType(), "float_cast");
     case DATA_TYPE_BOOL:
-        return LLVMBuildUIToFP(exec->builder, arg.data.value, LLVMDoubleType(), "float_cast");
+        return LLVMBuildUIToFP(compiler->builder, arg.data.value, LLVMDoubleType(), "float_cast");
     case DATA_TYPE_FLOAT:
         return arg.data.value;
     case DATA_TYPE_ANY:
-        return build_call(exec, "std_float_from_any", arg.data.value);
+        return build_call(compiler, "std_float_from_any", arg.data.value);
     case DATA_TYPE_COLOR:
-        return LLVMBuildSIToFP(exec->builder, arg.data.value, LLVMDoubleType(), "float_cast");
+        return LLVMBuildSIToFP(compiler->builder, arg.data.value, LLVMDoubleType(), "float_cast");
     case DATA_TYPE_BLOCKDEF:
     case DATA_TYPE_UNKNOWN:
-        exec_set_error(exec, block, gettext("Cannot cast type %s into %s"), type_to_str(arg.type), type_to_str(DATA_TYPE_FLOAT));
+        compiler_set_error(compiler, block, gettext("Cannot cast type %s into %s"), type_to_str(arg.type), type_to_str(DATA_TYPE_FLOAT));
         return NULL;
     }
     assert(false && "Unhandled cast to float");
 }
 
-LLVMValueRef arg_to_any_string(Exec* exec, Block* block, FuncArg arg) {
+LLVMValueRef arg_to_any_string(Compiler* compiler, Block* block, FuncArg arg) {
     switch (arg.type) {
     case DATA_TYPE_LITERAL:
         return CONST_STRING_LITERAL(arg.data.str);
@@ -1264,60 +1264,60 @@ LLVMValueRef arg_to_any_string(Exec* exec, Block* block, FuncArg arg) {
     case DATA_TYPE_STRING:
         return arg.data.value;
     case DATA_TYPE_INTEGER:
-        return build_call(exec, "std_string_from_integer", CONST_GC, arg.data.value);
+        return build_call(compiler, "std_string_from_integer", CONST_GC, arg.data.value);
     case DATA_TYPE_BOOL:
-        return build_call(exec, "std_string_from_bool", CONST_GC, arg.data.value);
+        return build_call(compiler, "std_string_from_bool", CONST_GC, arg.data.value);
     case DATA_TYPE_FLOAT:
-        return build_call(exec, "std_string_from_float", CONST_GC, arg.data.value);
+        return build_call(compiler, "std_string_from_float", CONST_GC, arg.data.value);
     case DATA_TYPE_ANY:
-        return build_call(exec, "std_string_from_any", CONST_GC, arg.data.value);
+        return build_call(compiler, "std_string_from_any", CONST_GC, arg.data.value);
     case DATA_TYPE_LIST:
-        return build_call(exec, "std_string_from_literal", CONST_GC, CONST_STRING_LITERAL(""), CONST_INTEGER(0));
+        return build_call(compiler, "std_string_from_literal", CONST_GC, CONST_STRING_LITERAL(""), CONST_INTEGER(0));
     case DATA_TYPE_COLOR:
-        return build_call(exec, "std_string_from_color", CONST_GC, arg.data.value);
+        return build_call(compiler, "std_string_from_color", CONST_GC, arg.data.value);
     case DATA_TYPE_BLOCKDEF:
     case DATA_TYPE_UNKNOWN:
-        exec_set_error(exec, block, gettext("Cannot cast type %s into any string"), type_to_str(arg.type));
+        compiler_set_error(compiler, block, gettext("Cannot cast type %s into any string"), type_to_str(arg.type));
         return NULL;
     }
     assert(false && "Unhandled cast to any string");
 }
 
-LLVMValueRef arg_to_string_ref(Exec* exec, Block* block, FuncArg arg) {
+LLVMValueRef arg_to_string_ref(Compiler* compiler, Block* block, FuncArg arg) {
     switch (arg.type) {
     case DATA_TYPE_LITERAL:
-        return build_call(exec, "std_string_from_literal", CONST_GC, CONST_STRING_LITERAL(arg.data.str), CONST_INTEGER(strlen(arg.data.str)));
+        return build_call(compiler, "std_string_from_literal", CONST_GC, CONST_STRING_LITERAL(arg.data.str), CONST_INTEGER(strlen(arg.data.str)));
     case DATA_TYPE_NOTHING:
-        return build_call(exec, "std_string_from_literal", CONST_GC, CONST_STRING_LITERAL("nothing"), CONST_INTEGER(sizeof("nothing") - 1));
+        return build_call(compiler, "std_string_from_literal", CONST_GC, CONST_STRING_LITERAL("nothing"), CONST_INTEGER(sizeof("nothing") - 1));
     case DATA_TYPE_LIST:
-        return build_call(exec, "std_string_from_literal", CONST_GC, CONST_STRING_LITERAL(""), CONST_INTEGER(0));
+        return build_call(compiler, "std_string_from_literal", CONST_GC, CONST_STRING_LITERAL(""), CONST_INTEGER(0));
     case DATA_TYPE_STRING:
         return arg.data.value;
     case DATA_TYPE_INTEGER:
-        return build_call(exec, "std_string_from_integer", CONST_GC, arg.data.value);
+        return build_call(compiler, "std_string_from_integer", CONST_GC, arg.data.value);
     case DATA_TYPE_BOOL:
-        return build_call(exec, "std_string_from_bool", CONST_GC, arg.data.value);
+        return build_call(compiler, "std_string_from_bool", CONST_GC, arg.data.value);
     case DATA_TYPE_FLOAT:
-        return build_call(exec, "std_string_from_float", CONST_GC, arg.data.value);
+        return build_call(compiler, "std_string_from_float", CONST_GC, arg.data.value);
     case DATA_TYPE_ANY:
-        return build_call(exec, "std_string_from_any", CONST_GC, arg.data.value);
+        return build_call(compiler, "std_string_from_any", CONST_GC, arg.data.value);
     case DATA_TYPE_COLOR:
-        return build_call(exec, "std_string_from_color", CONST_GC, arg.data.value);
+        return build_call(compiler, "std_string_from_color", CONST_GC, arg.data.value);
     case DATA_TYPE_UNKNOWN:
     case DATA_TYPE_BLOCKDEF:
-        exec_set_error(exec, block, gettext("Cannot cast type %s into %s"), type_to_str(arg.type), type_to_str(DATA_TYPE_STRING));
+        compiler_set_error(compiler, block, gettext("Cannot cast type %s into %s"), type_to_str(arg.type), type_to_str(DATA_TYPE_STRING));
         return NULL;
     }
     assert(false && "Unhandled cast to string ref");
 }
 
-LLVMValueRef arg_to_color(Exec* exec, Block* block, FuncArg arg) {
+LLVMValueRef arg_to_color(Compiler* compiler, Block* block, FuncArg arg) {
     switch (arg.type) {
     case DATA_TYPE_LITERAL: ;
         StdColor col = std_parse_color(arg.data.str);
         return CONST_INTEGER(*(int*)&col);
     case DATA_TYPE_STRING:
-        return build_call(exec, "std_parse_color", build_call(exec, "std_string_get_data", arg.data.value));
+        return build_call(compiler, "std_parse_color", build_call(compiler, "std_string_get_data", arg.data.value));
     case DATA_TYPE_LIST:
     case DATA_TYPE_NOTHING:
         return CONST_INTEGER(0);
@@ -1325,20 +1325,20 @@ LLVMValueRef arg_to_color(Exec* exec, Block* block, FuncArg arg) {
     case DATA_TYPE_COLOR:
         return arg.data.value;
     case DATA_TYPE_BOOL:
-        return LLVMBuildSelect(exec->builder, arg.data.value, CONST_INTEGER(0xffffffff), CONST_INTEGER(0xff000000), "color_cast");
+        return LLVMBuildSelect(compiler->builder, arg.data.value, CONST_INTEGER(0xffffffff), CONST_INTEGER(0xff000000), "color_cast");
     case DATA_TYPE_FLOAT:
-        return LLVMBuildFPToSI(exec->builder, arg.data.value, LLVMInt32Type(), "color_cast");
+        return LLVMBuildFPToSI(compiler->builder, arg.data.value, LLVMInt32Type(), "color_cast");
     case DATA_TYPE_ANY:
-        return build_call(exec, "std_color_from_any", arg.data.value);
+        return build_call(compiler, "std_color_from_any", arg.data.value);
     case DATA_TYPE_BLOCKDEF:
     case DATA_TYPE_UNKNOWN:
-        exec_set_error(exec, block, gettext("Cannot cast type %s into %s"), type_to_str(arg.type), type_to_str(DATA_TYPE_COLOR));
+        compiler_set_error(compiler, block, gettext("Cannot cast type %s into %s"), type_to_str(arg.type), type_to_str(DATA_TYPE_COLOR));
         return NULL;
     }
     assert(false && "Unhandled cast to color");
 }
 
-LLVMValueRef arg_to_list(Exec* exec, Block* block, FuncArg arg) {
+LLVMValueRef arg_to_list(Compiler* compiler, Block* block, FuncArg arg) {
     switch (arg.type) {
     case DATA_TYPE_BOOL:
     case DATA_TYPE_NOTHING:
@@ -1349,20 +1349,20 @@ LLVMValueRef arg_to_list(Exec* exec, Block* block, FuncArg arg) {
     case DATA_TYPE_UNKNOWN:
     case DATA_TYPE_BLOCKDEF:
     case DATA_TYPE_COLOR:
-        exec_set_error(exec, block, gettext("Cannot cast type %s into %s"), type_to_str(arg.type), type_to_str(DATA_TYPE_LIST));
+        compiler_set_error(compiler, block, gettext("Cannot cast type %s into %s"), type_to_str(arg.type), type_to_str(DATA_TYPE_LIST));
         return NULL;
     case DATA_TYPE_LIST:
         return arg.data.value;
     case DATA_TYPE_ANY:
-        return build_call(exec, "std_list_from_any", CONST_GC, arg.data.value);
+        return build_call(compiler, "std_list_from_any", CONST_GC, arg.data.value);
     }
     assert(false && "Unhandled cast to string ref");
 }
 
-LLVMValueRef arg_to_any(Exec* exec, Block* block, FuncArg arg) {
+LLVMValueRef arg_to_any(Compiler* compiler, Block* block, FuncArg arg) {
     switch (arg.type) {
     case DATA_TYPE_NOTHING:
-        return build_call_count(exec, "std_any_from_value", 2, CONST_GC, CONST_INTEGER(arg.type));
+        return build_call_count(compiler, "std_any_from_value", 2, CONST_GC, CONST_INTEGER(arg.type));
     case DATA_TYPE_BOOL:
     case DATA_TYPE_INTEGER:
     case DATA_TYPE_STRING:
@@ -1370,93 +1370,93 @@ LLVMValueRef arg_to_any(Exec* exec, Block* block, FuncArg arg) {
     case DATA_TYPE_LITERAL:
     case DATA_TYPE_LIST:
     case DATA_TYPE_COLOR:
-        return build_call_count(exec, "std_any_from_value", 3, CONST_GC, CONST_INTEGER(arg.type), arg_to_value(exec, block, arg));
+        return build_call_count(compiler, "std_any_from_value", 3, CONST_GC, CONST_INTEGER(arg.type), arg_to_value(compiler, block, arg));
     case DATA_TYPE_ANY:
         return arg.data.value;
     case DATA_TYPE_UNKNOWN:
     case DATA_TYPE_BLOCKDEF:
-        exec_set_error(exec, block, gettext("Cannot cast type %s into %s"), type_to_str(arg.type), type_to_str(DATA_TYPE_ANY));
+        compiler_set_error(compiler, block, gettext("Cannot cast type %s into %s"), type_to_str(arg.type), type_to_str(DATA_TYPE_ANY));
         return NULL;
     }
     assert(false && "Unhandled cast to string ref");
 }
 
-FuncArg arg_cast(Exec* exec, Block* block, FuncArg arg, DataType cast_to_type) {
+FuncArg arg_cast(Compiler* compiler, Block* block, FuncArg arg, DataType cast_to_type) {
     switch (cast_to_type) {
     case DATA_TYPE_LITERAL:
         if (arg.type == DATA_TYPE_LITERAL) return arg;
         assert(false && "Attempted to cast LLVM value to string literal");
     case DATA_TYPE_STRING:
-        return DATA_STRING(arg_to_string_ref(exec, block, arg));
+        return DATA_STRING(arg_to_string_ref(compiler, block, arg));
     case DATA_TYPE_INTEGER:
-        return DATA_INTEGER(arg_to_integer(exec, block, arg));
+        return DATA_INTEGER(arg_to_integer(compiler, block, arg));
     case DATA_TYPE_BOOL:
-        return DATA_BOOLEAN(arg_to_bool(exec, block, arg));
+        return DATA_BOOLEAN(arg_to_bool(compiler, block, arg));
     case DATA_TYPE_FLOAT:
-        return DATA_FLOAT(arg_to_float(exec, block, arg));
+        return DATA_FLOAT(arg_to_float(compiler, block, arg));
     case DATA_TYPE_LIST:
-        return DATA_LIST(arg_to_list(exec, block, arg));
+        return DATA_LIST(arg_to_list(compiler, block, arg));
     case DATA_TYPE_ANY:
-        return DATA_ANY(arg_to_any(exec, block, arg));
+        return DATA_ANY(arg_to_any(compiler, block, arg));
     case DATA_TYPE_COLOR:
-        return DATA_COLOR(arg_to_color(exec, block, arg));
+        return DATA_COLOR(arg_to_color(compiler, block, arg));
     case DATA_TYPE_NOTHING:
     case DATA_TYPE_UNKNOWN:
     case DATA_TYPE_BLOCKDEF:
-        exec_set_error(exec, block, gettext("Cannot cast type %s into %s"), type_to_str(arg.type), type_to_str(cast_to_type));
+        compiler_set_error(compiler, block, gettext("Cannot cast type %s into %s"), type_to_str(arg.type), type_to_str(cast_to_type));
         return DATA_UNKNOWN;
     }
     assert(false && "Unhandled cast to value typed");
 }
 
-bool block_return(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
+bool block_return(Compiler* compiler, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     MIN_ARG_COUNT(1);
 
-    LLVMBasicBlockRef current = LLVMGetInsertBlock(exec->builder);
+    LLVMBasicBlockRef current = LLVMGetInsertBlock(compiler->builder);
     LLVMBasicBlockRef return_block = LLVMInsertBasicBlock(current, "return");
     LLVMBasicBlockRef return_after_block = LLVMInsertBasicBlock(current, "return_after");
 
     LLVMMoveBasicBlockAfter(return_after_block, current);
     LLVMMoveBasicBlockAfter(return_block, current);
 
-    LLVMBuildBr(exec->builder, return_block);
+    LLVMBuildBr(compiler->builder, return_block);
 
-    LLVMPositionBuilderAtEnd(exec->builder, return_block);
+    LLVMPositionBuilderAtEnd(compiler->builder, return_block);
 
-    build_call(exec, "gc_root_restore", CONST_GC);
+    build_call(compiler, "gc_root_restore", CONST_GC);
 
     LLVMTypeRef data_type = LLVMTypeOf(argv[0].data.value);
     if (data_type == LLVMPointerType(LLVMInt8Type(), 0)) {
-        build_call(exec, "gc_add_temp_root", CONST_GC, argv[0].data.value);
+        build_call(compiler, "gc_add_temp_root", CONST_GC, argv[0].data.value);
     }
     
-    LLVMValueRef custom_return = arg_to_any(exec, block, argv[0]);
+    LLVMValueRef custom_return = arg_to_any(compiler, block, argv[0]);
     if (!custom_return) return false;
 
-    exec->gc_dirty = false;
-    LLVMBuildRet(exec->builder, custom_return);
+    compiler->gc_dirty = false;
+    LLVMBuildRet(compiler->builder, custom_return);
 
-    LLVMPositionBuilderAtEnd(exec->builder, return_after_block);
+    LLVMPositionBuilderAtEnd(compiler->builder, return_after_block);
     
     *return_val = DATA_NOTHING;
     return true;
 }
 
-bool block_custom_arg(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
+bool block_custom_arg(Compiler* compiler, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
     (void) control_state;
     (void) argc;
     (void) argv;
     DefineFunction* func;
-    DefineArgument* arg = get_custom_argument(exec, block->blockdef, &func);
+    DefineArgument* arg = get_custom_argument(compiler, block->blockdef, &func);
     if (!arg) {
-        exec_set_error(exec, block, gettext("Could not find function definition for argument"));
+        compiler_set_error(compiler, block, gettext("Could not find function definition for argument"));
         return false;
     }
     
-    if (LLVMGetBasicBlockParent(LLVMGetInsertBlock(exec->builder)) != func->func) {
-        exec_set_error(exec, block, gettext("Function argument block used outside of function"));
+    if (LLVMGetBasicBlockParent(LLVMGetInsertBlock(compiler->builder)) != func->func) {
+        compiler_set_error(compiler, block, gettext("Function argument block used outside of function"));
         return false;
     }
 
@@ -1464,32 +1464,32 @@ bool block_custom_arg(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg
     return true;
 }
 
-bool block_exec_custom(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
+bool block_exec_custom(Compiler* compiler, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
     (void) control_state;
     if (argc > 32) {
-        exec_set_error(exec, block, gettext("Too many parameters passed into function. Got %d/32"), argc);
+        compiler_set_error(compiler, block, gettext("Too many parameters passed into function. Got %d/32"), argc);
         return false;
     }
     
-    DefineFunction* define = define_function(exec, block->blockdef);
+    DefineFunction* define = define_function(compiler, block->blockdef);
     
     LLVMTypeRef func_type = LLVMGlobalGetValueType(define->func);
     LLVMValueRef func_param_list[32];
 
     for (int i = 0; i < argc; i++) {
-        func_param_list[i] = arg_to_any(exec, block, argv[i]);
+        func_param_list[i] = arg_to_any(compiler, block, argv[i]);
         if (!func_param_list[i]) return false;
     }
 
-    exec->gc_dirty = true;
-    if (exec->gc_block_stack_len > 0) {
-        exec->gc_block_stack[exec->gc_block_stack_len - 1].required = true;
+    compiler->gc_dirty = true;
+    if (compiler->gc_block_stack_len > 0) {
+        compiler->gc_block_stack[compiler->gc_block_stack_len - 1].required = true;
     }
-    *return_val = DATA_ANY(LLVMBuildCall2(exec->builder, func_type, define->func, func_param_list, argc, ""));
+    *return_val = DATA_ANY(LLVMBuildCall2(compiler->builder, func_type, define->func, func_param_list, argc, ""));
     return true;
 }
 
-bool block_not_eq(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
+bool block_not_eq(Compiler* compiler, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     MIN_ARG_COUNT(2);
@@ -1502,12 +1502,12 @@ bool block_not_eq(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* re
     FuncArg right;
 
     if (argv[0].type == DATA_TYPE_LITERAL) {
-        left = arg_cast(exec, block, argv[0], argv[1].type);
+        left = arg_cast(compiler, block, argv[0], argv[1].type);
         if (!left.data.value) return false;
         right = argv[1];
     } else if (argv[1].type == DATA_TYPE_LITERAL) {
         left = argv[0];
-        right = arg_cast(exec, block, argv[1], argv[0].type);
+        right = arg_cast(compiler, block, argv[1], argv[0].type);
         if (!right.data.value) return false;
     } else if (argv[0].type != argv[1].type) {
         *return_val = DATA_BOOLEAN(CONST_BOOLEAN(1));
@@ -1522,38 +1522,38 @@ bool block_not_eq(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* re
         *return_val = DATA_BOOLEAN(CONST_BOOLEAN(0));
         break;
     case DATA_TYPE_STRING: ;
-        LLVMValueRef eq_return = build_call(exec, "std_string_is_eq", left.data.value, right.data.value);
-        *return_val = DATA_BOOLEAN(LLVMBuildXor(exec->builder, eq_return, CONST_BOOLEAN(1), "string_neq"));
+        LLVMValueRef eq_return = build_call(compiler, "std_string_is_eq", left.data.value, right.data.value);
+        *return_val = DATA_BOOLEAN(LLVMBuildXor(compiler->builder, eq_return, CONST_BOOLEAN(1), "string_neq"));
         break;
     case DATA_TYPE_INTEGER:
     case DATA_TYPE_COLOR:
-        *return_val = DATA_BOOLEAN(LLVMBuildICmp(exec->builder, LLVMIntNE, left.data.value, right.data.value, "int_neq"));
+        *return_val = DATA_BOOLEAN(LLVMBuildICmp(compiler->builder, LLVMIntNE, left.data.value, right.data.value, "int_neq"));
         break;
     case DATA_TYPE_BOOL:
-        *return_val = DATA_BOOLEAN(LLVMBuildXor(exec->builder, left.data.value, right.data.value, "bool_neq"));
+        *return_val = DATA_BOOLEAN(LLVMBuildXor(compiler->builder, left.data.value, right.data.value, "bool_neq"));
         break;
     case DATA_TYPE_FLOAT:
-        *return_val = DATA_BOOLEAN(LLVMBuildFCmp(exec->builder, LLVMRealONE, left.data.value, right.data.value, "float_neq"));
+        *return_val = DATA_BOOLEAN(LLVMBuildFCmp(compiler->builder, LLVMRealONE, left.data.value, right.data.value, "float_neq"));
         break;
     case DATA_TYPE_LIST:
         // Compare list pointers
-        *return_val = DATA_BOOLEAN(LLVMBuildICmp(exec->builder, LLVMIntNE, left.data.value, right.data.value, "list_neq"));
+        *return_val = DATA_BOOLEAN(LLVMBuildICmp(compiler->builder, LLVMIntNE, left.data.value, right.data.value, "list_neq"));
         break;
     case DATA_TYPE_ANY: ;
-        LLVMValueRef eq_any_return = build_call(exec, "std_any_is_eq", left.data.value, right.data.value);
-        *return_val = DATA_BOOLEAN(LLVMBuildXor(exec->builder, eq_any_return, CONST_BOOLEAN(1), "any_neq"));
+        LLVMValueRef eq_any_return = build_call(compiler, "std_any_is_eq", left.data.value, right.data.value);
+        *return_val = DATA_BOOLEAN(LLVMBuildXor(compiler->builder, eq_any_return, CONST_BOOLEAN(1), "any_neq"));
         break;
     case DATA_TYPE_UNKNOWN:
     case DATA_TYPE_LITERAL:
     case DATA_TYPE_BLOCKDEF:
-        exec_set_error(exec, block, gettext("Cannot compare type %s"), type_to_str(left.type));
+        compiler_set_error(compiler, block, gettext("Cannot compare type %s"), type_to_str(left.type));
         return false;
     }
 
     return true;
 }
 
-bool block_eq(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
+bool block_eq(Compiler* compiler, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     MIN_ARG_COUNT(2);
@@ -1566,12 +1566,12 @@ bool block_eq(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return
     FuncArg right;
 
     if (argv[0].type == DATA_TYPE_LITERAL) {
-        left = arg_cast(exec, block, argv[0], argv[1].type);
+        left = arg_cast(compiler, block, argv[0], argv[1].type);
         if (!left.data.value) return false;
         right = argv[1];
     } else if (argv[1].type == DATA_TYPE_LITERAL) {
         left = argv[0];
-        right = arg_cast(exec, block, argv[1], argv[0].type);
+        right = arg_cast(compiler, block, argv[1], argv[0].type);
         if (!right.data.value) return false;
     } else if (argv[0].type != argv[1].type) {
         *return_val = DATA_BOOLEAN(CONST_BOOLEAN(0));
@@ -1586,268 +1586,268 @@ bool block_eq(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return
         *return_val = DATA_BOOLEAN(CONST_BOOLEAN(1));
         break;
     case DATA_TYPE_STRING:
-        *return_val = DATA_BOOLEAN(build_call(exec, "std_string_is_eq", left.data.value, right.data.value));
+        *return_val = DATA_BOOLEAN(build_call(compiler, "std_string_is_eq", left.data.value, right.data.value));
         break;
     case DATA_TYPE_BOOL:
     case DATA_TYPE_INTEGER:
     case DATA_TYPE_COLOR:
-        *return_val = DATA_BOOLEAN(LLVMBuildICmp(exec->builder, LLVMIntEQ, left.data.value, right.data.value, "int_eq"));
+        *return_val = DATA_BOOLEAN(LLVMBuildICmp(compiler->builder, LLVMIntEQ, left.data.value, right.data.value, "int_eq"));
         break;
     case DATA_TYPE_FLOAT:
-        *return_val = DATA_BOOLEAN(LLVMBuildFCmp(exec->builder, LLVMRealOEQ, left.data.value, right.data.value, "float_eq"));
+        *return_val = DATA_BOOLEAN(LLVMBuildFCmp(compiler->builder, LLVMRealOEQ, left.data.value, right.data.value, "float_eq"));
         break;
     case DATA_TYPE_LIST:
         // Compare list pointers
-        *return_val = DATA_BOOLEAN(LLVMBuildICmp(exec->builder, LLVMIntEQ, left.data.value, right.data.value, "list_eq"));
+        *return_val = DATA_BOOLEAN(LLVMBuildICmp(compiler->builder, LLVMIntEQ, left.data.value, right.data.value, "list_eq"));
         break;
     case DATA_TYPE_ANY:
-        *return_val = DATA_BOOLEAN(build_call(exec, "std_any_is_eq", left.data.value, right.data.value));
+        *return_val = DATA_BOOLEAN(build_call(compiler, "std_any_is_eq", left.data.value, right.data.value));
         break;
     case DATA_TYPE_UNKNOWN:
     case DATA_TYPE_LITERAL:
     case DATA_TYPE_BLOCKDEF:
-        exec_set_error(exec, block, gettext("Cannot compare type %s"), type_to_str(left.type));
+        compiler_set_error(compiler, block, gettext("Cannot compare type %s"), type_to_str(left.type));
         return false;
     }
 
     return true;
 }
 
-bool block_false(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
+bool block_false(Compiler* compiler, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
-    (void) exec;
+    (void) compiler;
     (void) argc;
     (void) argv;
     *return_val = DATA_BOOLEAN(CONST_BOOLEAN(0));
     return true;
 }
 
-bool block_true(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
+bool block_true(Compiler* compiler, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
-    (void) exec;
+    (void) compiler;
     (void) argc;
     (void) argv;
     *return_val = DATA_BOOLEAN(CONST_BOOLEAN(1));
     return true;
 }
 
-bool block_or(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
+bool block_or(Compiler* compiler, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     MIN_ARG_COUNT(2);
-    LLVMValueRef left = arg_to_bool(exec, block, argv[0]);
+    LLVMValueRef left = arg_to_bool(compiler, block, argv[0]);
     if (!left) return false;
-    LLVMValueRef right = arg_to_bool(exec, block, argv[1]);
+    LLVMValueRef right = arg_to_bool(compiler, block, argv[1]);
     if (!right) return false;
-    *return_val = DATA_BOOLEAN(LLVMBuildOr(exec->builder, left, right, "bool_or"));
+    *return_val = DATA_BOOLEAN(LLVMBuildOr(compiler->builder, left, right, "bool_or"));
     return true;
 }
 
-bool block_and(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
+bool block_and(Compiler* compiler, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     MIN_ARG_COUNT(2);
-    LLVMValueRef left = arg_to_bool(exec, block, argv[0]);
+    LLVMValueRef left = arg_to_bool(compiler, block, argv[0]);
     if (!left) return false;
-    LLVMValueRef right = arg_to_bool(exec, block, argv[1]);
+    LLVMValueRef right = arg_to_bool(compiler, block, argv[1]);
     if (!right) return false;
-    *return_val = DATA_BOOLEAN(LLVMBuildAnd(exec->builder, left, right, "bool_and"));
+    *return_val = DATA_BOOLEAN(LLVMBuildAnd(compiler->builder, left, right, "bool_and"));
     return true;
 }
 
-bool block_not(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
+bool block_not(Compiler* compiler, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     MIN_ARG_COUNT(1);
-    LLVMValueRef value = arg_to_bool(exec, block, argv[0]);
+    LLVMValueRef value = arg_to_bool(compiler, block, argv[0]);
     if (!value) return false;
-    *return_val = DATA_BOOLEAN(LLVMBuildXor(exec->builder, value, CONST_BOOLEAN(1), "not"));
+    *return_val = DATA_BOOLEAN(LLVMBuildXor(compiler->builder, value, CONST_BOOLEAN(1), "not"));
     return true;
 }
 
-bool block_more_eq(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
+bool block_more_eq(Compiler* compiler, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     MIN_ARG_COUNT(2);
     if (argv[0].type != DATA_TYPE_FLOAT) {
-        LLVMValueRef left = arg_to_integer(exec, block, argv[0]);
+        LLVMValueRef left = arg_to_integer(compiler, block, argv[0]);
         if (!left) return false;
-        LLVMValueRef right = arg_to_integer(exec, block, argv[1]);
+        LLVMValueRef right = arg_to_integer(compiler, block, argv[1]);
         if (!right) return false;
-        *return_val = DATA_BOOLEAN(LLVMBuildICmp(exec->builder, LLVMIntSGE, left, right, "int_more_or_eq"));
+        *return_val = DATA_BOOLEAN(LLVMBuildICmp(compiler->builder, LLVMIntSGE, left, right, "int_more_or_eq"));
     } else {
-        LLVMValueRef right = arg_to_float(exec, block, argv[1]);
+        LLVMValueRef right = arg_to_float(compiler, block, argv[1]);
         if (!right) return false;
-        *return_val = DATA_BOOLEAN(LLVMBuildFCmp(exec->builder, LLVMRealOGE, argv[0].data.value, right, "float_more_or_eq"));
+        *return_val = DATA_BOOLEAN(LLVMBuildFCmp(compiler->builder, LLVMRealOGE, argv[0].data.value, right, "float_more_or_eq"));
     }
     return true;
 }
 
-bool block_more(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
+bool block_more(Compiler* compiler, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     MIN_ARG_COUNT(2);
     if (argv[0].type != DATA_TYPE_FLOAT) {
-        LLVMValueRef left = arg_to_integer(exec, block, argv[0]);
+        LLVMValueRef left = arg_to_integer(compiler, block, argv[0]);
         if (!left) return false;
-        LLVMValueRef right = arg_to_integer(exec, block, argv[1]);
+        LLVMValueRef right = arg_to_integer(compiler, block, argv[1]);
         if (!right) return false;
-        *return_val = DATA_BOOLEAN(LLVMBuildICmp(exec->builder, LLVMIntSGT, left, right, "int_more"));
+        *return_val = DATA_BOOLEAN(LLVMBuildICmp(compiler->builder, LLVMIntSGT, left, right, "int_more"));
     } else {
-        LLVMValueRef right = arg_to_float(exec, block, argv[1]);
+        LLVMValueRef right = arg_to_float(compiler, block, argv[1]);
         if (!right) return false;
-        *return_val = DATA_BOOLEAN(LLVMBuildFCmp(exec->builder, LLVMRealOGT, argv[0].data.value, right, "float_more"));
+        *return_val = DATA_BOOLEAN(LLVMBuildFCmp(compiler->builder, LLVMRealOGT, argv[0].data.value, right, "float_more"));
     }
     return true;
 }
 
-bool block_less_eq(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
+bool block_less_eq(Compiler* compiler, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     MIN_ARG_COUNT(2);
     if (argv[0].type != DATA_TYPE_FLOAT) {
-        LLVMValueRef left = arg_to_integer(exec, block, argv[0]);
+        LLVMValueRef left = arg_to_integer(compiler, block, argv[0]);
         if (!left) return false;
-        LLVMValueRef right = arg_to_integer(exec, block, argv[1]);
+        LLVMValueRef right = arg_to_integer(compiler, block, argv[1]);
         if (!right) return false;
-        *return_val = DATA_BOOLEAN(LLVMBuildICmp(exec->builder, LLVMIntSLE, left, right, "int_less_or_eq"));
+        *return_val = DATA_BOOLEAN(LLVMBuildICmp(compiler->builder, LLVMIntSLE, left, right, "int_less_or_eq"));
     } else {
-        LLVMValueRef right = arg_to_float(exec, block, argv[1]);
+        LLVMValueRef right = arg_to_float(compiler, block, argv[1]);
         if (!right) return false;
-        *return_val = DATA_BOOLEAN(LLVMBuildFCmp(exec->builder, LLVMRealOLE, argv[0].data.value, right, "float_less_or_eq"));
+        *return_val = DATA_BOOLEAN(LLVMBuildFCmp(compiler->builder, LLVMRealOLE, argv[0].data.value, right, "float_less_or_eq"));
     }
     return true;
 }
 
-bool block_less(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
+bool block_less(Compiler* compiler, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     MIN_ARG_COUNT(2);
     if (argv[0].type != DATA_TYPE_FLOAT) {
-        LLVMValueRef left = arg_to_integer(exec, block, argv[0]);
+        LLVMValueRef left = arg_to_integer(compiler, block, argv[0]);
         if (!left) return false;
-        LLVMValueRef right = arg_to_integer(exec, block, argv[1]);
+        LLVMValueRef right = arg_to_integer(compiler, block, argv[1]);
         if (!right) return false;
-        *return_val = DATA_BOOLEAN(LLVMBuildICmp(exec->builder, LLVMIntSLT, left, right, "int_less"));
+        *return_val = DATA_BOOLEAN(LLVMBuildICmp(compiler->builder, LLVMIntSLT, left, right, "int_less"));
     } else {
-        LLVMValueRef right = arg_to_float(exec, block, argv[1]);
+        LLVMValueRef right = arg_to_float(compiler, block, argv[1]);
         if (!right) return false;
-        *return_val = DATA_BOOLEAN(LLVMBuildFCmp(exec->builder, LLVMRealOLT, argv[0].data.value, right, "float_less"));
+        *return_val = DATA_BOOLEAN(LLVMBuildFCmp(compiler->builder, LLVMRealOLT, argv[0].data.value, right, "float_less"));
     }
     return true;
 }
 
-bool block_bit_or(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
+bool block_bit_or(Compiler* compiler, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     MIN_ARG_COUNT(2);
-    LLVMValueRef left = arg_to_integer(exec, block, argv[0]);
+    LLVMValueRef left = arg_to_integer(compiler, block, argv[0]);
     if (!left) return false;
-    LLVMValueRef right = arg_to_integer(exec, block, argv[1]);
+    LLVMValueRef right = arg_to_integer(compiler, block, argv[1]);
     if (!right) return false;
-    *return_val = DATA_INTEGER(LLVMBuildOr(exec->builder, left, right, "or"));
+    *return_val = DATA_INTEGER(LLVMBuildOr(compiler->builder, left, right, "or"));
     return true;
 }
 
-bool block_bit_xor(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
+bool block_bit_xor(Compiler* compiler, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     MIN_ARG_COUNT(2);
-    LLVMValueRef left = arg_to_integer(exec, block, argv[0]);
+    LLVMValueRef left = arg_to_integer(compiler, block, argv[0]);
     if (!left) return false;
-    LLVMValueRef right = arg_to_integer(exec, block, argv[1]);
+    LLVMValueRef right = arg_to_integer(compiler, block, argv[1]);
     if (!right) return false;
-    *return_val = DATA_INTEGER(LLVMBuildXor(exec->builder, left, right, "xor"));
+    *return_val = DATA_INTEGER(LLVMBuildXor(compiler->builder, left, right, "xor"));
     return true;
 }
 
-bool block_bit_and(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
+bool block_bit_and(Compiler* compiler, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     MIN_ARG_COUNT(2);
-    LLVMValueRef left = arg_to_integer(exec, block, argv[0]);
+    LLVMValueRef left = arg_to_integer(compiler, block, argv[0]);
     if (!left) return false;
-    LLVMValueRef right = arg_to_integer(exec, block, argv[1]);
+    LLVMValueRef right = arg_to_integer(compiler, block, argv[1]);
     if (!right) return false;
-    *return_val = DATA_INTEGER(LLVMBuildAnd(exec->builder, left, right, "and"));
+    *return_val = DATA_INTEGER(LLVMBuildAnd(compiler->builder, left, right, "and"));
     return true;
 }
 
-bool block_bit_not(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
+bool block_bit_not(Compiler* compiler, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     MIN_ARG_COUNT(1);
-    LLVMValueRef integer_val = arg_to_integer(exec, block, argv[0]);
+    LLVMValueRef integer_val = arg_to_integer(compiler, block, argv[0]);
     if (!integer_val) return false;
 
-    LLVMValueRef add_op = LLVMBuildAdd(exec->builder, integer_val, CONST_INTEGER(1), "");
-    *return_val = DATA_INTEGER(LLVMBuildNeg(exec->builder, add_op, "bit_not"));
+    LLVMValueRef add_op = LLVMBuildAdd(compiler->builder, integer_val, CONST_INTEGER(1), "");
+    *return_val = DATA_INTEGER(LLVMBuildNeg(compiler->builder, add_op, "bit_not"));
     return true;
 }
 
-bool block_pi(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
+bool block_pi(Compiler* compiler, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
-    (void) exec;
+    (void) compiler;
     (void) argc;
     (void) argv;
     *return_val = DATA_FLOAT(CONST_FLOAT(M_PI));
     return true;
 }
 
-bool block_math(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
+bool block_math(Compiler* compiler, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     MIN_ARG_COUNT(2);
     if (argv[0].type != DATA_TYPE_LITERAL) return false;
 
-    LLVMValueRef value = arg_to_float(exec, block, argv[1]);
+    LLVMValueRef value = arg_to_float(compiler, block, argv[1]);
     if (!value) return false;
 
     for (int i = 0; i < MATH_LIST_LEN; i++) {
         if (strcmp(argv[0].data.str, block_math_list[i])) continue;
-        *return_val = DATA_FLOAT(build_call(exec, argv[0].data.str, value));
+        *return_val = DATA_FLOAT(build_call(compiler, argv[0].data.str, value));
         return true;
     }
 
     return false;
 }
 
-bool block_pow(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
+bool block_pow(Compiler* compiler, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     MIN_ARG_COUNT(2);
 
     if (argv[0].type != DATA_TYPE_FLOAT) {
-        LLVMValueRef left = arg_to_integer(exec, block, argv[0]);
+        LLVMValueRef left = arg_to_integer(compiler, block, argv[0]);
         if (!left) return false;
-        LLVMValueRef right = arg_to_integer(exec, block, argv[1]);
+        LLVMValueRef right = arg_to_integer(compiler, block, argv[1]);
         if (!right) return false;
 
-        *return_val = DATA_INTEGER(build_call(exec, "std_int_pow", left, right));
+        *return_val = DATA_INTEGER(build_call(compiler, "std_int_pow", left, right));
     } else {
-        LLVMValueRef right = arg_to_float(exec, block, argv[1]);
+        LLVMValueRef right = arg_to_float(compiler, block, argv[1]);
         if (!right) return false;
-        *return_val = DATA_FLOAT(build_call(exec, "pow", argv[0].data.value, right));
+        *return_val = DATA_FLOAT(build_call(compiler, "pow", argv[0].data.value, right));
     }
 
     return true;
 }
 
-bool block_rem(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
+bool block_rem(Compiler* compiler, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     MIN_ARG_COUNT(2);
     if (argv[0].type != DATA_TYPE_FLOAT) {
-        LLVMValueRef left = arg_to_integer(exec, block, argv[0]);
+        LLVMValueRef left = arg_to_integer(compiler, block, argv[0]);
         if (!left) return false;
-        LLVMValueRef right = arg_to_integer(exec, block, argv[1]);
+        LLVMValueRef right = arg_to_integer(compiler, block, argv[1]);
         if (!right) return false;
 
         if (!LLVMIsConstant(right)) {
-            LLVMBasicBlockRef current_branch = LLVMGetInsertBlock(exec->builder);
+            LLVMBasicBlockRef current_branch = LLVMGetInsertBlock(compiler->builder);
             LLVMBasicBlockRef non_zero_branch = LLVMInsertBasicBlock(current_branch, "non_zero_cond");
             LLVMBasicBlockRef zero_branch = LLVMInsertBasicBlock(current_branch, "zero_cond");
             LLVMBasicBlockRef phi_branch = LLVMInsertBasicBlock(current_branch, "cond_after");
@@ -1856,51 +1856,51 @@ bool block_rem(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* retur
             LLVMMoveBasicBlockAfter(zero_branch, current_branch);
             LLVMMoveBasicBlockAfter(non_zero_branch, current_branch);
 
-            LLVMValueRef condition = LLVMBuildICmp(exec->builder, LLVMIntEQ, right, CONST_INTEGER(0), "");
-            LLVMBuildCondBr(exec->builder, condition, zero_branch, non_zero_branch);
+            LLVMValueRef condition = LLVMBuildICmp(compiler->builder, LLVMIntEQ, right, CONST_INTEGER(0), "");
+            LLVMBuildCondBr(compiler->builder, condition, zero_branch, non_zero_branch);
 
-            LLVMPositionBuilderAtEnd(exec->builder, non_zero_branch);
-            LLVMValueRef out = LLVMBuildSRem(exec->builder, left, right, "");
-            LLVMBuildBr(exec->builder, phi_branch);
+            LLVMPositionBuilderAtEnd(compiler->builder, non_zero_branch);
+            LLVMValueRef out = LLVMBuildSRem(compiler->builder, left, right, "");
+            LLVMBuildBr(compiler->builder, phi_branch);
 
-            LLVMPositionBuilderAtEnd(exec->builder, zero_branch);
-            LLVMBuildBr(exec->builder, phi_branch);
+            LLVMPositionBuilderAtEnd(compiler->builder, zero_branch);
+            LLVMBuildBr(compiler->builder, phi_branch);
 
-            LLVMPositionBuilderAtEnd(exec->builder, phi_branch);
+            LLVMPositionBuilderAtEnd(compiler->builder, phi_branch);
 
-            *return_val = DATA_INTEGER(LLVMBuildPhi(exec->builder, LLVMInt32Type(), "div"));
+            *return_val = DATA_INTEGER(LLVMBuildPhi(compiler->builder, LLVMInt32Type(), "div"));
 
             LLVMValueRef vals[] = { CONST_INTEGER(0), out };
             LLVMBasicBlockRef blocks[] = { zero_branch, non_zero_branch };
             LLVMAddIncoming(return_val->data.value, vals, blocks, ARRLEN(blocks));
         } else {
-            *return_val = DATA_INTEGER(LLVMBuildSRem(exec->builder, left, right, "rem"));
+            *return_val = DATA_INTEGER(LLVMBuildSRem(compiler->builder, left, right, "rem"));
         }
     } else {
-        LLVMValueRef right = arg_to_float(exec, block, argv[1]);
+        LLVMValueRef right = arg_to_float(compiler, block, argv[1]);
         if (!right) return false;
-        *return_val = DATA_FLOAT(LLVMBuildFRem(exec->builder, argv[0].data.value, right, "rem"));
+        *return_val = DATA_FLOAT(LLVMBuildFRem(compiler->builder, argv[0].data.value, right, "rem"));
     }
 
     if (LLVMIsPoison(return_val->data.value)) {
-        exec_set_error(exec, block, gettext("Division by zero"));
+        compiler_set_error(compiler, block, gettext("Division by zero"));
         return false;
     }
     return true;
 }
 
-bool block_div(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
+bool block_div(Compiler* compiler, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     MIN_ARG_COUNT(2);
     if (argv[0].type != DATA_TYPE_FLOAT) {
-        LLVMValueRef left = arg_to_integer(exec, block, argv[0]);
+        LLVMValueRef left = arg_to_integer(compiler, block, argv[0]);
         if (!left) return false;
-        LLVMValueRef right = arg_to_integer(exec, block, argv[1]);
+        LLVMValueRef right = arg_to_integer(compiler, block, argv[1]);
         if (!right) return false;
 
         if (!LLVMIsConstant(right)) {
-            LLVMBasicBlockRef current_branch = LLVMGetInsertBlock(exec->builder);
+            LLVMBasicBlockRef current_branch = LLVMGetInsertBlock(compiler->builder);
             LLVMBasicBlockRef non_zero_branch = LLVMInsertBasicBlock(current_branch, "non_zero_cond");
             LLVMBasicBlockRef zero_branch = LLVMInsertBasicBlock(current_branch, "zero_cond");
             LLVMBasicBlockRef phi_branch = LLVMInsertBasicBlock(current_branch, "cond_after");
@@ -1909,98 +1909,98 @@ bool block_div(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* retur
             LLVMMoveBasicBlockAfter(zero_branch, current_branch);
             LLVMMoveBasicBlockAfter(non_zero_branch, current_branch);
 
-            LLVMValueRef condition = LLVMBuildICmp(exec->builder, LLVMIntEQ, right, CONST_INTEGER(0), "");
-            LLVMBuildCondBr(exec->builder, condition, zero_branch, non_zero_branch);
+            LLVMValueRef condition = LLVMBuildICmp(compiler->builder, LLVMIntEQ, right, CONST_INTEGER(0), "");
+            LLVMBuildCondBr(compiler->builder, condition, zero_branch, non_zero_branch);
 
-            LLVMPositionBuilderAtEnd(exec->builder, non_zero_branch);
-            LLVMValueRef out = LLVMBuildSDiv(exec->builder, left, right, "");
-            LLVMBuildBr(exec->builder, phi_branch);
+            LLVMPositionBuilderAtEnd(compiler->builder, non_zero_branch);
+            LLVMValueRef out = LLVMBuildSDiv(compiler->builder, left, right, "");
+            LLVMBuildBr(compiler->builder, phi_branch);
 
-            LLVMPositionBuilderAtEnd(exec->builder, zero_branch);
-            LLVMBuildBr(exec->builder, phi_branch);
+            LLVMPositionBuilderAtEnd(compiler->builder, zero_branch);
+            LLVMBuildBr(compiler->builder, phi_branch);
 
-            LLVMPositionBuilderAtEnd(exec->builder, phi_branch);
+            LLVMPositionBuilderAtEnd(compiler->builder, phi_branch);
 
-            *return_val = DATA_INTEGER(LLVMBuildPhi(exec->builder, LLVMInt32Type(), "div"));
+            *return_val = DATA_INTEGER(LLVMBuildPhi(compiler->builder, LLVMInt32Type(), "div"));
 
             LLVMValueRef vals[] = { CONST_INTEGER(0), out };
             LLVMBasicBlockRef blocks[] = { zero_branch, non_zero_branch };
             LLVMAddIncoming(return_val->data.value, vals, blocks, ARRLEN(blocks));
         } else {
-            *return_val = DATA_INTEGER(LLVMBuildSDiv(exec->builder, left, right, "div"));
+            *return_val = DATA_INTEGER(LLVMBuildSDiv(compiler->builder, left, right, "div"));
         }
     } else {
-        LLVMValueRef right = arg_to_float(exec, block, argv[1]);
+        LLVMValueRef right = arg_to_float(compiler, block, argv[1]);
         if (!right) return false;
-        *return_val = DATA_FLOAT(LLVMBuildFDiv(exec->builder, argv[0].data.value, right, "div"));
+        *return_val = DATA_FLOAT(LLVMBuildFDiv(compiler->builder, argv[0].data.value, right, "div"));
     }
 
     if (LLVMIsPoison(return_val->data.value)) {
-        exec_set_error(exec, block, gettext("Division by zero"));
+        compiler_set_error(compiler, block, gettext("Division by zero"));
         return false;
     }
     return true;
 }
 
-bool block_mult(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
+bool block_mult(Compiler* compiler, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     MIN_ARG_COUNT(2);
     if (argv[0].type != DATA_TYPE_FLOAT) {
-        LLVMValueRef left = arg_to_integer(exec, block, argv[0]);
+        LLVMValueRef left = arg_to_integer(compiler, block, argv[0]);
         if (!left) return false;
-        LLVMValueRef right = arg_to_integer(exec, block, argv[1]);
+        LLVMValueRef right = arg_to_integer(compiler, block, argv[1]);
         if (!right) return false;
-        *return_val = DATA_INTEGER(LLVMBuildMul(exec->builder, left, right, "mul"));
+        *return_val = DATA_INTEGER(LLVMBuildMul(compiler->builder, left, right, "mul"));
     } else {
-        LLVMValueRef right = arg_to_float(exec, block, argv[1]);
+        LLVMValueRef right = arg_to_float(compiler, block, argv[1]);
         if (!right) return false;
-        *return_val = DATA_FLOAT(LLVMBuildFMul(exec->builder, argv[0].data.value, right, "mul"));
+        *return_val = DATA_FLOAT(LLVMBuildFMul(compiler->builder, argv[0].data.value, right, "mul"));
     }
     return true;
 }
 
-bool block_minus(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
+bool block_minus(Compiler* compiler, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     MIN_ARG_COUNT(2);
     if (argv[0].type != DATA_TYPE_FLOAT) {
-        LLVMValueRef left = arg_to_integer(exec, block, argv[0]);
+        LLVMValueRef left = arg_to_integer(compiler, block, argv[0]);
         if (!left) return false;
-        LLVMValueRef right = arg_to_integer(exec, block, argv[1]);
+        LLVMValueRef right = arg_to_integer(compiler, block, argv[1]);
         if (!right) return false;
-        *return_val = DATA_INTEGER(LLVMBuildSub(exec->builder, left, right, "sub"));
+        *return_val = DATA_INTEGER(LLVMBuildSub(compiler->builder, left, right, "sub"));
     } else {
-        LLVMValueRef right = arg_to_float(exec, block, argv[1]);
+        LLVMValueRef right = arg_to_float(compiler, block, argv[1]);
         if (!right) return false;
-        *return_val = DATA_FLOAT(LLVMBuildFSub(exec->builder, argv[0].data.value, right, "sub"));
+        *return_val = DATA_FLOAT(LLVMBuildFSub(compiler->builder, argv[0].data.value, right, "sub"));
     }
     return true;
 }
 
-bool block_plus(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
+bool block_plus(Compiler* compiler, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     MIN_ARG_COUNT(2);
     if (argv[0].type != DATA_TYPE_FLOAT) {
-        LLVMValueRef left = arg_to_integer(exec, block, argv[0]);
+        LLVMValueRef left = arg_to_integer(compiler, block, argv[0]);
         if (!left) return false;
-        LLVMValueRef right = arg_to_integer(exec, block, argv[1]);
+        LLVMValueRef right = arg_to_integer(compiler, block, argv[1]);
         if (!right) return false;
-        *return_val = DATA_INTEGER(LLVMBuildAdd(exec->builder, left, right, "add"));
+        *return_val = DATA_INTEGER(LLVMBuildAdd(compiler->builder, left, right, "add"));
     } else {
-        LLVMValueRef right = arg_to_float(exec, block, argv[1]);
+        LLVMValueRef right = arg_to_float(compiler, block, argv[1]);
         if (!right) return false;
-        *return_val = DATA_FLOAT(LLVMBuildFAdd(exec->builder, argv[0].data.value, right, "add"));
+        *return_val = DATA_FLOAT(LLVMBuildFAdd(compiler->builder, argv[0].data.value, right, "add"));
     }
     return true;
 }
 
 // TODO: Make this block evaluate arguments lazily
-bool block_typeof(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
+bool block_typeof(Compiler* compiler, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
-    (void) exec;
+    (void) compiler;
     (void) argc;
     *return_val = (FuncArg) {
         .type = DATA_TYPE_LITERAL,
@@ -2011,288 +2011,288 @@ bool block_typeof(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* re
     return true;
 }
 
-bool block_convert_color(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
+bool block_convert_color(Compiler* compiler, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     MIN_ARG_COUNT(1);
-    LLVMValueRef value = arg_to_color(exec, block, argv[0]);
+    LLVMValueRef value = arg_to_color(compiler, block, argv[0]);
     if (!value) return false;
     *return_val = DATA_COLOR(value);
     return true;
 }
 
-bool block_convert_bool(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
+bool block_convert_bool(Compiler* compiler, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     MIN_ARG_COUNT(1);
-    LLVMValueRef value = arg_to_bool(exec, block, argv[0]);
+    LLVMValueRef value = arg_to_bool(compiler, block, argv[0]);
     if (!value) return false;
     *return_val = DATA_BOOLEAN(value);
     return true;
 }
 
-bool block_convert_str(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
+bool block_convert_str(Compiler* compiler, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     MIN_ARG_COUNT(1);
-    LLVMValueRef value = arg_to_string_ref(exec, block, argv[0]);
+    LLVMValueRef value = arg_to_string_ref(compiler, block, argv[0]);
     if (!value) return false;
     *return_val = DATA_STRING(value);
     return true;
 }
 
-bool block_convert_float(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
+bool block_convert_float(Compiler* compiler, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     MIN_ARG_COUNT(1);
-    LLVMValueRef value = arg_to_float(exec, block, argv[0]);
+    LLVMValueRef value = arg_to_float(compiler, block, argv[0]);
     if (!value) return false;
     *return_val = DATA_FLOAT(value);
     return true;
 }
 
-bool block_convert_int(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
+bool block_convert_int(Compiler* compiler, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     MIN_ARG_COUNT(1);
-    LLVMValueRef value = arg_to_integer(exec, block, argv[0]);
+    LLVMValueRef value = arg_to_integer(compiler, block, argv[0]);
     if (!value) return false;
     *return_val = DATA_INTEGER(value);
     return true;
 }
 
-bool block_unix_time(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
+bool block_unix_time(Compiler* compiler, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     (void) argc;
     (void) argv;
-    *return_val = DATA_INTEGER(build_call(exec, "time", LLVMConstPointerNull(LLVMPointerType(LLVMVoidType(), 0))));
+    *return_val = DATA_INTEGER(build_call(compiler, "time", LLVMConstPointerNull(LLVMPointerType(LLVMVoidType(), 0))));
     return true;
 }
 
-bool block_length(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
+bool block_length(Compiler* compiler, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     MIN_ARG_COUNT(1);
-    LLVMValueRef str = arg_to_string_ref(exec, block, argv[0]);
+    LLVMValueRef str = arg_to_string_ref(compiler, block, argv[0]);
     if (!str) return false;
 
-    *return_val = DATA_INTEGER(build_call(exec, "std_string_length", str));
+    *return_val = DATA_INTEGER(build_call(compiler, "std_string_length", str));
     return true;
 }
 
-bool block_substring(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
+bool block_substring(Compiler* compiler, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     MIN_ARG_COUNT(3);
-    LLVMValueRef begin = arg_to_integer(exec, block, argv[0]);
+    LLVMValueRef begin = arg_to_integer(compiler, block, argv[0]);
     if (!begin) return false;
 
-    LLVMValueRef end = arg_to_integer(exec, block, argv[1]);
+    LLVMValueRef end = arg_to_integer(compiler, block, argv[1]);
     if (!end) return false;
 
-    LLVMValueRef str = arg_to_string_ref(exec, block, argv[2]);
+    LLVMValueRef str = arg_to_string_ref(compiler, block, argv[2]);
     if (!str) return false;
 
-    *return_val = DATA_STRING(build_call(exec, "std_string_substring", CONST_GC, begin, end, str));
+    *return_val = DATA_STRING(build_call(compiler, "std_string_substring", CONST_GC, begin, end, str));
     return true;
 }
 
-bool block_letter_in(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
+bool block_letter_in(Compiler* compiler, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     MIN_ARG_COUNT(2);
-    LLVMValueRef target = arg_to_integer(exec, block, argv[0]);
+    LLVMValueRef target = arg_to_integer(compiler, block, argv[0]);
     if (!target) return false;
 
-    LLVMValueRef str = arg_to_string_ref(exec, block, argv[1]);
+    LLVMValueRef str = arg_to_string_ref(compiler, block, argv[1]);
     if (!str) return false;
 
-    *return_val = DATA_STRING(build_call(exec, "std_string_letter_in", CONST_GC, target, str));
+    *return_val = DATA_STRING(build_call(compiler, "std_string_letter_in", CONST_GC, target, str));
     return true;
 }
 
-bool block_chr(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
+bool block_chr(Compiler* compiler, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     MIN_ARG_COUNT(1);
-    LLVMValueRef value = arg_to_integer(exec, block, argv[0]);
+    LLVMValueRef value = arg_to_integer(compiler, block, argv[0]);
     if (!value) return false;
 
-    *return_val = DATA_STRING(build_call(exec, "std_string_chr", CONST_GC, value));
+    *return_val = DATA_STRING(build_call(compiler, "std_string_chr", CONST_GC, value));
     return true;
 }
 
-bool block_ord(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
+bool block_ord(Compiler* compiler, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     MIN_ARG_COUNT(1);
-    LLVMValueRef str = arg_to_any_string(exec, block, argv[0]);
+    LLVMValueRef str = arg_to_any_string(compiler, block, argv[0]);
     if (!str) return false;
 
-    *return_val = DATA_INTEGER(build_call(exec, "std_string_ord", str));
+    *return_val = DATA_INTEGER(build_call(compiler, "std_string_ord", str));
     return true;
 }
 
-bool block_join(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
+bool block_join(Compiler* compiler, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     MIN_ARG_COUNT(2);
-    LLVMValueRef left = arg_to_string_ref(exec, block, argv[0]);
+    LLVMValueRef left = arg_to_string_ref(compiler, block, argv[0]);
     if (!left) return false;
-    LLVMValueRef right = arg_to_string_ref(exec, block, argv[1]);
+    LLVMValueRef right = arg_to_string_ref(compiler, block, argv[1]);
     if (!right) return false;
 
-    *return_val = DATA_STRING(build_call(exec, "std_string_join", CONST_GC, left, right));
+    *return_val = DATA_STRING(build_call(compiler, "std_string_join", CONST_GC, left, right));
     return true;
 }
 
-bool block_random(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
+bool block_random(Compiler* compiler, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     MIN_ARG_COUNT(2);
 
-    exec->build_random = true;
+    compiler->build_random = true;
 
-    LLVMValueRef min = arg_to_integer(exec, block, argv[0]);
+    LLVMValueRef min = arg_to_integer(compiler, block, argv[0]);
     if (!min) return false;
-    LLVMValueRef max = arg_to_integer(exec, block, argv[1]);
+    LLVMValueRef max = arg_to_integer(compiler, block, argv[1]);
     if (!max) return false;
 
-    *return_val = DATA_INTEGER(build_call(exec, "std_get_random", min, max));
+    *return_val = DATA_INTEGER(build_call(compiler, "std_get_random", min, max));
     return true;
 }
 
-bool block_get_char(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
+bool block_get_char(Compiler* compiler, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     (void) argc;
     (void) argv;
-    *return_val = DATA_STRING(build_call(exec, "std_term_get_char", CONST_GC));
+    *return_val = DATA_STRING(build_call(compiler, "std_term_get_char", CONST_GC));
     return true;
 }
 
-bool block_input(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
+bool block_input(Compiler* compiler, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     (void) argc;
     (void) argv;
-    *return_val = DATA_STRING(build_call(exec, "std_term_get_input", CONST_GC));
+    *return_val = DATA_STRING(build_call(compiler, "std_term_get_input", CONST_GC));
     return true;
 }
 
-bool block_term_set_clear(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
+bool block_term_set_clear(Compiler* compiler, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     (void) argc;
 
-    LLVMValueRef color = arg_to_color(exec, block, argv[0]);
+    LLVMValueRef color = arg_to_color(compiler, block, argv[0]);
     if (!color) return false;
 
-    build_call(exec, "std_term_set_clear_color", color);
+    build_call(compiler, "std_term_set_clear_color", color);
     *return_val = DATA_NOTHING;
     return true;
 }
 
-bool block_term_clear(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
+bool block_term_clear(Compiler* compiler, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     (void) argc;
     (void) argv;
-    build_call(exec, "std_term_clear");
+    build_call(compiler, "std_term_clear");
     *return_val = DATA_NOTHING;
     return true;
 }
 
-bool block_reset_color(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
+bool block_reset_color(Compiler* compiler, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     (void) argc;
     (void) argv;
     // For some reason gcc throws a warning in release mode with constant color struct so it is passed as integer
-    build_call(exec, "std_term_set_fg_color", CONST_INTEGER(0xffffffff));
-    build_call(exec, "std_term_set_bg_color", CONST_INTEGER(*(int*)&(BLACK)));
+    build_call(compiler, "std_term_set_fg_color", CONST_INTEGER(0xffffffff));
+    build_call(compiler, "std_term_set_bg_color", CONST_INTEGER(*(int*)&(BLACK)));
     *return_val = DATA_NOTHING;
     return true;
 }
 
-bool block_set_bg_color(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
+bool block_set_bg_color(Compiler* compiler, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     MIN_ARG_COUNT(1);
 
-    LLVMValueRef color = arg_to_color(exec, block, argv[0]);
+    LLVMValueRef color = arg_to_color(compiler, block, argv[0]);
     if (!color) return false;
 
-    build_call(exec, "std_term_set_bg_color", color);
+    build_call(compiler, "std_term_set_bg_color", color);
     *return_val = DATA_NOTHING;
     return true;
 }
 
-bool block_set_fg_color(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
+bool block_set_fg_color(Compiler* compiler, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     MIN_ARG_COUNT(1);
 
-    LLVMValueRef color = arg_to_color(exec, block, argv[0]);
+    LLVMValueRef color = arg_to_color(compiler, block, argv[0]);
     if (!color) return false;
 
-    build_call(exec, "std_term_set_fg_color", color);
+    build_call(compiler, "std_term_set_fg_color", color);
     *return_val = DATA_NOTHING;
     return true;
 }
 
-bool block_set_cursor(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
+bool block_set_cursor(Compiler* compiler, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     MIN_ARG_COUNT(2);
-    LLVMValueRef x = arg_to_integer(exec, block, argv[0]);
+    LLVMValueRef x = arg_to_integer(compiler, block, argv[0]);
     if (!x) return false;
-    LLVMValueRef y = arg_to_integer(exec, block, argv[1]);
+    LLVMValueRef y = arg_to_integer(compiler, block, argv[1]);
     if (!y) return false;
 
-    build_call(exec, "std_term_set_cursor", x, y);
+    build_call(compiler, "std_term_set_cursor", x, y);
     *return_val = DATA_NOTHING;
     return true;
 }
 
-bool block_cursor_max_y(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
+bool block_cursor_max_y(Compiler* compiler, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     (void) argc;
     (void) argv;
-    *return_val = DATA_INTEGER(build_call(exec, "std_term_cursor_max_y"));
+    *return_val = DATA_INTEGER(build_call(compiler, "std_term_cursor_max_y"));
     return true;
 }
 
-bool block_cursor_max_x(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
+bool block_cursor_max_x(Compiler* compiler, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     (void) argc;
     (void) argv;
-    *return_val = DATA_INTEGER(build_call(exec, "std_term_cursor_max_x"));
+    *return_val = DATA_INTEGER(build_call(compiler, "std_term_cursor_max_x"));
     return true;
 }
 
-bool block_cursor_y(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
+bool block_cursor_y(Compiler* compiler, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     (void) argc;
     (void) argv;
-    *return_val = DATA_INTEGER(build_call(exec, "std_term_cursor_y"));
+    *return_val = DATA_INTEGER(build_call(compiler, "std_term_cursor_y"));
     return true;
 }
 
-bool block_cursor_x(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
+bool block_cursor_x(Compiler* compiler, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     (void) argc;
     (void) argv;
-    *return_val = DATA_INTEGER(build_call(exec, "std_term_cursor_x"));
+    *return_val = DATA_INTEGER(build_call(compiler, "std_term_cursor_x"));
     return true;
 }
 
-bool block_print(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
+bool block_print(Compiler* compiler, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     MIN_ARG_COUNT(1);
@@ -2300,149 +2300,149 @@ bool block_print(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* ret
     switch (argv[0].type) {
     case DATA_TYPE_LITERAL:
         *return_val = DATA_INTEGER(*argv[0].data.str
-                                   ? build_call(exec, "std_term_print_str", CONST_STRING_LITERAL(argv[0].data.str))
+                                   ? build_call(compiler, "std_term_print_str", CONST_STRING_LITERAL(argv[0].data.str))
                                    : CONST_INTEGER(0));
         return true;
     case DATA_TYPE_STRING:
-        *return_val = DATA_INTEGER(build_call(exec, "std_term_print_str", build_call(exec, "std_string_get_data", argv[0].data.value)));
+        *return_val = DATA_INTEGER(build_call(compiler, "std_term_print_str", build_call(compiler, "std_string_get_data", argv[0].data.value)));
         return true;
     case DATA_TYPE_NOTHING:
         *return_val = DATA_INTEGER(CONST_INTEGER(0));
         return true;
     case DATA_TYPE_INTEGER:
-        *return_val = DATA_INTEGER(build_call(exec, "std_term_print_integer", argv[0].data.value));
+        *return_val = DATA_INTEGER(build_call(compiler, "std_term_print_integer", argv[0].data.value));
         return true;
     case DATA_TYPE_BOOL:
-        *return_val = DATA_INTEGER(build_call(exec, "std_term_print_bool", argv[0].data.value));
+        *return_val = DATA_INTEGER(build_call(compiler, "std_term_print_bool", argv[0].data.value));
         return true;
     case DATA_TYPE_FLOAT:
-        *return_val = DATA_INTEGER(build_call(exec, "std_term_print_float", argv[0].data.value));
+        *return_val = DATA_INTEGER(build_call(compiler, "std_term_print_float", argv[0].data.value));
         return true;
     case DATA_TYPE_LIST:
-        *return_val = DATA_INTEGER(build_call(exec, "std_term_print_list", argv[0].data.value));
+        *return_val = DATA_INTEGER(build_call(compiler, "std_term_print_list", argv[0].data.value));
         return true;
     case DATA_TYPE_ANY:
-        *return_val = DATA_INTEGER(build_call(exec, "std_term_print_any", argv[0].data.value));
+        *return_val = DATA_INTEGER(build_call(compiler, "std_term_print_any", argv[0].data.value));
         return true;
     case DATA_TYPE_COLOR:
-        *return_val = DATA_INTEGER(build_call(exec, "std_term_print_color", argv[0].data.value));
+        *return_val = DATA_INTEGER(build_call(compiler, "std_term_print_color", argv[0].data.value));
         return true;
     case DATA_TYPE_UNKNOWN:
     case DATA_TYPE_BLOCKDEF:
-        exec_set_error(exec, block, gettext("Invalid type %s in print function"), type_to_str(argv[0].type));
+        compiler_set_error(compiler, block, gettext("Invalid type %s in print function"), type_to_str(argv[0].type));
         return false;
     }
 
-    exec_set_error(exec, block, gettext("Unhandled type %s in print function"), type_to_str(argv[0].type));
+    compiler_set_error(compiler, block, gettext("Unhandled type %s in print function"), type_to_str(argv[0].type));
     return false;
 }
 
-bool block_println(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
+bool block_println(Compiler* compiler, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     MIN_ARG_COUNT(1);
-    block_print(exec, block, argc, argv, return_val, control_state);
-    build_call(exec, "std_term_print_str", CONST_STRING_LITERAL("\n"));
-    *return_val = DATA_INTEGER(LLVMBuildAdd(exec->builder, return_val->data.value, CONST_INTEGER(1), "add"));
+    block_print(compiler, block, argc, argv, return_val, control_state);
+    build_call(compiler, "std_term_print_str", CONST_STRING_LITERAL("\n"));
+    *return_val = DATA_INTEGER(LLVMBuildAdd(compiler->builder, return_val->data.value, CONST_INTEGER(1), "add"));
     return true;
 }
 
-bool block_list_length(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
+bool block_list_length(Compiler* compiler, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
     (void) control_state;
     MIN_ARG_COUNT(1);
 
-    LLVMValueRef list = arg_to_list(exec, block, argv[0]);
+    LLVMValueRef list = arg_to_list(compiler, block, argv[0]);
     if (!list) return false;
 
-    *return_val = DATA_INTEGER(build_call(exec, "std_list_length", list));
+    *return_val = DATA_INTEGER(build_call(compiler, "std_list_length", list));
     return true;
 }
 
-bool block_list_set(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
+bool block_list_set(Compiler* compiler, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
     (void) control_state;
     MIN_ARG_COUNT(3);
 
-    LLVMValueRef list = arg_to_list(exec, block, argv[0]);
+    LLVMValueRef list = arg_to_list(compiler, block, argv[0]);
     if (!list) return false;
-    LLVMValueRef index = arg_to_integer(exec, block, argv[1]);
+    LLVMValueRef index = arg_to_integer(compiler, block, argv[1]);
     if (!index) return false;
 
     if (argv[2].type == DATA_TYPE_NOTHING) {
-        build_call_count(exec, "std_list_set", 3, list, index, CONST_INTEGER(argv[2].type));
+        build_call_count(compiler, "std_list_set", 3, list, index, CONST_INTEGER(argv[2].type));
     } else {
-        build_call_count(exec, "std_list_set", 4, list, index, CONST_INTEGER(argv[2].type), arg_to_value(exec, block, argv[2]));
+        build_call_count(compiler, "std_list_set", 4, list, index, CONST_INTEGER(argv[2].type), arg_to_value(compiler, block, argv[2]));
     }
     *return_val = DATA_NOTHING;
     return true;
 }
 
-bool block_list_get(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
+bool block_list_get(Compiler* compiler, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     MIN_ARG_COUNT(2);
 
-    LLVMValueRef list = arg_to_list(exec, block, argv[0]);
+    LLVMValueRef list = arg_to_list(compiler, block, argv[0]);
     if (!list) return false;
-    LLVMValueRef index = arg_to_integer(exec, block, argv[1]);
+    LLVMValueRef index = arg_to_integer(compiler, block, argv[1]);
     if (!index) return false;
 
-    *return_val = DATA_ANY(build_call(exec, "std_list_get", CONST_GC, list, index));
+    *return_val = DATA_ANY(build_call(compiler, "std_list_get", CONST_GC, list, index));
     return true;
 }
 
-bool block_list_add(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
+bool block_list_add(Compiler* compiler, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     MIN_ARG_COUNT(2);
 
-    LLVMValueRef list = arg_to_list(exec, block, argv[0]);
+    LLVMValueRef list = arg_to_list(compiler, block, argv[0]);
     if (!list) return false;
 
     if (argv[1].type == DATA_TYPE_NOTHING) {
-        build_call_count(exec, "std_list_add", 3, CONST_GC, list, CONST_INTEGER(argv[1].type));
+        build_call_count(compiler, "std_list_add", 3, CONST_GC, list, CONST_INTEGER(argv[1].type));
     } else {
-        build_call_count(exec, "std_list_add", 4, CONST_GC, list, CONST_INTEGER(argv[1].type), arg_to_value(exec, block, argv[1]));
+        build_call_count(compiler, "std_list_add", 4, CONST_GC, list, CONST_INTEGER(argv[1].type), arg_to_value(compiler, block, argv[1]));
     }
     *return_val = DATA_NOTHING;
     return true;
 }
 
-bool block_create_list(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
+bool block_create_list(Compiler* compiler, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     (void) argc;
     (void) argv;
-    *return_val = DATA_LIST(build_call(exec, "std_list_new", CONST_GC));
+    *return_val = DATA_LIST(build_call(compiler, "std_list_new", CONST_GC));
     return true;
 }
 
-bool block_gc_collect(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
+bool block_gc_collect(Compiler* compiler, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     (void) argc;
     (void) argv;
-    build_call(exec, "gc_collect", CONST_GC);
+    build_call(compiler, "gc_collect", CONST_GC);
     *return_val = DATA_NOTHING;
     return true;
 }
 
-bool block_set_var(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
+bool block_set_var(Compiler* compiler, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     MIN_ARG_COUNT(2);
     if (argv[0].type != DATA_TYPE_LITERAL) {
-        exec_set_error(exec, block, gettext("Invalid data type %s, expected %s"), type_to_str(argv[0].type), type_to_str(DATA_TYPE_LITERAL));
+        compiler_set_error(compiler, block, gettext("Invalid data type %s, expected %s"), type_to_str(argv[0].type), type_to_str(DATA_TYPE_LITERAL));
         return false;
     }
 
-    Variable* var = variable_get(exec, argv[0].data.str);
+    Variable* var = variable_get(compiler, argv[0].data.str);
     if (!var) {
-        exec_set_error(exec, block, gettext("Variable with name \"%s\" does not exist in the current scope"), argv[0].data.str);
+        compiler_set_error(compiler, block, gettext("Variable with name \"%s\" does not exist in the current scope"), argv[0].data.str);
         return false;
     }
 
     if (argv[1].type != var->value.type) {
-        exec_set_error(exec, block, gettext("Assign to variable \"%s\" of type %s with incompatible type %s"), argv[0].data.str, type_to_str(var->value.type), type_to_str(argv[1].type));
+        compiler_set_error(compiler, block, gettext("Assign to variable \"%s\" of type %s with incompatible type %s"), argv[0].data.str, type_to_str(var->value.type), type_to_str(argv[1].type));
         return false;
     }
 
@@ -2452,23 +2452,23 @@ bool block_set_var(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* r
         return true;
     }
 
-    LLVMBuildStore(exec->builder, argv[1].data.value, var->value.data.value);
+    LLVMBuildStore(compiler->builder, argv[1].data.value, var->value.data.value);
     *return_val = argv[1];
     return true;
 }
 
-bool block_get_var(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
+bool block_get_var(Compiler* compiler, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     MIN_ARG_COUNT(1);
     if (argv[0].type != DATA_TYPE_LITERAL) {
-        exec_set_error(exec, block, gettext("Invalid data type %s, expected %s"), type_to_str(argv[0].type), type_to_str(DATA_TYPE_LITERAL));
+        compiler_set_error(compiler, block, gettext("Invalid data type %s, expected %s"), type_to_str(argv[0].type), type_to_str(DATA_TYPE_LITERAL));
         return false;
     }
 
-    Variable* var = variable_get(exec, argv[0].data.str);
+    Variable* var = variable_get(compiler, argv[0].data.str);
     if (!var) {
-        exec_set_error(exec, block, gettext("Variable with name \"%s\" does not exist in the current scope"), argv[0].data.str);
+        compiler_set_error(compiler, block, gettext("Variable with name \"%s\" does not exist in the current scope"), argv[0].data.str);
         return false;
     }
 
@@ -2480,39 +2480,39 @@ bool block_get_var(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* r
     *return_val = (FuncArg) {
         .type = var->value.type,
         .data = (FuncArgData) {
-            .value = LLVMBuildLoad2(exec->builder, var->type, var->value.data.value, "get_var"),
+            .value = LLVMBuildLoad2(compiler->builder, var->type, var->value.data.value, "get_var"),
         },
     };
     return true;
 }
 
-bool block_declare_var(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
+bool block_declare_var(Compiler* compiler, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     MIN_ARG_COUNT(2);
 
     if (block->parent) {
-        exec_set_error(exec, block, gettext("Variable declarations are not allowed inside an argument"));
+        compiler_set_error(compiler, block, gettext("Variable declarations are not allowed inside an argument"));
         return false;
     }
     
     if (argv[0].type != DATA_TYPE_LITERAL) {
-        exec_set_error(exec, block, gettext("Invalid data type %s, expected %s"), type_to_str(argv[0].type), type_to_str(DATA_TYPE_LITERAL));
+        compiler_set_error(compiler, block, gettext("Invalid data type %s, expected %s"), type_to_str(argv[0].type), type_to_str(DATA_TYPE_LITERAL));
         return false;
     }
 
     if (*argv[0].data.str == 0) {
-        exec_set_error(exec, block, gettext("Cannot declare variable with empty name"));
+        compiler_set_error(compiler, block, gettext("Cannot declare variable with empty name"));
         return false;
     }
 
     if (argv[1].type == DATA_TYPE_NOTHING) {
-        exec_set_error(exec, block, gettext("Cannot declare a variable with zero sized type (i.e. Nothing)"));
+        compiler_set_error(compiler, block, gettext("Cannot declare a variable with zero sized type (i.e. Nothing)"));
         return false;
     }
 
-    LLVMValueRef func_current = LLVMGetBasicBlockParent(LLVMGetInsertBlock(exec->builder));
-    LLVMValueRef func_main = LLVMGetNamedFunction(exec->module, MAIN_NAME);
+    LLVMValueRef func_current = LLVMGetBasicBlockParent(LLVMGetInsertBlock(compiler->builder));
+    LLVMValueRef func_main = LLVMGetNamedFunction(compiler->module, MAIN_NAME);
 
     if (argv[1].type == DATA_TYPE_LITERAL) {
         Variable var = (Variable) {
@@ -2520,10 +2520,10 @@ bool block_declare_var(Exec* exec, Block* block, int argc, FuncArg* argv, FuncAr
             .value = argv[1],
             .name = argv[0].data.str,
         };
-        if (exec->control_stack_len == 0 && func_current == func_main) {
-            global_variable_add(exec, var);
+        if (compiler->control_stack_len == 0 && func_current == func_main) {
+            global_variable_add(compiler, var);
         } else {
-            if (!variable_stack_push(exec, block, var)) return false;
+            if (!variable_stack_push(compiler, block, var)) return false;
         }
         *return_val = argv[1];
         return true;
@@ -2542,54 +2542,54 @@ bool block_declare_var(Exec* exec, Block* block, int argc, FuncArg* argv, FuncAr
         .name = argv[0].data.str,
     };
 
-    if (exec->control_stack_len == 0 && func_current == func_main) {
-        var.value.data.value = LLVMAddGlobal(exec->module, data_type, argv[0].data.str);
+    if (compiler->control_stack_len == 0 && func_current == func_main) {
+        var.value.data.value = LLVMAddGlobal(compiler->module, data_type, argv[0].data.str);
         LLVMSetInitializer(var.value.data.value, LLVMConstNull(LLVMTypeOf(argv[1].data.value)));
-        global_variable_add(exec, var);
+        global_variable_add(compiler, var);
     } else {
-        var.value.data.value = LLVMBuildAlloca(exec->builder, data_type, argv[0].data.str);
-        variable_stack_push(exec, block, var);
+        var.value.data.value = LLVMBuildAlloca(compiler->builder, data_type, argv[0].data.str);
+        variable_stack_push(compiler, block, var);
     }
 
-    LLVMBuildStore(exec->builder, argv[1].data.value, var.value.data.value);
+    LLVMBuildStore(compiler->builder, argv[1].data.value, var.value.data.value);
     if (data_type == LLVMPointerType(LLVMInt8Type(), 0)) {
-        build_call(exec, "gc_add_root", CONST_GC, var.value.data.value);
+        build_call(compiler, "gc_add_root", CONST_GC, var.value.data.value);
     }
     *return_val = argv[1];
     return true;
 }
 
-bool block_sleep(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
+bool block_sleep(Compiler* compiler, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     MIN_ARG_COUNT(1);
-    LLVMValueRef usecs = arg_to_integer(exec, block, argv[0]);
+    LLVMValueRef usecs = arg_to_integer(compiler, block, argv[0]);
     if (!usecs) return false;
 
-    *return_val = DATA_INTEGER(build_call(exec, "std_sleep", usecs));
+    *return_val = DATA_INTEGER(build_call(compiler, "std_sleep", usecs));
     return true;
 }
 
-bool block_while(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
+bool block_while(Compiler* compiler, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
     (void) block;
 
     if (control_state == CONTROL_STATE_BEGIN) {
         MIN_ARG_COUNT(1);
 
-        LLVMValueRef condition = arg_to_bool(exec, block, argv[0]);
+        LLVMValueRef condition = arg_to_bool(compiler, block, argv[0]);
         if (!condition) return false;
 
-        LLVMBasicBlockRef control_block = LLVMGetInsertBlock(exec->builder);
+        LLVMBasicBlockRef control_block = LLVMGetInsertBlock(compiler->builder);
         LLVMBasicBlockRef while_body_branch = LLVMInsertBasicBlock(control_block, "while");
         LLVMBasicBlockRef while_end_branch = LLVMInsertBasicBlock(control_block, "while_end");
 
         LLVMMoveBasicBlockAfter(while_end_branch, control_block);
         LLVMMoveBasicBlockAfter(while_body_branch, control_block);
 
-        LLVMBuildCondBr(exec->builder, condition, while_body_branch, while_end_branch);
+        LLVMBuildCondBr(compiler->builder, condition, while_body_branch, while_end_branch);
 
-        LLVMPositionBuilderAtEnd(exec->builder, while_body_branch);
-        if (!build_gc_root_begin(exec, block)) return false;
+        LLVMPositionBuilderAtEnd(compiler->builder, while_body_branch);
+        if (!build_gc_root_begin(compiler, block)) return false;
 
         control_data_stack_push_data(control_block, LLVMBasicBlockRef);
         control_data_stack_push_data(while_end_branch, LLVMBasicBlockRef);
@@ -2598,30 +2598,30 @@ bool block_while(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* ret
         control_data_stack_pop_data(while_end_branch, LLVMBasicBlockRef);
         control_data_stack_pop_data(control_block, LLVMBasicBlockRef);
 
-        if (!build_gc_root_end(exec, block)) return false;
-        LLVMBuildBr(exec->builder, control_block);
+        if (!build_gc_root_end(compiler, block)) return false;
+        LLVMBuildBr(compiler->builder, control_block);
 
-        LLVMPositionBuilderAtEnd(exec->builder, while_end_branch);
+        LLVMPositionBuilderAtEnd(compiler->builder, while_end_branch);
 
         *return_val = DATA_BOOLEAN(CONST_BOOLEAN(1));
     } else {
-        exec_set_error(exec, block, "Invalid control state");
+        compiler_set_error(compiler, block, "Invalid control state");
         return false;
     }
 
     return true;
 }
 
-bool block_repeat(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
+bool block_repeat(Compiler* compiler, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
     (void) block;
 
     if (control_state == CONTROL_STATE_BEGIN) {
         MIN_ARG_COUNT(1);
 
-        LLVMValueRef counter = arg_to_integer(exec, block, argv[0]);
+        LLVMValueRef counter = arg_to_integer(compiler, block, argv[0]);
         if (!counter) return false;
 
-        LLVMBasicBlockRef current = LLVMGetInsertBlock(exec->builder);
+        LLVMBasicBlockRef current = LLVMGetInsertBlock(compiler->builder);
         LLVMBasicBlockRef repeat_branch = LLVMInsertBasicBlock(current, "repeat");
         LLVMBasicBlockRef repeat_body_branch = LLVMInsertBasicBlock(current, "repeat_body");
         LLVMBasicBlockRef repeat_end_branch = LLVMInsertBasicBlock(current, "repeat_end");
@@ -2630,20 +2630,20 @@ bool block_repeat(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* re
         LLVMMoveBasicBlockAfter(repeat_body_branch, current);
         LLVMMoveBasicBlockAfter(repeat_branch, current);
 
-        LLVMBuildBr(exec->builder, repeat_branch);
-        LLVMPositionBuilderAtEnd(exec->builder, repeat_branch);
+        LLVMBuildBr(compiler->builder, repeat_branch);
+        LLVMPositionBuilderAtEnd(compiler->builder, repeat_branch);
 
-        LLVMValueRef phi_node = LLVMBuildPhi(exec->builder, LLVMInt32Type(), "repeat_phi");
-        LLVMValueRef index = LLVMBuildSub(exec->builder, phi_node, CONST_INTEGER(1), "repeat_index_sub");
-        LLVMValueRef index_test = LLVMBuildICmp(exec->builder, LLVMIntSLT, index, CONST_INTEGER(0), "repeat_loop_check");
-        LLVMBuildCondBr(exec->builder, index_test, repeat_end_branch, repeat_body_branch);
+        LLVMValueRef phi_node = LLVMBuildPhi(compiler->builder, LLVMInt32Type(), "repeat_phi");
+        LLVMValueRef index = LLVMBuildSub(compiler->builder, phi_node, CONST_INTEGER(1), "repeat_index_sub");
+        LLVMValueRef index_test = LLVMBuildICmp(compiler->builder, LLVMIntSLT, index, CONST_INTEGER(0), "repeat_loop_check");
+        LLVMBuildCondBr(compiler->builder, index_test, repeat_end_branch, repeat_body_branch);
 
         LLVMValueRef vals[] = { counter };
         LLVMBasicBlockRef blocks[] = { current };
         LLVMAddIncoming(phi_node, vals, blocks, ARRLEN(blocks));
 
-        LLVMPositionBuilderAtEnd(exec->builder, repeat_body_branch);
-        if (!build_gc_root_begin(exec, block)) return false;
+        LLVMPositionBuilderAtEnd(compiler->builder, repeat_body_branch);
+        if (!build_gc_root_begin(compiler, block)) return false;
 
         control_data_stack_push_data(phi_node, LLVMValueRef);
         control_data_stack_push_data(vals[0], LLVMValueRef);
@@ -2651,7 +2651,7 @@ bool block_repeat(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* re
         control_data_stack_push_data(repeat_branch, LLVMBasicBlockRef);
         control_data_stack_push_data(repeat_end_branch, LLVMBasicBlockRef);
     } else if (control_state == CONTROL_STATE_END) {
-        LLVMBasicBlockRef current = LLVMGetInsertBlock(exec->builder);
+        LLVMBasicBlockRef current = LLVMGetInsertBlock(compiler->builder);
         LLVMBasicBlockRef loop_end, loop;
         LLVMValueRef phi_node, index, start_index;
         control_data_stack_pop_data(loop_end, LLVMBasicBlockRef);
@@ -2660,74 +2660,74 @@ bool block_repeat(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* re
         control_data_stack_pop_data(start_index, LLVMValueRef);
         control_data_stack_pop_data(phi_node, LLVMValueRef);
 
-        if (!build_gc_root_end(exec, block)) return false;
-        LLVMBuildBr(exec->builder, loop);
+        if (!build_gc_root_end(compiler, block)) return false;
+        LLVMBuildBr(compiler->builder, loop);
 
         LLVMValueRef vals[] = { index };
         LLVMBasicBlockRef blocks[] = { current };
         LLVMAddIncoming(phi_node, vals, blocks, ARRLEN(blocks));
 
-        LLVMPositionBuilderAtEnd(exec->builder, loop_end);
+        LLVMPositionBuilderAtEnd(compiler->builder, loop_end);
 
-        *return_val = DATA_BOOLEAN(LLVMBuildICmp(exec->builder, LLVMIntSGT, start_index, CONST_INTEGER(0), ""));
+        *return_val = DATA_BOOLEAN(LLVMBuildICmp(compiler->builder, LLVMIntSGT, start_index, CONST_INTEGER(0), ""));
     } else {
-        exec_set_error(exec, block, "Invalid control state");
+        compiler_set_error(compiler, block, "Invalid control state");
         return false;
     }
 
     return true;
 }
 
-bool block_else(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
+bool block_else(Compiler* compiler, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
     (void) block;
 
     if (control_state == CONTROL_STATE_BEGIN) {
         MIN_ARG_COUNT(1);
 
-        LLVMValueRef value = arg_to_bool(exec, block, argv[0]);
+        LLVMValueRef value = arg_to_bool(compiler, block, argv[0]);
         if (!value) return false;
 
-        LLVMBasicBlockRef current_branch = LLVMGetInsertBlock(exec->builder);
+        LLVMBasicBlockRef current_branch = LLVMGetInsertBlock(compiler->builder);
         LLVMBasicBlockRef else_branch = LLVMInsertBasicBlock(current_branch, "else");
         LLVMBasicBlockRef end_branch = LLVMInsertBasicBlock(current_branch, "end_else");
 
         LLVMMoveBasicBlockAfter(end_branch, current_branch);
         LLVMMoveBasicBlockAfter(else_branch, current_branch);
 
-        LLVMBuildCondBr(exec->builder, value, end_branch, else_branch);
+        LLVMBuildCondBr(compiler->builder, value, end_branch, else_branch);
 
-        LLVMPositionBuilderAtEnd(exec->builder, else_branch);
-        if (!build_gc_root_begin(exec, block)) return false;
+        LLVMPositionBuilderAtEnd(compiler->builder, else_branch);
+        if (!build_gc_root_begin(compiler, block)) return false;
 
         control_data_stack_push_data(end_branch, LLVMBasicBlockRef);
     } else if (control_state == CONTROL_STATE_END) {
         LLVMBasicBlockRef end_branch;
         control_data_stack_pop_data(end_branch, LLVMBasicBlockRef);
 
-        if (!build_gc_root_end(exec, block)) return false;
-        LLVMBuildBr(exec->builder, end_branch);
-        LLVMPositionBuilderAtEnd(exec->builder, end_branch);
+        if (!build_gc_root_end(compiler, block)) return false;
+        LLVMBuildBr(compiler->builder, end_branch);
+        LLVMPositionBuilderAtEnd(compiler->builder, end_branch);
         *return_val = DATA_BOOLEAN(CONST_BOOLEAN(1));
     } else {
-        exec_set_error(exec, block, "Invalid control state");
+        compiler_set_error(compiler, block, "Invalid control state");
         return false;
     }
 
     return true;
 }
 
-bool block_else_if(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
+bool block_else_if(Compiler* compiler, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
     (void) block;
 
     if (control_state == CONTROL_STATE_BEGIN) {
         MIN_ARG_COUNT(2);
 
-        LLVMValueRef prev_val = arg_to_bool(exec, block, argv[0]);
+        LLVMValueRef prev_val = arg_to_bool(compiler, block, argv[0]);
         if (!prev_val) return false;
-        LLVMValueRef condition = arg_to_bool(exec, block, argv[1]);
+        LLVMValueRef condition = arg_to_bool(compiler, block, argv[1]);
         if (!condition) return false;
 
-        LLVMBasicBlockRef current_branch = LLVMGetInsertBlock(exec->builder);
+        LLVMBasicBlockRef current_branch = LLVMGetInsertBlock(compiler->builder);
         LLVMBasicBlockRef else_if_check_branch = LLVMInsertBasicBlock(current_branch, "else_if_check");
         LLVMBasicBlockRef else_if_branch = LLVMInsertBasicBlock(current_branch, "else_if");
         LLVMBasicBlockRef else_if_fail_branch = LLVMInsertBasicBlock(current_branch, "else_if_fail");
@@ -2738,54 +2738,54 @@ bool block_else_if(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* r
         LLVMMoveBasicBlockAfter(else_if_branch, current_branch);
         LLVMMoveBasicBlockAfter(else_if_check_branch, current_branch);
 
-        LLVMBuildCondBr(exec->builder, prev_val, end_branch, else_if_check_branch);
+        LLVMBuildCondBr(compiler->builder, prev_val, end_branch, else_if_check_branch);
         control_data_stack_push_data(current_branch, LLVMBasicBlockRef);
 
-        LLVMPositionBuilderAtEnd(exec->builder, else_if_check_branch);
-        LLVMBuildCondBr(exec->builder, condition, else_if_branch, else_if_fail_branch);
+        LLVMPositionBuilderAtEnd(compiler->builder, else_if_check_branch);
+        LLVMBuildCondBr(compiler->builder, condition, else_if_branch, else_if_fail_branch);
 
-        LLVMPositionBuilderAtEnd(exec->builder, else_if_fail_branch);
-        LLVMBuildBr(exec->builder, end_branch);
+        LLVMPositionBuilderAtEnd(compiler->builder, else_if_fail_branch);
+        LLVMBuildBr(compiler->builder, end_branch);
 
-        LLVMPositionBuilderAtEnd(exec->builder, else_if_branch);
-        if (!build_gc_root_begin(exec, block)) return false;
+        LLVMPositionBuilderAtEnd(compiler->builder, else_if_branch);
+        if (!build_gc_root_begin(compiler, block)) return false;
 
         control_data_stack_push_data(else_if_fail_branch, LLVMBasicBlockRef);
         control_data_stack_push_data(end_branch, LLVMBasicBlockRef);
     } else if (control_state == CONTROL_STATE_END) {
-        LLVMBasicBlockRef else_if_branch = LLVMGetInsertBlock(exec->builder);
+        LLVMBasicBlockRef else_if_branch = LLVMGetInsertBlock(compiler->builder);
         LLVMBasicBlockRef top_branch, fail_branch, end_branch;
         control_data_stack_pop_data(end_branch, LLVMBasicBlockRef);
         control_data_stack_pop_data(fail_branch, LLVMBasicBlockRef);
         control_data_stack_pop_data(top_branch, LLVMBasicBlockRef);
 
-        if (!build_gc_root_end(exec, block)) return false;
-        LLVMBuildBr(exec->builder, end_branch);
+        if (!build_gc_root_end(compiler, block)) return false;
+        LLVMBuildBr(compiler->builder, end_branch);
 
-        LLVMPositionBuilderAtEnd(exec->builder, end_branch);
-        *return_val = DATA_BOOLEAN(LLVMBuildPhi(exec->builder, LLVMInt1Type(), ""));
+        LLVMPositionBuilderAtEnd(compiler->builder, end_branch);
+        *return_val = DATA_BOOLEAN(LLVMBuildPhi(compiler->builder, LLVMInt1Type(), ""));
 
         LLVMValueRef vals[] = { CONST_BOOLEAN(1), CONST_BOOLEAN(1), CONST_BOOLEAN(0) };
         LLVMBasicBlockRef blocks[] = { top_branch, else_if_branch, fail_branch };
         LLVMAddIncoming(return_val->data.value, vals, blocks, ARRLEN(blocks));
     } else {
-        exec_set_error(exec, block, "Invalid control state");
+        compiler_set_error(compiler, block, "Invalid control state");
         return false;
     }
 
     return true;
 }
 
-bool block_if(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
+bool block_if(Compiler* compiler, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
     (void) block;
 
     if (control_state == CONTROL_STATE_BEGIN) {
         MIN_ARG_COUNT(1);
 
-        LLVMValueRef condition = arg_to_bool(exec, block, argv[0]);
+        LLVMValueRef condition = arg_to_bool(compiler, block, argv[0]);
         if (!condition) return false;
 
-        LLVMBasicBlockRef current_branch = LLVMGetInsertBlock(exec->builder);
+        LLVMBasicBlockRef current_branch = LLVMGetInsertBlock(compiler->builder);
         LLVMBasicBlockRef then_branch = LLVMInsertBasicBlock(current_branch, "if_cond");
         // This is needed for a phi block to determine if this condition has failed. The result of this phi node is then passed into a C-end block
         LLVMBasicBlockRef fail_branch = LLVMInsertBasicBlock(current_branch, "if_fail");
@@ -2795,55 +2795,55 @@ bool block_if(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return
         LLVMMoveBasicBlockAfter(fail_branch, current_branch);
         LLVMMoveBasicBlockAfter(then_branch, current_branch);
 
-        LLVMBuildCondBr(exec->builder, condition, then_branch, fail_branch);
+        LLVMBuildCondBr(compiler->builder, condition, then_branch, fail_branch);
 
-        LLVMPositionBuilderAtEnd(exec->builder, fail_branch);
-        LLVMBuildBr(exec->builder, end_branch);
+        LLVMPositionBuilderAtEnd(compiler->builder, fail_branch);
+        LLVMBuildBr(compiler->builder, end_branch);
 
-        LLVMPositionBuilderAtEnd(exec->builder, then_branch);
-        if (!build_gc_root_begin(exec, block)) return false;
+        LLVMPositionBuilderAtEnd(compiler->builder, then_branch);
+        if (!build_gc_root_begin(compiler, block)) return false;
 
         control_data_stack_push_data(fail_branch, LLVMBasicBlockRef);
         control_data_stack_push_data(end_branch, LLVMBasicBlockRef);
     } else if (control_state == CONTROL_STATE_END) {
-        LLVMBasicBlockRef then_branch = LLVMGetInsertBlock(exec->builder);
+        LLVMBasicBlockRef then_branch = LLVMGetInsertBlock(compiler->builder);
         LLVMBasicBlockRef fail_branch, end_branch;
         control_data_stack_pop_data(end_branch, LLVMBasicBlockRef);
         control_data_stack_pop_data(fail_branch, LLVMBasicBlockRef);
 
-        if (!build_gc_root_end(exec, block)) return false;
-        LLVMBuildBr(exec->builder, end_branch);
+        if (!build_gc_root_end(compiler, block)) return false;
+        LLVMBuildBr(compiler->builder, end_branch);
 
-        LLVMPositionBuilderAtEnd(exec->builder, end_branch);
-        *return_val = DATA_BOOLEAN(LLVMBuildPhi(exec->builder, LLVMInt1Type(), ""));
+        LLVMPositionBuilderAtEnd(compiler->builder, end_branch);
+        *return_val = DATA_BOOLEAN(LLVMBuildPhi(compiler->builder, LLVMInt1Type(), ""));
 
         LLVMValueRef vals[] = { CONST_BOOLEAN(1), CONST_BOOLEAN(0) };
         LLVMBasicBlockRef blocks[] = { then_branch, fail_branch };
         LLVMAddIncoming(return_val->data.value, vals, blocks, ARRLEN(blocks));
     } else {
-        exec_set_error(exec, block, "Invalid control state");
+        compiler_set_error(compiler, block, "Invalid control state");
         return false;
     }
 
     return true;
 }
 
-bool block_loop(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
+bool block_loop(Compiler* compiler, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
     (void) block;
     (void) argc;
     (void) argv;
 
     if (control_state == CONTROL_STATE_BEGIN) {
-        LLVMBasicBlockRef current = LLVMGetInsertBlock(exec->builder);
+        LLVMBasicBlockRef current = LLVMGetInsertBlock(compiler->builder);
         LLVMBasicBlockRef loop = LLVMInsertBasicBlock(current, "loop");
         LLVMBasicBlockRef loop_end = LLVMInsertBasicBlock(current, "loop_end");
 
         LLVMMoveBasicBlockAfter(loop_end, current);
         LLVMMoveBasicBlockAfter(loop, current);
 
-        LLVMBuildBr(exec->builder, loop);
-        LLVMPositionBuilderAtEnd(exec->builder, loop);
-        if (!build_gc_root_begin(exec, block)) return false;
+        LLVMBuildBr(compiler->builder, loop);
+        LLVMPositionBuilderAtEnd(compiler->builder, loop);
+        if (!build_gc_root_begin(compiler, block)) return false;
 
         control_data_stack_push_data(loop, LLVMBasicBlockRef);
         control_data_stack_push_data(loop_end, LLVMBasicBlockRef);
@@ -2853,29 +2853,29 @@ bool block_loop(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* retu
         control_data_stack_pop_data(loop_end, LLVMBasicBlockRef);
         control_data_stack_pop_data(loop, LLVMBasicBlockRef);
 
-        if (!build_gc_root_end(exec, block)) return false;
-        LLVMBuildBr(exec->builder, loop);
-        LLVMPositionBuilderAtEnd(exec->builder, loop_end);
+        if (!build_gc_root_end(compiler, block)) return false;
+        LLVMBuildBr(compiler->builder, loop);
+        LLVMPositionBuilderAtEnd(compiler->builder, loop_end);
         *return_val = DATA_BOOLEAN(CONST_BOOLEAN(0));
     } else {
-        exec_set_error(exec, block, "Invalid control state");
+        compiler_set_error(compiler, block, "Invalid control state");
         return false;
     }
 
     return true;
 }
 
-bool block_do_nothing(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
+bool block_do_nothing(Compiler* compiler, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
     (void) block;
     (void) argc;
     (void) argv;
 
     if (control_state == CONTROL_STATE_BEGIN) {
-        if (!build_gc_root_begin(exec, block)) return false;
+        if (!build_gc_root_begin(compiler, block)) return false;
     } else if (control_state == CONTROL_STATE_END) {
-        if (!build_gc_root_end(exec, block)) return false;
+        if (!build_gc_root_end(compiler, block)) return false;
     } else {
-        exec_set_error(exec, block, "Invalid control state");
+        compiler_set_error(compiler, block, "Invalid control state");
         return false;
     }
 
@@ -2883,56 +2883,56 @@ bool block_do_nothing(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg
     return true;
 }
 
-bool block_noop(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
+bool block_noop(Compiler* compiler, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
-    (void) exec;
+    (void) compiler;
     (void) argc;
     (void) argv;
     *return_val = DATA_NOTHING;
     return true;
 }
 
-bool block_define_block(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
+bool block_define_block(Compiler* compiler, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     MIN_ARG_COUNT(1);
 
     if (argv[0].type != DATA_TYPE_BLOCKDEF) {
-        exec_set_error(exec, block, gettext("Invalid data type %s, expected %s"), type_to_str(argv[0].type), type_to_str(DATA_TYPE_BLOCKDEF));
+        compiler_set_error(compiler, block, gettext("Invalid data type %s, expected %s"), type_to_str(argv[0].type), type_to_str(DATA_TYPE_BLOCKDEF));
         return false;
     }
 
-    DefineFunction* define = define_function(exec, argv[0].data.blockdef);
+    DefineFunction* define = define_function(compiler, argv[0].data.blockdef);
 
     LLVMBasicBlockRef entry = LLVMAppendBasicBlock(define->func, "entry");
-    LLVMPositionBuilderAtEnd(exec->builder, entry);
+    LLVMPositionBuilderAtEnd(compiler->builder, entry);
 
-    exec->gc_value = LLVMBuildLoad2(exec->builder, LLVMInt64Type(), LLVMGetNamedGlobal(exec->module, "gc"), "get_gc");
+    compiler->gc_value = LLVMBuildLoad2(compiler->builder, LLVMInt64Type(), LLVMGetNamedGlobal(compiler->module, "gc"), "get_gc");
 
-    build_call(exec, "gc_root_save", CONST_GC);
+    build_call(compiler, "gc_root_save", CONST_GC);
 
-    if (!build_gc_root_begin(exec, NULL)) return false;
+    if (!build_gc_root_begin(compiler, NULL)) return false;
 
     *return_val = DATA_NOTHING;
     return true;
 }
 
-bool block_on_start(Exec* exec, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
+bool block_on_start(Compiler* compiler, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
     (void) control_state;
     (void) block;
     (void) argc;
     (void) argv;
-    LLVMValueRef main_func = LLVMGetNamedFunction(exec->module, MAIN_NAME);
+    LLVMValueRef main_func = LLVMGetNamedFunction(compiler->module, MAIN_NAME);
     LLVMBasicBlockRef last_block = LLVMGetLastBasicBlock(main_func);
-    LLVMPositionBuilderAtEnd(exec->builder, last_block);
+    LLVMPositionBuilderAtEnd(compiler->builder, last_block);
     *return_val = DATA_NOTHING;
     return true;
 }
 
 #endif // USE_INTERPRETER
 
-// Creates and registers blocks (commands) for the Vm/Exec virtual machine
+// Creates and registers blocks (commands) for the Vm/Compiler virtual machine
 void register_blocks(Vm* vm) {
     BlockCategory cat;
     cat = block_category_new(gettext("Control"),  (Color) CATEGORY_CONTROL_COLOR);

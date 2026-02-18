@@ -27,16 +27,16 @@
 #include <stdio.h>
 #include <libintl.h>
 
-void arg_stack_push_arg(Exec* exec, AnyValue data);
-void arg_stack_undo_args(Exec* exec, size_t count);
-void variable_stack_pop_layer(Exec* exec);
-void variable_stack_cleanup(Exec* exec);
-void chain_stack_push(Exec* exec, ChainStackData data);
-void chain_stack_pop(Exec* exec);
-bool exec_block(Exec* exec, Block* block, AnyValue* block_return, ControlState control_state, AnyValue control_arg);
+void arg_stack_push_arg(Compiler* compiler, AnyValue data);
+void arg_stack_undo_args(Compiler* compiler, size_t count);
+void variable_stack_pop_layer(Compiler* compiler);
+void variable_stack_cleanup(Compiler* compiler);
+void chain_stack_push(Compiler* compiler, ChainStackData data);
+void chain_stack_pop(Compiler* compiler);
+bool exec_block(Compiler* compiler, Block* block, AnyValue* block_return, ControlState control_state, AnyValue control_arg);
 
-void define_function(Exec* exec, Blockdef* blockdef, BlockChain* chain) {
-    DefineFunction* func = vector_add_dst(&exec->defined_functions);
+void define_function(Compiler* compiler, Blockdef* blockdef, BlockChain* chain) {
+    DefineFunction* func = vector_add_dst(&compiler->defined_functions);
     func->blockdef = blockdef;
     func->run_chain = chain;
     func->args = vector_create();
@@ -51,45 +51,45 @@ void define_function(Exec* exec, Blockdef* blockdef, BlockChain* chain) {
     }
 }
 
-Exec exec_new(Thread* thread) {
-    Exec exec = (Exec) {
+Compiler compiler_new(Thread* thread) {
+    Compiler compiler = (Compiler) {
         .code = NULL,
         .arg_stack_len = 0,
         .control_stack_len = 0,
         .thread = thread,
         .current_error_block = NULL,
     };
-    exec.current_error[0] = 0;
-    return exec;
+    compiler.current_error[0] = 0;
+    return compiler;
 }
 
-void exec_free(Exec* exec) {
-    (void) exec;
+void compiler_free(Compiler* compiler) {
+    (void) compiler;
 }
 
-bool exec_run(void* e) {
-    Exec* exec = e;
-    exec->arg_stack_len = 0;
-    exec->control_stack_len = 0;
-    exec->chain_stack_len = 0;
-    exec->running_chain = NULL;
-    exec->defined_functions = vector_create();
-    exec->gc = gc_new(MIN_MEMORY_LIMIT, MAX_MEMORY_LIMIT);
+bool compiler_run(void* e) {
+    Compiler* compiler = e;
+    compiler->arg_stack_len = 0;
+    compiler->control_stack_len = 0;
+    compiler->chain_stack_len = 0;
+    compiler->running_chain = NULL;
+    compiler->defined_functions = vector_create();
+    compiler->gc = gc_new(MIN_MEMORY_LIMIT, MAX_MEMORY_LIMIT);
 
     SetRandomSeed(time(NULL));
 
-    for (size_t i = 0; i < vector_size(exec->code); i++) {
-        Block* block = &exec->code[i].blocks[0];
+    for (size_t i = 0; i < vector_size(compiler->code); i++) {
+        Block* block = &compiler->code[i].blocks[0];
         if (strcmp(block->blockdef->id, "define_block")) continue;
 
         for (size_t j = 0; j < vector_size(block->arguments); j++) {
             if (block->arguments[j].type != ARGUMENT_BLOCKDEF) continue;
-            define_function(exec, block->arguments[j].data.blockdef, &exec->code[i]);
+            define_function(compiler, block->arguments[j].data.blockdef, &compiler->code[i]);
         }
     }
 
-    for (size_t i = 0; i < vector_size(exec->code); i++) {
-        Block* block = &exec->code[i].blocks[0];
+    for (size_t i = 0; i < vector_size(compiler->code); i++) {
+        Block* block = &compiler->code[i].blocks[0];
         if (block->blockdef->type != BLOCKTYPE_HAT) continue;
         bool cont = false;
         for (size_t j = 0; j < vector_size(block->arguments); j++) {
@@ -100,44 +100,44 @@ bool exec_run(void* e) {
         }
         if (cont) continue;
         AnyValue bin;
-        if (!exec_run_chain(exec, &exec->code[i], -1, NULL, &bin)) {
-            exec->running_chain = NULL;
+        if (!compiler_run_chain(compiler, &compiler->code[i], -1, NULL, &bin)) {
+            compiler->running_chain = NULL;
             return false;
         }
-        exec->running_chain = NULL;
+        compiler->running_chain = NULL;
     }
 
     return true;
 }
 
-void exec_cleanup(void* e) {
-    Exec* exec = e;
-    for (size_t i = 0; i < vector_size(exec->defined_functions); i++) {
-        vector_free(exec->defined_functions[i].args);
+void compiler_cleanup(void* e) {
+    Compiler* compiler = e;
+    for (size_t i = 0; i < vector_size(compiler->defined_functions); i++) {
+        vector_free(compiler->defined_functions[i].args);
     }
-    vector_free(exec->defined_functions);
-    variable_stack_cleanup(exec);
-    arg_stack_undo_args(exec, exec->arg_stack_len);
-    gc_free(&exec->gc);
+    vector_free(compiler->defined_functions);
+    variable_stack_cleanup(compiler);
+    arg_stack_undo_args(compiler, compiler->arg_stack_len);
+    gc_free(&compiler->gc);
 }
 
-void exec_set_error(Exec* exec, Block* block, const char* fmt, ...) {
-    exec->current_error_block = block;
+void compiler_set_error(Compiler* compiler, Block* block, const char* fmt, ...) {
+    compiler->current_error_block = block;
     va_list va;
     va_start(va, fmt);
-    vsnprintf(exec->current_error, MAX_ERROR_LEN, fmt, va);
+    vsnprintf(compiler->current_error, MAX_ERROR_LEN, fmt, va);
     va_end(va);
-    scrap_log(LOG_ERROR, "[EXEC] %s", exec->current_error);
+    scrap_log(LOG_ERROR, "[EXEC] %s", compiler->current_error);
 }
 
-bool evaluate_argument(Exec* exec, Argument* arg, AnyValue* return_val) {
+bool evaluate_argument(Compiler* compiler, Argument* arg, AnyValue* return_val) {
     switch (arg->type) {
     case ARGUMENT_TEXT:
     case ARGUMENT_CONST_STRING:
         *return_val = DATA_LITERAL(arg->data.text);
         return true;
     case ARGUMENT_BLOCK:
-        if (!exec_block(exec, &arg->data.block, return_val, CONTROL_STATE_NORMAL, (AnyValue) {0})) {
+        if (!exec_block(compiler, &arg->data.block, return_val, CONTROL_STATE_NORMAL, (AnyValue) {0})) {
             return false;
         }
         return true;
@@ -150,53 +150,53 @@ bool evaluate_argument(Exec* exec, Argument* arg, AnyValue* return_val) {
     return false;
 }
 
-bool exec_block(Exec* exec, Block* block, AnyValue* block_return, ControlState control_state, AnyValue control_arg) {
+bool exec_block(Compiler* compiler, Block* block, AnyValue* block_return, ControlState control_state, AnyValue control_arg) {
     if (!block->blockdef) {
-        exec_set_error(exec, block, gettext("Tried to execute block without definition"));
+        compiler_set_error(compiler, block, gettext("Tried to execute block without definition"));
         return false;
     }
     if (!block->blockdef->func) {
-        exec_set_error(exec, block, gettext("Tried to execute block \"%s\" without implementation"), block->blockdef->id);
+        compiler_set_error(compiler, block, gettext("Tried to execute block \"%s\" without implementation"), block->blockdef->id);
         return false;
     }
 
     BlockFunc execute_block = block->blockdef->func;
 
-    int stack_begin = exec->arg_stack_len;
+    int stack_begin = compiler->arg_stack_len;
 
     if (block->blockdef->type == BLOCKTYPE_CONTROLEND && control_state == CONTROL_STATE_BEGIN) {
-        arg_stack_push_arg(exec, control_arg);
+        arg_stack_push_arg(compiler, control_arg);
     }
 
-    size_t last_temps = vector_size(exec->gc.root_temp_chunks);
+    size_t last_temps = vector_size(compiler->gc.root_temp_chunks);
 
     if (control_state != CONTROL_STATE_END) {
         for (vec_size_t i = 0; i < vector_size(block->arguments); i++) {
             AnyValue arg;
-            if (!evaluate_argument(exec, &block->arguments[i], &arg)) {
+            if (!evaluate_argument(compiler, &block->arguments[i], &arg)) {
                 scrap_log(LOG_ERROR, "[VM] From block id: \"%s\" (at block %p)", block->blockdef->id, &block);
                 return false;
             }
-            arg_stack_push_arg(exec, arg);
+            arg_stack_push_arg(compiler, arg);
         }
     }
 
-    if (!execute_block(exec, block, exec->arg_stack_len - stack_begin, exec->arg_stack + stack_begin, block_return, control_state)) {
+    if (!execute_block(compiler, block, compiler->arg_stack_len - stack_begin, compiler->arg_stack + stack_begin, block_return, control_state)) {
         scrap_log(LOG_ERROR, "[VM] Error from block id: \"%s\" (at block %p)", block->blockdef->id, &block);
         return false;
     }
 
-    arg_stack_undo_args(exec, exec->arg_stack_len - stack_begin);
+    arg_stack_undo_args(compiler, compiler->arg_stack_len - stack_begin);
 
-    if (!block->parent && vector_size(exec->gc.root_temp_chunks) > last_temps) gc_flush(&exec->gc);
+    if (!block->parent && vector_size(compiler->gc.root_temp_chunks) > last_temps) gc_flush(&compiler->gc);
 
     return true;
 }
 
 #define BLOCKDEF chain->blocks[i].blockdef
-bool exec_run_chain(Exec* exec, BlockChain* chain, int argc, AnyValue* argv, AnyValue* return_val) {
-    size_t base_len = exec->control_stack_len;
-    chain_stack_push(exec, (ChainStackData) {
+bool compiler_run_chain(Compiler* compiler, BlockChain* chain, int argc, AnyValue* argv, AnyValue* return_val) {
+    size_t base_len = compiler->control_stack_len;
+    chain_stack_push(compiler, (ChainStackData) {
         .skip_block = false,
         .layer = 0,
         .running_ind = 0,
@@ -206,13 +206,13 @@ bool exec_run_chain(Exec* exec, BlockChain* chain, int argc, AnyValue* argv, Any
         .return_arg = (AnyValue) {0},
     });
 
-    gc_root_begin(&exec->gc);
-    gc_root_save(&exec->gc);
+    gc_root_begin(&compiler->gc);
+    gc_root_save(&compiler->gc);
 
-    exec->running_chain = chain;
+    compiler->running_chain = chain;
     AnyValue block_return;
     for (size_t i = 0; i < vector_size(chain->blocks); i++) {
-        ChainStackData* chain_data = &exec->chain_stack[exec->chain_stack_len - 1];
+        ChainStackData* chain_data = &compiler->chain_stack[compiler->chain_stack_len - 1];
 
         if (chain_data->skip_block) {
             int layer = chain_data->layer;
@@ -229,7 +229,7 @@ bool exec_run_chain(Exec* exec, BlockChain* chain, int argc, AnyValue* argv, Any
             chain_data->skip_block = false;
         }
 
-        thread_handle_stopping_state(exec->thread);
+        thread_handle_stopping_state(compiler->thread);
 
         size_t block_ind = i;
         chain_data->running_ind = i;
@@ -238,25 +238,25 @@ bool exec_run_chain(Exec* exec, BlockChain* chain, int argc, AnyValue* argv, Any
 
         if (BLOCKDEF->type == BLOCKTYPE_END || BLOCKDEF->type == BLOCKTYPE_CONTROLEND) {
             if (chain_data->layer == 0) continue;
-            variable_stack_pop_layer(exec);
+            variable_stack_pop_layer(compiler);
             chain_data->layer--;
             control_stack_pop_data(block_ind, size_t);
             control_stack_pop_data(block_return, AnyValue);
-            gc_root_end(&exec->gc);
+            gc_root_end(&compiler->gc);
             control_state = CONTROL_STATE_END;
         }
         
-        if (!exec_block(exec, &chain->blocks[block_ind], &block_return, control_state, (AnyValue){0})) {
-            chain_stack_pop(exec);
+        if (!exec_block(compiler, &chain->blocks[block_ind], &block_return, control_state, (AnyValue){0})) {
+            chain_stack_pop(compiler);
             return false;
         }
-        exec->running_chain = chain;
+        compiler->running_chain = chain;
         if (chain_data->running_ind != i) i = chain_data->running_ind;
 
         if (BLOCKDEF->type == BLOCKTYPE_CONTROLEND && block_ind != i) {
             control_state = CONTROL_STATE_BEGIN;
-            if (!exec_block(exec, &chain->blocks[i], &block_return, control_state, block_return)) {
-                chain_stack_pop(exec);
+            if (!exec_block(compiler, &chain->blocks[i], &block_return, control_state, block_return)) {
+                chain_stack_pop(compiler);
                 return false;
             }
             if (chain_data->running_ind != i) i = chain_data->running_ind;
@@ -265,102 +265,102 @@ bool exec_run_chain(Exec* exec, BlockChain* chain, int argc, AnyValue* argv, Any
         if (BLOCKDEF->type == BLOCKTYPE_CONTROL || BLOCKDEF->type == BLOCKTYPE_CONTROLEND) {
             control_stack_push_data(block_return, AnyValue);
             control_stack_push_data(i, size_t);
-            gc_root_begin(&exec->gc);
+            gc_root_begin(&compiler->gc);
             chain_data->layer++;
         }
     }
-    gc_root_restore(&exec->gc);
-    gc_root_end(&exec->gc);
+    gc_root_restore(&compiler->gc);
+    gc_root_end(&compiler->gc);
 
-    *return_val = exec->chain_stack[exec->chain_stack_len - 1].return_arg;
-    while (exec->chain_stack[exec->chain_stack_len - 1].layer >= 0) {
-        variable_stack_pop_layer(exec);
-        exec->chain_stack[exec->chain_stack_len - 1].layer--;
+    *return_val = compiler->chain_stack[compiler->chain_stack_len - 1].return_arg;
+    while (compiler->chain_stack[compiler->chain_stack_len - 1].layer >= 0) {
+        variable_stack_pop_layer(compiler);
+        compiler->chain_stack[compiler->chain_stack_len - 1].layer--;
     }
-    exec->control_stack_len = base_len;
-    chain_stack_pop(exec);
+    compiler->control_stack_len = base_len;
+    chain_stack_pop(compiler);
     return true;
 }
 #undef BLOCKDEF
 
-void exec_set_skip_block(Exec* exec) {
-    exec->chain_stack[exec->chain_stack_len - 1].skip_block = true;
+void compiler_set_skip_block(Compiler* compiler) {
+    compiler->chain_stack[compiler->chain_stack_len - 1].skip_block = true;
 }
 
-Variable* variable_stack_push_var(Exec* exec, const char* name, AnyValue arg) {
-    if (exec->variable_stack_len >= VM_VARIABLE_STACK_SIZE) {
+Variable* variable_stack_push_var(Compiler* compiler, const char* name, AnyValue arg) {
+    if (compiler->variable_stack_len >= VM_VARIABLE_STACK_SIZE) {
         scrap_log(LOG_ERROR, "[VM] Variable stack overflow");
-        thread_exit(exec->thread, false);
+        thread_exit(compiler->thread, false);
     }
     if (*name == 0) return NULL;
     Variable var;
     var.name = name;
     var.chunk_header.marked = 0;
     var.chunk_header.data_type = DATA_TYPE_ANY;
-    var.value_ptr = &exec->variable_stack[exec->variable_stack_len].value;
+    var.value_ptr = &compiler->variable_stack[compiler->variable_stack_len].value;
     var.value = arg;
-    var.chain_layer = exec->chain_stack_len - 1;
-    var.layer = exec->chain_stack[var.chain_layer].layer;
-    exec->variable_stack[exec->variable_stack_len++] = var;
-    return &exec->variable_stack[exec->variable_stack_len - 1];
+    var.chain_layer = compiler->chain_stack_len - 1;
+    var.layer = compiler->chain_stack[var.chain_layer].layer;
+    compiler->variable_stack[compiler->variable_stack_len++] = var;
+    return &compiler->variable_stack[compiler->variable_stack_len - 1];
 }
 
-void variable_stack_pop_layer(Exec* exec) {
+void variable_stack_pop_layer(Compiler* compiler) {
     size_t count = 0;
-    for (int i = exec->variable_stack_len - 1; i >= 0 &&
-                                               exec->variable_stack[i].layer == exec->chain_stack[exec->chain_stack_len - 1].layer &&
-                                               exec->variable_stack[i].chain_layer == exec->chain_stack_len - 1; i--) {
+    for (int i = compiler->variable_stack_len - 1; i >= 0 &&
+                                               compiler->variable_stack[i].layer == compiler->chain_stack[compiler->chain_stack_len - 1].layer &&
+                                               compiler->variable_stack[i].chain_layer == compiler->chain_stack_len - 1; i--) {
         count++;
     }
-    exec->variable_stack_len -= count;
+    compiler->variable_stack_len -= count;
 }
 
-void variable_stack_cleanup(Exec* exec) {
-    exec->variable_stack_len = 0;
+void variable_stack_cleanup(Compiler* compiler) {
+    compiler->variable_stack_len = 0;
 }
 
-Variable* variable_stack_get_variable(Exec* exec, const char* name) {
-    for (int i = exec->variable_stack_len - 1; i >= 0; i--) {
-        if (exec->variable_stack[i].chain_layer != exec->chain_stack_len - 1) break;
-        if (!strcmp(exec->variable_stack[i].name, name)) return &exec->variable_stack[i];
+Variable* variable_stack_get_variable(Compiler* compiler, const char* name) {
+    for (int i = compiler->variable_stack_len - 1; i >= 0; i--) {
+        if (compiler->variable_stack[i].chain_layer != compiler->chain_stack_len - 1) break;
+        if (!strcmp(compiler->variable_stack[i].name, name)) return &compiler->variable_stack[i];
     }
-    if (exec->chain_stack_len > 0) {
-        for (size_t i = 0; i < exec->variable_stack_len; i++) {
-            if (exec->variable_stack[i].layer != 0 || exec->variable_stack[i].chain_layer != 0) break;
-            if (!strcmp(exec->variable_stack[i].name, name)) return &exec->variable_stack[i];
+    if (compiler->chain_stack_len > 0) {
+        for (size_t i = 0; i < compiler->variable_stack_len; i++) {
+            if (compiler->variable_stack[i].layer != 0 || compiler->variable_stack[i].chain_layer != 0) break;
+            if (!strcmp(compiler->variable_stack[i].name, name)) return &compiler->variable_stack[i];
         }
     }
     return NULL;
 }
 
-void chain_stack_push(Exec* exec, ChainStackData data) {
-    if (exec->chain_stack_len >= VM_CHAIN_STACK_SIZE) {
+void chain_stack_push(Compiler* compiler, ChainStackData data) {
+    if (compiler->chain_stack_len >= VM_CHAIN_STACK_SIZE) {
         scrap_log(LOG_ERROR, "[VM] Chain stack overflow");
-        thread_exit(exec->thread, false);
+        thread_exit(compiler->thread, false);
     }
-    exec->chain_stack[exec->chain_stack_len++] = data;
+    compiler->chain_stack[compiler->chain_stack_len++] = data;
 }
 
-void chain_stack_pop(Exec* exec) {
-    if (exec->chain_stack_len == 0) {
+void chain_stack_pop(Compiler* compiler) {
+    if (compiler->chain_stack_len == 0) {
         scrap_log(LOG_ERROR, "[VM] Chain stack underflow");
-        thread_exit(exec->thread, false);
+        thread_exit(compiler->thread, false);
     }
-    exec->chain_stack_len--;
+    compiler->chain_stack_len--;
 }
 
-void arg_stack_push_arg(Exec* exec, AnyValue arg) {
-    if (exec->arg_stack_len >= VM_ARG_STACK_SIZE) {
+void arg_stack_push_arg(Compiler* compiler, AnyValue arg) {
+    if (compiler->arg_stack_len >= VM_ARG_STACK_SIZE) {
         scrap_log(LOG_ERROR, "[VM] Arg stack overflow");
-        thread_exit(exec->thread, false);
+        thread_exit(compiler->thread, false);
     }
-    exec->arg_stack[exec->arg_stack_len++] = arg;
+    compiler->arg_stack[compiler->arg_stack_len++] = arg;
 }
 
-void arg_stack_undo_args(Exec* exec, size_t count) {
-    if (count > exec->arg_stack_len) {
+void arg_stack_undo_args(Compiler* compiler, size_t count) {
+    if (count > compiler->arg_stack_len) {
         scrap_log(LOG_ERROR, "[VM] Arg stack underflow");
-        thread_exit(exec->thread, false);
+        thread_exit(compiler->thread, false);
     }
-    exec->arg_stack_len -= count;
+    compiler->arg_stack_len -= count;
 }
