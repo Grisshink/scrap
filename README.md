@@ -2,7 +2,7 @@
 
 # Scrap
 
-![CI build](https://img.shields.io/github/actions/workflow/status/Grisshink/scrap/makefile.yml)
+![CI build](https://img.shields.io/github/actions/workflow/status/Grisshink/scrap/build.yml)
 ![Version](https://img.shields.io/github/v/release/Grisshink/scrap)
 ![Downloads](https://img.shields.io/github/downloads/Grisshink/scrap/total)
 ![License](https://img.shields.io/github/license/Grisshink/scrap)
