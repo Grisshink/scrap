@@ -31,6 +31,7 @@ typedef struct IrExec IrExec;
 typedef struct IrValue IrValue;
 
 typedef int IrLabelID;
+typedef size_t IrInstructionID;
 typedef bool (*IrRunFunction)(IrExec* exec);
 typedef IrRunFunction (*IrRunFunctionResolver)(IrExec* exec, const char* hint);
 
@@ -237,14 +238,22 @@ IrBytecode bytecode_new(const char* name);
 void bytecode_free(IrBytecode* bc);
 
 void bytecode_print(IrBytecode* bc);
-void bytecode_push_op(IrBytecode* bc, IrOpcode op);
-void bytecode_push_op_int(IrBytecode* bc, IrOpcode op, int int_val);
-void bytecode_push_op_float(IrBytecode* bc, IrOpcode op, double float_val);
-void bytecode_push_op_bool(IrBytecode* bc, IrOpcode op, bool bool_val);
-void bytecode_push_op_func(IrBytecode* bc, IrOpcode op, IrFunction func_val);
-void bytecode_push_op_label(IrBytecode* bc, IrOpcode op, IrLabelID label_id);
-void bytecode_push_op_list(IrBytecode* bc, IrOpcode op, IrList* list_val);
+
 IrLabelID bytecode_push_label(IrBytecode* bc, const char* name);
+
+IrInstructionID bytecode_push_op(IrBytecode* bc, IrOpcode op);
+IrInstructionID bytecode_push_op_int(IrBytecode* bc, IrOpcode op, int int_val);
+IrInstructionID bytecode_push_op_float(IrBytecode* bc, IrOpcode op, double float_val);
+IrInstructionID bytecode_push_op_bool(IrBytecode* bc, IrOpcode op, bool bool_val);
+IrInstructionID bytecode_push_op_func(IrBytecode* bc, IrOpcode op, IrFunction func_val);
+IrInstructionID bytecode_push_op_label(IrBytecode* bc, IrOpcode op, IrLabelID label_id);
+IrInstructionID bytecode_push_op_list(IrBytecode* bc, IrOpcode op, IrList* list_val);
+
+void bytecode_set_op_int(IrBytecode* bc, IrInstructionID instr_id, int int_val);
+void bytecode_set_op_float(IrBytecode* bc, IrInstructionID instr_id, double float_val);
+void bytecode_set_op_bool(IrBytecode* bc, IrInstructionID instr_id, bool bool_val);
+void bytecode_set_op_func(IrBytecode* bc, IrInstructionID instr_id, IrFunction func_val);
+void bytecode_set_op_list(IrBytecode* bc, IrInstructionID instr_id, IrList* list_val);
 
 IrList* bytecode_const_list_new(void);
 void bytecode_const_list_append(IrList* list, IrValue val);
@@ -355,14 +364,18 @@ void bytecode_free(IrBytecode* bc) {
     ir_list_free(bc->labels);
 }
 
-void bytecode_push_op(IrBytecode* bc, IrOpcode op) {
+IrInstructionID bytecode_push_op(IrBytecode* bc, IrOpcode op) {
+    IrInstructionID id = bc->code.size;
     ir_list_append(bc->code, op);
+    return id;
 }
 
-void bytecode_push_op_const(IrBytecode* bc, IrOpcode op, ConstId const_id) {
+IrInstructionID bytecode_push_op_const(IrBytecode* bc, IrOpcode op, ConstId const_id) {
+    IrInstructionID id = bc->code.size;
     ir_list_append(bc->code, op);
     ir_list_append(bc->code, (const_id >> 8) & 255);
     ir_list_append(bc->code, const_id & 255);
+    return id;
 }
 
 IrLabelID bytecode_push_label(IrBytecode* bc, const char* name) {
@@ -382,11 +395,11 @@ ConstId bytecode_push_constant(IrBytecode* bc, IrValue constant) {
 }
 
 #define _ir_make_bc_push_op(_name, _type, _valname, _irtype) \
-    void _name(IrBytecode* bc, IrOpcode op, _type _valname) { \
+    IrInstructionID _name(IrBytecode* bc, IrOpcode op, _type _valname) { \
         IrValue constant; \
         constant.type = _irtype; \
         constant.as._valname = _valname; \
-        bytecode_push_op_const(bc, op, bytecode_push_constant(bc, constant)); \
+        return bytecode_push_op_const(bc, op, bytecode_push_constant(bc, constant)); \
     }
 
 _ir_make_bc_push_op(bytecode_push_op_int, int, int_val, IR_TYPE_INT)
@@ -396,6 +409,31 @@ _ir_make_bc_push_op(bytecode_push_op_func, IrFunction, func_val, IR_TYPE_FUNC)
 _ir_make_bc_push_op(bytecode_push_op_list, IrList*, list_val, IR_TYPE_LIST)
 
 #undef _ir_make_bc_push_op
+
+void bytecode_set_op(IrBytecode* bc, IrInstructionID instr_id, IrOpcode op) {
+    bc->code.items[instr_id] = op;
+}
+
+void bytecode_set_op_const(IrBytecode* bc, IrInstructionID instr_id, ConstId const_id) {
+    bc->code.items[instr_id + 1] = (const_id >> 8) & 255;
+    bc->code.items[instr_id + 2] = const_id & 255;
+}
+
+#define _ir_make_bc_set_op(_name, _type, _valname, _irtype) \
+    void _name(IrBytecode* bc, IrInstructionID instr_id, _type _valname) { \
+        IrValue constant; \
+        constant.type = _irtype; \
+        constant.as._valname = _valname; \
+        bytecode_set_op_const(bc, instr_id, bytecode_push_constant(bc, constant)); \
+    }
+
+_ir_make_bc_set_op(bytecode_set_op_int, int, int_val, IR_TYPE_INT)
+_ir_make_bc_set_op(bytecode_set_op_float, double, float_val, IR_TYPE_FLOAT)
+_ir_make_bc_set_op(bytecode_set_op_bool, bool, bool_val, IR_TYPE_BOOL)
+_ir_make_bc_set_op(bytecode_set_op_func, IrFunction, func_val, IR_TYPE_FUNC)
+_ir_make_bc_set_op(bytecode_set_op_list, IrList*, list_val, IR_TYPE_LIST)
+
+#undef _ir_make_bc_set_op
 
 IrList* bytecode_const_list_new(void) {
     IrList* list = malloc(sizeof(IrList));
@@ -424,11 +462,11 @@ void bytecode_const_list_free(IrList* list) {
     free(list);
 }
 
-void bytecode_push_op_label(IrBytecode* bc, IrOpcode op, IrLabelID label_id) {
+IrInstructionID bytecode_push_op_label(IrBytecode* bc, IrOpcode op, IrLabelID label_id) {
     IrValue constant;
     constant.type = IR_TYPE_LABEL;
     constant.as.label_val = bc->labels.items[label_id];
-    bytecode_push_op_const(bc, op, bytecode_push_constant(bc, constant));
+    return bytecode_push_op_const(bc, op, bytecode_push_constant(bc, constant));
 }
 
 IrFunction ir_func_by_hint(const char* hint) {

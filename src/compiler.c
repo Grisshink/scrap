@@ -68,9 +68,40 @@ IrRunFunction resolve_function(IrExec* exec, const char* hint) {
     return NULL;
 }
 
+void compiler_begin_discard(Compiler* compiler) {
+    if (compiler->discard_layer == 0) {
+        compiler->scratch_bytecode.code.size = 0;
+        compiler->scratch_bytecode.labels.size = 0;
+        for (size_t i = 0; i < compiler->scratch_bytecode.constants.size; i++) {
+            if (compiler->scratch_bytecode.constants.items[i].type != IR_TYPE_LIST) continue;
+            bytecode_const_list_free(compiler->scratch_bytecode.constants.items[i].as.list_val);
+        }
+        compiler->scratch_bytecode.constants.size = 0;
+
+        IrBytecode temp;
+        temp = compiler->bytecode;
+        compiler->bytecode = compiler->scratch_bytecode;
+        compiler->scratch_bytecode = temp;
+    }
+    compiler->discard_layer++;
+}
+
+void compiler_end_discard(Compiler* compiler) {
+    assert(compiler->discard_layer > 0);
+    compiler->discard_layer--;
+    if (compiler->discard_layer == 0) {
+        IrBytecode temp;
+        temp = compiler->bytecode;
+        compiler->bytecode = compiler->scratch_bytecode;
+        compiler->scratch_bytecode = temp;
+    }
+}
+
 bool compiler_run(void* e) {
     Compiler* compiler = e;
+    compiler->discard_layer = 0;
     compiler->bytecode = bytecode_new("main");
+    compiler->scratch_bytecode = bytecode_new("scratch");
 
     bytecode_push_label(&compiler->bytecode, "entry");
 
@@ -112,6 +143,7 @@ void compiler_cleanup(void* e) {
     } else {
         bytecode_free(&compiler->bytecode);
     }
+    bytecode_free(&compiler->scratch_bytecode);
 }
 
 void compiler_set_error(Compiler* compiler, Block* block, const char* fmt, ...) {

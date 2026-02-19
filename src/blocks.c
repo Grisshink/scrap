@@ -220,7 +220,7 @@ bool any_to_list(Compiler* compiler, Block* block, AnyValue value) {
 bool any_cast(Compiler* compiler, Block* block, AnyValue value, DataType type) {
     if (type == value.type) return true;
 
-    switch (value.type) {
+    switch (type) {
     case DATA_TYPE_BLOCKDEF:
     case DATA_TYPE_UNKNOWN:
     case DATA_TYPE_NOTHING:
@@ -246,6 +246,67 @@ bool any_cast(Compiler* compiler, Block* block, AnyValue value, DataType type) {
 #define TO_BOOL(_val) GUARD(any_to_bool(compiler, block, _val))
 #define TO_COLOR(_val) GUARD(any_to_color(compiler, block, _val))
 #define TO_LIST(_val) GUARD(any_to_list(compiler, block, _val))
+#define CAST(_val, _type) GUARD(any_cast(compiler, block, _val, _type))
+
+AnyValue evaluate_binary(Compiler* compiler, Block* block, DataType literal_cast) {
+    AnyValue left, right;
+
+    EVALUATE(&block->arguments[0], &left);
+    compiler_begin_discard(compiler);
+        EVALUATE(&block->arguments[1], &right);
+    compiler_end_discard(compiler);
+
+    if (left.type == DATA_TYPE_LITERAL) {
+        CAST(left, right.type);
+        left.type = right.type;
+    }
+    EVALUATE(&block->arguments[1], &right);
+    if (right.type == DATA_TYPE_LITERAL) {
+        CAST(right, left.type);
+        right.type = left.type;
+    }
+
+    if (left.type != right.type) {
+        compiler_set_error(compiler, block, gettext("Incompatible types %s and %s in binary block"), type_to_str(left.type), type_to_str(right.type));
+        return DATA_UNKNOWN;
+    }
+
+    switch (left.type) {
+    case DATA_TYPE_INTEGER: return DATA_INTEGER;
+    case DATA_TYPE_STRING:  return DATA_STRING;
+    case DATA_TYPE_LIST:    return DATA_LIST;
+    case DATA_TYPE_FLOAT:   return DATA_FLOAT;
+    case DATA_TYPE_BOOL:    return DATA_BOOL;
+    case DATA_TYPE_COLOR:   return DATA_COLOR;
+    case DATA_TYPE_NOTHING: return DATA_NOTHING;
+    case DATA_TYPE_LITERAL:
+        CAST(left,  literal_cast);
+        CAST(right, literal_cast);
+        left.type = literal_cast;
+        return left;
+    case DATA_TYPE_BLOCKDEF:
+    case DATA_TYPE_UNKNOWN:
+    case DATA_TYPE_ANY: 
+        compiler_set_error(compiler, block, gettext("Invalid type %s in binary block"), type_to_str(left.type));
+        return DATA_UNKNOWN;
+    }
+    assert(false && "Unimplemented evaluate_binary");
+}
+
+AnyValue evaluate_number_operation(Compiler* compiler, Block* block, IrOpcode int_op, IrOpcode float_op) {
+    AnyValue val = evaluate_binary(compiler, block, DATA_TYPE_INTEGER);
+    if (val.type == DATA_TYPE_UNKNOWN) return val;
+
+    switch (val.type) {
+    case DATA_TYPE_INTEGER: bytecode_push_op(&compiler->bytecode, int_op); break;
+    case DATA_TYPE_FLOAT:   bytecode_push_op(&compiler->bytecode, float_op); break;
+    default:
+        compiler_set_error(compiler, block, gettext("Invalid type %s in operator block"), type_to_str(val.type));
+        return DATA_UNKNOWN;
+    }
+
+    return val;
+}
 
 AnyValue block_do_nothing(Compiler* compiler, Block* block) {
     (void) compiler;
@@ -537,27 +598,23 @@ AnyValue block_typeof(Compiler* compiler, Block* block) {
 }
 
 AnyValue block_plus(Compiler* compiler, Block* block) {
-    (void) compiler;
-    (void) block;
-    return DATA_UNKNOWN;
+    return evaluate_number_operation(compiler, block, IR_ADDI, IR_ADDF);
 }
 
 AnyValue block_minus(Compiler* compiler, Block* block) {
-    (void) compiler;
-    (void) block;
-    return DATA_UNKNOWN;
+    return evaluate_number_operation(compiler, block, IR_SUBI, IR_SUBF);
 }
 
 AnyValue block_mult(Compiler* compiler, Block* block) {
-    (void) compiler;
-    (void) block;
-    return DATA_UNKNOWN;
+    return evaluate_number_operation(compiler, block, IR_MULI, IR_MULF);
 }
 
 AnyValue block_div(Compiler* compiler, Block* block) {
-    (void) compiler;
-    (void) block;
-    return DATA_UNKNOWN;
+    return evaluate_number_operation(compiler, block, IR_DIVI, IR_DIVF);
+}
+
+AnyValue block_rem(Compiler* compiler, Block* block) {
+    return evaluate_number_operation(compiler, block, IR_MODI, IR_MODF);
 }
 
 AnyValue block_pow(Compiler* compiler, Block* block) {
@@ -597,12 +654,6 @@ AnyValue block_bit_xor(Compiler* compiler, Block* block) {
 }
 
 AnyValue block_bit_or(Compiler* compiler, Block* block) {
-    (void) compiler;
-    (void) block;
-    return DATA_UNKNOWN;
-}
-
-AnyValue block_rem(Compiler* compiler, Block* block) {
     (void) compiler;
     (void) block;
     return DATA_UNKNOWN;
