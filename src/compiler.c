@@ -136,8 +136,8 @@ bool compiler_evaluate_argument(Compiler* compiler, Argument* arg, AnyValue* ret
         compiler_set_error(compiler, NULL, gettext("Tried to evaluate blockdef"));
         return false;
     case ARGUMENT_COLOR:
-        *return_val = DATA_UNKNOWN;
-        // *return_val = DATA_COLOR(CONVERT_COLOR(arg->data.color, StdColor));
+        bytecode_push_op_int(&compiler->bytecode, IR_PUSHI, *(int*)&arg->data.color);
+        *return_val = DATA_COLOR;
         return true;
     }
     return false;

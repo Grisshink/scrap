@@ -64,7 +64,7 @@ static MathFunc block_math_func_list[MATH_LIST_LEN] = {
 
 #include "std.h"
 
-bool any_to_str(Compiler* compiler, Block* block, AnyValue value) {
+bool any_to_string(Compiler* compiler, Block* block, AnyValue value) {
     switch (value.type) {
     case DATA_TYPE_BLOCKDEF:
     case DATA_TYPE_UNKNOWN:
@@ -77,6 +77,8 @@ bool any_to_str(Compiler* compiler, Block* block, AnyValue value) {
     case DATA_TYPE_LIST: bytecode_push_op(&compiler->bytecode, IR_LTOA); return true;
     case DATA_TYPE_ANY: bytecode_push_op(&compiler->bytecode, IR_TOA); return true;
     case DATA_TYPE_INTEGER:
+        bytecode_push_op(&compiler->bytecode, IR_ITOA);
+        return true;
     case DATA_TYPE_COLOR:
         bytecode_push_op(&compiler->bytecode, IR_ITOA);
         return true;
@@ -94,8 +96,156 @@ bool any_to_str(Compiler* compiler, Block* block, AnyValue value) {
         bytecode_push_op_list(&compiler->bytecode, IR_PUSHL, list);
         return true;
     }
-    assert(false && "Unimplemented any_to_str");
+    assert(false && "Unimplemented any_to_string");
 }
+
+bool any_to_integer(Compiler* compiler, Block* block, AnyValue value) {
+    switch (value.type) {
+    case DATA_TYPE_BLOCKDEF:
+    case DATA_TYPE_UNKNOWN:
+    case DATA_TYPE_LIST:
+        compiler_set_error(compiler, block, gettext("Cannot cast type %s into %s"), type_to_str(value.type), type_to_str(DATA_TYPE_INTEGER));
+        return false;
+    case DATA_TYPE_STRING: bytecode_push_op(&compiler->bytecode, IR_ATOI); return true;
+    case DATA_TYPE_FLOAT: bytecode_push_op(&compiler->bytecode, IR_FTOI); return true;
+    case DATA_TYPE_BOOL: bytecode_push_op(&compiler->bytecode, IR_BTOI); return true;
+    case DATA_TYPE_NOTHING:
+    case DATA_TYPE_ANY: 
+        bytecode_push_op(&compiler->bytecode, IR_TOI);
+        return true;
+    case DATA_TYPE_INTEGER:
+    case DATA_TYPE_COLOR:
+        return true;
+    case DATA_TYPE_LITERAL:
+        bytecode_push_op_int(&compiler->bytecode, IR_PUSHI, atol(value.data.literal_val));
+        return true;
+    }
+    assert(false && "Unimplemented any_to_integer");
+}
+
+bool any_to_float(Compiler* compiler, Block* block, AnyValue value) {
+    switch (value.type) {
+    case DATA_TYPE_BLOCKDEF:
+    case DATA_TYPE_UNKNOWN:
+    case DATA_TYPE_LIST:
+        compiler_set_error(compiler, block, gettext("Cannot cast type %s into %s"), type_to_str(value.type), type_to_str(DATA_TYPE_FLOAT));
+        return false;
+    case DATA_TYPE_STRING: bytecode_push_op(&compiler->bytecode, IR_ATOF); return true;
+    case DATA_TYPE_FLOAT: return true;
+    case DATA_TYPE_BOOL: bytecode_push_op(&compiler->bytecode, IR_BTOF); return true;
+    case DATA_TYPE_NOTHING:
+    case DATA_TYPE_ANY:
+        bytecode_push_op(&compiler->bytecode, IR_TOF);
+        return true;
+    case DATA_TYPE_INTEGER:
+    case DATA_TYPE_COLOR:
+        bytecode_push_op(&compiler->bytecode, IR_ITOF);
+        return true;
+    case DATA_TYPE_LITERAL:
+        bytecode_push_op_float(&compiler->bytecode, IR_PUSHF, atof(value.data.literal_val));
+        return true;
+    }
+    assert(false && "Unimplemented any_to_float");
+}
+
+bool any_to_bool(Compiler* compiler, Block* block, AnyValue value) {
+    switch (value.type) {
+    case DATA_TYPE_BLOCKDEF:
+    case DATA_TYPE_UNKNOWN:
+    case DATA_TYPE_LIST:
+        compiler_set_error(compiler, block, gettext("Cannot cast type %s into %s"), type_to_str(value.type), type_to_str(DATA_TYPE_BOOL));
+        return false;
+    case DATA_TYPE_STRING: bytecode_push_op(&compiler->bytecode, IR_ATOB); return true;
+    case DATA_TYPE_FLOAT: bytecode_push_op(&compiler->bytecode, IR_FTOB); return true;
+    case DATA_TYPE_BOOL: return true;
+    case DATA_TYPE_NOTHING:
+    case DATA_TYPE_ANY:
+        bytecode_push_op(&compiler->bytecode, IR_TOB);
+        return true;
+    case DATA_TYPE_INTEGER:
+    case DATA_TYPE_COLOR:
+        bytecode_push_op(&compiler->bytecode, IR_ITOB);
+        return true;
+    case DATA_TYPE_LITERAL:
+        bytecode_push_op_bool(&compiler->bytecode, IR_PUSHB, *value.data.literal_val);
+        return true;
+    }
+    assert(false && "Unimplemented any_to_bool");
+}
+
+bool any_to_color(Compiler* compiler, Block* block, AnyValue value) {
+    switch (value.type) {
+    case DATA_TYPE_BLOCKDEF:
+    case DATA_TYPE_UNKNOWN:
+    case DATA_TYPE_LIST:
+    case DATA_TYPE_BOOL:
+        compiler_set_error(compiler, block, gettext("Cannot cast type %s into %s"), type_to_str(value.type), type_to_str(DATA_TYPE_COLOR));
+        return false;
+    case DATA_TYPE_STRING: bytecode_push_op(&compiler->bytecode, IR_ATOI); return true;
+    case DATA_TYPE_FLOAT: bytecode_push_op(&compiler->bytecode, IR_FTOI); return true;
+    case DATA_TYPE_NOTHING:
+    case DATA_TYPE_ANY:
+        bytecode_push_op(&compiler->bytecode, IR_TOI);
+        return true;
+    case DATA_TYPE_INTEGER:
+    case DATA_TYPE_COLOR:
+        return true;
+    case DATA_TYPE_LITERAL:
+        bytecode_push_op_int(&compiler->bytecode, IR_PUSHI, atol(value.data.literal_val));
+        return true;
+    }
+    assert(false && "Unimplemented any_to_color");
+}
+
+bool any_to_list(Compiler* compiler, Block* block, AnyValue value) {
+    switch (value.type) {
+    case DATA_TYPE_BLOCKDEF:
+    case DATA_TYPE_UNKNOWN:
+    case DATA_TYPE_BOOL:
+    case DATA_TYPE_FLOAT: 
+    case DATA_TYPE_NOTHING:
+    case DATA_TYPE_INTEGER:
+    case DATA_TYPE_COLOR:
+    case DATA_TYPE_LITERAL:
+    case DATA_TYPE_ANY: // TODO: Add tol instruction
+        compiler_set_error(compiler, block, gettext("Cannot cast type %s into %s"), type_to_str(value.type), type_to_str(DATA_TYPE_COLOR));
+        return false;
+    case DATA_TYPE_LIST:
+    case DATA_TYPE_STRING:
+        return true;
+    }
+    assert(false && "Unimplemented any_to_list");
+}
+
+bool any_cast(Compiler* compiler, Block* block, AnyValue value, DataType type) {
+    if (type == value.type) return true;
+
+    switch (value.type) {
+    case DATA_TYPE_BLOCKDEF:
+    case DATA_TYPE_UNKNOWN:
+    case DATA_TYPE_NOTHING:
+    case DATA_TYPE_LITERAL: 
+        compiler_set_error(compiler, block, gettext("Cannot cast type %s into %s"), type_to_str(value.type), type_to_str(type));
+        return false;
+    case DATA_TYPE_BOOL: return any_to_bool(compiler, block, value);
+    case DATA_TYPE_FLOAT: return any_to_float(compiler, block, value); 
+    case DATA_TYPE_INTEGER: return any_to_integer(compiler, block, value);
+    case DATA_TYPE_COLOR: return any_to_color(compiler, block, value);
+    case DATA_TYPE_ANY: return true;
+    case DATA_TYPE_LIST: return any_to_list(compiler, block, value);
+    case DATA_TYPE_STRING: return any_to_string(compiler, block, value);
+    }
+    assert(false && "Unimplemented any_cast");
+}
+
+#define GUARD(_val) if (!_val) return DATA_UNKNOWN
+#define EVALUATE(_arg, _val) GUARD(compiler_evaluate_argument(compiler, (_arg), _val))
+#define TO_STRING(_val) GUARD(any_to_string(compiler, block, _val))
+#define TO_INTEGER(_val) GUARD(any_to_integer(compiler, block, _val))
+#define TO_FLOAT(_val) GUARD(any_to_float(compiler, block, _val))
+#define TO_BOOL(_val) GUARD(any_to_bool(compiler, block, _val))
+#define TO_COLOR(_val) GUARD(any_to_color(compiler, block, _val))
+#define TO_LIST(_val) GUARD(any_to_list(compiler, block, _val))
 
 AnyValue block_do_nothing(Compiler* compiler, Block* block) {
     (void) compiler;
@@ -213,8 +363,8 @@ AnyValue block_list_set(Compiler* compiler, Block* block) {
 
 AnyValue block_print(Compiler* compiler, Block* block) {
     AnyValue print_val;
-    if (!compiler_evaluate_argument(compiler, &block->arguments[0], &print_val)) return DATA_UNKNOWN;
-    if (!any_to_str(compiler, block, print_val)) return DATA_UNKNOWN;
+    EVALUATE(&block->arguments[0], &print_val);
+    TO_STRING(print_val);
     bytecode_push_op_func(&compiler->bytecode, IR_RUN, ir_func_by_hint("print_str"));
     return DATA_NOTHING;
 }
@@ -346,33 +496,38 @@ AnyValue block_unix_time(Compiler* compiler, Block* block) {
 }
 
 AnyValue block_convert_int(Compiler* compiler, Block* block) {
-    (void) compiler;
-    (void) block;
-    return DATA_UNKNOWN;
+    AnyValue val;
+    EVALUATE(&block->arguments[0], &val);
+    TO_INTEGER(val);
+    return DATA_INTEGER;
 }
 
 AnyValue block_convert_float(Compiler* compiler, Block* block) {
-    (void) compiler;
-    (void) block;
-    return DATA_UNKNOWN;
+    AnyValue val;
+    EVALUATE(&block->arguments[0], &val);
+    TO_FLOAT(val);
+    return DATA_FLOAT;
 }
 
 AnyValue block_convert_str(Compiler* compiler, Block* block) {
-    (void) compiler;
-    (void) block;
-    return DATA_UNKNOWN;
+    AnyValue val;
+    EVALUATE(&block->arguments[0], &val);
+    TO_STRING(val);
+    return DATA_STRING;
 }
 
 AnyValue block_convert_bool(Compiler* compiler, Block* block) {
-    (void) compiler;
-    (void) block;
-    return DATA_UNKNOWN;
+    AnyValue val;
+    EVALUATE(&block->arguments[0], &val);
+    TO_BOOL(val);
+    return DATA_BOOL;
 }
 
 AnyValue block_convert_color(Compiler* compiler, Block* block) {
-    (void) compiler;
-    (void) block;
-    return DATA_UNKNOWN;
+    AnyValue val;
+    EVALUATE(&block->arguments[0], &val);
+    TO_COLOR(val);
+    return DATA_COLOR;
 }
 
 AnyValue block_typeof(Compiler* compiler, Block* block) {

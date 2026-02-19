@@ -43,12 +43,20 @@ struct Compiler {
     Thread* thread;
 };
 
-#define DATA_UNKNOWN (AnyValue) {0}
-
-#define DATA_NOTHING (AnyValue) { \
-    .type = DATA_TYPE_NOTHING, \
+#define _DATA_WITH_TYPE(_t) (AnyValue) { \
+    .type = (_t), \
     .data = (AnyValueData) {0}, \
 }
+
+#define DATA_UNKNOWN (AnyValue) {0}
+
+#define DATA_NOTHING _DATA_WITH_TYPE(DATA_TYPE_NOTHING)
+#define DATA_INTEGER _DATA_WITH_TYPE(DATA_TYPE_INTEGER)
+#define DATA_FLOAT _DATA_WITH_TYPE(DATA_TYPE_FLOAT)
+#define DATA_BOOL _DATA_WITH_TYPE(DATA_TYPE_BOOL)
+#define DATA_COLOR _DATA_WITH_TYPE(DATA_TYPE_COLOR)
+#define DATA_LIST _DATA_WITH_TYPE(DATA_TYPE_LIST)
+#define DATA_STRING _DATA_WITH_TYPE(DATA_TYPE_STRING)
 
 #define DATA_LITERAL(v) (AnyValue) { \
     .type = DATA_TYPE_LITERAL, \
