@@ -497,11 +497,11 @@ static void draw_block(Block* block, bool highlight, bool can_hover, bool ghost,
         if (ui.hover.editor.select_block == block) gui_on_render(gui, block_on_render);
 
     gui_element_begin(gui);
-        gui_set_direction(gui, DIRECTION_HORIZONTAL);
+        gui_set_direction(gui, DIRECTION_VERTICAL);
         gui_set_border(gui, CONVERT_COLOR(outline_color, GuiColor), BLOCK_OUTLINE_SIZE);
         gui_set_align(gui, ALIGN_LEFT, ALIGN_CENTER);
-        gui_set_min_size(gui, 0, config.ui_size);
         gui_set_padding(gui, BLOCK_OUTLINE_SIZE * 2, BLOCK_OUTLINE_SIZE * 2);
+        gui_set_min_size(gui, 0, config.ui_size);
         gui_set_gap(gui, BLOCK_PADDING);
         if (block->blockdef->type == BLOCKTYPE_CONTROL) {
             gui_set_draw_subtype(gui, BORDER_CONTROL);
@@ -510,6 +510,11 @@ static void draw_block(Block* block, bool highlight, bool can_hover, bool ghost,
         } else if (block->blockdef->type == BLOCKTYPE_HAT) {
             gui_set_draw_subtype(gui, BORDER_NOTCHED);
         }
+
+    gui_element_begin(gui);
+        gui_set_direction(gui, DIRECTION_HORIZONTAL);
+        gui_set_gap(gui, BLOCK_PADDING);
+        gui_set_align(gui, ALIGN_LEFT, ALIGN_CENTER);
 
     size_t arg_id = 0;
     Input* inputs = block->blockdef->inputs;
@@ -521,6 +526,8 @@ static void draw_block(Block* block, bool highlight, bool can_hover, bool ghost,
             .text = "",
         },
     };
+
+    GuiElement* block_element;
 
     for (size_t i = 0; i < inputs_size; i++) {
         Input* input = &inputs[i];
@@ -565,12 +572,19 @@ static void draw_block(Block* block, bool highlight, bool can_hover, bool ghost,
                 );
                 break;
             case ARGUMENT_BLOCK:
-                gui_element_begin(gui);
+                block_element = gui_element_begin(gui);
                     if (can_hover) gui_on_hover(gui, block_argument_on_hover);
                     gui_set_custom_data(gui, arg);
 
                     draw_block(&arg->data.block, highlight, can_hover, ghost, editable);
                 gui_element_end(gui);
+                if (block_element->w > 500 && i + 1 < inputs_size) {
+                    gui_element_end(gui);
+                    gui_element_begin(gui);
+                        gui_set_direction(gui, DIRECTION_HORIZONTAL);
+                        gui_set_gap(gui, BLOCK_PADDING);
+                        gui_set_align(gui, ALIGN_LEFT, ALIGN_CENTER);
+                }
                 break;
             default:
                 gui_text(gui, &assets.fonts.font_cond_shadow, "NODEF", BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0x00, 0x00, 0xff });
@@ -713,12 +727,19 @@ static void draw_block(Block* block, bool highlight, bool can_hover, bool ghost,
                 gui_element_end(gui);
                 break;
             case ARGUMENT_BLOCK:
-                gui_element_begin(gui);
+                block_element = gui_element_begin(gui);
                     if (can_hover) gui_on_hover(gui, block_argument_on_hover);
                     gui_set_custom_data(gui, arg);
 
                     draw_block(&arg->data.block, highlight, can_hover, ghost, editable);
                 gui_element_end(gui);
+                if (block_element->w > 500 && i + 1 < inputs_size) {
+                    gui_element_end(gui);
+                    gui_element_begin(gui);
+                        gui_set_direction(gui, DIRECTION_HORIZONTAL);
+                        gui_set_gap(gui, BLOCK_PADDING);
+                        gui_set_align(gui, ALIGN_LEFT, ALIGN_CENTER);
+                }
                 break;
             default:
                 assert(false && "Invalid argument type in color input");
@@ -733,6 +754,7 @@ static void draw_block(Block* block, bool highlight, bool can_hover, bool ghost,
         }
     }
 
+    gui_element_end(gui);
     gui_element_end(gui);
     gui_element_end(gui);
 }

@@ -106,6 +106,7 @@ typedef void (*GuiHandler)(GuiElement* el);
 struct GuiElement {
     int x, y;
     unsigned short w, h;
+    unsigned short min_w, min_h;
     float abs_x, abs_y;
     int cursor_x, cursor_y;
     unsigned short pad_w, pad_h;
