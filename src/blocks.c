@@ -252,19 +252,14 @@ AnyValue evaluate_binary(Compiler* compiler, Block* block, DataType literal_cast
     AnyValue left, right;
 
     EVALUATE(&block->arguments[0], &left);
-    compiler_begin_discard(compiler);
-        EVALUATE(&block->arguments[1], &right);
-    compiler_end_discard(compiler);
-
     if (left.type == DATA_TYPE_LITERAL) {
-        CAST(left, right.type);
-        left.type = right.type;
+        CAST(left, literal_cast);
+        left.type = literal_cast;
     }
+
     EVALUATE(&block->arguments[1], &right);
-    if (right.type == DATA_TYPE_LITERAL) {
-        CAST(right, left.type);
-        right.type = left.type;
-    }
+    CAST(right, left.type);
+    right.type = left.type;
 
     if (left.type != right.type) {
         compiler_set_error(compiler, block, gettext("Incompatible types %s and %s in binary block"), type_to_str(left.type), type_to_str(right.type));
@@ -280,10 +275,6 @@ AnyValue evaluate_binary(Compiler* compiler, Block* block, DataType literal_cast
     case DATA_TYPE_COLOR:   return DATA_COLOR;
     case DATA_TYPE_NOTHING: return DATA_NOTHING;
     case DATA_TYPE_LITERAL:
-        CAST(left,  literal_cast);
-        CAST(right, literal_cast);
-        left.type = literal_cast;
-        return left;
     case DATA_TYPE_BLOCKDEF:
     case DATA_TYPE_UNKNOWN:
     case DATA_TYPE_ANY: 

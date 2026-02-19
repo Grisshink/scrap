@@ -77,7 +77,5 @@ bool compiler_evaluate_block(Compiler* compiler, Block* block, AnyValue* block_r
 bool compiler_evaluate_argument(Compiler* compiler, Argument* arg, AnyValue* return_val);
 void compiler_set_skip_block(Compiler* compiler);
 void compiler_set_error(Compiler* compiler, Block* block, const char* fmt, ...);
-void compiler_begin_discard(Compiler* compiler);
-void compiler_end_discard(Compiler* compiler);
 
 #endif // INTERPRETER_H
