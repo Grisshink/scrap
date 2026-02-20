@@ -70,39 +70,34 @@ IrRunFunction resolve_function(IrExec* exec, const char* hint) {
 
 bool compiler_run(void* e) {
     Compiler* compiler = e;
-    compiler->discard_layer = 0;
     compiler->bytecode = bytecode_new("main");
-    compiler->scratch_bytecode = bytecode_new("scratch");
-
-    bytecode_push_label(&compiler->bytecode, "entry");
+    compiler->exec_running = false;
 
     for (size_t i = 0; i < vector_size(compiler->code); i++) {
+        assert(vector_size(compiler->code[i].blocks) > 0);
         Block* block = &compiler->code[i].blocks[0];
         if (block->blockdef->type != BLOCKTYPE_HAT) continue;
-        if (!strcmp(block->blockdef->id, "define_block")) continue;
 
-        if (!compiler_evaluate_chain(compiler, &compiler->code[i])) {
-            return false;
-        }
+        CompilerValue value = compiler_evaluate_block(compiler, block);
+        if (value.type == DATA_TYPE_UNKNOWN) return false;
     }
 
-    bytecode_push_op(&compiler->bytecode, IR_RET);
     bytecode_print(&compiler->bytecode);
 
-    compiler->exec = exec_new(1024 * 1024); // 1 MB
-    if (compiler->exec.last_error[0] != 0) {
-        compiler_set_error(compiler, NULL, "Exec create error: %s", compiler->exec.last_error);
-        exec_free(&compiler->exec);
-        return false;
-    }
-    exec_set_run_function_resolver(&compiler->exec, resolve_function);
-    exec_add_bytecode(&compiler->exec, compiler->bytecode);
-    compiler->exec_running = true;
+    // compiler->exec = exec_new(1024 * 1024); // 1 MB
+    // if (compiler->exec.last_error[0] != 0) {
+    //     compiler_set_error(compiler, NULL, "Exec create error: %s", compiler->exec.last_error);
+    //     exec_free(&compiler->exec);
+    //     return false;
+    // }
+    // exec_set_run_function_resolver(&compiler->exec, resolve_function);
+    // exec_add_bytecode(&compiler->exec, compiler->bytecode);
+    // compiler->exec_running = true;
 
-    if (!exec_run(&compiler->exec, "main", "entry")) {
-        compiler_set_error(compiler, NULL, "Runtime error: %s", compiler->exec.last_error);
-        return false;
-    }
+    // if (!exec_run(&compiler->exec, "main", "entry")) {
+    //     compiler_set_error(compiler, NULL, "Runtime error: %s", compiler->exec.last_error);
+    //     return false;
+    // }
 
     return true;
 }
@@ -114,7 +109,6 @@ void compiler_cleanup(void* e) {
     } else {
         bytecode_free(&compiler->bytecode);
     }
-    bytecode_free(&compiler->scratch_bytecode);
 }
 
 void compiler_set_error(Compiler* compiler, Block* block, const char* fmt, ...) {
@@ -126,52 +120,53 @@ void compiler_set_error(Compiler* compiler, Block* block, const char* fmt, ...) 
     scrap_log(LOG_ERROR, "[COMPILER] %s", compiler->current_error);
 }
 
-bool compiler_evaluate_argument(Compiler* compiler, Argument* arg, AnyValue* return_val) {
+CompilerValue compiler_evaluate_argument(Compiler* compiler, Argument* arg) {
     switch (arg->type) {
     case ARGUMENT_TEXT:
     case ARGUMENT_CONST_STRING:
-        *return_val = DATA_LITERAL(arg->data.text);
-        return true;
+        return DATA_LITERAL(arg->data.text);
     case ARGUMENT_BLOCK:
-        if (!compiler_evaluate_block(compiler, &arg->data.block, return_val)) return false;
-        return true;
+        return compiler_evaluate_block(compiler, &arg->data.block);
     case ARGUMENT_BLOCKDEF:
         compiler_set_error(compiler, NULL, gettext("Tried to evaluate blockdef"));
-        return false;
+        return DATA_UNKNOWN;
     case ARGUMENT_COLOR:
-        bytecode_push_op_int(&compiler->bytecode, IR_PUSHI, *(int*)&arg->data.color);
-        *return_val = DATA_COLOR;
-        return true;
+        return DATA_COLOR(CONVERT_COLOR(arg->data.color, StdColor));
     }
-    return false;
+    assert(false && "Unimplemented compiler_evaluate_argument");
 }
 
-bool compiler_evaluate_block(Compiler* compiler, Block* block, AnyValue* block_return) {
+CompilerValue compiler_evaluate_block(Compiler* compiler, Block* block) {
     if (!block->blockdef) {
         compiler_set_error(compiler, block, gettext("Tried to execute block without definition"));
-        return false;
+        return DATA_UNKNOWN;
     }
     if (!block->blockdef->func) {
         compiler_set_error(compiler, block, gettext("Tried to execute block \"%s\" without implementation"), block->blockdef->id);
-        return false;
+        return DATA_UNKNOWN;
     }
 
     BlockFunc execute_block = block->blockdef->func;
-
-    *block_return = execute_block(compiler, block);
-    if (block_return->type == DATA_TYPE_UNKNOWN) {
+    CompilerValue value = execute_block(compiler, block);
+    if (value.type == DATA_TYPE_UNKNOWN) {
         scrap_log(LOG_ERROR, "[COMPILER] Error from block id: \"%s\" (at block %p)", block->blockdef->id, &block);
-        return false;
     }
 
-    return true;
+    return value;
 }
 
-bool compiler_evaluate_chain(Compiler* compiler, BlockChain* chain) {
-    AnyValue block_return;
-    for (size_t i = 0; i < vector_size(chain->blocks); i++) {
+CompilerValue compiler_evaluate_chain(Compiler* compiler, BlockChain* chain, size_t start_block, size_t end_block) {
+    for (size_t i = start_block; i < end_block; i++) {
         thread_handle_stopping_state(compiler->thread);
-        if (!compiler_evaluate_block(compiler, &chain->blocks[i], &block_return)) return false;
+        CompilerValue value = compiler_evaluate_block(compiler, &chain->blocks[i]);
+        if (value.type == DATA_TYPE_UNKNOWN) {
+            scrap_log(LOG_ERROR, "[COMPILER] From chain: %p", chain);
+            return value;
+        }
+        if (value.type != DATA_TYPE_CHUNK) {
+            compiler_set_error(compiler, &chain->blocks[i], gettext("Top level blocks should return type %s, but got %s instead"), type_to_str(DATA_TYPE_CHUNK), type_to_str(value.type));
+            return DATA_UNKNOWN;
+        }
     }
-    return true;
+    return EMPTY_CHUNK;
 }

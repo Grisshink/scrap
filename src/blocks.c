@@ -64,677 +64,445 @@ static MathFunc block_math_func_list[MATH_LIST_LEN] = {
 
 #include "std.h"
 
-bool any_to_string(Compiler* compiler, Block* block, AnyValue value) {
-    switch (value.type) {
-    case DATA_TYPE_BLOCKDEF:
-    case DATA_TYPE_UNKNOWN:
-        compiler_set_error(compiler, block, gettext("Cannot cast type %s into %s"), type_to_str(value.type), type_to_str(DATA_TYPE_STRING));
-        return false;
-    case DATA_TYPE_STRING: return true;
-    case DATA_TYPE_FLOAT: bytecode_push_op(&compiler->bytecode, IR_FTOA); return true;
-    case DATA_TYPE_NOTHING: bytecode_push_op(&compiler->bytecode, IR_NTOA); return true;
-    case DATA_TYPE_BOOL: bytecode_push_op(&compiler->bytecode, IR_BTOA); return true;
-    case DATA_TYPE_LIST: bytecode_push_op(&compiler->bytecode, IR_LTOA); return true;
-    case DATA_TYPE_ANY: bytecode_push_op(&compiler->bytecode, IR_TOA); return true;
-    case DATA_TYPE_INTEGER:
-        bytecode_push_op(&compiler->bytecode, IR_ITOA);
-        return true;
-    case DATA_TYPE_COLOR:
-        bytecode_push_op(&compiler->bytecode, IR_ITOA);
-        return true;
-    case DATA_TYPE_LITERAL:
-        IrList* list = bytecode_const_list_new();
-        char* str = value.data.literal_val;
-        int char_size;
-        while (*str) {
-            IrValue val;
-            val.type = IR_TYPE_INT;
-            val.as.int_val = GetCodepoint(str, &char_size);
-            bytecode_const_list_append(list, val);
-            str += char_size;
-        }
-        bytecode_push_op_list(&compiler->bytecode, IR_PUSHL, list);
-        return true;
-    }
-    assert(false && "Unimplemented any_to_string");
-}
-
-bool any_to_integer(Compiler* compiler, Block* block, AnyValue value) {
-    switch (value.type) {
-    case DATA_TYPE_BLOCKDEF:
-    case DATA_TYPE_UNKNOWN:
-    case DATA_TYPE_LIST:
-        compiler_set_error(compiler, block, gettext("Cannot cast type %s into %s"), type_to_str(value.type), type_to_str(DATA_TYPE_INTEGER));
-        return false;
-    case DATA_TYPE_STRING: bytecode_push_op(&compiler->bytecode, IR_ATOI); return true;
-    case DATA_TYPE_FLOAT: bytecode_push_op(&compiler->bytecode, IR_FTOI); return true;
-    case DATA_TYPE_BOOL: bytecode_push_op(&compiler->bytecode, IR_BTOI); return true;
-    case DATA_TYPE_NOTHING:
-    case DATA_TYPE_ANY: 
-        bytecode_push_op(&compiler->bytecode, IR_TOI);
-        return true;
-    case DATA_TYPE_INTEGER:
-    case DATA_TYPE_COLOR:
-        return true;
-    case DATA_TYPE_LITERAL:
-        bytecode_push_op_int(&compiler->bytecode, IR_PUSHI, atol(value.data.literal_val));
-        return true;
-    }
-    assert(false && "Unimplemented any_to_integer");
-}
-
-bool any_to_float(Compiler* compiler, Block* block, AnyValue value) {
-    switch (value.type) {
-    case DATA_TYPE_BLOCKDEF:
-    case DATA_TYPE_UNKNOWN:
-    case DATA_TYPE_LIST:
-        compiler_set_error(compiler, block, gettext("Cannot cast type %s into %s"), type_to_str(value.type), type_to_str(DATA_TYPE_FLOAT));
-        return false;
-    case DATA_TYPE_STRING: bytecode_push_op(&compiler->bytecode, IR_ATOF); return true;
-    case DATA_TYPE_FLOAT: return true;
-    case DATA_TYPE_BOOL: bytecode_push_op(&compiler->bytecode, IR_BTOF); return true;
-    case DATA_TYPE_NOTHING:
-    case DATA_TYPE_ANY:
-        bytecode_push_op(&compiler->bytecode, IR_TOF);
-        return true;
-    case DATA_TYPE_INTEGER:
-    case DATA_TYPE_COLOR:
-        bytecode_push_op(&compiler->bytecode, IR_ITOF);
-        return true;
-    case DATA_TYPE_LITERAL:
-        bytecode_push_op_float(&compiler->bytecode, IR_PUSHF, atof(value.data.literal_val));
-        return true;
-    }
-    assert(false && "Unimplemented any_to_float");
-}
-
-bool any_to_bool(Compiler* compiler, Block* block, AnyValue value) {
-    switch (value.type) {
-    case DATA_TYPE_BLOCKDEF:
-    case DATA_TYPE_UNKNOWN:
-    case DATA_TYPE_LIST:
-        compiler_set_error(compiler, block, gettext("Cannot cast type %s into %s"), type_to_str(value.type), type_to_str(DATA_TYPE_BOOL));
-        return false;
-    case DATA_TYPE_STRING: bytecode_push_op(&compiler->bytecode, IR_ATOB); return true;
-    case DATA_TYPE_FLOAT: bytecode_push_op(&compiler->bytecode, IR_FTOB); return true;
-    case DATA_TYPE_BOOL: return true;
-    case DATA_TYPE_NOTHING:
-    case DATA_TYPE_ANY:
-        bytecode_push_op(&compiler->bytecode, IR_TOB);
-        return true;
-    case DATA_TYPE_INTEGER:
-    case DATA_TYPE_COLOR:
-        bytecode_push_op(&compiler->bytecode, IR_ITOB);
-        return true;
-    case DATA_TYPE_LITERAL:
-        bytecode_push_op_bool(&compiler->bytecode, IR_PUSHB, *value.data.literal_val);
-        return true;
-    }
-    assert(false && "Unimplemented any_to_bool");
-}
-
-bool any_to_color(Compiler* compiler, Block* block, AnyValue value) {
-    switch (value.type) {
-    case DATA_TYPE_BLOCKDEF:
-    case DATA_TYPE_UNKNOWN:
-    case DATA_TYPE_LIST:
-    case DATA_TYPE_BOOL:
-        compiler_set_error(compiler, block, gettext("Cannot cast type %s into %s"), type_to_str(value.type), type_to_str(DATA_TYPE_COLOR));
-        return false;
-    case DATA_TYPE_STRING: bytecode_push_op(&compiler->bytecode, IR_ATOI); return true;
-    case DATA_TYPE_FLOAT: bytecode_push_op(&compiler->bytecode, IR_FTOI); return true;
-    case DATA_TYPE_NOTHING:
-    case DATA_TYPE_ANY:
-        bytecode_push_op(&compiler->bytecode, IR_TOI);
-        return true;
-    case DATA_TYPE_INTEGER:
-    case DATA_TYPE_COLOR:
-        return true;
-    case DATA_TYPE_LITERAL:
-        bytecode_push_op_int(&compiler->bytecode, IR_PUSHI, atol(value.data.literal_val));
-        return true;
-    }
-    assert(false && "Unimplemented any_to_color");
-}
-
-bool any_to_list(Compiler* compiler, Block* block, AnyValue value) {
-    switch (value.type) {
-    case DATA_TYPE_BLOCKDEF:
-    case DATA_TYPE_UNKNOWN:
-    case DATA_TYPE_BOOL:
-    case DATA_TYPE_FLOAT: 
-    case DATA_TYPE_NOTHING:
-    case DATA_TYPE_INTEGER:
-    case DATA_TYPE_COLOR:
-    case DATA_TYPE_LITERAL:
-    case DATA_TYPE_ANY: // TODO: Add tol instruction
-        compiler_set_error(compiler, block, gettext("Cannot cast type %s into %s"), type_to_str(value.type), type_to_str(DATA_TYPE_COLOR));
-        return false;
-    case DATA_TYPE_LIST:
-    case DATA_TYPE_STRING:
-        return true;
-    }
-    assert(false && "Unimplemented any_to_list");
-}
-
-bool any_cast(Compiler* compiler, Block* block, AnyValue value, DataType type) {
-    if (type == value.type) return true;
-
-    switch (type) {
-    case DATA_TYPE_BLOCKDEF:
-    case DATA_TYPE_UNKNOWN:
-    case DATA_TYPE_NOTHING:
-    case DATA_TYPE_LITERAL: 
-        compiler_set_error(compiler, block, gettext("Cannot cast type %s into %s"), type_to_str(value.type), type_to_str(type));
-        return false;
-    case DATA_TYPE_BOOL: return any_to_bool(compiler, block, value);
-    case DATA_TYPE_FLOAT: return any_to_float(compiler, block, value); 
-    case DATA_TYPE_INTEGER: return any_to_integer(compiler, block, value);
-    case DATA_TYPE_COLOR: return any_to_color(compiler, block, value);
-    case DATA_TYPE_ANY: return true;
-    case DATA_TYPE_LIST: return any_to_list(compiler, block, value);
-    case DATA_TYPE_STRING: return any_to_string(compiler, block, value);
-    }
-    assert(false && "Unimplemented any_cast");
-}
-
-#define GUARD(_val) if (!_val) return DATA_UNKNOWN
-#define EVALUATE(_arg, _val) GUARD(compiler_evaluate_argument(compiler, (_arg), _val))
-#define TO_STRING(_val) GUARD(any_to_string(compiler, block, _val))
-#define TO_INTEGER(_val) GUARD(any_to_integer(compiler, block, _val))
-#define TO_FLOAT(_val) GUARD(any_to_float(compiler, block, _val))
-#define TO_BOOL(_val) GUARD(any_to_bool(compiler, block, _val))
-#define TO_COLOR(_val) GUARD(any_to_color(compiler, block, _val))
-#define TO_LIST(_val) GUARD(any_to_list(compiler, block, _val))
-#define CAST(_val, _type) GUARD(any_cast(compiler, block, _val, _type))
-
-AnyValue evaluate_binary(Compiler* compiler, Block* block, DataType literal_cast) {
-    AnyValue left, right;
-
-    EVALUATE(&block->arguments[0], &left);
-    if (left.type == DATA_TYPE_LITERAL) {
-        CAST(left, literal_cast);
-        left.type = literal_cast;
-    }
-
-    EVALUATE(&block->arguments[1], &right);
-    CAST(right, left.type);
-    right.type = left.type;
-
-    if (left.type != right.type) {
-        compiler_set_error(compiler, block, gettext("Incompatible types %s and %s in binary block"), type_to_str(left.type), type_to_str(right.type));
-        return DATA_UNKNOWN;
-    }
-
-    switch (left.type) {
-    case DATA_TYPE_INTEGER: return DATA_INTEGER;
-    case DATA_TYPE_STRING:  return DATA_STRING;
-    case DATA_TYPE_LIST:    return DATA_LIST;
-    case DATA_TYPE_FLOAT:   return DATA_FLOAT;
-    case DATA_TYPE_BOOL:    return DATA_BOOL;
-    case DATA_TYPE_COLOR:   return DATA_COLOR;
-    case DATA_TYPE_NOTHING: return DATA_NOTHING;
-    case DATA_TYPE_LITERAL:
-    case DATA_TYPE_BLOCKDEF:
-    case DATA_TYPE_UNKNOWN:
-    case DATA_TYPE_ANY: 
-        compiler_set_error(compiler, block, gettext("Invalid type %s in binary block"), type_to_str(left.type));
-        return DATA_UNKNOWN;
-    }
-    assert(false && "Unimplemented evaluate_binary");
-}
-
-AnyValue evaluate_number_operation(Compiler* compiler, Block* block, IrOpcode int_op, IrOpcode float_op) {
-    AnyValue val = evaluate_binary(compiler, block, DATA_TYPE_INTEGER);
-    if (val.type == DATA_TYPE_UNKNOWN) return val;
-
-    switch (val.type) {
-    case DATA_TYPE_INTEGER: bytecode_push_op(&compiler->bytecode, int_op); break;
-    case DATA_TYPE_FLOAT:   bytecode_push_op(&compiler->bytecode, float_op); break;
-    default:
-        compiler_set_error(compiler, block, gettext("Invalid type %s in operator block"), type_to_str(val.type));
-        return DATA_UNKNOWN;
-    }
-
-    return val;
-}
-
-AnyValue block_do_nothing(Compiler* compiler, Block* block) {
-    (void) compiler;
-    (void) block;
-    return DATA_NOTHING;
-}
-
-AnyValue block_noop(Compiler* compiler, Block* block) {
-    (void) compiler;
-    (void) block;
-    return DATA_NOTHING;
-}
-
-AnyValue block_on_start(Compiler* compiler, Block* block) {
-    (void) compiler;
-    (void) block;
-    return DATA_NOTHING;
-}
-
-AnyValue block_define_block(Compiler* compiler, Block* block) {
+CompilerValue block_do_nothing(Compiler* compiler, Block* block) {
     (void) compiler;
     (void) block;
     return DATA_UNKNOWN;
 }
 
-AnyValue block_loop(Compiler* compiler, Block* block) {
+CompilerValue block_noop(Compiler* compiler, Block* block) {
     (void) compiler;
     (void) block;
     return DATA_UNKNOWN;
 }
 
-AnyValue block_if(Compiler* compiler, Block* block) {
+CompilerValue block_on_start(Compiler* compiler, Block* block) {
+    (void) compiler;
+    (void) block;
+    return EMPTY_CHUNK;
+}
+
+CompilerValue block_define_block(Compiler* compiler, Block* block) {
     (void) compiler;
     (void) block;
     return DATA_UNKNOWN;
 }
 
-AnyValue block_else_if(Compiler* compiler, Block* block) {
+CompilerValue block_loop(Compiler* compiler, Block* block) {
     (void) compiler;
     (void) block;
     return DATA_UNKNOWN;
 }
 
-AnyValue block_else(Compiler* compiler, Block* block) {
+CompilerValue block_if(Compiler* compiler, Block* block) {
     (void) compiler;
     (void) block;
     return DATA_UNKNOWN;
 }
 
-AnyValue block_repeat(Compiler* compiler, Block* block) {
+CompilerValue block_else_if(Compiler* compiler, Block* block) {
     (void) compiler;
     (void) block;
     return DATA_UNKNOWN;
 }
 
-AnyValue block_while(Compiler* compiler, Block* block) {
+CompilerValue block_else(Compiler* compiler, Block* block) {
     (void) compiler;
     (void) block;
     return DATA_UNKNOWN;
 }
 
-AnyValue block_sleep(Compiler* compiler, Block* block) {
+CompilerValue block_repeat(Compiler* compiler, Block* block) {
     (void) compiler;
     (void) block;
     return DATA_UNKNOWN;
 }
 
-AnyValue block_declare_var(Compiler* compiler, Block* block) {
+CompilerValue block_while(Compiler* compiler, Block* block) {
     (void) compiler;
     (void) block;
     return DATA_UNKNOWN;
 }
 
-AnyValue block_get_var(Compiler* compiler, Block* block) {
+CompilerValue block_sleep(Compiler* compiler, Block* block) {
     (void) compiler;
     (void) block;
     return DATA_UNKNOWN;
 }
 
-AnyValue block_set_var(Compiler* compiler, Block* block) {
+CompilerValue block_declare_var(Compiler* compiler, Block* block) {
     (void) compiler;
     (void) block;
     return DATA_UNKNOWN;
 }
 
-AnyValue block_create_list(Compiler* compiler, Block* block) {
+CompilerValue block_get_var(Compiler* compiler, Block* block) {
     (void) compiler;
     (void) block;
     return DATA_UNKNOWN;
 }
 
-AnyValue block_list_add(Compiler* compiler, Block* block) {
+CompilerValue block_set_var(Compiler* compiler, Block* block) {
     (void) compiler;
     (void) block;
     return DATA_UNKNOWN;
 }
 
-AnyValue block_list_get(Compiler* compiler, Block* block) {
+CompilerValue block_create_list(Compiler* compiler, Block* block) {
     (void) compiler;
     (void) block;
     return DATA_UNKNOWN;
 }
 
-AnyValue block_list_length(Compiler* compiler, Block* block) {
+CompilerValue block_list_add(Compiler* compiler, Block* block) {
     (void) compiler;
     (void) block;
     return DATA_UNKNOWN;
 }
 
-AnyValue block_list_set(Compiler* compiler, Block* block) {
+CompilerValue block_list_get(Compiler* compiler, Block* block) {
     (void) compiler;
     (void) block;
     return DATA_UNKNOWN;
 }
 
-AnyValue block_print(Compiler* compiler, Block* block) {
-    AnyValue print_val;
-    EVALUATE(&block->arguments[0], &print_val);
-    TO_STRING(print_val);
-    bytecode_push_op_func(&compiler->bytecode, IR_RUN, ir_func_by_hint("print_str"));
-    return DATA_NOTHING;
-}
-
-AnyValue block_println(Compiler* compiler, Block* block) {
+CompilerValue block_list_length(Compiler* compiler, Block* block) {
     (void) compiler;
     (void) block;
     return DATA_UNKNOWN;
 }
 
-AnyValue block_cursor_x(Compiler* compiler, Block* block) {
+CompilerValue block_list_set(Compiler* compiler, Block* block) {
     (void) compiler;
     (void) block;
     return DATA_UNKNOWN;
 }
 
-AnyValue block_cursor_y(Compiler* compiler, Block* block) {
+CompilerValue block_print(Compiler* compiler, Block* block) {
     (void) compiler;
     (void) block;
     return DATA_UNKNOWN;
 }
 
-AnyValue block_cursor_max_x(Compiler* compiler, Block* block) {
+CompilerValue block_println(Compiler* compiler, Block* block) {
     (void) compiler;
     (void) block;
     return DATA_UNKNOWN;
 }
 
-AnyValue block_cursor_max_y(Compiler* compiler, Block* block) {
+CompilerValue block_cursor_x(Compiler* compiler, Block* block) {
     (void) compiler;
     (void) block;
     return DATA_UNKNOWN;
 }
 
-AnyValue block_set_cursor(Compiler* compiler, Block* block) {
+CompilerValue block_cursor_y(Compiler* compiler, Block* block) {
     (void) compiler;
     (void) block;
     return DATA_UNKNOWN;
 }
 
-AnyValue block_set_fg_color(Compiler* compiler, Block* block) {
+CompilerValue block_cursor_max_x(Compiler* compiler, Block* block) {
     (void) compiler;
     (void) block;
     return DATA_UNKNOWN;
 }
 
-AnyValue block_set_bg_color(Compiler* compiler, Block* block) {
+CompilerValue block_cursor_max_y(Compiler* compiler, Block* block) {
     (void) compiler;
     (void) block;
     return DATA_UNKNOWN;
 }
 
-AnyValue block_reset_color(Compiler* compiler, Block* block) {
+CompilerValue block_set_cursor(Compiler* compiler, Block* block) {
     (void) compiler;
     (void) block;
     return DATA_UNKNOWN;
 }
 
-AnyValue block_term_clear(Compiler* compiler, Block* block) {
+CompilerValue block_set_fg_color(Compiler* compiler, Block* block) {
     (void) compiler;
     (void) block;
     return DATA_UNKNOWN;
 }
 
-AnyValue block_term_set_clear(Compiler* compiler, Block* block) {
+CompilerValue block_set_bg_color(Compiler* compiler, Block* block) {
     (void) compiler;
     (void) block;
     return DATA_UNKNOWN;
 }
 
-AnyValue block_input(Compiler* compiler, Block* block) {
+CompilerValue block_reset_color(Compiler* compiler, Block* block) {
     (void) compiler;
     (void) block;
     return DATA_UNKNOWN;
 }
 
-AnyValue block_get_char(Compiler* compiler, Block* block) {
+CompilerValue block_term_clear(Compiler* compiler, Block* block) {
     (void) compiler;
     (void) block;
     return DATA_UNKNOWN;
 }
 
-AnyValue block_random(Compiler* compiler, Block* block) {
+CompilerValue block_term_set_clear(Compiler* compiler, Block* block) {
     (void) compiler;
     (void) block;
     return DATA_UNKNOWN;
 }
 
-AnyValue block_join(Compiler* compiler, Block* block) {
+CompilerValue block_input(Compiler* compiler, Block* block) {
     (void) compiler;
     (void) block;
     return DATA_UNKNOWN;
 }
 
-AnyValue block_ord(Compiler* compiler, Block* block) {
+CompilerValue block_get_char(Compiler* compiler, Block* block) {
     (void) compiler;
     (void) block;
     return DATA_UNKNOWN;
 }
 
-AnyValue block_chr(Compiler* compiler, Block* block) {
+CompilerValue block_random(Compiler* compiler, Block* block) {
     (void) compiler;
     (void) block;
     return DATA_UNKNOWN;
 }
 
-AnyValue block_letter_in(Compiler* compiler, Block* block) {
+CompilerValue block_join(Compiler* compiler, Block* block) {
     (void) compiler;
     (void) block;
     return DATA_UNKNOWN;
 }
 
-AnyValue block_substring(Compiler* compiler, Block* block) {
+CompilerValue block_ord(Compiler* compiler, Block* block) {
     (void) compiler;
     (void) block;
     return DATA_UNKNOWN;
 }
 
-AnyValue block_length(Compiler* compiler, Block* block) {
+CompilerValue block_chr(Compiler* compiler, Block* block) {
     (void) compiler;
     (void) block;
     return DATA_UNKNOWN;
 }
 
-AnyValue block_unix_time(Compiler* compiler, Block* block) {
+CompilerValue block_letter_in(Compiler* compiler, Block* block) {
     (void) compiler;
     (void) block;
     return DATA_UNKNOWN;
 }
 
-AnyValue block_convert_int(Compiler* compiler, Block* block) {
-    AnyValue val;
-    EVALUATE(&block->arguments[0], &val);
-    TO_INTEGER(val);
-    return DATA_INTEGER;
-}
-
-AnyValue block_convert_float(Compiler* compiler, Block* block) {
-    AnyValue val;
-    EVALUATE(&block->arguments[0], &val);
-    TO_FLOAT(val);
-    return DATA_FLOAT;
-}
-
-AnyValue block_convert_str(Compiler* compiler, Block* block) {
-    AnyValue val;
-    EVALUATE(&block->arguments[0], &val);
-    TO_STRING(val);
-    return DATA_STRING;
-}
-
-AnyValue block_convert_bool(Compiler* compiler, Block* block) {
-    AnyValue val;
-    EVALUATE(&block->arguments[0], &val);
-    TO_BOOL(val);
-    return DATA_BOOL;
-}
-
-AnyValue block_convert_color(Compiler* compiler, Block* block) {
-    AnyValue val;
-    EVALUATE(&block->arguments[0], &val);
-    TO_COLOR(val);
-    return DATA_COLOR;
-}
-
-AnyValue block_typeof(Compiler* compiler, Block* block) {
+CompilerValue block_substring(Compiler* compiler, Block* block) {
     (void) compiler;
     (void) block;
     return DATA_UNKNOWN;
 }
 
-AnyValue block_plus(Compiler* compiler, Block* block) {
-    return evaluate_number_operation(compiler, block, IR_ADDI, IR_ADDF);
-}
-
-AnyValue block_minus(Compiler* compiler, Block* block) {
-    return evaluate_number_operation(compiler, block, IR_SUBI, IR_SUBF);
-}
-
-AnyValue block_mult(Compiler* compiler, Block* block) {
-    return evaluate_number_operation(compiler, block, IR_MULI, IR_MULF);
-}
-
-AnyValue block_div(Compiler* compiler, Block* block) {
-    return evaluate_number_operation(compiler, block, IR_DIVI, IR_DIVF);
-}
-
-AnyValue block_rem(Compiler* compiler, Block* block) {
-    return evaluate_number_operation(compiler, block, IR_MODI, IR_MODF);
-}
-
-AnyValue block_pow(Compiler* compiler, Block* block) {
+CompilerValue block_length(Compiler* compiler, Block* block) {
     (void) compiler;
     (void) block;
     return DATA_UNKNOWN;
 }
 
-AnyValue block_math(Compiler* compiler, Block* block) {
+CompilerValue block_unix_time(Compiler* compiler, Block* block) {
     (void) compiler;
     (void) block;
     return DATA_UNKNOWN;
 }
 
-AnyValue block_pi(Compiler* compiler, Block* block) {
+CompilerValue block_convert_int(Compiler* compiler, Block* block) {
     (void) compiler;
     (void) block;
     return DATA_UNKNOWN;
 }
 
-AnyValue block_bit_not(Compiler* compiler, Block* block) {
+CompilerValue block_convert_float(Compiler* compiler, Block* block) {
     (void) compiler;
     (void) block;
     return DATA_UNKNOWN;
 }
 
-AnyValue block_bit_and(Compiler* compiler, Block* block) {
+CompilerValue block_convert_str(Compiler* compiler, Block* block) {
     (void) compiler;
     (void) block;
     return DATA_UNKNOWN;
 }
 
-AnyValue block_bit_xor(Compiler* compiler, Block* block) {
+CompilerValue block_convert_bool(Compiler* compiler, Block* block) {
     (void) compiler;
     (void) block;
     return DATA_UNKNOWN;
 }
 
-AnyValue block_bit_or(Compiler* compiler, Block* block) {
+CompilerValue block_convert_color(Compiler* compiler, Block* block) {
     (void) compiler;
     (void) block;
     return DATA_UNKNOWN;
 }
 
-AnyValue block_less(Compiler* compiler, Block* block) {
+CompilerValue block_typeof(Compiler* compiler, Block* block) {
     (void) compiler;
     (void) block;
     return DATA_UNKNOWN;
 }
 
-AnyValue block_less_eq(Compiler* compiler, Block* block) {
+CompilerValue block_plus(Compiler* compiler, Block* block) {
     (void) compiler;
     (void) block;
     return DATA_UNKNOWN;
 }
 
-AnyValue block_more(Compiler* compiler, Block* block) {
+CompilerValue block_minus(Compiler* compiler, Block* block) {
     (void) compiler;
     (void) block;
     return DATA_UNKNOWN;
 }
 
-AnyValue block_more_eq(Compiler* compiler, Block* block) {
+CompilerValue block_mult(Compiler* compiler, Block* block) {
     (void) compiler;
     (void) block;
     return DATA_UNKNOWN;
 }
 
-AnyValue block_not(Compiler* compiler, Block* block) {
+CompilerValue block_div(Compiler* compiler, Block* block) {
     (void) compiler;
     (void) block;
     return DATA_UNKNOWN;
 }
 
-AnyValue block_and(Compiler* compiler, Block* block) {
+CompilerValue block_rem(Compiler* compiler, Block* block) {
     (void) compiler;
     (void) block;
     return DATA_UNKNOWN;
 }
 
-AnyValue block_or(Compiler* compiler, Block* block) {
+CompilerValue block_pow(Compiler* compiler, Block* block) {
     (void) compiler;
     (void) block;
     return DATA_UNKNOWN;
 }
 
-AnyValue block_true(Compiler* compiler, Block* block) {
+CompilerValue block_math(Compiler* compiler, Block* block) {
     (void) compiler;
     (void) block;
     return DATA_UNKNOWN;
 }
 
-AnyValue block_false(Compiler* compiler, Block* block) {
+CompilerValue block_pi(Compiler* compiler, Block* block) {
     (void) compiler;
     (void) block;
     return DATA_UNKNOWN;
 }
 
-AnyValue block_eq(Compiler* compiler, Block* block) {
+CompilerValue block_bit_not(Compiler* compiler, Block* block) {
     (void) compiler;
     (void) block;
     return DATA_UNKNOWN;
 }
 
-AnyValue block_not_eq(Compiler* compiler, Block* block) {
+CompilerValue block_bit_and(Compiler* compiler, Block* block) {
     (void) compiler;
     (void) block;
     return DATA_UNKNOWN;
 }
 
-AnyValue block_exec_custom(Compiler* compiler, Block* block) {
+CompilerValue block_bit_xor(Compiler* compiler, Block* block) {
     (void) compiler;
     (void) block;
     return DATA_UNKNOWN;
 }
 
-AnyValue block_custom_arg(Compiler* compiler, Block* block) {
+CompilerValue block_bit_or(Compiler* compiler, Block* block) {
     (void) compiler;
     (void) block;
     return DATA_UNKNOWN;
 }
 
-AnyValue block_return(Compiler* compiler, Block* block) {
+CompilerValue block_less(Compiler* compiler, Block* block) {
     (void) compiler;
     (void) block;
     return DATA_UNKNOWN;
 }
 
-AnyValue block_gc_collect(Compiler* compiler, Block* block) {
+CompilerValue block_less_eq(Compiler* compiler, Block* block) {
+    (void) compiler;
+    (void) block;
+    return DATA_UNKNOWN;
+}
+
+CompilerValue block_more(Compiler* compiler, Block* block) {
+    (void) compiler;
+    (void) block;
+    return DATA_UNKNOWN;
+}
+
+CompilerValue block_more_eq(Compiler* compiler, Block* block) {
+    (void) compiler;
+    (void) block;
+    return DATA_UNKNOWN;
+}
+
+CompilerValue block_not(Compiler* compiler, Block* block) {
+    (void) compiler;
+    (void) block;
+    return DATA_UNKNOWN;
+}
+
+CompilerValue block_and(Compiler* compiler, Block* block) {
+    (void) compiler;
+    (void) block;
+    return DATA_UNKNOWN;
+}
+
+CompilerValue block_or(Compiler* compiler, Block* block) {
+    (void) compiler;
+    (void) block;
+    return DATA_UNKNOWN;
+}
+
+CompilerValue block_true(Compiler* compiler, Block* block) {
+    (void) compiler;
+    (void) block;
+    return DATA_UNKNOWN;
+}
+
+CompilerValue block_false(Compiler* compiler, Block* block) {
+    (void) compiler;
+    (void) block;
+    return DATA_UNKNOWN;
+}
+
+CompilerValue block_eq(Compiler* compiler, Block* block) {
+    (void) compiler;
+    (void) block;
+    return DATA_UNKNOWN;
+}
+
+CompilerValue block_not_eq(Compiler* compiler, Block* block) {
+    (void) compiler;
+    (void) block;
+    return DATA_UNKNOWN;
+}
+
+CompilerValue block_exec_custom(Compiler* compiler, Block* block) {
+    (void) compiler;
+    (void) block;
+    return DATA_UNKNOWN;
+}
+
+CompilerValue block_custom_arg(Compiler* compiler, Block* block) {
+    (void) compiler;
+    (void) block;
+    return DATA_UNKNOWN;
+}
+
+CompilerValue block_return(Compiler* compiler, Block* block) {
+    (void) compiler;
+    (void) block;
+    return DATA_UNKNOWN;
+}
+
+CompilerValue block_gc_collect(Compiler* compiler, Block* block) {
     (void) compiler;
     (void) block;
     return DATA_UNKNOWN;

@@ -49,6 +49,8 @@ const char* type_to_str(DataType type) {
         return "blockdef";
     case DATA_TYPE_UNKNOWN:
         return "unknown";
+    case DATA_TYPE_CHUNK:
+        return "chunk";
     }
     assert(false && "Unhandled type_to_str");
 }

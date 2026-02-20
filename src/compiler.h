@@ -28,14 +28,37 @@
 #include "scrap_ir.h"
 
 typedef struct Compiler Compiler;
-typedef AnyValue (*BlockFunc)(Compiler* compiler, Block* block);
+typedef struct CompilerValue CompilerValue;
+typedef CompilerValue (*BlockFunc)(Compiler* compiler, Block* block);
+
+typedef struct {
+    IrOpcode op;
+    IrValue constant;
+} IrInstruction;
+
+typedef struct {
+    IrInstruction* items;
+    size_t size, capacity;
+} BytecodeChunk;
+
+typedef union {
+    char* literal_val;
+    int integer_val;
+    double float_val;
+    IrList* list_val;
+    StdColor color_val;
+    BytecodeChunk chunk_val;
+} CompilerValueData;
+
+struct CompilerValue {
+    DataType type;
+    CompilerValueData data;
+};
 
 struct Compiler {
     BlockChain* code;
 
     IrBytecode bytecode;
-    IrBytecode scratch_bytecode;
-    size_t discard_layer;
 
     IrExec exec;
     bool exec_running;
@@ -46,35 +69,30 @@ struct Compiler {
     Thread* thread;
 };
 
-#define _DATA_WITH_TYPE(_t) (AnyValue) { \
+#define _DATA(_t, ...) (CompilerValue) { \
     .type = (_t), \
-    .data = (AnyValueData) {0}, \
+    .data = (CompilerValueData) { __VA_ARGS__ }, \
 }
 
-#define DATA_UNKNOWN (AnyValue) {0}
+#define DATA_UNKNOWN _DATA(DATA_TYPE_UNKNOWN, 0)
+#define DATA_NOTHING _DATA(DATA_TYPE_NOTHING, 0)
+#define DATA_INTEGER(v) _DATA(DATA_TYPE_INTEGER, .int_val = (v))
+#define DATA_FLOAT(v) _DATA(DATA_TYPE_FLOAT, .float_val = (v))
+#define DATA_BOOL(v) _DATA(DATA_TYPE_BOOL, .bool_val = (v))
+#define DATA_COLOR(v) _DATA(DATA_TYPE_COLOR, .color_val = (v))
+#define DATA_LIST(v) _DATA(DATA_TYPE_LIST, .list_val = (v))
+#define DATA_LITERAL(v) _DATA(DATA_TYPE_LITERAL, .literal_val = (v))
+#define DATA_CHUNK(v) _DATA(DATA_TYPE_CHUNK, .chunk_val = (v))
 
-#define DATA_NOTHING _DATA_WITH_TYPE(DATA_TYPE_NOTHING)
-#define DATA_INTEGER _DATA_WITH_TYPE(DATA_TYPE_INTEGER)
-#define DATA_FLOAT _DATA_WITH_TYPE(DATA_TYPE_FLOAT)
-#define DATA_BOOL _DATA_WITH_TYPE(DATA_TYPE_BOOL)
-#define DATA_COLOR _DATA_WITH_TYPE(DATA_TYPE_COLOR)
-#define DATA_LIST _DATA_WITH_TYPE(DATA_TYPE_LIST)
-#define DATA_STRING _DATA_WITH_TYPE(DATA_TYPE_STRING)
-
-#define DATA_LITERAL(v) (AnyValue) { \
-    .type = DATA_TYPE_LITERAL, \
-    .data = (AnyValueData) { \
-        .literal_val = (v), \
-    }, \
-}
+#define EMPTY_CHUNK DATA_CHUNK((BytecodeChunk) {0})
 
 Compiler compiler_new(Thread* thread);
 bool compiler_run(void* e);
 void compiler_cleanup(void* e);
 void compiler_free(Compiler* compiler);
-bool compiler_evaluate_chain(Compiler* compiler, BlockChain* chain);
-bool compiler_evaluate_block(Compiler* compiler, Block* block, AnyValue* block_return);
-bool compiler_evaluate_argument(Compiler* compiler, Argument* arg, AnyValue* return_val);
+CompilerValue compiler_evaluate_chain(Compiler* compiler, BlockChain* chain, size_t start_block, size_t end_block);
+CompilerValue compiler_evaluate_block(Compiler* compiler, Block* block);
+CompilerValue compiler_evaluate_argument(Compiler* compiler, Argument* arg);
 void compiler_set_skip_block(Compiler* compiler);
 void compiler_set_error(Compiler* compiler, Block* block, const char* fmt, ...);
 
