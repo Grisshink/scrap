@@ -146,6 +146,18 @@ gmake MAKE=gmake -j$(nproc)
 ./scrap
 ```
 
+#### NixOS build
+
+To build and run Scrap on NixOS, just run the following commands:
+
+```bash
+nix-shell
+make -j$(nproc)
+./scrap
+```
+
+`TODO: implement buildFHSEnv` 
+
 #### MacOS build
 
 > [!WARNING]
