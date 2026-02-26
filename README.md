@@ -156,8 +156,6 @@ make -j$(nproc)
 ./scrap
 ```
 
-`TODO: implement buildFHSEnv` 
-
 #### MacOS build
 
 > [!WARNING]
