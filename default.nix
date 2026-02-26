@@ -6,6 +6,7 @@ pkgs.mkShell {
     cmake
     clang
     wayland
+    libx11
   ];
   nativeBuildInputs = [
     pkgs.libGL
