@@ -131,6 +131,7 @@ void exec_set_error(Exec* exec, Block* block, const char* fmt, ...) {
 }
 
 bool evaluate_argument(Exec* exec, Argument* arg, AnyValue* return_val) {
+    static_assert(ARGUMENT_LAST == 5, "Exhaustive argument type in evaluate_argument");
     switch (arg->type) {
     case ARGUMENT_TEXT:
     case ARGUMENT_CONST_STRING:

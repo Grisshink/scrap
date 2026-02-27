@@ -139,6 +139,7 @@ Block block_copy(Block* block, Block* parent) {
         Argument* arg = vector_add_dst((Argument**)&new.arguments);
         arg->type = block->arguments[i].type;
         arg->input_id = block->arguments[i].input_id;
+        static_assert(ARGUMENT_LAST == 5, "Exhaustive argument type in block_copy");
         switch (block->arguments[i].type) {
         case ARGUMENT_CONST_STRING:
         case ARGUMENT_TEXT:
@@ -172,6 +173,7 @@ void block_free(Block* block) {
     blockdef_free(block->blockdef);
     if (block->arguments) {
         for (size_t i = 0; i < vector_size(block->arguments); i++) {
+            static_assert(ARGUMENT_LAST == 5, "Exhaustive argument type in block_free");
             switch (block->arguments[i].type) {
             case ARGUMENT_CONST_STRING:
             case ARGUMENT_TEXT:

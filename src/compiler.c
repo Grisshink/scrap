@@ -220,6 +220,7 @@ static bool evaluate_block(Exec* exec, Block* block, FuncArg* return_val, Contro
     if (control_state != CONTROL_STATE_END) {
         for (size_t i = 0; i < vector_size(block->arguments); i++) {
             FuncArg block_return;
+            static_assert(ARGUMENT_LAST == 5, "Exhaustive argument type in evaluate_block");
             switch (block->arguments[i].type) {
             case ARGUMENT_TEXT:
             case ARGUMENT_CONST_STRING:

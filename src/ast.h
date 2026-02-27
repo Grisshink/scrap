@@ -149,6 +149,8 @@ enum ArgumentType {
     ARGUMENT_CONST_STRING,
     ARGUMENT_BLOCKDEF,
     ARGUMENT_COLOR,
+    // Must be last in enum
+    ARGUMENT_LAST,
 };
 
 struct Argument {
