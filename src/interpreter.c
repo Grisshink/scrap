@@ -26,6 +26,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <libintl.h>
+#include <assert.h>
 
 void arg_stack_push_arg(Exec* exec, AnyValue data);
 void arg_stack_undo_args(Exec* exec, size_t count);
@@ -147,6 +148,8 @@ bool evaluate_argument(Exec* exec, Argument* arg, AnyValue* return_val) {
     case ARGUMENT_COLOR:
         *return_val = DATA_COLOR(CONVERT_COLOR(arg->data.color, StdColor));
         return true;
+    default:
+        assert(false && "Unimplemented argument type in evaluate_argument");
     }
     return false;
 }

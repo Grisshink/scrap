@@ -246,6 +246,8 @@ static bool evaluate_block(Exec* exec, Block* block, FuncArg* return_val, Contro
                 arg->type = DATA_TYPE_COLOR;
                 arg->data.value = CONST_INTEGER(*(int*)&block->arguments[i].data.color);
                 break;
+            default:
+                assert(false && "Unimplemented argument type in evaluate_block");
             }
         }
     }
