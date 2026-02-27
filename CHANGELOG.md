@@ -1,4 +1,4 @@
-# v0.6.1-beta *(Upcoming)*
+# v0.6.1-beta *(27-02-2026)*
 
 ## What's new?
 - Re-added block folding feature. Now if the last argument size was more than 500 pixels then the next arguments will be drawn on the next line to save horizontal space
