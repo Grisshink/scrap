@@ -694,12 +694,14 @@ static void draw_block(Block* block, bool highlight, bool can_hover, bool ghost,
 
                 for (size_t i = 0; i < ARRLEN(color_map); i++) {
                     if (!strcmp(arg->data.text, color_map[i].text)) {
+                        vector_free(arg->data.text);
                         argument_set_color(arg, CONVERT_COLOR(color_map[i].color, BlockdefColor));
                         break;
                     }
                 }
 
                 if (arg->type != ARGUMENT_COLOR) {
+                    vector_free(arg->data.text);
                     argument_set_color(arg, (BlockdefColor) { 0x00, 0x00, 0x00, 0xff });
                 }
             }
