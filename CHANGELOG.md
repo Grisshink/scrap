@@ -1,7 +1,12 @@
 # v0.6.1-beta *(Upcoming)*
 
+## What's new?
+- Re-added block folding feature. Now if the last argument size was more than 500 pixels then the next arguments will be drawn on the next line to save horizontal space
+
 ## Fixes
 - Fixed buffer overflow when rendering glyphs that are not present in font (This also fixes text in Kazakh language being absolutely broken)
+- Fixed crash when saving/loading blocks with color arguments
+- Fixed memory leak when converting legacy color arguments
 
 # v0.6-beta *(31-01-2026)*
 
