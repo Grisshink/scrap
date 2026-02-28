@@ -2,7 +2,8 @@ name: Deploy Site
 
 on:
   push:
-    branches: [ "gh-pages" ]
+    branches:
+      - gh-pages
   workflow_dispatch:
 
 permissions:
