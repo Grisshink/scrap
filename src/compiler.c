@@ -121,6 +121,7 @@ void compiler_set_error(Compiler* compiler, const char* fmt, ...) {
 }
 
 CompilerValue compiler_evaluate_argument(Compiler* compiler, Argument* arg) {
+    static_assert(ARGUMENT_LAST == 5, "Exhaustive argument type in compiler_evaluate_argument");
     switch (arg->type) {
     case ARGUMENT_TEXT:
     case ARGUMENT_CONST_STRING:
