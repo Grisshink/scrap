@@ -33,6 +33,13 @@
 #define SHARED_DIR_BUF_LEN 512
 #define LOCALE_DIR_BUF_LEN 768
 
+#define INT_TO_COLOR(v) ((BlockdefColor) { \
+    ((v) >> 0 ) & 255, \
+    ((v) >> 8 ) & 255, \
+    ((v) >> 16) & 255, \
+    ((v) >> 24) & 255, \
+})
+
 typedef struct {
     void* ptr;
     size_t size;
@@ -577,6 +584,7 @@ void save_block_arguments(SaveData* save, Argument* arg) {
     save_add_varint(save, arg->type);
 
     int string_id;
+    static_assert(ARGUMENT_LAST == 5, "Exhaustive argument type in save_block_arguments");
     switch (arg->type) {
     case ARGUMENT_TEXT:
     case ARGUMENT_CONST_STRING:
@@ -591,6 +599,9 @@ void save_block_arguments(SaveData* save, Argument* arg) {
         string_id = save_find_id(arg->data.blockdef->id);
         assert(string_id != -1);
         save_add_varint(save, string_id);
+        break;
+    case ARGUMENT_COLOR:
+        save_add_varint(save, *(int*)&arg->data.color);
         break;
     default:
         assert(false && "Unimplemented argument save");
@@ -651,6 +662,7 @@ void save_add_id(const char* id) {
 void block_collect_ids(Block* block) {
     save_add_id(block->blockdef->id);
     for (size_t i = 0; i < vector_size(block->arguments); i++) {
+        static_assert(ARGUMENT_LAST == 5, "Exhaustive argument type in block_collect_ids");
         switch (block->arguments[i].type) {
         case ARGUMENT_TEXT:
         case ARGUMENT_CONST_STRING:
@@ -661,6 +673,8 @@ void block_collect_ids(Block* block) {
             break;
         case ARGUMENT_BLOCKDEF:
             save_add_id(block->arguments[i].data.blockdef->id);
+            break;
+        case ARGUMENT_COLOR:
             break;
         default:
             assert(false && "Unimplemented argument save id");
@@ -826,7 +840,9 @@ bool load_block_argument(SaveData* save, Argument* arg) {
 
     unsigned int text_id;
     unsigned int blockdef_id;
+    unsigned int color_int;
 
+    static_assert(ARGUMENT_LAST == 5, "Exhaustive argument type in load_block_argument");
     switch (arg_type) {
     case ARGUMENT_TEXT:
     case ARGUMENT_CONST_STRING:
@@ -857,6 +873,10 @@ bool load_block_argument(SaveData* save, Argument* arg) {
 
         arg->data.blockdef = blockdef;
         arg->data.blockdef->ref_count++;
+        break;
+    case ARGUMENT_COLOR:
+        if (!save_read_varint(save, &color_int)) return false;
+        arg->data.color = INT_TO_COLOR(color_int);
         break;
     default:
         scrap_log(LOG_ERROR, "[LOAD] Unimplemented argument load");

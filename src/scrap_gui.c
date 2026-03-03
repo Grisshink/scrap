@@ -493,9 +493,9 @@ void gui_element_end(Gui* gui) {
     GuiElement* parent = gui->current_element->parent;
 
     if (DIRECTION(el) == DIRECTION_VERTICAL) {
-        el->h -= el->gap;
+        el->h = MAX(el->min_h, el->h - el->gap);
     } else {
-        el->w -= el->gap;
+        el->w = MAX(el->min_w, el->w - el->gap);
     }
 
     if (!FLOATING(el)) gui_element_advance(parent, (GuiMeasurement) { el->w, el->h });
@@ -710,6 +710,8 @@ void gui_set_min_size(Gui* gui, unsigned short min_w, unsigned short min_h) {
     GuiElement* el = gui->current_element;
     el->w = MAX(el->w, min_w);
     el->h = MAX(el->h, min_h);
+    el->min_w = min_w;
+    el->min_h = min_h;
 }
 
 inline void gui_text_slice(Gui* gui, void* font, const char* text, unsigned int text_size, unsigned short font_size, GuiColor color) {
