@@ -65,7 +65,7 @@ struct Compiler {
 
     char current_error[MAX_ERROR_LEN];
     Block* current_error_block;
-    BlockChain** current_error_blockchain;
+    BlockChain* current_error_blockchain;
 
     Thread* thread;
 };

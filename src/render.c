@@ -56,7 +56,7 @@ typedef enum {
 } ImageType;
 
 static void draw_code(void);
-static GuiElement* draw_blockchain(BlockChain** chain, bool ghost, bool show_previews, bool editable_arguments);
+static GuiElement* draw_blockchain(BlockChain* chain, bool ghost, bool show_previews, bool editable_arguments);
 static void argument_on_hover(GuiElement* el);
 static void argument_on_render(GuiElement* el);
 static void draw_block_preview(void);
@@ -786,7 +786,7 @@ static void draw_block(Block* block, bool highlight, bool select, bool can_hover
                 if (editor.show_debug && block->contents->parent != block) {
                     gui_text(gui, &assets.fonts.font_cond_shadow, "Detached parent", BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0x00, 0x00, 0xff });
                 }
-                draw_blockchain(&block->contents, ghost, true, editable);
+                draw_blockchain(block->contents, ghost, true, editable);
             gui_element_end(gui);
         gui_element_end(gui);
 
@@ -794,7 +794,7 @@ static void draw_block(Block* block, bool highlight, bool select, bool can_hover
             if (editor.show_debug && block->controlend_contents->parent != block) {
                 gui_text(gui, &assets.fonts.font_cond_shadow, "Detached parent", BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0x00, 0x00, 0xff });
             }
-            draw_blockchain(&block->controlend_contents, ghost, true, editable);
+            draw_blockchain(block->controlend_contents, ghost, true, editable);
         }
 
         if (block->blockdef->type == BLOCKTYPE_CONTROL) {
@@ -994,17 +994,17 @@ static void draw_block_preview(void) {
     if (ui.hover.editor.prev_argument != NULL) return;
     if (editor.mouse_blockchains[0].chain->start->blockdef->type == BLOCKTYPE_HAT) return;
 
-    draw_blockchain(&editor.mouse_blockchains[0].chain, true, false, false);
+    draw_blockchain(editor.mouse_blockchains[0].chain, true, false, false);
 }
 
-static GuiElement* draw_blockchain(BlockChain** chain, bool ghost, bool show_previews, bool editable_arguments) {
+static GuiElement* draw_blockchain(BlockChain* chain, bool ghost, bool show_previews, bool editable_arguments) {
     GuiElement* el = gui_element_begin(gui);
         gui_set_direction(gui, DIRECTION_VERTICAL);
         gui_on_hover(gui, blockchain_on_hover);
         gui_set_custom_data(gui, chain);
 
         if (editor.show_debug) {
-            BlockChain* ch = *chain;
+            BlockChain* ch = chain;
 
             if (CHAIN_EMPTY(ch) && !ch->parent) {
                 gui_text(gui, &assets.fonts.font_cond_shadow, "Empty chain", BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0x00, 0x00, 0xff });
@@ -1027,7 +1027,7 @@ static GuiElement* draw_blockchain(BlockChain** chain, bool ghost, bool show_pre
             }
         }
         
-        for (Block* iter = (*chain)->start; iter; iter = iter->next) {
+        for (Block* iter = chain->start; iter; iter = iter->next) {
             draw_block(iter, false, false, true, ghost, editable_arguments, show_previews);
         }
     gui_element_end(gui);
@@ -1121,7 +1121,7 @@ static void draw_block_palette(void) {
             for (size_t i = 0; i < vector_size(cat->items); i++) {
                 switch (cat->items[i].type) {
                 case CATEGORY_ITEM_CHAIN:
-                    draw_blockchain(&cat->items[i].data.chain, false, false, false);
+                    draw_blockchain(cat->items[i].data.chain, false, false, false);
                     break;
                 case CATEGORY_ITEM_LABEL:
                     if (i != 0) gui_spacer(gui, 0, config.ui_size * 0.1);
@@ -1544,7 +1544,7 @@ static void draw_code(void) {
             gui_set_floating(gui);
             gui_set_position(gui, chain_pos.x, chain_pos.y);
 
-            draw_blockchain(&editor.code[i].chain, false, config.show_blockchain_previews, true);
+            draw_blockchain(editor.code[i].chain, false, config.show_blockchain_previews, true);
         gui_element_end(gui);
         editor.code[i].width = el->w;
         editor.code[i].height = el->h;
@@ -1723,7 +1723,7 @@ void scrap_gui_process(void) {
                 gui_set_gap(gui, config.ui_size);
 
                 for (size_t i = 0; i < vector_size(editor.mouse_blockchains); i++) {
-                    GuiElement* el = draw_blockchain(&editor.mouse_blockchains[i].chain, false, false, true);
+                    GuiElement* el = draw_blockchain(editor.mouse_blockchains[i].chain, false, false, true);
                     editor.mouse_blockchains[i].width  = el->w;
                     editor.mouse_blockchains[i].height = el->h;
 

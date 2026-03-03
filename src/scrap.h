@@ -107,8 +107,8 @@ typedef enum {
 } EditorHoverPart;
 
 typedef struct {
-    BlockChain** prev_blockchain;
-    BlockChain** blockchain;
+    BlockChain* prev_blockchain;
+    BlockChain* blockchain;
 
     Block* prev_block;
     Block* block;
@@ -119,7 +119,7 @@ typedef struct {
 
     Block* select_block;
     Argument* select_argument;
-    BlockChain** select_blockchain;
+    BlockChain* select_blockchain;
     Vector2 select_block_pos;
     bool select_valid;
 
@@ -386,7 +386,7 @@ struct Vm {
     Compiler compiler;
     char** compile_error;
     Block* compile_error_block;
-    BlockChain** compile_error_blockchain;
+    BlockChain* compile_error_blockchain;
 
     int start_timeout; // = -1;
 #ifdef USE_LLVM

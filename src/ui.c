@@ -773,7 +773,7 @@ static bool handle_block_palette_click(bool mouse_empty) {
         assert(editor.palette.current_category != NULL);
 
         RootBlockChain root = {0};
-        root.chain = blockchain_copy(*ui.hover.editor.blockchain, NULL);
+        root.chain = blockchain_copy(ui.hover.editor.blockchain, NULL);
         vector_add(&editor.mouse_blockchains, root);
         return true;
     } else if (!mouse_empty) {
@@ -833,8 +833,8 @@ static void code_put_blocks(bool single) {
         vector_clear(editor.mouse_blockchains);
     }
 
-    ui.hover.editor.select_blockchain = &editor.code[vector_size(editor.code) - 1].chain;
-    ui.hover.editor.select_block = (*ui.hover.editor.select_blockchain)->start;
+    ui.hover.editor.select_blockchain = editor.code[vector_size(editor.code) - 1].chain;
+    ui.hover.editor.select_block = ui.hover.editor.select_blockchain->start;
     editor.project_modified = true;
 }
 
@@ -945,7 +945,7 @@ static void code_copy_blocks(bool single) {
 
     ui.hover.select_input = NULL;
 
-    BlockChain* hover_chain = *ui.hover.editor.blockchain;
+    BlockChain* hover_chain = ui.hover.editor.blockchain;
 
     RootBlockChain root = {0};
     if (single) {
@@ -985,7 +985,7 @@ static void code_detach_blocks(bool single) {
     editor.project_modified = true;
     ui.hover.select_input = NULL;
 
-    BlockChain* hover_chain = *ui.hover.editor.blockchain;
+    BlockChain* hover_chain = ui.hover.editor.blockchain;
 
     RootBlockChain root = {0};
     if (single) {
@@ -1034,14 +1034,14 @@ static void code_attach_block(void) {
     Block* hover_block = ui.hover.editor.block;
 
     Block* inserted_block;
-    BlockChain** inserted_blockchain;
+    BlockChain* inserted_blockchain;
 
     if ((hover_block->blockdef->type == BLOCKTYPE_CONTROL || hover_block->blockdef->type == BLOCKTYPE_CONTROLEND) && !ui.hover.editor.block_end) {
         blockchain_insert(hover_block->contents, mouse_chain, NULL);
-        inserted_blockchain = &hover_block->contents;
+        inserted_blockchain = hover_block->contents;
         inserted_block = hover_block->contents->start;
     } else {
-        blockchain_insert(*ui.hover.editor.blockchain, mouse_chain, hover_block);
+        blockchain_insert(ui.hover.editor.blockchain, mouse_chain, hover_block);
         inserted_blockchain = ui.hover.editor.blockchain;
         inserted_block = hover_block->next;
     }
@@ -1061,12 +1061,12 @@ static void code_attach_block(void) {
             iter = iter->next;
         }
 
-        BlockChain* chain = last_controlend->next ? blockchain_detach(*inserted_blockchain, last_controlend->next, (*inserted_blockchain)->end) : blockchain_new();
+        BlockChain* chain = last_controlend->next ? blockchain_detach(inserted_blockchain, last_controlend->next, inserted_blockchain->end) : blockchain_new();
         blockchain_insert(last_controlend->contents, chain, last_controlend->contents->end);
 
-        Block* parent_block = (*inserted_blockchain)->parent;
+        Block* parent_block = inserted_blockchain->parent;
         if (parent_block) {
-            chain = blockchain_detach(*inserted_blockchain, first_controlend, last_controlend);
+            chain = blockchain_detach(inserted_blockchain, first_controlend, last_controlend);
             if (parent_block->blockdef->type == BLOCKTYPE_CONTROL) {
                 blockchain_insert(parent_block->controlend_contents, chain, NULL);
             } else if (parent_block->blockdef->type == BLOCKTYPE_CONTROLEND) {
@@ -1481,7 +1481,7 @@ static bool handle_code_panel_key_press(void) {
         ui.hover.select_input = NULL;
         ui.hover.editor.select_argument = NULL;
         ui.hover.editor.select_block = editor.code[editor.blockchain_select_counter].chain->start;
-        ui.hover.editor.select_blockchain = &editor.code[editor.blockchain_select_counter].chain;
+        ui.hover.editor.select_blockchain = editor.code[editor.blockchain_select_counter].chain;
         editor.camera_pos.x = editor.code[editor.blockchain_select_counter].x - 50;
         editor.camera_pos.y = editor.code[editor.blockchain_select_counter].y - 50;
         actionbar_show(TextFormat(gettext("Jump to chain (%d/%d)"), editor.blockchain_select_counter + 1, vector_size(editor.code)));
