@@ -987,6 +987,62 @@ bool load_root_blockchain(SaveData* save, RootBlockChain* chain) {
     return true;
 }
 
+// This function converts all control blocks from linear representation into the new hierarchical format
+// Before save version 5 all control blocks were stored linearly, with "end" blocks marking the end of control block contents. 
+// With the new ast structure control blocks actually contain the chains inside them and this function converts to this new format
+void convert_old_save_structure(RootBlockChain* code) {
+    scrap_log(LOG_INFO, "Fixing old save");
+    BlockChain** chain_list = vector_create();
+
+    for (size_t i = 0; i < vector_size(code); i++) {
+        BlockChain* iter_chain = code[i].chain;
+        Block* iter = iter_chain->start;
+
+        while (iter) {
+            if (iter->blockdef->type == BLOCKTYPE_CONTROL) {
+                BlockChain* contents = blockchain_detach(iter_chain, iter->next, iter_chain->end);
+                blockchain_insert(iter->contents, contents, iter->contents->end);
+                vector_add(&chain_list, iter_chain);
+                iter_chain = iter->contents;
+                iter = iter_chain->start;
+            } else if (iter->blockdef->type == BLOCKTYPE_CONTROLEND) {
+                if (iter_chain->parent) {
+                    BlockChain* contents = blockchain_detach(iter_chain, iter->next, iter_chain->end);
+                    blockchain_insert(iter->contents, contents, iter->contents->end);
+
+                    BlockChain* block = blockchain_detach(iter_chain, iter, iter);
+                    if (iter_chain->parent->blockdef->type == BLOCKTYPE_CONTROL) {
+                        blockchain_insert(iter_chain->parent->controlend_contents, block, iter_chain->parent->controlend_contents->end);
+                    } else {
+                        BlockChain* controlend_chain = iter_chain->parent->parent.as.chain;
+                        blockchain_insert(controlend_chain, block, controlend_chain->end);
+                    }
+
+                    iter_chain = iter->contents;
+                    iter = iter_chain->start;
+                }
+            } else if (!strcmp(iter->blockdef->id, "end")) {
+                if (iter_chain->parent) {
+                    Block* next = iter->next;
+                    BlockChain* block = blockchain_detach(iter_chain, iter, iter);
+                    blockchain_free(block);
+                    BlockChain* contents = next ? blockchain_detach(iter_chain, next, iter_chain->end) : blockchain_new();
+
+                    iter_chain = chain_list[vector_size(chain_list) - 1];
+                    vector_pop(chain_list);
+
+                    blockchain_insert(iter_chain, contents, iter_chain->end);
+                    iter = next;
+                }
+            } else {
+                iter = iter->next;
+            }
+        }
+    }
+
+    vector_free(chain_list);
+}
+
 RootBlockChain* load_code(const char* file_path, ProjectConfig* out_config) {
     ProjectConfig config;
     project_config_new(&config);
@@ -1011,6 +1067,7 @@ RootBlockChain* load_code(const char* file_path, ProjectConfig* out_config) {
         scrap_log(LOG_ERROR, "[LOAD] Unsupported version %d. Current scrap build expects save versions from %d to %d", ver, SCRAP_MIN_SAVE_VERSION, SCRAP_MAX_SAVE_VERSION);
         goto load_fail;
     }
+    scrap_log(LOG_INFO, "Save version: %d", ver);
 
     unsigned int ident_len;
     char* ident = save_read_array(&save, sizeof(char), &ident_len);
@@ -1062,6 +1119,8 @@ RootBlockChain* load_code(const char* file_path, ProjectConfig* out_config) {
     UnloadFileData(file_data);
     vector_free(save_block_ids);
     vector_free(save_blockdefs);
+
+    if (ver < 5) convert_old_save_structure(code);
     return code;
 
 load_fail:
