@@ -363,7 +363,7 @@ static void draw_argument_input(Argument* arg, char** input, const char* hint, b
     gui_element_end(gui);
 }
 
-static void draw_blockdef(Blockdef* blockdef, bool editing) {
+static void draw_blockdef(Blockdef* blockdef, bool editing, bool in_editor) {
     bool collision = ui.hover.editor.prev_blockdef == blockdef;
     Color color = CONVERT_COLOR(blockdef->color, Color);
     Color block_color = ColorBrightness(color, collision ? 0.3 : 0.0);
@@ -375,6 +375,7 @@ static void draw_blockdef(Blockdef* blockdef, bool editing) {
         gui_set_rect(gui, CONVERT_COLOR(block_color, GuiColor));
         gui_set_custom_data(gui, blockdef);
         gui_on_hover(gui, blockdef_on_hover);
+        if (blockdef->type == BLOCKTYPE_HAT) gui_set_draw_subtype(gui, RECT_NOTCHED);
 
     gui_element_begin(gui);
         gui_set_direction(gui, DIRECTION_HORIZONTAL);
@@ -383,6 +384,7 @@ static void draw_blockdef(Blockdef* blockdef, bool editing) {
         gui_set_min_size(gui, 0, config.ui_size);
         gui_set_padding(gui, BLOCK_OUTLINE_SIZE * 2, BLOCK_OUTLINE_SIZE * 2);
         gui_set_gap(gui, BLOCK_PADDING);
+        if (blockdef->type == BLOCKTYPE_HAT) gui_set_draw_subtype(gui, BORDER_NOTCHED);
 
     for (size_t i = 0; i < vector_size(blockdef->inputs); i++) {
         Input* input = &blockdef->inputs[i];
@@ -398,21 +400,31 @@ static void draw_blockdef(Blockdef* blockdef, bool editing) {
 
         switch (input->type) {
         case INPUT_TEXT_DISPLAY:
-            if (editing) {
+            if (editing && in_editor) {
                 draw_argument_input(NULL, &input->data.text, "", true, true, GUI_BLACK, GUI_WHITE);
             } else {
                 gui_text(gui, &assets.fonts.font_cond_shadow, input->data.text, BLOCK_TEXT_SIZE, GUI_WHITE);
             }
             break;
         case INPUT_IMAGE_DISPLAY:
-            gui_image(gui, input->data.image.image_ptr, BLOCK_IMAGE_SIZE, GUI_WHITE);
+            gui_image(gui, input->data.image.image_ptr, BLOCK_IMAGE_SIZE, CONVERT_COLOR(input->data.image.image_color, GuiColor));
             break;
         case INPUT_ARGUMENT:
-            input->data.arg.blockdef->color = blockdef->color;
-            draw_blockdef(input->data.arg.blockdef, editing);
+            if (in_editor) {
+                input->data.arg.blockdef->color = blockdef->color;
+                draw_blockdef(input->data.arg.blockdef, editing, in_editor);
+            } else {
+                gui_element_begin(gui);
+                    gui_set_fixed(gui, config.ui_size - BLOCK_OUTLINE_SIZE * 4, config.ui_size - BLOCK_OUTLINE_SIZE * 4);
+                    gui_set_rect(gui, CONVERT_COLOR(dropdown_color, GuiColor));
+                gui_element_end(gui);
+            }
             break;
         default:
-            gui_text(gui, &assets.fonts.font_cond_shadow, "NODEF", BLOCK_TEXT_SIZE, GUI_WHITE);
+            gui_element_begin(gui);
+                gui_set_fixed(gui, config.ui_size - BLOCK_OUTLINE_SIZE * 4, config.ui_size - BLOCK_OUTLINE_SIZE * 4);
+                gui_set_rect(gui, CONVERT_COLOR(dropdown_color, GuiColor));
+            gui_element_end(gui);
             break;
         }
 
@@ -641,7 +653,7 @@ static void draw_block(Block* block, bool highlight, bool select, bool can_hover
                 gui_set_custom_data(gui, arg);
                 if (can_hover) gui_on_hover(gui, argument_on_hover);
 
-                draw_blockdef(arg->data.blockdef, ui.hover.editor.edit_blockdef == arg->data.blockdef);
+                draw_blockdef(arg->data.blockdef, ui.hover.editor.edit_blockdef == arg->data.blockdef, true);
 
                 if (editable) {
                     if (ui.hover.editor.edit_blockdef == arg->data.blockdef) {
@@ -1675,12 +1687,7 @@ static void draw_search_list(void) {
                     gui_on_hover(gui, search_on_hover);
                     gui_set_custom_data(gui, editor.search_list[i]);
 
-                    Block dummy_block = {
-                        .blockdef = editor.search_list[i],
-                        .arguments = NULL,
-                        .parent = (BlockParent) {0},
-                    };
-                    draw_block(&dummy_block, ui.hover.editor.prev_blockdef == editor.search_list[i], false, false, false, false, false);
+                    draw_blockdef(editor.search_list[i], false, false);
                 gui_element_end(gui);
             }
 
