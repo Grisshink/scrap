@@ -30,8 +30,6 @@
 
 #include "../external/cfgpath.h"
 
-#define STR(v) #v
-
 #define SHARED_DIR_BUF_LEN 512
 #define LOCALE_DIR_BUF_LEN 768
 
@@ -62,12 +60,15 @@ Blockdef** save_blockdefs = NULL;
 static unsigned int ver = 0;
 
 int save_find_id(const char* id);
-void save_code(const char* file_path, ProjectConfig* config, BlockChain* code);
-BlockChain* load_code(const char* file_path, ProjectConfig* out_config);
+void save_code(const char* file_path, ProjectConfig* config, RootBlockChain* code);
+RootBlockChain* load_code(const char* file_path, ProjectConfig* out_config);
 void save_block(SaveData* save, Block* block);
-bool load_block(SaveData* save, Block* block);
+Block* load_block(SaveData* save);
 void save_blockdef(SaveData* save, Blockdef* blockdef);
 Blockdef* load_blockdef(SaveData* save);
+void save_blockchain(SaveData* save, BlockChain* chain);
+BlockChain* load_blockchain(SaveData* save);
+void collect_blockchain_ids(BlockChain* chain);
 
 const char* language_to_code(Language lang) {
     switch (lang) {
@@ -584,7 +585,7 @@ void save_block_arguments(SaveData* save, Argument* arg) {
         save_add_varint(save, string_id);
         break;
     case ARGUMENT_BLOCK:
-        save_block(save, &arg->data.block);
+        save_block(save, arg->data.block);
         break;
     case ARGUMENT_BLOCKDEF:
         string_id = save_find_id(arg->data.blockdef->id);
@@ -607,15 +608,23 @@ void save_block(SaveData* save, Block* block) {
     save_add_varint(save, string_id);
     save_add_varint(save, arg_count);
     for (int i = 0; i < arg_count; i++) save_block_arguments(save, &block->arguments[i]);
+
+    if (block->blockdef->type == BLOCKTYPE_CONTROL || block->blockdef->type == BLOCKTYPE_CONTROLEND) save_blockchain(save, block->contents);
+    if (block->blockdef->type == BLOCKTYPE_CONTROL) save_blockchain(save, block->controlend_contents);
 }
 
 void save_blockchain(SaveData* save, BlockChain* chain) {
-    int blocks_count = vector_size(chain->blocks);
+    int blocks_count = 0;
+    for (Block* iter = chain->start; iter; iter = iter->next) blocks_count++;
 
+    save_add_varint(save, blocks_count);
+    for (Block* iter = chain->start; iter; iter = iter->next) save_block(save, iter);
+}
+
+void save_root_blockchain(SaveData* save, RootBlockChain* chain) {
     save_add(save, chain->x);
     save_add(save, chain->y);
-    save_add_varint(save, blocks_count);
-    for (int i = 0; i < blocks_count; i++) save_block(save, &chain->blocks[i]);
+    save_blockchain(save, chain->chain);
 }
 
 void rename_blockdef(Blockdef* blockdef, int id) {
@@ -648,7 +657,7 @@ void block_collect_ids(Block* block) {
             save_add_id(block->arguments[i].data.text);
             break;
         case ARGUMENT_BLOCK:
-            block_collect_ids(&block->arguments[i].data.block);
+            block_collect_ids(block->arguments[i].data.block);
             break;
         case ARGUMENT_BLOCKDEF:
             save_add_id(block->arguments[i].data.blockdef->id);
@@ -658,21 +667,21 @@ void block_collect_ids(Block* block) {
             break;
         }
     }
+
+    if (block->blockdef->type == BLOCKTYPE_CONTROL || block->blockdef->type == BLOCKTYPE_CONTROLEND) collect_blockchain_ids(block->contents);
+    if (block->blockdef->type == BLOCKTYPE_CONTROL) collect_blockchain_ids(block->controlend_contents);
 }
 
-void collect_all_code_ids(BlockChain* code) {
-    for (size_t i = 0; i < vector_size(code); i++) {
-        BlockChain* chain = &code[i];
-        for (size_t j = 0; j < vector_size(chain->blocks); j++) {
-            block_collect_ids(&chain->blocks[j]);
-        }
+void collect_blockchain_ids(BlockChain* chain) {
+    for (Block* iter = chain->start; iter; iter = iter->next) {
+        block_collect_ids(iter);
     }
 }
 
-void save_code(const char* file_path, ProjectConfig* config, BlockChain* code) {
+void save_code(const char* file_path, ProjectConfig* config, RootBlockChain* code) {
     (void) config;
     SaveData save = {0};
-    ver = SCRAP_SAVE_VERSION;
+    ver = SCRAP_MAX_SAVE_VERSION;
     int chains_count = vector_size(code);
 
     Blockdef** blockdefs = vector_create();
@@ -680,7 +689,7 @@ void save_code(const char* file_path, ProjectConfig* config, BlockChain* code) {
 
     int id = 0;
     for (int i = 0; i < chains_count; i++) {
-        Block* block = &code[i].blocks[0];
+        Block* block = code[i].chain->start;
         for (size_t j = 0; j < vector_size(block->arguments); j++) {
             if (block->arguments[j].type != ARGUMENT_BLOCKDEF) continue;
             rename_blockdef(block->arguments[j].data.blockdef, id++);
@@ -688,7 +697,9 @@ void save_code(const char* file_path, ProjectConfig* config, BlockChain* code) {
         }
     }
 
-    collect_all_code_ids(code);
+    for (size_t i = 0; i < vector_size(code); i++) {
+        collect_blockchain_ids(code[i].chain);
+    }
 
     save_add_varint(&save, ver);
     save_add_array(&save, scrap_ident, ARRLEN(scrap_ident), sizeof(scrap_ident[0]));
@@ -702,7 +713,7 @@ void save_code(const char* file_path, ProjectConfig* config, BlockChain* code) {
     for (size_t i = 0; i < vector_size(blockdefs); i++) save_blockdef(&save, blockdefs[i]);
 
     save_add_varint(&save, chains_count);
-    for (int i = 0; i < chains_count; i++) save_blockchain(&save, &code[i]);
+    for (int i = 0; i < chains_count; i++) save_root_blockchain(&save, &code[i]);
 
     SaveFileData(file_path, save.ptr, save.size);
     scrap_log(LOG_INFO, "%zu bytes written into %s", save.size, file_path);
@@ -814,7 +825,6 @@ bool load_block_argument(SaveData* save, Argument* arg) {
     arg->input_id = input_id;
 
     unsigned int text_id;
-    Block block;
     unsigned int blockdef_id;
 
     switch (arg_type) {
@@ -826,8 +836,12 @@ bool load_block_argument(SaveData* save, Argument* arg) {
         for (char* str = (char*)save_block_ids[text_id]; *str; str++) vector_add(&arg->data.text, *str);
         vector_add(&arg->data.text, 0);
         break;
-    case ARGUMENT_BLOCK:
-        if (!load_block(save, &block)) return false;
+    case ARGUMENT_BLOCK: ;
+        Block* block = load_block(save);
+        if (!block) return false;
+
+        block->parent.type = BLOCK_PARENT_ARGUMENT;
+        block->parent.as.arg = arg;
 
         arg->data.block = block;
         break;
@@ -851,9 +865,9 @@ bool load_block_argument(SaveData* save, Argument* arg) {
     return true;
 }
 
-bool load_block(SaveData* save, Block* block) {
+Block* load_block(SaveData* save) {
     unsigned int block_id;
-    if (!save_read_varint(save, &block_id)) return false;
+    if (!save_read_varint(save, &block_id)) return NULL;
 
     bool unknown_blockdef = false;
     Blockdef* blockdef = NULL;
@@ -872,27 +886,83 @@ bool load_block(SaveData* save, Block* block) {
     unsigned int arg_count;
     if (!save_read_varint(save, &arg_count)) return false;
 
+    Block* block = malloc(sizeof(Block));
     block->blockdef = blockdef;
     block->arguments = vector_create();
-    block->parent = NULL;
+    block->contents = blockchain_new();
+    block->contents->parent = block;
+    block->controlend_contents = blockchain_new();
+    block->controlend_contents->parent = block;
+    block->prev = NULL;
+    block->next = NULL;
+    block->parent = (BlockParent) {0};
     blockdef->ref_count++;
 
+    vector_reserve(&block->arguments, arg_count); // This prevents arguments from moving in memory
     for (unsigned int i = 0; i < arg_count; i++) {
-        Argument arg;
-        if (!load_block_argument(save, &arg)) {
+        Argument* arg = vector_add_dst(&block->arguments);
+        if (!load_block_argument(save, arg)) {
             block_free(block);
-            return false;
+            return NULL;
         }
-        vector_add(&block->arguments, arg);
+        arg->block = block;
         if (unknown_blockdef) {
             blockdef_add_argument(blockdef, "", "", BLOCKCONSTR_UNLIMITED);
         }
     }
 
-    return true;
+    if (ver >= 5) {
+        if (blockdef->type == BLOCKTYPE_CONTROL || blockdef->type == BLOCKTYPE_CONTROLEND) {
+            BlockChain* contents = load_blockchain(save);
+            if (!contents) return NULL;
+            blockchain_free(block->contents);
+            block->contents = contents;
+            block->contents->parent = block;
+        }
+
+        if (blockdef->type == BLOCKTYPE_CONTROL) {
+            BlockChain* controlend_contents = load_blockchain(save);
+            if (!controlend_contents) return NULL;
+            blockchain_free(block->controlend_contents);
+            block->controlend_contents = controlend_contents;
+            block->controlend_contents->parent = block;
+        }
+    }
+
+    return block;
 }
 
-bool load_blockchain(SaveData* save, BlockChain* chain) {
+BlockChain* load_blockchain(SaveData* save) {
+    unsigned int blocks_count;
+    if (!save_read_varint(save, &blocks_count)) return NULL;
+
+    BlockChain* chain = blockchain_new();
+    if (blocks_count == 0) return chain;
+
+    for (unsigned int i = 0; i < blocks_count; i++) {
+        Block* block = load_block(save);
+        if (!block) {
+            blockchain_free(chain);
+            return NULL;
+        }
+
+        block->prev = chain->end;
+        if (chain->end) chain->end->next = block;
+        chain->end = block;
+        if (!chain->start) chain->start = chain->end;
+    }
+
+    BlockParent parent;
+    parent.type = BLOCK_PARENT_BLOCKCHAIN;
+    parent.as.chain = chain;
+
+    chain->start->parent = parent;
+    chain->end->parent = parent;
+
+    return chain;
+}
+
+bool load_root_blockchain(SaveData* save, RootBlockChain* chain) {
     int pos_x, pos_y;
     if (ver == 1) {
         struct { float x; float y; }* pos = save_read_item(save, sizeof(struct { float x; float y; }));
@@ -909,32 +979,20 @@ bool load_blockchain(SaveData* save, BlockChain* chain) {
         pos_y = *pos;
     }
 
-    unsigned int blocks_count;
-    if (!save_read_varint(save, &blocks_count)) return false;
-
-    *chain = blockchain_new();
     chain->x = pos_x;
     chain->y = pos_y;
-
-    for (unsigned int i = 0; i < blocks_count; i++) {
-        Block block;
-        if (!load_block(save, &block)) {
-            blockchain_free(chain);
-            return false;
-        }
-        blockchain_add_block(chain, block);
-        block_update_all_links(&chain->blocks[vector_size(chain->blocks) - 1]);
-    }
+    chain->chain = load_blockchain(save);
+    if (!chain->chain) return false;
 
     return true;
 }
 
-BlockChain* load_code(const char* file_path, ProjectConfig* out_config) {
+RootBlockChain* load_code(const char* file_path, ProjectConfig* out_config) {
     ProjectConfig config;
     project_config_new(&config);
     project_config_set_default(&config);
 
-    BlockChain* code = vector_create();
+    RootBlockChain* code = vector_create();
     save_blockdefs = vector_create();
     save_block_ids = vector_create();
 
@@ -949,8 +1007,8 @@ BlockChain* load_code(const char* file_path, ProjectConfig* out_config) {
     save.capacity = save_size;
 
     if (!save_read_varint(&save, &ver)) goto load_fail;
-    if (ver < 1 || ver > SCRAP_SAVE_VERSION) {
-        scrap_log(LOG_ERROR, "[LOAD] Unsupported version %d. Current scrap build expects save versions from 1 to " STR(SCRAP_SAVE_VERSION), ver);
+    if (ver < SCRAP_MIN_SAVE_VERSION || ver > SCRAP_MAX_SAVE_VERSION) {
+        scrap_log(LOG_ERROR, "[LOAD] Unsupported version %d. Current scrap build expects save versions from %d to %d", ver, SCRAP_MIN_SAVE_VERSION, SCRAP_MAX_SAVE_VERSION);
         goto load_fail;
     }
 
@@ -988,9 +1046,8 @@ BlockChain* load_code(const char* file_path, ProjectConfig* out_config) {
     if (!save_read_varint(&save, &code_len)) goto load_fail;
 
     for (unsigned int i = 0; i < code_len; i++) {
-        BlockChain chain;
-        if (!load_blockchain(&save, &chain)) goto load_fail;
-        vector_add(&code, chain);
+        RootBlockChain* chain = vector_add_dst(&code);
+        if (!load_root_blockchain(&save, chain)) goto load_fail;
     }
 
     unsigned int len;
@@ -1009,7 +1066,7 @@ BlockChain* load_code(const char* file_path, ProjectConfig* out_config) {
 
 load_fail:
     if (file_data) UnloadFileData(file_data);
-    for (size_t i = 0; i < vector_size(code); i++) blockchain_free(&code[i]);
+    for (size_t i = 0; i < vector_size(code); i++) blockchain_free(code[i].chain);
     project_config_free(&config);
     vector_free(code);
     vector_free(save_block_ids);

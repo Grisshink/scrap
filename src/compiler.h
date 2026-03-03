@@ -56,7 +56,7 @@ struct CompilerValue {
 };
 
 struct Compiler {
-    BlockChain* code;
+    RootBlockChain* code;
 
     IrBytecode bytecode;
 
@@ -65,6 +65,7 @@ struct Compiler {
 
     char current_error[MAX_ERROR_LEN];
     Block* current_error_block;
+    BlockChain** current_error_blockchain;
 
     Thread* thread;
 };
@@ -90,10 +91,10 @@ Compiler compiler_new(Thread* thread);
 bool compiler_run(void* e);
 void compiler_cleanup(void* e);
 void compiler_free(Compiler* compiler);
-CompilerValue compiler_evaluate_chain(Compiler* compiler, BlockChain* chain, size_t start_block, size_t end_block);
+CompilerValue compiler_evaluate_chain(Compiler* compiler, Block* chain);
 CompilerValue compiler_evaluate_block(Compiler* compiler, Block* block);
 CompilerValue compiler_evaluate_argument(Compiler* compiler, Argument* arg);
 void compiler_set_skip_block(Compiler* compiler);
-void compiler_set_error(Compiler* compiler, Block* block, const char* fmt, ...);
+void compiler_set_error(Compiler* compiler, const char* fmt, ...);
 
 #endif // INTERPRETER_H

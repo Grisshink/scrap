@@ -24,22 +24,11 @@
 #include <assert.h>
 #include <libintl.h>
 
-static BlockChain* find_blockchain(Block* block) {
-    if (!block) return NULL;
-    while (block->parent) block = block->parent;
-    for (size_t i = 0; i < vector_size(editor.code); i++) {
-        if (block >= editor.code[i].blocks && block < editor.code[i].blocks + vector_size(editor.code[i].blocks)) {
-            return &editor.code[i];
-        }
-    }
-    return NULL;
-}
-
-Block block_new_ms(Blockdef* blockdef) {
-    Block block = block_new(blockdef);
-    for (size_t i = 0; i < vector_size(block.arguments); i++) {
-        if (block.arguments[i].type != ARGUMENT_BLOCKDEF) continue;
-        block.arguments[i].data.blockdef->func = block_exec_custom;
+Block* block_new_ms(Blockdef* blockdef) {
+    Block* block = block_new(blockdef);
+    for (size_t i = 0; i < vector_size(block->arguments); i++) {
+        if (block->arguments[i].type != ARGUMENT_BLOCKDEF) continue;
+        block->arguments[i].data.blockdef->func = block_exec_custom;
     }
     return block;
 }
@@ -91,7 +80,7 @@ void block_category_unregister(BlockCategory* category) {
     for (size_t i = 0; i < vector_size(category->items); i++) {
         switch (category->items[i].type) {
         case CATEGORY_ITEM_CHAIN:
-            blockchain_free(&category->items[i].data.chain);
+            blockchain_free(category->items[i].data.chain);
             break;
         case CATEGORY_ITEM_LABEL:
             break;
@@ -109,10 +98,11 @@ void block_category_unregister(BlockCategory* category) {
 }
 
 void block_category_add_blockdef(BlockCategory* category, Blockdef* blockdef) {
-    BlockChain chain = blockchain_new();
-    blockchain_add_block(&chain, block_new_ms(blockdef));
-    if (blockdef->type == BLOCKTYPE_CONTROL && vm.end_blockdef != (size_t)-1) {
-        blockchain_add_block(&chain, block_new(vm.blockdefs[vm.end_blockdef])); }
+    BlockChain* chain = blockchain_new();
+    chain->start = block_new_ms(blockdef);
+    chain->end = chain->start;
+    chain->start->parent.type = BLOCK_PARENT_BLOCKCHAIN;
+    chain->start->parent.as.chain = chain;
 
     BlockCategoryItem* item = vector_add_dst(&category->items);
     item->type = CATEGORY_ITEM_CHAIN;
@@ -242,7 +232,7 @@ void vm_handle_running_thread(void) {
             vector_add(&vm.compile_error[vector_size(vm.compile_error) - 1], 0);
         }
         vm.compile_error_block = vm.compiler.current_error_block;
-        vm.compile_error_blockchain = find_blockchain(vm.compile_error_block);
+        vm.compile_error_blockchain = vm.compiler.current_error_blockchain;
         compiler_free(&vm.compiler);
         ui.render_surface_needs_redraw = true;
     } else if (thread_is_running(&vm.thread)) {

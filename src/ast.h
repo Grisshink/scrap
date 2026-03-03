@@ -24,12 +24,16 @@
 #include <stddef.h>
 #include <stdbool.h>
 
+#define CHAIN_EMPTY(_chain) (!(_chain)->start && !(_chain)->end)
+
 typedef struct BlockdefColor BlockdefColor;
 typedef struct BlockdefImage BlockdefImage;
 
 typedef enum ArgumentType ArgumentType;
 typedef union ArgumentData ArgumentData;
 typedef struct Argument Argument;
+typedef enum BlockParentType BlockParentType;
+typedef struct BlockParent BlockParent;
 typedef struct Block Block;
 
 typedef enum InputArgumentConstraint InputArgumentConstraint;
@@ -44,6 +48,7 @@ typedef enum BlockdefType BlockdefType;
 typedef struct Blockdef Blockdef;
 
 typedef struct BlockChain BlockChain;
+typedef struct RootBlockChain RootBlockChain;
 
 typedef char** (*ListAccessor)(Block* block, size_t* list_len);
 
@@ -131,16 +136,36 @@ struct Blockdef {
     void* func;
 };
 
+enum BlockParentType {
+    BLOCK_PARENT_NONE = 0, // No parent
+    BLOCK_PARENT_ARGUMENT,
+    BLOCK_PARENT_BLOCKCHAIN,
+    BLOCK_PARENT_BLOCK,
+};
+
+struct BlockParent {
+    BlockParentType type;
+    union {
+        Argument* arg;
+        BlockChain* chain;
+        Block* block;
+    } as;
+};
+
 struct Block {
     Blockdef* blockdef;
     Argument* arguments;
-    Block* parent;
+    BlockChain* contents;
+    BlockChain* controlend_contents;
+    BlockParent parent;
+    Block* prev;
+    Block* next;
 };
 
 union ArgumentData {
     char* text;
     BlockdefColor color;
-    Block block;
+    Block* block;
     Blockdef* blockdef;
 };
 
@@ -153,15 +178,22 @@ enum ArgumentType {
 };
 
 struct Argument {
+    Block* block;
     int input_id;
     ArgumentType type;
     ArgumentData data;
 };
 
 struct BlockChain {
+    Block* parent;
+    Block* start;
+    Block* end;
+};
+
+struct RootBlockChain {
     int x, y;
     int width, height;
-    Block* blocks;
+    BlockChain* chain;
 };
 
 Blockdef* blockdef_new(const char* id, BlockdefType type, BlockdefColor color, void* func);
@@ -176,25 +208,17 @@ void blockdef_delete_input(Blockdef* blockdef, size_t input);
 void blockdef_set_id(Blockdef* blockdef, const char* new_id);
 void blockdef_free(Blockdef* blockdef);
 
-BlockChain blockchain_new(void);
-BlockChain blockchain_copy(BlockChain* chain, size_t ind);
-BlockChain blockchain_copy_single(BlockChain* chain, size_t pos);
-void blockchain_add_block(BlockChain* chain, Block block);
-void blockchain_clear_blocks(BlockChain* chain);
-void blockchain_insert(BlockChain* dst, BlockChain* src, size_t pos);
-void blockchain_update_parent_links(BlockChain* chain);
-// Splits off blockchain src in two at specified pos, placing lower half into blockchain dst
-void blockchain_detach(BlockChain* dst, BlockChain* src, size_t pos);
-void blockchain_detach_single(BlockChain* dst, BlockChain* src, size_t pos);
+BlockChain* blockchain_new(void);
+BlockChain* blockchain_copy(BlockChain* chain, Block* pos);
+void blockchain_insert(BlockChain* dst, BlockChain* src, Block* pos);
+BlockChain* blockchain_detach(BlockChain* chain, Block* start, Block* end);
 void blockchain_free(BlockChain* chain);
 
-Block block_new(Blockdef* blockdef);
-Block block_copy(Block* block, Block* parent);
-void block_update_parent_links(Block* block);
-void block_update_all_links(Block* block);
+Block* block_new(Blockdef* blockdef);
+Block* block_copy(Block* block, BlockParent parent);
 void block_free(Block* block);
 
-void argument_set_block(Argument* block_arg, Block block);
+void argument_set_block(Argument* block_arg, Block* block);
 void argument_set_const_string(Argument* block_arg, char* text);
 void argument_set_text(Argument* block_arg, char* text);
 void argument_set_color(Argument* block_arg, BlockdefColor color);

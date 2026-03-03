@@ -29,6 +29,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <libintl.h>
+#include <wchar.h>
 
 Compiler compiler_new(Thread* thread) {
     Compiler compiler = (Compiler) {
@@ -50,7 +51,7 @@ bool print_str(IrExec* exec) {
     for (size_t i = 0; i < list->size; i++) {
         IrValue c = list->items[i];
         switch (c.type) {
-        case IR_TYPE_INT: printf("%lc", c.as.int_val); break;
+        case IR_TYPE_INT: printf("%lc", (wint_t)c.as.int_val); break;
         case IR_TYPE_BYTE: printf("%c", c.as.byte_val); break;
         default: printf("?"); break;
         }
@@ -74,8 +75,8 @@ bool compiler_run(void* e) {
     compiler->exec_running = false;
 
     for (size_t i = 0; i < vector_size(compiler->code); i++) {
-        assert(vector_size(compiler->code[i].blocks) > 0);
-        Block* block = &compiler->code[i].blocks[0];
+        assert(!CHAIN_EMPTY(compiler->code[i].chain));
+        Block* block = compiler->code[i].chain->start;
         if (block->blockdef->type != BLOCKTYPE_HAT) continue;
 
         CompilerValue value = compiler_evaluate_block(compiler, block);
@@ -86,7 +87,7 @@ bool compiler_run(void* e) {
 
     // compiler->exec = exec_new(1024 * 1024); // 1 MB
     // if (compiler->exec.last_error[0] != 0) {
-    //     compiler_set_error(compiler, NULL, "Exec create error: %s", compiler->exec.last_error);
+    //     compiler_set_error(compiler, "Exec create error: %s", compiler->exec.last_error);
     //     exec_free(&compiler->exec);
     //     return false;
     // }
@@ -95,7 +96,7 @@ bool compiler_run(void* e) {
     // compiler->exec_running = true;
 
     // if (!exec_run(&compiler->exec, "main", "entry")) {
-    //     compiler_set_error(compiler, NULL, "Runtime error: %s", compiler->exec.last_error);
+    //     compiler_set_error(compiler, "Runtime error: %s", compiler->exec.last_error);
     //     return false;
     // }
 
@@ -111,8 +112,7 @@ void compiler_cleanup(void* e) {
     }
 }
 
-void compiler_set_error(Compiler* compiler, Block* block, const char* fmt, ...) {
-    compiler->current_error_block = block;
+void compiler_set_error(Compiler* compiler, const char* fmt, ...) {
     va_list va;
     va_start(va, fmt);
     vsnprintf(compiler->current_error, MAX_ERROR_LEN, fmt, va);
@@ -126,9 +126,9 @@ CompilerValue compiler_evaluate_argument(Compiler* compiler, Argument* arg) {
     case ARGUMENT_CONST_STRING:
         return DATA_LITERAL(arg->data.text);
     case ARGUMENT_BLOCK:
-        return compiler_evaluate_block(compiler, &arg->data.block);
+        return compiler_evaluate_block(compiler, arg->data.block);
     case ARGUMENT_BLOCKDEF:
-        compiler_set_error(compiler, NULL, gettext("Tried to evaluate blockdef"));
+        compiler_set_error(compiler, gettext("Tried to evaluate blockdef"));
         return DATA_UNKNOWN;
     case ARGUMENT_COLOR:
         return DATA_COLOR(CONVERT_COLOR(arg->data.color, StdColor));
@@ -138,11 +138,11 @@ CompilerValue compiler_evaluate_argument(Compiler* compiler, Argument* arg) {
 
 CompilerValue compiler_evaluate_block(Compiler* compiler, Block* block) {
     if (!block->blockdef) {
-        compiler_set_error(compiler, block, gettext("Tried to execute block without definition"));
+        compiler_set_error(compiler, gettext("Tried to execute block without definition"));
         return DATA_UNKNOWN;
     }
     if (!block->blockdef->func) {
-        compiler_set_error(compiler, block, gettext("Tried to execute block \"%s\" without implementation"), block->blockdef->id);
+        compiler_set_error(compiler, gettext("Tried to execute block \"%s\" without implementation"), block->blockdef->id);
         return DATA_UNKNOWN;
     }
 
@@ -155,16 +155,16 @@ CompilerValue compiler_evaluate_block(Compiler* compiler, Block* block) {
     return value;
 }
 
-CompilerValue compiler_evaluate_chain(Compiler* compiler, BlockChain* chain, size_t start_block, size_t end_block) {
-    for (size_t i = start_block; i < end_block; i++) {
+CompilerValue compiler_evaluate_chain(Compiler* compiler, Block* chain) {
+    for (Block* iter = chain; iter; iter = iter->next) {
         thread_handle_stopping_state(compiler->thread);
-        CompilerValue value = compiler_evaluate_block(compiler, &chain->blocks[i]);
+        CompilerValue value = compiler_evaluate_block(compiler, iter);
         if (value.type == DATA_TYPE_UNKNOWN) {
             scrap_log(LOG_ERROR, "[COMPILER] From chain: %p", chain);
             return value;
         }
         if (value.type != DATA_TYPE_CHUNK) {
-            compiler_set_error(compiler, &chain->blocks[i], gettext("Top level blocks should return type %s, but got %s instead"), type_to_str(DATA_TYPE_CHUNK), type_to_str(value.type));
+            compiler_set_error(compiler, gettext("Top level blocks should return type %s, but got %s instead"), type_to_str(DATA_TYPE_CHUNK), type_to_str(value.type));
             return DATA_UNKNOWN;
         }
     }

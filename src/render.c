@@ -56,9 +56,10 @@ typedef enum {
 } ImageType;
 
 static void draw_code(void);
-static GuiElement* draw_blockchain(BlockChain* chain, bool ghost, bool show_previews, bool editable_arguments);
+static GuiElement* draw_blockchain(BlockChain** chain, bool ghost, bool show_previews, bool editable_arguments);
 static void argument_on_hover(GuiElement* el);
 static void argument_on_render(GuiElement* el);
+static void draw_block_preview(void);
 
 bool rl_vec_equal(Color lhs, Color rhs) {
     return lhs.r == rhs.r && lhs.g == rhs.g && lhs.b == rhs.b && lhs.a == rhs.a;
@@ -437,7 +438,16 @@ static void block_on_hover(GuiElement* el) {
     if (gui_window_is_shown()) return;
     ui.hover.editor.block = el->custom_data;
     ui.hover.editor.blockchain = ui.hover.editor.prev_blockchain;
-    if (!ui.hover.editor.block->parent) ui.hover.editor.parent_argument = NULL;
+    ui.hover.editor.block_end = false;
+    if (ui.hover.editor.block->parent.type != BLOCK_PARENT_ARGUMENT) ui.hover.editor.parent_argument = NULL;
+}
+
+static void block_end_on_hover(GuiElement* el) {
+    if (ui.hover.button.handler) return;
+    if (ui.hover.is_panel_edit_mode) return;
+    if (gui_window_is_shown()) return;
+    block_on_hover(el);
+    ui.hover.editor.block_end = true;
 }
 
 static void argument_on_render(GuiElement* el) {
@@ -469,7 +479,7 @@ static void argument_on_hover(GuiElement* el) {
     el->data.border_width = BLOCK_OUTLINE_SIZE;
 }
 
-static void draw_block(Block* block, bool highlight, bool can_hover, bool ghost, bool editable) {
+static void draw_block(Block* block, bool highlight, bool select, bool can_hover, bool ghost, bool editable, bool show_previews) {
     bool collision = ui.hover.editor.prev_block == block || highlight;
     Color color = CONVERT_COLOR(block->blockdef->color, Color);
     if (!block->blockdef->func) color = (Color) UNIMPLEMENTED_BLOCK_COLOR;
@@ -482,13 +492,14 @@ static void draw_block(Block* block, bool highlight, bool can_hover, bool ghost,
     Color block_color = collision ? ColorBrightness(color, 0.3) : color;
     Color dropdown_color = collision ? color : ColorBrightness(color, -0.3);
     Color outline_color;
-    if (ui.hover.editor.select_block == block) {
+    select = ui.hover.editor.select_block == block || select;
+    if (select) {
         outline_color = ColorBrightness(color, 0.7);
     } else {
         outline_color = ColorBrightness(color, collision ? 0.5 : -0.2);
     }
 
-    gui_element_begin(gui);
+    GuiElement* block_element = gui_element_begin(gui);
         gui_set_direction(gui, DIRECTION_HORIZONTAL);
         gui_set_rect(gui, CONVERT_COLOR(block_color, GuiColor));
         gui_set_custom_data(gui, block);
@@ -568,8 +579,13 @@ static void draw_block(Block* block, bool highlight, bool can_hover, bool ghost,
                 gui_element_begin(gui);
                     if (can_hover) gui_on_hover(gui, block_argument_on_hover);
                     gui_set_custom_data(gui, arg);
+                    if (arg->data.block->blockdef->type == BLOCKTYPE_CONTROL) gui_set_rect(gui, CONVERT_COLOR(dropdown_color, GuiColor));
 
-                    draw_block(&arg->data.block, highlight, can_hover, ghost, editable);
+                    if (arg->data.block->parent.as.arg != arg && editor.show_debug) {
+                        gui_text(gui, &assets.fonts.font_cond_shadow, "Detached parent", BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0x00, 0x00, 0xff });
+                    }
+
+                    draw_block(arg->data.block, highlight, false, can_hover, ghost, editable, show_previews);
                 gui_element_end(gui);
                 break;
             default:
@@ -716,8 +732,13 @@ static void draw_block(Block* block, bool highlight, bool can_hover, bool ghost,
                 gui_element_begin(gui);
                     if (can_hover) gui_on_hover(gui, block_argument_on_hover);
                     gui_set_custom_data(gui, arg);
+                    if (arg->data.block->blockdef->type == BLOCKTYPE_CONTROL) gui_set_rect(gui, CONVERT_COLOR(dropdown_color, GuiColor));
 
-                    draw_block(&arg->data.block, highlight, can_hover, ghost, editable);
+                    if (arg->data.block->parent.as.arg != arg && editor.show_debug) {
+                        gui_text(gui, &assets.fonts.font_cond_shadow, "Detached parent", BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0x00, 0x00, 0xff });
+                    }
+
+                    draw_block(arg->data.block, highlight, false, can_hover, ghost, editable, show_previews);
                 gui_element_end(gui);
                 break;
             default:
@@ -735,6 +756,72 @@ static void draw_block(Block* block, bool highlight, bool can_hover, bool ghost,
 
     gui_element_end(gui);
     gui_element_end(gui);
+
+    if (block->blockdef->type == BLOCKTYPE_CONTROL || block->blockdef->type == BLOCKTYPE_CONTROLEND) {
+        gui_element_begin(gui);
+            gui_set_direction(gui, DIRECTION_HORIZONTAL);
+
+            gui_element_begin(gui);
+                gui_set_grow(gui, DIRECTION_VERTICAL);
+                gui_set_min_size(gui, BLOCK_CONTROL_INDENT, config.ui_size / 2);
+                gui_set_rect(gui, CONVERT_COLOR(block_color, GuiColor));
+                gui_on_hover(gui, block_on_hover);
+                gui_set_custom_data(gui, block);
+
+                gui_element_begin(gui);
+                    gui_set_grow(gui, DIRECTION_VERTICAL);
+                    gui_set_grow(gui, DIRECTION_HORIZONTAL);
+                    gui_set_border(gui, CONVERT_COLOR(outline_color, GuiColor), BLOCK_OUTLINE_SIZE);
+                    gui_set_draw_subtype(gui, BORDER_CONTROL_BODY);
+                gui_element_end(gui);
+            gui_element_end(gui);
+
+            gui_element_begin(gui);
+                gui_set_direction(gui, DIRECTION_VERTICAL);
+
+                if (ui.hover.editor.prev_block == block && !ui.hover.editor.block_end && show_previews) {
+                    draw_block_preview();
+                }
+
+                if (editor.show_debug && block->contents->parent != block) {
+                    gui_text(gui, &assets.fonts.font_cond_shadow, "Detached parent", BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0x00, 0x00, 0xff });
+                }
+                draw_blockchain(&block->contents, ghost, true, editable);
+            gui_element_end(gui);
+        gui_element_end(gui);
+
+        if (block->blockdef->type == BLOCKTYPE_CONTROL) {
+            if (editor.show_debug && block->controlend_contents->parent != block) {
+                gui_text(gui, &assets.fonts.font_cond_shadow, "Detached parent", BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0x00, 0x00, 0xff });
+            }
+            draw_blockchain(&block->controlend_contents, ghost, true, editable);
+        }
+
+        if (block->blockdef->type == BLOCKTYPE_CONTROL) {
+            gui_element_begin(gui);
+                gui_set_min_size(gui, block_element->w, config.ui_size);
+                gui_set_rect(gui, CONVERT_COLOR(block_color, GuiColor));
+                gui_on_hover(gui, block_end_on_hover);
+                if (ui.hover.editor.select_block == block) gui_on_render(gui, block_on_render);
+                gui_set_custom_data(gui, block);
+
+                gui_element_begin(gui);
+                    gui_set_grow(gui, DIRECTION_VERTICAL);
+                    gui_set_grow(gui, DIRECTION_HORIZONTAL);
+                    gui_set_border(gui, CONVERT_COLOR(outline_color, GuiColor), BLOCK_OUTLINE_SIZE);
+                    gui_set_draw_subtype(gui, BORDER_END);
+                gui_element_end(gui);
+            gui_element_end(gui);
+        }
+
+        if (ui.hover.editor.prev_block == block && ui.hover.editor.block_end && show_previews && block->parent.type != BLOCK_PARENT_ARGUMENT) {
+            draw_block_preview();
+        }
+    } else {
+        if (ui.hover.editor.prev_block == block && show_previews && block->parent.type != BLOCK_PARENT_ARGUMENT) {
+            draw_block_preview();
+        }
+    }
 }
 
 static void tab_button_add_on_hover(GuiElement* el) {
@@ -903,136 +990,46 @@ static void blockchain_on_hover(GuiElement* el) {
 }
 
 static void draw_block_preview(void) {
-    if (vector_size(editor.mouse_blockchains) != 1) return;
+    if (vector_size(editor.mouse_blockchains) == 0) return;
     if (ui.hover.editor.prev_argument != NULL) return;
-    if (editor.mouse_blockchains[0].blocks[0].blockdef->type == BLOCKTYPE_HAT) return;
+    if (editor.mouse_blockchains[0].chain->start->blockdef->type == BLOCKTYPE_HAT) return;
 
-    draw_blockchain(&editor.mouse_blockchains[0], true, false, false);
+    draw_blockchain(&editor.mouse_blockchains[0].chain, true, false, false);
 }
 
-static GuiElement* draw_blockchain(BlockChain* chain, bool ghost, bool show_previews, bool editable_arguments) {
-    int layer = 0;
+static GuiElement* draw_blockchain(BlockChain** chain, bool ghost, bool show_previews, bool editable_arguments) {
     GuiElement* el = gui_element_begin(gui);
         gui_set_direction(gui, DIRECTION_VERTICAL);
         gui_on_hover(gui, blockchain_on_hover);
         gui_set_custom_data(gui, chain);
 
-    for (size_t i = 0; i < vector_size(chain->blocks); i++) {
-        Blockdef* blockdef = chain->blocks[i].blockdef;
+        if (editor.show_debug) {
+            BlockChain* ch = *chain;
 
-        if (blockdef->type == BLOCKTYPE_END) {
-            gui_element_end(gui);
-            gui_element_end(gui);
-
-            GuiElement* el = gui_get_element(gui);
-
-            Block* block = el->custom_data;
-
-            bool collision = ui.hover.editor.prev_block == &chain->blocks[i];
-            Color color = CONVERT_COLOR(block->blockdef->color, Color);
-            if (ghost) color.a = BLOCK_GHOST_OPACITY;
-            Color block_color = ColorBrightness(color, collision ? 0.3 : 0.0);
-            Color outline_color;
-            if (ui.hover.editor.select_block == &chain->blocks[i]) {
-                outline_color = ColorBrightness(color, 0.7);
-            } else {
-                outline_color = ColorBrightness(color, collision ? 0.5 : -0.2);
+            if (CHAIN_EMPTY(ch) && !ch->parent) {
+                gui_text(gui, &assets.fonts.font_cond_shadow, "Empty chain", BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0x00, 0x00, 0xff });
             }
 
-            gui_element_begin(gui);
-                gui_set_min_size(gui, editor.blockchain_render_layer_widths[vector_size(editor.blockchain_render_layer_widths) - 1], config.ui_size);
-                gui_set_rect(gui, CONVERT_COLOR(block_color, GuiColor));
-                gui_on_hover(gui, block_on_hover);
-                if (ui.hover.editor.select_block == &chain->blocks[i]) gui_on_render(gui, block_on_render);
-                gui_set_custom_data(gui, &chain->blocks[i]);
-
-                gui_element_begin(gui);
-                    gui_set_grow(gui, DIRECTION_VERTICAL);
-                    gui_set_grow(gui, DIRECTION_HORIZONTAL);
-                    gui_set_border(gui, CONVERT_COLOR(outline_color, GuiColor), BLOCK_OUTLINE_SIZE);
-                    gui_set_draw_subtype(gui, BORDER_END);
-                gui_element_end(gui);
-            gui_element_end(gui);
-
-            vector_pop(editor.blockchain_render_layer_widths);
-            layer--;
-            gui_element_end(gui);
-        } else if (blockdef->type == BLOCKTYPE_CONTROLEND) {
-            if (layer > 0) {
-                gui_element_end(gui);
-                gui_element_end(gui);
-                gui_element_end(gui);
-                layer--;
-            }
-            if (vector_size(editor.blockchain_render_layer_widths) > 0) vector_pop(editor.blockchain_render_layer_widths);
-            gui_element_begin(gui);
-                gui_set_direction(gui, DIRECTION_VERTICAL);
-                gui_set_custom_data(gui, &chain->blocks[i]);
-        } else if (blockdef->type == BLOCKTYPE_CONTROL) {
-            gui_element_begin(gui);
-                gui_set_direction(gui, DIRECTION_VERTICAL);
-                gui_set_custom_data(gui, &chain->blocks[i]);
-        }
-
-        if (blockdef->type != BLOCKTYPE_END) {
-            draw_block(&chain->blocks[i], false, true, ghost, editable_arguments);
-        }
-
-        if (blockdef->type == BLOCKTYPE_CONTROL || blockdef->type == BLOCKTYPE_CONTROLEND) {
-            layer++;
-
-            GuiElement* el = gui_get_element(gui);
-            vector_add(&editor.blockchain_render_layer_widths, el->w);
-
-            bool collision = ui.hover.editor.prev_block == &chain->blocks[i];
-            Color color = CONVERT_COLOR(blockdef->color, Color);
-            if (ghost) color.a = BLOCK_GHOST_OPACITY;
-            Color block_color = ColorBrightness(color, collision ? 0.3 : 0.0);
-            Color outline_color;
-            if (ui.hover.editor.select_block == &chain->blocks[i]) {
-                outline_color = ColorBrightness(color, 0.7);
-            } else {
-                outline_color = ColorBrightness(color, collision ? 0.5 : -0.2);
+            if (!ch->start != !ch->end) {
+                gui_text(gui, &assets.fonts.font_cond_shadow, !ch->start ? "missing start" : "missing end", BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0x00, 0x00, 0xff });
             }
 
-            gui_element_begin(gui);
-                gui_set_direction(gui, DIRECTION_HORIZONTAL);
+            if (ch->start) {
+                if (ch->start->parent.as.chain != ch) {
+                    gui_text(gui, &assets.fonts.font_cond_shadow, "start does not match", BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0x00, 0x00, 0xff });
+                }
+            }
 
-                gui_element_begin(gui);
-                    gui_set_grow(gui, DIRECTION_VERTICAL);
-                    gui_set_min_size(gui, BLOCK_CONTROL_INDENT, config.ui_size / 2);
-                    gui_set_rect(gui, CONVERT_COLOR(block_color, GuiColor));
-                    gui_on_hover(gui, block_on_hover);
-                    gui_set_custom_data(gui, &chain->blocks[i]);
-
-                    gui_element_begin(gui);
-                        gui_set_grow(gui, DIRECTION_VERTICAL);
-                        gui_set_grow(gui, DIRECTION_HORIZONTAL);
-                        gui_set_border(gui, CONVERT_COLOR(outline_color, GuiColor), BLOCK_OUTLINE_SIZE);
-                        gui_set_draw_subtype(gui, BORDER_CONTROL_BODY);
-                    gui_element_end(gui);
-                gui_element_end(gui);
-
-                gui_element_begin(gui);
-                    gui_set_direction(gui, DIRECTION_VERTICAL);
-
-                    if (ui.hover.editor.prev_block == &chain->blocks[i] && show_previews) {
-                        draw_block_preview();
-                    }
-        } else {
-            if (ui.hover.editor.prev_block == &chain->blocks[i] && show_previews) {
-                draw_block_preview();
+            if (ch->end) {
+                if (ch->end->parent.as.chain != ch) {
+                    gui_text(gui, &assets.fonts.font_cond_shadow, "end does not match", BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0x00, 0x00, 0xff });
+                }
             }
         }
-    }
-
-    while (layer > 0) {
-        gui_element_end(gui);
-        gui_element_end(gui);
-        gui_element_end(gui);
-        layer--;
-    }
-
+        
+        for (Block* iter = (*chain)->start; iter; iter = iter->next) {
+            draw_block(iter, false, false, true, ghost, editable_arguments, show_previews);
+        }
     gui_element_end(gui);
     return el;
 }
@@ -1538,16 +1535,16 @@ static void draw_code(void) {
             editor.code[i].y * config.ui_size / 32.0 - editor.camera_pos.y,
         };
         Rectangle code_size = ui.hover.panels.code_panel_bounds;
-        if (&editor.code[i] != ui.hover.editor.select_blockchain) {
+        // if (&editor.code[i] != ui.hover.editor.select_blockchain) {
             if (chain_pos.x > code_size.width || chain_pos.y > code_size.height) continue;
             if (editor.code[i].width > 0 && editor.code[i].height > 0 &&
                 (chain_pos.x + editor.code[i].width < 0 || chain_pos.y + editor.code[i].height < 0)) continue;
-        }
+        // }
         GuiElement* el = gui_element_begin(gui);
             gui_set_floating(gui);
             gui_set_position(gui, chain_pos.x, chain_pos.y);
 
-            draw_blockchain(&editor.code[i], false, config.show_blockchain_previews, true);
+            draw_blockchain(&editor.code[i].chain, false, config.show_blockchain_previews, true);
         gui_element_end(gui);
         editor.code[i].width = el->w;
         editor.code[i].height = el->h;
@@ -1681,9 +1678,9 @@ static void draw_search_list(void) {
                     Block dummy_block = {
                         .blockdef = editor.search_list[i],
                         .arguments = NULL,
-                        .parent = NULL,
+                        .parent = (BlockParent) {0},
                     };
-                    draw_block(&dummy_block, ui.hover.editor.prev_blockdef == editor.search_list[i], false, false, false);
+                    draw_block(&dummy_block, ui.hover.editor.prev_blockdef == editor.search_list[i], false, false, false, false, false);
                 gui_element_end(gui);
             }
 
@@ -1726,7 +1723,7 @@ void scrap_gui_process(void) {
                 gui_set_gap(gui, config.ui_size);
 
                 for (size_t i = 0; i < vector_size(editor.mouse_blockchains); i++) {
-                    GuiElement* el = draw_blockchain(&editor.mouse_blockchains[i], false, false, true);
+                    GuiElement* el = draw_blockchain(&editor.mouse_blockchains[i].chain, false, false, true);
                     editor.mouse_blockchains[i].width  = el->w;
                     editor.mouse_blockchains[i].height = el->h;
 
@@ -2117,7 +2114,8 @@ static void write_debug_buffer(void) {
     print_debug(&i, " ");
 
     print_debug(&i, "Button handler: %p", ui.hover.button.handler);
-    print_debug(&i, "Block: %p, Parent: %p, Parent Arg: %p", ui.hover.editor.block, ui.hover.editor.block ? ui.hover.editor.block->parent : NULL, ui.hover.editor.parent_argument);
+    print_debug(&i, "Block: %p, Parent: %p, Parent Arg: %p", ui.hover.editor.block, ui.hover.editor.block ? ui.hover.editor.block->parent.as.arg : NULL, ui.hover.editor.parent_argument);
+    print_debug(&i, "Block end: %s", ui.hover.editor.block_end ? "true" : "false");
     print_debug(&i, "Argument: %p", ui.hover.editor.argument);
     print_debug(&i, "BlockChain: %p", ui.hover.editor.blockchain);
     print_debug(&i, "Select block: %p, arg: %p, chain: %p", ui.hover.editor.select_block, ui.hover.editor.select_argument, ui.hover.editor.select_blockchain);

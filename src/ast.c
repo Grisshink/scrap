@@ -55,11 +55,17 @@ const char* type_to_str(DataType type) {
     assert(false && "Unhandled type_to_str");
 }
 
-Block block_new(Blockdef* blockdef) {
-    Block block;
-    block.blockdef = blockdef;
-    block.arguments = vector_create();
-    block.parent = NULL;
+Block* block_new(Blockdef* blockdef) {
+    Block* block = malloc(sizeof(Block));
+    block->blockdef = blockdef;
+    block->arguments = vector_create();
+    block->contents = blockchain_new();
+    block->contents->parent = block;
+    block->controlend_contents = blockchain_new();
+    block->controlend_contents->parent = block;
+    block->parent = (BlockParent) {0};
+    block->prev = NULL;
+    block->next = NULL;
     blockdef->ref_count++;
 
     for (size_t i = 0; i < vector_size(blockdef->inputs); i++) {
@@ -67,7 +73,8 @@ Block block_new(Blockdef* blockdef) {
 
         switch (blockdef->inputs[i].type) {
         case INPUT_ARGUMENT:
-            arg = vector_add_dst(&block.arguments);
+            arg = vector_add_dst(&block->arguments);
+            arg->block = block;
             arg->input_id = i;
 
             switch (blockdef->inputs[i].data.arg.constr) {
@@ -89,12 +96,13 @@ Block block_new(Blockdef* blockdef) {
             vector_add(&arg->data.text, 0);
             break;
         case INPUT_DROPDOWN:
-            arg = vector_add_dst(&block.arguments);
+            arg = vector_add_dst(&block->arguments);
+            arg->block = block;
             arg->input_id = i;
             arg->type = ARGUMENT_CONST_STRING;
 
             size_t list_len = 0;
-            char** list = blockdef->inputs[i].data.drop.list(&block, &list_len);
+            char** list = blockdef->inputs[i].data.drop.list(block, &list_len);
             if (!list || list_len == 0) break;
 
             arg->data.text = vector_create();
@@ -104,7 +112,8 @@ Block block_new(Blockdef* blockdef) {
             vector_add(&arg->data.text, 0);
             break;
         case INPUT_BLOCKDEF_EDITOR:
-            arg = vector_add_dst(&block.arguments);
+            arg = vector_add_dst(&block->arguments);
+            arg->block = block;
             arg->input_id = i;
             arg->type = ARGUMENT_BLOCKDEF;
             arg->data.blockdef = blockdef_new("custom", BLOCKTYPE_NORMAL, blockdef->color, NULL);
@@ -112,7 +121,8 @@ Block block_new(Blockdef* blockdef) {
             blockdef_add_text(arg->data.blockdef, gettext("My block"));
             break;
         case INPUT_COLOR:
-            arg = vector_add_dst(&block.arguments);
+            arg = vector_add_dst(&block->arguments);
+            arg->block = block;
             arg->input_id = i;
             arg->type = ARGUMENT_COLOR;
             arg->data.color = blockdef->inputs[i].data.color;
@@ -128,17 +138,28 @@ Block block_new(Blockdef* blockdef) {
     return block;
 }
 
-Block block_copy(Block* block, Block* parent) {
-    if (!block->arguments) return *block;
+Block* block_copy(Block* block, BlockParent parent) {
+    if (!block) return NULL;
+    if (!block->arguments) return NULL;
 
-    Block new;
-    new.blockdef = block->blockdef;
-    new.parent = parent;
-    new.arguments = vector_create();
-    new.blockdef->ref_count++;
+    Block* new = malloc(sizeof(Block));
+    new->blockdef = block->blockdef;
+    new->parent = parent;
+    new->arguments = vector_create();
 
+    new->contents = blockchain_copy(block->contents, NULL);
+    new->contents->parent = new;
+    new->controlend_contents = blockchain_copy(block->controlend_contents, NULL);
+    new->controlend_contents->parent = new;
+
+    new->blockdef->ref_count++;
+    new->prev = NULL;
+    new->next = NULL;
+
+    vector_reserve(&new->arguments, vector_size(block->arguments));
     for (size_t i = 0; i < vector_size(block->arguments); i++) {
-        Argument* arg = vector_add_dst((Argument**)&new.arguments);
+        Argument* arg = vector_add_dst(&new->arguments);
+        arg->block = new;
         arg->type = block->arguments[i].type;
         arg->input_id = block->arguments[i].input_id;
         switch (block->arguments[i].type) {
@@ -146,8 +167,11 @@ Block block_copy(Block* block, Block* parent) {
         case ARGUMENT_TEXT:
             arg->data.text = vector_copy(block->arguments[i].data.text);
             break;
-        case ARGUMENT_BLOCK:
-            arg->data.block = block_copy(&block->arguments[i].data.block, &new);
+        case ARGUMENT_BLOCK: ;
+            BlockParent parent_arg;
+            parent_arg.type = BLOCK_PARENT_ARGUMENT;
+            parent_arg.as.arg = arg;
+            arg->data.block = block_copy(block->arguments[i].data.block, parent_arg);
             break;
         case ARGUMENT_BLOCKDEF:
             arg->data.blockdef = blockdef_copy(block->arguments[i].data.blockdef);
@@ -162,16 +186,12 @@ Block block_copy(Block* block, Block* parent) {
         }
     }
 
-    for (size_t i = 0; i < vector_size(new.arguments); i++) {
-        if (new.arguments[i].type != ARGUMENT_BLOCK) continue;
-        block_update_parent_links(&new.arguments[i].data.block);
-    }
-
     return new;
 }
 
 void block_free(Block* block) {
     blockdef_free(block->blockdef);
+
     if (block->arguments) {
         for (size_t i = 0; i < vector_size(block->arguments); i++) {
             switch (block->arguments[i].type) {
@@ -180,9 +200,17 @@ void block_free(Block* block) {
                 vector_free(block->arguments[i].data.text);
                 break;
             case ARGUMENT_BLOCK:
-                block_free(&block->arguments[i].data.block);
+                block_free(block->arguments[i].data.block);
                 break;
-            case ARGUMENT_BLOCKDEF:
+            case ARGUMENT_BLOCKDEF: ;
+                Blockdef* blockdef = block->arguments[i].data.blockdef;
+                blockdef->func = NULL;
+                for (size_t j = 0; j < vector_size(blockdef->inputs); j++) {
+                    Input* input = &blockdef->inputs[j];
+                    if (input->type != INPUT_ARGUMENT) continue;
+                    input->data.arg.blockdef->func = NULL;
+                }
+
                 blockdef_free(block->arguments[i].data.blockdef);
                 break;
             case ARGUMENT_COLOR:
@@ -192,239 +220,162 @@ void block_free(Block* block) {
                 break;
             }
         }
-        vector_free((Argument*)block->arguments);
+        vector_free(block->arguments);
     }
+
+    blockchain_free(block->contents);
+    blockchain_free(block->controlend_contents);
+    free(block);
 }
 
-void block_update_all_links(Block* block) {
-    for (size_t i = 0; i < vector_size(block->arguments); i++) {
-        if (block->arguments[i].type != ARGUMENT_BLOCK) continue;
-        block->arguments[i].data.block.parent = block;
-        block_update_all_links(&block->arguments[i].data.block);
-    }
-}
-
-void block_update_parent_links(Block* block) {
-    for (size_t i = 0; i < vector_size(block->arguments); i++) {
-        if (block->arguments[i].type != ARGUMENT_BLOCK) continue;
-        block->arguments[i].data.block.parent = block;
-    }
-}
-
-BlockChain blockchain_new(void) {
-    BlockChain chain;
-    chain.x = 0;
-    chain.y = 0;
-    chain.blocks = vector_create();
-    chain.width = 0;
-    chain.height = 0;
-
+BlockChain* blockchain_new(void) {
+    BlockChain* chain = malloc(sizeof(BlockChain));
+    memset(chain, 0, sizeof(BlockChain));
     return chain;
 }
 
-BlockChain blockchain_copy_single(BlockChain* chain, size_t pos) {
-    assert(pos < vector_size(chain->blocks) || pos == 0);
+BlockChain* blockchain_copy(BlockChain* chain, Block* pos) {
+    assert(chain != NULL);
 
-    BlockChain new;
-    new.x = chain->x;
-    new.y = chain->y;
-    new.blocks = vector_create();
+    BlockChain* new_chain = blockchain_new();
+    if (CHAIN_EMPTY(chain)) return new_chain;
 
-    BlockdefType block_type = chain->blocks[pos].blockdef->type;
-    if (block_type == BLOCKTYPE_END) return new;
-    if (block_type != BLOCKTYPE_CONTROL) {
-        vector_add(&new.blocks, block_copy(&chain->blocks[pos], NULL));
-        blockchain_update_parent_links(&new);
-        return new;
+    for (Block* iter = pos ? pos : chain->start; iter; iter = iter->next) {
+        Block* copy = block_copy(iter, (BlockParent) {0});
+        copy->prev = new_chain->end;
+        if (new_chain->end) new_chain->end->next = copy;
+        new_chain->end = copy;
+        if (!new_chain->start) new_chain->start = new_chain->end;
     }
 
-    int layer = 0;
-    for (size_t i = pos; i < vector_size(chain->blocks) && layer >= 0; i++) {
-        block_type = chain->blocks[i].blockdef->type;
-        vector_add(&new.blocks, block_copy(&chain->blocks[i], NULL));
-        if (block_type == BLOCKTYPE_CONTROL && i != pos) {
-            layer++;
-        } else if (block_type == BLOCKTYPE_END) {
-            layer--;
-        }
-    }
+    BlockParent parent;
+    parent.type = BLOCK_PARENT_BLOCKCHAIN;
+    parent.as.chain = new_chain;
 
-    blockchain_update_parent_links(&new);
-    return new;
+    new_chain->start->parent = parent;
+    new_chain->end->parent = parent;
+
+    return new_chain;
 }
 
-BlockChain blockchain_copy(BlockChain* chain, size_t pos) {
-    assert(pos < vector_size(chain->blocks) || pos == 0);
+void blockchain_insert(BlockChain* dst, BlockChain* src, Block* pos) {
+    assert(dst != NULL);
+    assert(src != NULL);
 
-    BlockChain new;
-    new.x = chain->x;
-    new.y = chain->y;
-    new.blocks = vector_create();
-
-    int pos_layer = 0;
-    for (size_t i = 0; i < pos; i++) {
-        BlockdefType block_type = chain->blocks[i].blockdef->type;
-        if (block_type == BLOCKTYPE_CONTROL) {
-            pos_layer++;
-        } else if (block_type == BLOCKTYPE_END) {
-            pos_layer--;
-            if (pos_layer < 0) pos_layer = 0;
-        }
-    }
-    int current_layer = pos_layer;
-
-    vector_reserve(&new.blocks, vector_size(chain->blocks) - pos);
-    for (vec_size_t i = pos; i < vector_size(chain->blocks); i++) {
-        BlockdefType block_type = chain->blocks[i].blockdef->type;
-        if ((block_type == BLOCKTYPE_END || (block_type == BLOCKTYPE_CONTROLEND && i != pos)) &&
-            pos_layer == current_layer &&
-            current_layer != 0) break;
-
-        vector_add(&new.blocks, block_copy(&chain->blocks[i], NULL));
-        block_update_parent_links(&new.blocks[vector_size(new.blocks) - 1]);
-
-        if (block_type == BLOCKTYPE_CONTROL) {
-            current_layer++;
-        } else if (block_type == BLOCKTYPE_END) {
-            current_layer--;
-        }
-    }
-
-    return new;
-}
-
-void blockchain_update_parent_links(BlockChain* chain) {
-    for (size_t i = 0; i < vector_size(chain->blocks); i++) {
-        block_update_parent_links(&chain->blocks[i]);
-    }
-}
-
-void blockchain_add_block(BlockChain* chain, Block block) {
-    vector_add(&chain->blocks, block);
-    blockchain_update_parent_links(chain);
-}
-
-void blockchain_clear_blocks(BlockChain* chain) {
-    for (size_t i = 0; i < vector_size(chain->blocks); i++) {
-        block_free(&chain->blocks[i]);
-    }
-    vector_clear(chain->blocks);
-}
-
-void blockchain_insert(BlockChain* dst, BlockChain* src, size_t pos) {
-    assert(pos < vector_size(dst->blocks));
-
-    vector_reserve(&dst->blocks, vector_size(dst->blocks) + vector_size(src->blocks));
-    for (ssize_t i = (ssize_t)vector_size(src->blocks) - 1; i >= 0; i--) {
-        vector_insert(&dst->blocks, pos + 1, src->blocks[i]);
-    }
-    blockchain_update_parent_links(dst);
-    vector_clear(src->blocks);
-}
-
-void blockchain_detach_single(BlockChain* dst, BlockChain* src, size_t pos) {
-    assert(pos < vector_size(src->blocks));
-
-    BlockdefType block_type = src->blocks[pos].blockdef->type;
-    if (block_type == BLOCKTYPE_END) return;
-    if (block_type != BLOCKTYPE_CONTROL) {
-        vector_add(&dst->blocks, src->blocks[pos]);
-        blockchain_update_parent_links(dst);
-        vector_remove(src->blocks, pos);
-        for (size_t i = pos; i < vector_size(src->blocks); i++) block_update_parent_links(&src->blocks[i]);
+    if (CHAIN_EMPTY(src)) {
+        free(src);
         return;
     }
 
-    int size = 0;
-    int layer = 0;
-    for (size_t i = pos; i < vector_size(src->blocks) && layer >= 0; i++) {
-        BlockdefType block_type = src->blocks[i].blockdef->type;
-        vector_add(&dst->blocks, src->blocks[i]);
-        if (block_type == BLOCKTYPE_CONTROL && i != pos) {
-            layer++;
-        } else if (block_type == BLOCKTYPE_END) {
-            layer--;
-        }
-        size++;
+    Block* next_pos = pos ? pos->next : dst->start;
+
+    if (pos) pos->next = src->start;
+    src->start->prev = pos;
+
+    if (next_pos) next_pos->prev = src->end;
+    src->end->next = next_pos;
+
+    if (!pos) {
+        dst->start = src->start;
+        dst->start->parent.type = BLOCK_PARENT_BLOCKCHAIN;
+        dst->start->parent.as.chain = dst;
     }
 
-    blockchain_update_parent_links(dst);
-    vector_erase(src->blocks, pos, size);
-    for (size_t i = pos; i < vector_size(src->blocks); i++) block_update_parent_links(&src->blocks[i]);
+    if (!next_pos) {
+        dst->end = src->end;
+        dst->end->parent.type = BLOCK_PARENT_BLOCKCHAIN;
+        dst->end->parent.as.chain = dst;
+    }
+
+    free(src);
 }
 
-void blockchain_detach(BlockChain* dst, BlockChain* src, size_t pos) {
-    assert(pos < vector_size(src->blocks));
+BlockChain* blockchain_detach(BlockChain* chain, Block* start, Block* end) {
+    assert(chain != NULL);
+    assert(!start == !end && "Invalid chain, either start or end cannot be NULL");
 
-    int pos_layer = 0;
-    for (size_t i = 0; i < pos; i++) {
-        BlockdefType block_type = src->blocks[i].blockdef->type;
-        if (block_type == BLOCKTYPE_CONTROL) {
-            pos_layer++;
-        } else if (block_type == BLOCKTYPE_END) {
-            pos_layer--;
-            if (pos_layer < 0) pos_layer = 0;
-        }
+    BlockChain* new_chain = blockchain_new();
+    new_chain->start = start;
+    new_chain->end = end;
+
+    if (!new_chain->start && !new_chain->end) return new_chain;
+
+    BlockParent parent;
+    parent.type = BLOCK_PARENT_BLOCKCHAIN;
+    parent.as.chain = new_chain;
+
+    new_chain->start->parent = parent;
+    new_chain->end->parent = parent;
+
+    if (chain->start == start && chain->end == end) {
+        chain->start = NULL;
+        chain->end = NULL;
+        return new_chain;
     }
 
-    int current_layer = pos_layer;
-    int layer_size = 0;
-
-    vector_reserve(&dst->blocks, vector_size(dst->blocks) + vector_size(src->blocks) - pos);
-    for (size_t i = pos; i < vector_size(src->blocks); i++) {
-        BlockdefType block_type = src->blocks[i].blockdef->type;
-        if ((block_type == BLOCKTYPE_END || (block_type == BLOCKTYPE_CONTROLEND && i != pos)) && pos_layer == current_layer && current_layer != 0) break;
-        vector_add(&dst->blocks, src->blocks[i]);
-        if (block_type == BLOCKTYPE_CONTROL) {
-            current_layer++;
-        } else if (block_type == BLOCKTYPE_END) {
-            current_layer--;
-        }
-        layer_size++;
+    if (start->prev) {
+        start->prev->next = end->next;
+    } else {
+        chain->start = end->next;
+        chain->start->parent.type = BLOCK_PARENT_BLOCKCHAIN;
+        chain->start->parent.as.chain = chain;
     }
-    blockchain_update_parent_links(dst);
-    vector_erase(src->blocks, pos, layer_size);
-    blockchain_update_parent_links(src);
+
+    if (end->next) {
+        end->next->prev = start->prev;
+    } else {
+        chain->end = start->prev;
+        chain->end->parent.type = BLOCK_PARENT_BLOCKCHAIN;
+        chain->end->parent.as.chain = chain;
+    }
+
+    start->prev = NULL;
+    end->next = NULL;
+
+    return new_chain;
 }
 
 void blockchain_free(BlockChain* chain) {
-    blockchain_clear_blocks(chain);
-    vector_free(chain->blocks);
-}
+    assert(chain != NULL);
 
-void argument_set_block(Argument* block_arg, Block block) {
-    if (block_arg->type == ARGUMENT_TEXT || block_arg->type == ARGUMENT_CONST_STRING) vector_free(block_arg->data.text);
-    block_arg->type = ARGUMENT_BLOCK;
-    block_arg->data.block = block;
-
-    block_update_parent_links(&block_arg->data.block);
-}
-
-void argument_set_const_string(Argument* block_arg, char* text) {
-    assert(block_arg->type == ARGUMENT_CONST_STRING);
-
-    block_arg->type = ARGUMENT_CONST_STRING;
-    vector_clear(block_arg->data.text);
-
-    for (char* pos = text; *pos; pos++) {
-        vector_add(&block_arg->data.text, *pos);
+    Block* iter = chain->start;
+    while (iter) {
+        Block* next = iter->next;
+        block_free(iter);
+        iter = next;
     }
-    vector_add(&block_arg->data.text, 0);
+    chain->start = NULL;
+    chain->end = NULL;
+    free(chain);
 }
 
-void argument_set_text(Argument* block_arg, char* text) {
-    block_arg->type = ARGUMENT_TEXT;
-    block_arg->data.text = vector_create();
-
-    for (char* pos = text; *pos; pos++) {
-        vector_add(&block_arg->data.text, *pos);
-    }
-    vector_add(&block_arg->data.text, 0);
+void argument_set_block(Argument* arg, Block* block) {
+    if (arg->type == ARGUMENT_TEXT || arg->type == ARGUMENT_CONST_STRING) vector_free(arg->data.text);
+    arg->type = ARGUMENT_BLOCK;
+    arg->data.block = block;
 }
 
-void argument_set_color(Argument* block_arg, BlockdefColor color) {
-    block_arg->type = ARGUMENT_COLOR;
-    block_arg->data.color = color;
+void argument_set_const_string(Argument* arg, char* text) {
+    assert(arg->type == ARGUMENT_CONST_STRING);
+
+    arg->type = ARGUMENT_CONST_STRING;
+    vector_clear(arg->data.text);
+
+    for (char* pos = text; *pos; pos++) vector_add(&arg->data.text, *pos);
+    vector_add(&arg->data.text, 0);
+}
+
+void argument_set_text(Argument* arg, char* text) {
+    arg->type = ARGUMENT_TEXT;
+    arg->data.text = vector_create();
+
+    for (char* pos = text; *pos; pos++) vector_add(&arg->data.text, *pos);
+    vector_add(&arg->data.text, 0);
+}
+
+void argument_set_color(Argument* arg, BlockdefColor color) {
+    arg->type = ARGUMENT_COLOR;
+    arg->data.color = color;
 }
 
 Blockdef* blockdef_new(const char* id, BlockdefType type, BlockdefColor color, void* func) {

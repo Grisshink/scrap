@@ -107,18 +107,19 @@ typedef enum {
 } EditorHoverPart;
 
 typedef struct {
-    BlockChain* prev_blockchain;
-    BlockChain* blockchain;
+    BlockChain** prev_blockchain;
+    BlockChain** blockchain;
 
     Block* prev_block;
     Block* block;
+    bool block_end;
     Argument* argument;
     Argument* prev_argument;
     Argument* parent_argument;
 
     Block* select_block;
     Argument* select_argument;
-    BlockChain* select_blockchain;
+    BlockChain** select_blockchain;
     Vector2 select_block_pos;
     bool select_valid;
 
@@ -201,7 +202,7 @@ typedef enum {
 typedef struct {
     BlockCategoryItemType type;
     union {
-        BlockChain chain;
+        BlockChain* chain;
         struct {
             const char* text;
             Color color;
@@ -336,7 +337,7 @@ typedef struct {
     Vector2 camera_pos;
     Vector2 camera_click_pos;
 
-    BlockChain* code;
+    RootBlockChain* code;
     BlockPalette palette;
 
     char* search_list_search;
@@ -344,7 +345,7 @@ typedef struct {
     Vector2 search_list_pos;
 
     ActionBar actionbar;
-    BlockChain* mouse_blockchains;
+    RootBlockChain* mouse_blockchains;
     SplitPreview split_preview;
     int* blockchain_render_layer_widths;
     int current_tab;
@@ -385,7 +386,7 @@ struct Vm {
     Compiler compiler;
     char** compile_error;
     Block* compile_error_block;
-    BlockChain* compile_error_blockchain;
+    BlockChain** compile_error_blockchain;
 
     int start_timeout; // = -1;
 #ifdef USE_LLVM
@@ -479,8 +480,8 @@ void save_config(Config* config);
 void load_config(Config* config);
 void config_copy(Config* dst, Config* src);
 
-void save_code(const char* file_path, ProjectConfig* config, BlockChain* code);
-BlockChain* load_code(const char* file_path, ProjectConfig* out_config);
+void save_code(const char* file_path, ProjectConfig* config, RootBlockChain* code);
+RootBlockChain* load_code(const char* file_path, ProjectConfig* out_config);
 
 void project_config_new(ProjectConfig* config);
 void project_config_free(ProjectConfig* config);
@@ -543,7 +544,7 @@ bool vm_stop(void);
 void vm_handle_running_thread(void);
 
 void clear_compile_error(void);
-Block block_new_ms(Blockdef* blockdef);
+Block* block_new_ms(Blockdef* blockdef);
 
 // platform.c
 void scrap_set_env(const char* name, const char* value);

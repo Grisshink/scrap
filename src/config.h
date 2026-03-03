@@ -18,7 +18,8 @@
 //    misrepresented as being the original software.
 // 3. This notice may not be removed or altered from any source distribution.
 
-#define SCRAP_SAVE_VERSION 4
+#define SCRAP_MIN_SAVE_VERSION 1
+#define SCRAP_MAX_SAVE_VERSION 5
 
 #define EDITOR_DEFAULT_PROJECT_NAME "project.scrp"
 

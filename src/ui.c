@@ -224,36 +224,6 @@ TermVec term_measure_text(void* font, const char* text, unsigned int text_size, 
     return (TermVec) { .x = m.w, .y = m.h };
 }
 
-#ifdef DEBUG
-static void sanitize_block(Block* block) {
-    for (vec_size_t i = 0; i < vector_size(block->arguments); i++) {
-        if (block->arguments[i].type != ARGUMENT_BLOCK) continue;
-        if (block->arguments[i].data.block.parent != block) {
-            scrap_log(LOG_ERROR, "Block %p detached from parent %p! (Got %p)", &block->arguments[i].data.block, block, block->arguments[i].data.block.parent);
-            assert(false);
-            return;
-        }
-        sanitize_block(&block->arguments[i].data.block);
-    }
-}
-
-static void sanitize_links(void) {
-    for (vec_size_t i = 0; i < vector_size(editor.code); i++) {
-        Block* blocks = editor.code[i].blocks;
-        for (vec_size_t j = 0; j < vector_size(blocks); j++) {
-            sanitize_block(&blocks[j]);
-        }
-    }
-
-    for (size_t i = 0; i < vector_size(editor.mouse_blockchains); i++) {
-        BlockChain* chain = &editor.mouse_blockchains[i];
-        for (size_t j = 0; j < vector_size(chain->blocks); j++) {
-            sanitize_block(&chain->blocks[j]);
-        }
-    }
-}
-#endif
-
 static void switch_tab_to_panel(PanelType panel) {
     for (size_t i = 0; i < vector_size(editor.tabs); i++) {
         if (find_panel(editor.tabs[i].root_panel, panel)) {
@@ -530,7 +500,7 @@ void load_project(void) {
     if (!path) return;
 
     ProjectConfig new_config;
-    BlockChain* chain = load_code(path, &new_config);
+    RootBlockChain* chain = load_code(path, &new_config);
     switch_tab_to_panel(PANEL_CODE);
     if (!chain) {
         actionbar_show(gettext("File load failed :("));
@@ -540,7 +510,7 @@ void load_project(void) {
     project_config_free(&project_config);
     project_config = new_config;
 
-    for (size_t i = 0; i < vector_size(editor.code); i++) blockchain_free(&editor.code[i]);
+    for (size_t i = 0; i < vector_size(editor.code); i++) blockchain_free(editor.code[i].chain);
     vector_free(editor.code);
     vm.compile_error_block = NULL;
     vm.compile_error_blockchain = NULL;
@@ -565,7 +535,7 @@ bool handle_file_menu_click(void) {
 
     switch (ui.dropdown.as.list.select_ind) {
     case FILE_MENU_NEW_PROJECT:
-        for (size_t i = 0; i < vector_size(editor.code); i++) blockchain_free(&editor.code[i]);
+        for (size_t i = 0; i < vector_size(editor.code); i++) blockchain_free(editor.code[i].chain);
         vector_clear(editor.code);
         switch_tab_to_panel(PANEL_CODE);
         editor.project_modified = false;
@@ -791,21 +761,6 @@ bool handle_editor_color_button(void) {
     return true;
 }
 
-static void remove_blockdef(BlockChain* chain) {
-    for (size_t i = 0; i < vector_size(chain->blocks); i++) {
-        for (size_t j = 0; j < vector_size(chain->blocks[i].arguments); j++) {
-            Argument* arg = &chain->blocks[i].arguments[j];
-            if (arg->type != ARGUMENT_BLOCKDEF) continue;
-            arg->data.blockdef->func = NULL;
-            for (size_t k = 0; k < vector_size(arg->data.blockdef->inputs); k++) {
-                Input* input = &arg->data.blockdef->inputs[k];
-                if (input->type != INPUT_ARGUMENT) continue;
-                input->data.arg.blockdef->func = NULL;
-            }
-        }
-    }
-}
-
 static bool handle_block_palette_click(bool mouse_empty) {
     if (ui.hover.editor.select_argument) {
         deselect_all();
@@ -816,20 +771,19 @@ static bool handle_block_palette_click(bool mouse_empty) {
         // Pickup block
         scrap_log(LOG_INFO, "Pickup block");
         assert(editor.palette.current_category != NULL);
-        vector_add(&editor.mouse_blockchains, blockchain_copy(ui.hover.editor.blockchain, 0));
+
+        RootBlockChain root = {0};
+        root.chain = blockchain_copy(*ui.hover.editor.blockchain, NULL);
+        vector_add(&editor.mouse_blockchains, root);
         return true;
     } else if (!mouse_empty) {
         // Drop block
         scrap_log(LOG_INFO, "Drop block");
         if (shift_down) {
-            for (size_t i = 0; i < vector_size(editor.mouse_blockchains); i++) {
-                remove_blockdef(&editor.mouse_blockchains[i]);
-                blockchain_free(&editor.mouse_blockchains[i]);
-            }
+            for (size_t i = 0; i < vector_size(editor.mouse_blockchains); i++) blockchain_free(editor.mouse_blockchains[i].chain);
             vector_clear(editor.mouse_blockchains);
         } else {
-            remove_blockdef(&editor.mouse_blockchains[0]);
-            blockchain_free(&editor.mouse_blockchains[0]);
+            blockchain_free(editor.mouse_blockchains[0].chain);
             vector_remove(editor.mouse_blockchains, 0);
         }
         return true;
@@ -844,8 +798,14 @@ static bool handle_blockdef_editor_click(void) {
     if (!ui.hover.editor.blockdef) return true;
     if (ui.hover.editor.edit_blockdef == ui.hover.editor.argument->data.blockdef) return false;
 
-    vector_add(&editor.mouse_blockchains, blockchain_new());
-    blockchain_add_block(&editor.mouse_blockchains[vector_size(editor.mouse_blockchains) - 1], block_new_ms(ui.hover.editor.blockdef));
+    RootBlockChain root = {0};
+    root.chain = blockchain_new();
+    root.chain->start = block_new_ms(ui.hover.editor.blockdef);
+    root.chain->end = root.chain->start;
+    root.chain->start->parent.type = BLOCK_PARENT_BLOCKCHAIN;
+    root.chain->start->parent.as.chain = root.chain;
+
+    vector_add(&editor.mouse_blockchains, root);
     deselect_all();
     return true;
 }
@@ -854,49 +814,56 @@ static void code_put_blocks(bool single) {
     scrap_log(LOG_INFO, "Put block(s)");
 
     if (single) {
-        BlockChain* chain = &editor.mouse_blockchains[0];
-        chain->x += editor.camera_pos.x - ui.hover.panels.panel_size.x;
-        chain->y += editor.camera_pos.y - ui.hover.panels.panel_size.y;
-        chain->x /= config.ui_size / 32.0;
-        chain->y /= config.ui_size / 32.0;
-        vector_add(&editor.code, *chain);
+        RootBlockChain root = editor.mouse_blockchains[0]; 
+        root.x += editor.camera_pos.x - ui.hover.panels.panel_size.x;
+        root.y += editor.camera_pos.y - ui.hover.panels.panel_size.y;
+        root.x /= config.ui_size / 32.0;
+        root.y /= config.ui_size / 32.0;
+        vector_add(&editor.code, root);
         vector_remove(editor.mouse_blockchains, 0);
     } else {
         for (size_t i = 0; i < vector_size(editor.mouse_blockchains); i++) {
-            BlockChain* chain = &editor.mouse_blockchains[i];
-            chain->x += editor.camera_pos.x - ui.hover.panels.panel_size.x;
-            chain->y += editor.camera_pos.y - ui.hover.panels.panel_size.y;
-            chain->x /= config.ui_size / 32.0;
-            chain->y /= config.ui_size / 32.0;
-            vector_add(&editor.code, *chain);
+            RootBlockChain root = editor.mouse_blockchains[0];
+            root.x += editor.camera_pos.x - ui.hover.panels.panel_size.x;
+            root.y += editor.camera_pos.y - ui.hover.panels.panel_size.y;
+            root.x /= config.ui_size / 32.0;
+            root.y /= config.ui_size / 32.0;
+            vector_add(&editor.code, root);
         }
         vector_clear(editor.mouse_blockchains);
     }
 
-    ui.hover.editor.select_blockchain = &editor.code[vector_size(editor.code) - 1];
-    ui.hover.editor.select_block = &ui.hover.editor.select_blockchain->blocks[0];
+    ui.hover.editor.select_blockchain = &editor.code[vector_size(editor.code) - 1].chain;
+    ui.hover.editor.select_block = (*ui.hover.editor.select_blockchain)->start;
     editor.project_modified = true;
 }
 
 static void code_attach_to_argument(void) {
     scrap_log(LOG_INFO, "Attach to argument");
 
-    BlockChain* chain = &editor.mouse_blockchains[0];
+    BlockChain* chain = editor.mouse_blockchains[0].chain;
 
-    if (vector_size(chain->blocks) > 1) return;
-    if (chain->blocks[0].blockdef->type == BLOCKTYPE_CONTROLEND) return;
-    if (chain->blocks[0].blockdef->type == BLOCKTYPE_HAT) return;
+    assert(!CHAIN_EMPTY(chain));
+
+    Block* mouse_block = chain->start;
+
+    if (chain->start != chain->end) return;
+    if (mouse_block->blockdef->type == BLOCKTYPE_CONTROL) return;
+    if (mouse_block->blockdef->type == BLOCKTYPE_CONTROLEND) return;
+    if (mouse_block->blockdef->type == BLOCKTYPE_HAT) return;
     if (ui.hover.editor.argument->type != ARGUMENT_TEXT && ui.hover.editor.argument->type != ARGUMENT_COLOR) return;
 
-    chain->blocks[0].parent = ui.hover.editor.block;
-    argument_set_block(ui.hover.editor.argument, chain->blocks[0]);
+    mouse_block->parent.type = BLOCK_PARENT_ARGUMENT;
+    mouse_block->parent.as.arg = ui.hover.editor.argument;
+    argument_set_block(ui.hover.editor.argument, mouse_block);
 
-    vector_clear(chain->blocks);
+    chain->start = NULL;
+    chain->end = NULL;
     blockchain_free(chain);
     vector_remove(editor.mouse_blockchains, 0);
 
     ui.hover.editor.select_blockchain = ui.hover.editor.blockchain;
-    ui.hover.editor.select_block = &ui.hover.editor.argument->data.block;
+    ui.hover.editor.select_block = ui.hover.editor.argument->data.block;
     ui.hover.select_input = NULL;
     editor.project_modified = true;
 }
@@ -904,29 +871,43 @@ static void code_attach_to_argument(void) {
 static void code_copy_argument(void) {
     scrap_log(LOG_INFO, "Copy argument");
 
-    vector_add(&editor.mouse_blockchains, blockchain_new());
-    blockchain_add_block(&editor.mouse_blockchains[vector_size(editor.mouse_blockchains) - 1], block_copy(ui.hover.editor.block, NULL));
+    RootBlockChain root = {0};
+    root.chain = blockchain_new();
+
+    BlockParent chain_parent;
+    chain_parent.type = BLOCK_PARENT_BLOCKCHAIN;
+    chain_parent.as.chain = root.chain;
+    
+    root.chain->start = block_copy(ui.hover.editor.block, chain_parent);
+    root.chain->end = root.chain->start;
+    vector_add(&editor.mouse_blockchains, root);
 }
 
 static void code_swap_argument(void) {
     scrap_log(LOG_INFO, "Swap argument");
 
-    BlockChain* chain = &editor.mouse_blockchains[0];
+    BlockChain* chain = editor.mouse_blockchains[0].chain;
 
-    if (vector_size(chain->blocks) > 1) return;
-    if (chain->blocks[0].blockdef->type == BLOCKTYPE_CONTROLEND) return;
-    if (chain->blocks[0].blockdef->type == BLOCKTYPE_HAT) return;
+    assert(!CHAIN_EMPTY(chain));
+
+    Block* mouse_block = chain->start;
+
+    if (chain->start != chain->end) return;
+    if (mouse_block->blockdef->type == BLOCKTYPE_CONTROLEND) return;
+    if (mouse_block->blockdef->type == BLOCKTYPE_HAT) return;
+    if (mouse_block->blockdef->type == BLOCKTYPE_CONTROL) return;
     if (ui.hover.editor.parent_argument->type != ARGUMENT_BLOCK) return;
 
-    chain->blocks[0].parent = ui.hover.editor.block->parent;
-    Block temp = chain->blocks[0];
-    chain->blocks[0] = *ui.hover.editor.block;
-    chain->blocks[0].parent = NULL;
-    block_update_parent_links(&chain->blocks[0]);
+    argument_set_block(ui.hover.editor.parent_argument, mouse_block);
 
-    argument_set_block(ui.hover.editor.parent_argument, temp);
+    BlockParent temp_parent = mouse_block->parent;
+    mouse_block->parent = ui.hover.editor.block->parent;
 
-    ui.hover.editor.select_block = &ui.hover.editor.parent_argument->data.block;
+    chain->start = ui.hover.editor.block;
+    chain->end = chain->start;
+    chain->start->parent = temp_parent;
+
+    ui.hover.editor.select_block = ui.hover.editor.parent_argument->data.block;
     ui.hover.editor.select_blockchain = ui.hover.editor.blockchain;
     editor.project_modified = true;
 }
@@ -935,18 +916,23 @@ static void code_detach_argument(void) {
     scrap_log(LOG_INFO, "Detach argument");
 
     assert(ui.hover.editor.parent_argument != NULL);
+    assert(ui.hover.editor.block->parent.type == BLOCK_PARENT_ARGUMENT);
 
-    vector_add(&editor.mouse_blockchains, blockchain_new());
-    BlockChain* chain = &editor.mouse_blockchains[vector_size(editor.mouse_blockchains) - 1];
+    RootBlockChain root = {0};
+    root.chain = blockchain_new();
+    root.chain->start = ui.hover.editor.block;
+    root.chain->end = root.chain->start;
 
-    blockchain_add_block(chain, *ui.hover.editor.block);
-    chain->blocks[0].parent = NULL;
+    Argument* parent_arg = ui.hover.editor.block->parent.as.arg;
 
-    if (ui.hover.editor.block->parent->blockdef->inputs[ui.hover.editor.parent_argument->input_id].type == INPUT_COLOR) {
-        argument_set_color(ui.hover.editor.parent_argument, (BlockdefColor) { 0xff, 0xff, 0xff, 0xff });
+    if (parent_arg->block->blockdef->inputs[parent_arg->input_id].type == INPUT_COLOR) {
+        argument_set_color(parent_arg, (BlockdefColor) { 0xff, 0xff, 0xff, 0xff });
     } else {
-        argument_set_text(ui.hover.editor.parent_argument, "");
+        argument_set_text(parent_arg, "");
     }
+    root.chain->start->parent.type = BLOCK_PARENT_BLOCKCHAIN;
+    root.chain->start->parent.as.chain = root.chain;
+    vector_add(&editor.mouse_blockchains, root);
 
     ui.hover.editor.select_blockchain = NULL;
     ui.hover.editor.select_block = NULL;
@@ -957,59 +943,148 @@ static void code_detach_argument(void) {
 static void code_copy_blocks(bool single) {
     scrap_log(LOG_INFO, "Copy block(s)");
 
-    int ind = ui.hover.editor.block - ui.hover.editor.blockchain->blocks;
-    BlockChain new_chain = single ? blockchain_copy_single(ui.hover.editor.blockchain, ind) : blockchain_copy(ui.hover.editor.blockchain, ind);
-    if (vector_size(new_chain.blocks) == 0) {
-        blockchain_free(&new_chain);
-        ui.hover.select_input = NULL;
-        return;
-    }
-    vector_add(&editor.mouse_blockchains, new_chain);
     ui.hover.select_input = NULL;
+
+    BlockChain* hover_chain = *ui.hover.editor.blockchain;
+
+    RootBlockChain root = {0};
+    if (single) {
+        root.chain = blockchain_new();
+
+        BlockParent parent;
+        parent.type = BLOCK_PARENT_BLOCKCHAIN;
+        parent.as.chain = root.chain;
+        root.chain->start = block_copy(ui.hover.editor.block, parent);
+        root.chain->end = root.chain->start;
+
+        if (hover_chain->parent && ui.hover.editor.block->blockdef->type == BLOCKTYPE_CONTROLEND) {
+            blockchain_free(root.chain->start->contents);
+            root.chain->start->contents = blockchain_new();
+            root.chain->start->contents->parent = root.chain->start;
+        }
+    } else {
+        if (hover_chain->parent && ui.hover.editor.block->blockdef->type == BLOCKTYPE_CONTROLEND) {
+            root.chain = blockchain_new();
+
+            BlockParent parent;
+            parent.type = BLOCK_PARENT_BLOCKCHAIN;
+            parent.as.chain = root.chain;
+            root.chain->start = block_copy(ui.hover.editor.block, parent);
+            root.chain->end = root.chain->start;
+        } else {
+            root.chain = blockchain_copy(hover_chain, ui.hover.editor.block);
+        }
+    }
+
+    vector_add(&editor.mouse_blockchains, root);
 }
 
 static void code_detach_blocks(bool single) {
     scrap_log(LOG_INFO, "Detach block(s)");
 
-    int ind = ui.hover.editor.block - ui.hover.editor.blockchain->blocks;
-    vector_add(&editor.mouse_blockchains, blockchain_new());
-    BlockChain* chain = &editor.mouse_blockchains[vector_size(editor.mouse_blockchains) - 1];
-
-    if (single) {
-        blockchain_detach_single(chain, ui.hover.editor.blockchain, ind);
-    } else {
-        blockchain_detach(chain, ui.hover.editor.blockchain, ind);
-    }
-    if (vector_size(chain->blocks) == 0) {
-        blockchain_free(chain);
-        vector_pop(editor.mouse_blockchains);
-    }
-
-    if (vector_size(ui.hover.editor.blockchain->blocks) == 0) {
-        blockchain_free(ui.hover.editor.blockchain);
-        vector_remove(editor.code, ui.hover.editor.blockchain - editor.code);
-        ui.hover.editor.block = NULL;
-    }
-
     editor.project_modified = true;
     ui.hover.select_input = NULL;
+
+    BlockChain* hover_chain = *ui.hover.editor.blockchain;
+
+    RootBlockChain root = {0};
+    if (single) {
+        if (hover_chain->parent && ui.hover.editor.block->blockdef->type == BLOCKTYPE_CONTROLEND) {
+            BlockChain* controlend_chain = blockchain_detach(ui.hover.editor.block->contents, ui.hover.editor.block->contents->start, ui.hover.editor.block->contents->end);
+            BlockChain* prev_chain;
+            if (ui.hover.editor.block->prev) {
+                prev_chain = ui.hover.editor.block->prev->contents;
+            } else {
+                prev_chain = hover_chain->parent->contents;
+            }
+            blockchain_insert(prev_chain, controlend_chain, prev_chain->end);
+        }
+
+        root.chain = blockchain_detach(hover_chain, ui.hover.editor.block, ui.hover.editor.block);
+    } else {
+        if (hover_chain->parent && ui.hover.editor.block->blockdef->type == BLOCKTYPE_CONTROLEND) {
+            root.chain = blockchain_detach(hover_chain, ui.hover.editor.block, ui.hover.editor.block);
+        } else {
+            root.chain = blockchain_detach(hover_chain, ui.hover.editor.block, hover_chain->end);
+        }
+    }
+
+    if (CHAIN_EMPTY(hover_chain) && !hover_chain->parent) {
+        for (size_t i = 0; i < vector_size(editor.code); i++) {
+            if (editor.code[i].chain == hover_chain) {
+                free(hover_chain);
+                vector_remove(editor.code, i);
+                break;
+            }
+        }
+    }
+    ui.hover.editor.block = NULL;
+
+    vector_add(&editor.mouse_blockchains, root);
 }
 
 static void code_attach_block(void) {
     scrap_log(LOG_INFO, "Attach block");
 
-    BlockChain* chain = &editor.mouse_blockchains[0];
+    BlockChain* mouse_chain = editor.mouse_blockchains[0].chain;
 
-    if (chain->blocks[0].blockdef->type == BLOCKTYPE_HAT) return;
+    if (CHAIN_EMPTY(mouse_chain)) return;
+    if (mouse_chain->start->blockdef->type == BLOCKTYPE_HAT) return;
 
-    int ind = ui.hover.editor.block - ui.hover.editor.blockchain->blocks;
-    blockchain_insert(ui.hover.editor.blockchain, chain, ind);
-    blockchain_free(chain);
+    Block* hover_block = ui.hover.editor.block;
+
+    Block* inserted_block;
+    BlockChain** inserted_blockchain;
+
+    if ((hover_block->blockdef->type == BLOCKTYPE_CONTROL || hover_block->blockdef->type == BLOCKTYPE_CONTROLEND) && !ui.hover.editor.block_end) {
+        blockchain_insert(hover_block->contents, mouse_chain, NULL);
+        inserted_blockchain = &hover_block->contents;
+        inserted_block = hover_block->contents->start;
+    } else {
+        blockchain_insert(*ui.hover.editor.blockchain, mouse_chain, hover_block);
+        inserted_blockchain = ui.hover.editor.blockchain;
+        inserted_block = hover_block->next;
+    }
+
     vector_remove(editor.mouse_blockchains, 0);
 
-    ui.hover.editor.block = &ui.hover.editor.blockchain->blocks[ind];
-    ui.hover.editor.select_block = ui.hover.editor.block + 1;
-    ui.hover.editor.select_blockchain = ui.hover.editor.blockchain;
+    Block* first_controlend = inserted_block;
+    while (first_controlend && first_controlend->blockdef->type != BLOCKTYPE_CONTROLEND) {
+        first_controlend = first_controlend->next;
+    }
+
+    if (first_controlend) {
+        Block* last_controlend = first_controlend;
+        Block* iter = last_controlend;
+        while (iter && iter->blockdef->type == BLOCKTYPE_CONTROLEND) {
+            last_controlend = iter;
+            iter = iter->next;
+        }
+
+        BlockChain* chain = last_controlend->next ? blockchain_detach(*inserted_blockchain, last_controlend->next, (*inserted_blockchain)->end) : blockchain_new();
+        blockchain_insert(last_controlend->contents, chain, last_controlend->contents->end);
+
+        Block* parent_block = (*inserted_blockchain)->parent;
+        if (parent_block) {
+            chain = blockchain_detach(*inserted_blockchain, first_controlend, last_controlend);
+            if (parent_block->blockdef->type == BLOCKTYPE_CONTROL) {
+                blockchain_insert(parent_block->controlend_contents, chain, NULL);
+            } else if (parent_block->blockdef->type == BLOCKTYPE_CONTROLEND) {
+                Block* first_block = parent_block;
+                Block* iter = parent_block;
+                while (iter) {
+                    first_block = iter;
+                    iter = iter->prev;
+                }
+                assert(first_block->parent.type == BLOCK_PARENT_BLOCKCHAIN);
+                BlockChain* parent_chain = first_block->parent.as.chain;
+                blockchain_insert(parent_chain, chain, parent_block);
+            }
+        }
+    }
+
+    ui.hover.editor.select_block = inserted_block;
+    ui.hover.editor.select_blockchain = inserted_blockchain;
     editor.project_modified = true;
 }
 
@@ -1051,7 +1126,7 @@ static bool handle_code_editor_click(bool mouse_empty) {
         return true;
     }
 
-    if (ui.hover.editor.block->parent) {
+    if (ui.hover.editor.block->parent.type == BLOCK_PARENT_ARGUMENT) {
         if (alt_down) {
             code_copy_argument();
             return true;
@@ -1175,13 +1250,13 @@ static bool handle_mouse_click(void) {
 
     if (ui.hover.select_input == &editor.search_list_search) {
         if (ui.hover.editor.blockdef) {
-            vector_add(&editor.mouse_blockchains, blockchain_new());
-            BlockChain* chain = &editor.mouse_blockchains[vector_size(editor.mouse_blockchains) - 1];
-
-            blockchain_add_block(chain, block_new_ms(ui.hover.editor.blockdef));
-            if (ui.hover.editor.blockdef->type == BLOCKTYPE_CONTROL && vm.end_blockdef != (size_t)-1) {
-                blockchain_add_block(chain, block_new_ms(vm.blockdefs[vm.end_blockdef]));
-            }
+            RootBlockChain root = {0};
+            root.chain = blockchain_new();
+            root.chain->start = block_new_ms(ui.hover.editor.blockdef);
+            root.chain->end = root.chain->start;
+            root.chain->start->parent.type = BLOCK_PARENT_BLOCKCHAIN;
+            root.chain->start->parent.as.chain = root.chain;
+            vector_add(&editor.mouse_blockchains, root);
         }
 
         ui.hover.select_input = NULL;
@@ -1235,7 +1310,8 @@ static bool handle_mouse_click(void) {
 
         if (ui.hover.editor.blockchain != ui.hover.editor.select_blockchain) {
             ui.hover.editor.select_blockchain = ui.hover.editor.blockchain;
-            if (ui.hover.editor.select_blockchain) editor.blockchain_select_counter = ui.hover.editor.select_blockchain - editor.code;
+            // FIXME: Figure out how to get root blockchain here
+            // if (ui.hover.editor.select_blockchain) editor.blockchain_select_counter = ui.hover.editor.select_blockchain - editor.code;
         }
 
         if (ui.hover.editor.block != ui.hover.editor.select_block) {
@@ -1263,12 +1339,12 @@ static void block_next_argument() {
     Argument* args = ui.hover.editor.select_block->arguments;
     Argument* arg = ui.hover.editor.select_argument ? ui.hover.editor.select_argument + 1 : &args[0];
     if (arg - args >= (int)vector_size(args)) {
-        if (ui.hover.editor.select_block->parent) {
-            Argument* parent_args = ui.hover.editor.select_block->parent->arguments;
+        if (ui.hover.editor.select_block->parent.type == BLOCK_PARENT_ARGUMENT) {
+            Argument* parent_args = ui.hover.editor.select_block->parent.as.arg->block->arguments;
             for (size_t i = 0; i < vector_size(parent_args); i++) {
-                if (parent_args[i].type == ARGUMENT_BLOCK && &parent_args[i].data.block == ui.hover.editor.select_block) ui.hover.editor.select_argument = &parent_args[i];
+                if (parent_args[i].type == ARGUMENT_BLOCK && parent_args[i].data.block == ui.hover.editor.select_block) ui.hover.editor.select_argument = &parent_args[i];
             }
-            ui.hover.editor.select_block = ui.hover.editor.select_block->parent;
+            ui.hover.editor.select_block = ui.hover.editor.select_block->parent.as.arg->block;
             block_next_argument();
         } else {
             ui.hover.editor.select_argument = NULL;
@@ -1280,7 +1356,7 @@ static void block_next_argument() {
         ui.hover.editor.select_argument = arg;
     } else if (arg->type == ARGUMENT_BLOCK) {
         ui.hover.editor.select_argument = NULL;
-        ui.hover.editor.select_block = &arg->data.block;
+        ui.hover.editor.select_block = arg->data.block;
     }
 }
 
@@ -1292,12 +1368,12 @@ static void block_prev_argument() {
             ui.hover.editor.select_argument = NULL;
             return;
         }
-        if (ui.hover.editor.select_block->parent) {
-            Argument* parent_args = ui.hover.editor.select_block->parent->arguments;
+        if (ui.hover.editor.select_block->parent.type == BLOCK_PARENT_ARGUMENT) {
+            Argument* parent_args = ui.hover.editor.select_block->parent.as.arg->block->arguments;
             for (size_t i = 0; i < vector_size(parent_args); i++) {
-                if (parent_args[i].type == ARGUMENT_BLOCK && &parent_args[i].data.block == ui.hover.editor.select_block) ui.hover.editor.select_argument = &parent_args[i];
+                if (parent_args[i].type == ARGUMENT_BLOCK && parent_args[i].data.block == ui.hover.editor.select_block) ui.hover.editor.select_argument = &parent_args[i];
             }
-            ui.hover.editor.select_block = ui.hover.editor.select_block->parent;
+            ui.hover.editor.select_block = ui.hover.editor.select_block->parent.as.arg->block;
             block_prev_argument();
         } else {
             ui.hover.editor.select_argument = NULL;
@@ -1309,17 +1385,77 @@ static void block_prev_argument() {
         ui.hover.editor.select_argument = arg;
     } else if (arg->type == ARGUMENT_BLOCK) {
         ui.hover.editor.select_argument = NULL;
-        ui.hover.editor.select_block = &arg->data.block;
+        ui.hover.editor.select_block = arg->data.block;
         while (vector_size(ui.hover.editor.select_block->arguments) != 0) {
             arg = &ui.hover.editor.select_block->arguments[vector_size(ui.hover.editor.select_block->arguments) - 1];
             if (arg->type == ARGUMENT_TEXT || arg->type == ARGUMENT_CONST_STRING) {
                 ui.hover.editor.select_argument = arg;
                 break;
             } else if (arg->type == ARGUMENT_BLOCK) {
-                ui.hover.editor.select_block = &arg->data.block;
+                ui.hover.editor.select_block = arg->data.block;
             }
         }
     }
+}
+
+static Block* block_next_block(Block* block, Block* prev) {
+    if (block->parent.type == BLOCK_PARENT_ARGUMENT) {
+        while (block->parent.type == BLOCK_PARENT_ARGUMENT) block = block->parent.as.arg->block;
+        prev = block->prev;
+    }
+
+    if (block->blockdef->type == BLOCKTYPE_CONTROL) {
+        if (prev == block->prev) {
+            if (!CHAIN_EMPTY(block->contents)) return block->contents->start;
+            if (!CHAIN_EMPTY(block->controlend_contents)) return block->controlend_contents->start;
+        } else if (prev == block->contents->end) {
+            if (!CHAIN_EMPTY(block->controlend_contents)) return block->controlend_contents->start;
+        }
+    }
+
+    if (block->blockdef->type == BLOCKTYPE_CONTROLEND) {
+        if (prev == block->prev) {
+            if (!CHAIN_EMPTY(block->contents)) return block->contents->start;
+        }
+    }
+
+    if (block->next) return block->next;
+    
+    Block* parent = block->parent.as.chain->parent;
+    if (parent) return block_next_block(parent, block);
+
+    return block;
+}
+
+static Block* block_recurse_prev(Block* block) {
+    if (block->blockdef->type == BLOCKTYPE_CONTROL) {
+        if (!CHAIN_EMPTY(block->controlend_contents)) return block_recurse_prev(block->controlend_contents->end);
+        if (!CHAIN_EMPTY(block->contents)) return block_recurse_prev(block->contents->end);
+    } else if (block->blockdef->type == BLOCKTYPE_CONTROLEND) {
+        if (!CHAIN_EMPTY(block->contents)) return block_recurse_prev(block->contents->end);
+    }
+    return block;
+}
+
+static Block* block_prev_block(Block* block) {
+    while (block->parent.type == BLOCK_PARENT_ARGUMENT) block = block->parent.as.arg->block;
+
+    Block* prev = block->prev;
+    if (prev) {
+        return block_recurse_prev(prev);
+    } else {
+        Block* parent = block->parent.as.chain->parent;
+        if (parent) {
+            if (parent->blockdef->type == BLOCKTYPE_CONTROL && block->blockdef->type == BLOCKTYPE_CONTROLEND) {
+                if (!CHAIN_EMPTY(parent->contents)) {
+                    return block_recurse_prev(parent->contents->end);
+                }
+            }
+            return parent;
+        }
+    }
+
+    return block;
 }
 
 static bool handle_code_panel_key_press(void) {
@@ -1344,8 +1480,8 @@ static bool handle_code_panel_key_press(void) {
 
         ui.hover.select_input = NULL;
         ui.hover.editor.select_argument = NULL;
-        ui.hover.editor.select_block = &editor.code[editor.blockchain_select_counter].blocks[0];
-        ui.hover.editor.select_blockchain = &editor.code[editor.blockchain_select_counter];
+        ui.hover.editor.select_block = editor.code[editor.blockchain_select_counter].chain->start;
+        ui.hover.editor.select_blockchain = &editor.code[editor.blockchain_select_counter].chain;
         editor.camera_pos.x = editor.code[editor.blockchain_select_counter].x - 50;
         editor.camera_pos.y = editor.code[editor.blockchain_select_counter].y - 50;
         actionbar_show(TextFormat(gettext("Jump to chain (%d/%d)"), editor.blockchain_select_counter + 1, vector_size(editor.code)));
@@ -1389,20 +1525,14 @@ static bool handle_code_panel_key_press(void) {
         return true;
     }
     if (IsKeyPressed(KEY_UP) || IsKeyPressedRepeat(KEY_UP)) {
-        while (ui.hover.editor.select_block->parent) ui.hover.editor.select_block = ui.hover.editor.select_block->parent;
-        ui.hover.editor.select_block--;
+        ui.hover.editor.select_block = block_prev_block(ui.hover.editor.select_block);
         ui.hover.editor.select_argument = NULL;
-        if (ui.hover.editor.select_block < ui.hover.editor.select_blockchain->blocks) ui.hover.editor.select_block = ui.hover.editor.select_blockchain->blocks;
         ui.render_surface_needs_redraw = true;
         return true;
     }
     if (IsKeyPressed(KEY_DOWN) || IsKeyPressedRepeat(KEY_DOWN)) {
-        while (ui.hover.editor.select_block->parent) ui.hover.editor.select_block = ui.hover.editor.select_block->parent;
-        ui.hover.editor.select_block++;
+        ui.hover.editor.select_block = block_next_block(ui.hover.editor.select_block, ui.hover.editor.select_block->prev);
         ui.hover.editor.select_argument = NULL;
-        if (ui.hover.editor.select_block - ui.hover.editor.select_blockchain->blocks >= (int)vector_size(ui.hover.editor.select_blockchain->blocks)) {
-            ui.hover.editor.select_block--;
-        }
         ui.render_surface_needs_redraw = true;
         return true;
     }
@@ -1627,11 +1757,6 @@ void scrap_gui_process_ui(void) {
     if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
         ui.hover.drag_cancelled = handle_mouse_click();
         ui.render_surface_needs_redraw = true;
-#ifdef DEBUG
-        // This will traverse through all blocks in codebase, which is expensive in large codebase.
-        // Ideally all functions should not be broken in the first place. This helps with debugging invalid states
-        sanitize_links();
-#endif
     } else if (IsMouseButtonPressed(MOUSE_BUTTON_MIDDLE)) {
         ui.hover.mouse_click_pos = (Vector2) { gui->mouse_x, gui->mouse_y };
         editor.camera_click_pos = editor.camera_pos;

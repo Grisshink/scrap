@@ -204,9 +204,9 @@ Image setup(void) {
 void cleanup(void) {
     term_free();
 
-    for (size_t i = 0; i < vector_size(editor.mouse_blockchains); i++) blockchain_free(&editor.mouse_blockchains[i]);
+    for (size_t i = 0; i < vector_size(editor.mouse_blockchains); i++) blockchain_free(editor.mouse_blockchains[i].chain);
     vector_free(editor.mouse_blockchains);
-    for (vec_size_t i = 0; i < vector_size(editor.code); i++) blockchain_free(&editor.code[i]);
+    for (size_t i = 0; i < vector_size(editor.code); i++) blockchain_free(editor.code[i].chain);
     vector_free(editor.code);
     vm_free(&vm);
 
