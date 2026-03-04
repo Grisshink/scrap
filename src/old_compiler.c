@@ -337,6 +337,7 @@ DefineFunction* define_function(Compiler* compiler, Blockdef* blockdef) {
     vector_add(&func_name, ' ');
 
     for (size_t i = 0; i < vector_size(blockdef->inputs); i++) {
+        static_assert(INPUT_LAST == 6, "Exhaustive input type in define_function");
         switch (blockdef->inputs[i].type) {
         case INPUT_TEXT_DISPLAY:
             vector_add_str(&func_name, blockdef->inputs[i].data.text);

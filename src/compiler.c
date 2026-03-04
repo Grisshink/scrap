@@ -133,8 +133,9 @@ CompilerValue compiler_evaluate_argument(Compiler* compiler, Argument* arg) {
         return DATA_UNKNOWN;
     case ARGUMENT_COLOR:
         return DATA_COLOR(CONVERT_COLOR(arg->data.color, StdColor));
+    default:
+        assert(false && "Unimplemented argument type in compiler_evaluate_argument");
     }
-    assert(false && "Unimplemented compiler_evaluate_argument");
 }
 
 CompilerValue compiler_evaluate_block(Compiler* compiler, Block* block) {

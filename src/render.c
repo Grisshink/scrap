@@ -398,6 +398,7 @@ static void draw_blockdef(Blockdef* blockdef, bool editing, bool in_editor) {
                 gui_set_gap(gui, BLOCK_PADDING);
         }
 
+        static_assert(INPUT_LAST == 6, "Exhaustive input type in draw_blockdef");
         switch (input->type) {
         case INPUT_TEXT_DISPLAY:
             if (editing && in_editor) {

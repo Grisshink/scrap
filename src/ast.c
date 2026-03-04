@@ -71,6 +71,7 @@ Block* block_new(Blockdef* blockdef) {
     for (size_t i = 0; i < vector_size(blockdef->inputs); i++) {
         Argument* arg;
 
+        static_assert(INPUT_LAST == 6, "Exhaustive input type in block_new");
         switch (blockdef->inputs[i].type) {
         case INPUT_ARGUMENT:
             arg = vector_add_dst(&block->arguments);
@@ -398,6 +399,8 @@ Blockdef* blockdef_copy(Blockdef* blockdef) {
     for (size_t i = 0; i < vector_size(blockdef->inputs); i++) {
         Input* input = vector_add_dst(&new->inputs);
         input->type = blockdef->inputs[i].type;
+
+        static_assert(INPUT_LAST == 6, "Exhaustive input type in blockdef_copy");
         switch (blockdef->inputs[i].type) {
         case INPUT_TEXT_DISPLAY:
             input->data = (InputData) {
@@ -430,6 +433,11 @@ Blockdef* blockdef_copy(Blockdef* blockdef) {
             break;
         case INPUT_BLOCKDEF_EDITOR:
             input->data = (InputData) {0};
+            break;
+        case INPUT_COLOR:
+            input->data = (InputData) {
+                .color = blockdef->inputs[i].data.color,
+            };
             break;
         default:
             assert(false && "Unimplemented input copy");
@@ -505,13 +513,20 @@ void blockdef_set_id(Blockdef* blockdef, const char* new_id) {
 
 void blockdef_delete_input(Blockdef* blockdef, size_t input) {
     assert(input < vector_size(blockdef->inputs));
-
+    
+    static_assert(INPUT_LAST == 6, "Exhaustive input type in blockdef_delete_input");
     switch (blockdef->inputs[input].type) {
     case INPUT_TEXT_DISPLAY:
         vector_free(blockdef->inputs[input].data.text);
         break;
     case INPUT_ARGUMENT:
         blockdef_free(blockdef->inputs[input].data.arg.blockdef);
+        break;
+    case INPUT_DROPDOWN:
+    case INPUT_BLOCKDEF_EDITOR:
+    case INPUT_IMAGE_DISPLAY:
+    case INPUT_COLOR:
+        assert(false && "TODO");
         break;
     default:
         assert(false && "Unimplemented input delete");
@@ -533,6 +548,7 @@ void blockdef_free(Blockdef* blockdef) {
     blockdef->ref_count--;
     if (blockdef->ref_count > 0) return;
     for (vec_size_t i = 0; i < vector_size(blockdef->inputs); i++) {
+        static_assert(INPUT_LAST == 6, "Exhaustive input type in blockdef_free");
         switch (blockdef->inputs[i].type) {
         case INPUT_TEXT_DISPLAY:
             vector_free(blockdef->inputs[i].data.text);

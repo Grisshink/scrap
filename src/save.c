@@ -555,6 +555,7 @@ void free_save(SaveData* save) {
 
 void save_blockdef_input(SaveData* save, Input* input) {
     save_add_varint(save, input->type);
+    static_assert(INPUT_LAST == 6, "Exhaustive input type in save_blockdef_input");
     switch (input->type) {
     case INPUT_TEXT_DISPLAY:
         save_add_array(save, input->data.text, vector_size(input->data.text), sizeof(input->data.text[0]));
@@ -562,6 +563,12 @@ void save_blockdef_input(SaveData* save, Input* input) {
     case INPUT_ARGUMENT:
         save_add_varint(save, input->data.arg.constr);
         save_blockdef(save, input->data.arg.blockdef);
+        break;
+    case INPUT_DROPDOWN:
+    case INPUT_BLOCKDEF_EDITOR:
+    case INPUT_IMAGE_DISPLAY:
+    case INPUT_COLOR:
+        assert(false && "TODO");
         break;
     default:
         assert(false && "Unimplemented input save");
@@ -753,6 +760,7 @@ bool load_blockdef_input(SaveData* save, Input* input) {
     InputArgumentConstraint constr;
     char* text;
 
+    static_assert(INPUT_LAST == 6, "Exhaustive input type in load_blockdef_input");
     switch (input->type) {
     case INPUT_TEXT_DISPLAY:
         text = save_read_array(save, sizeof(char), &text_len);
@@ -781,7 +789,6 @@ bool load_blockdef_input(SaveData* save, Input* input) {
     default:
         scrap_log(LOG_ERROR, "[LOAD] Unimplemented input load");
         return false;
-        break;
     }
     return true;
 }

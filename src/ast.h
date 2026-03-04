@@ -112,6 +112,8 @@ enum InputType {
     INPUT_BLOCKDEF_EDITOR,
     INPUT_IMAGE_DISPLAY,
     INPUT_COLOR,
+    // Must be last in enum
+    INPUT_LAST,
 };
 
 struct Input {

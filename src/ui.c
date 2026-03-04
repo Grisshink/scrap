@@ -1560,6 +1560,7 @@ static void update_search_blockdef(Blockdef* blockdef) {
     }
 
     for (size_t i = 0; i < vector_size(blockdef->inputs); i++) {
+        static_assert(INPUT_LAST == 6, "Exhaustive input type in update_search_blockdef");
         switch (blockdef->inputs[i].type) {
         case INPUT_TEXT_DISPLAY:
             if (!added && search_string(blockdef->inputs[i].data.text, editor.search_list_search)) {
