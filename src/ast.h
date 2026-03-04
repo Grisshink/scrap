@@ -207,6 +207,9 @@ void blockdef_add_image(Blockdef* blockdef, BlockdefImage image);
 void blockdef_add_blockdef_editor(Blockdef* blockdef);
 void blockdef_delete_input(Blockdef* blockdef, size_t input);
 void blockdef_set_id(Blockdef* blockdef, const char* new_id);
+// Removes all function pointers from blockdef, rendering it unusable. 
+// User is expected to manually fix these blockdefs by putting appropriate newly created blockdef
+void blockdef_abandon(Blockdef* blockdef);
 void blockdef_free(Blockdef* blockdef);
 
 BlockChain* blockchain_new(void);

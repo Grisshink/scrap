@@ -205,14 +205,7 @@ void block_free(Block* block) {
                 block_free(block->arguments[i].data.block);
                 break;
             case ARGUMENT_BLOCKDEF: ;
-                Blockdef* blockdef = block->arguments[i].data.blockdef;
-                blockdef->func = NULL;
-                for (size_t j = 0; j < vector_size(blockdef->inputs); j++) {
-                    Input* input = &blockdef->inputs[j];
-                    if (input->type != INPUT_ARGUMENT) continue;
-                    input->data.arg.blockdef->func = NULL;
-                }
-
+                blockdef_abandon(block->arguments[i].data.blockdef);
                 blockdef_free(block->arguments[i].data.blockdef);
                 break;
             case ARGUMENT_COLOR:
@@ -417,8 +410,10 @@ Blockdef* blockdef_copy(Blockdef* blockdef) {
                     .blockdef = blockdef_copy(blockdef->inputs[i].data.arg.blockdef),
                     .text = blockdef->inputs[i].data.arg.text,
                     .constr = blockdef->inputs[i].data.arg.constr,
+                    .hint_text = blockdef->inputs[i].data.arg.hint_text,
                 },
             };
+            input->data.arg.blockdef->ref_count++;
             break;
         case INPUT_IMAGE_DISPLAY:
             input->data = (InputData) {
@@ -523,6 +518,15 @@ void blockdef_delete_input(Blockdef* blockdef, size_t input) {
         break;
     }
     vector_remove(blockdef->inputs, input);
+}
+
+void blockdef_abandon(Blockdef* blockdef) {
+    blockdef->func = NULL;
+    for (size_t i = 0; i < vector_size(blockdef->inputs); i++) {
+        Input* input = &blockdef->inputs[i];
+        if (input->type != INPUT_ARGUMENT) continue;
+        input->data.arg.blockdef->func = NULL;
+    }
 }
 
 void blockdef_free(Blockdef* blockdef) {

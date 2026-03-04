@@ -669,18 +669,11 @@ bool handle_editor_add_arg_button(void) {
     size_t last_input = vector_size(blockdef->inputs);
     char str[32];
 
-    // TODO: Update block arguments when new argument is added
-    if (blockdef->ref_count > 1) {
-        deselect_all();
-        return true;
-    }
-    for (size_t i = 0; i < vector_size(blockdef->inputs); i++) {
-        if (blockdef->inputs[i].type != INPUT_ARGUMENT) continue;
-        if (blockdef->inputs[i].data.arg.blockdef->ref_count > 1) {
-            deselect_all();
-            return true;
-        }
-    }
+    Blockdef* new_blockdef = blockdef_copy(blockdef);
+    blockdef_abandon(blockdef);
+    blockdef_free(blockdef);
+    blockdef = new_blockdef;
+    blockdef->ref_count++;
 
     blockdef_add_argument(blockdef, "", gettext("any"), BLOCKCONSTR_UNLIMITED);
 
@@ -688,6 +681,9 @@ bool handle_editor_add_arg_button(void) {
     Blockdef* arg_blockdef = blockdef->inputs[last_input].data.arg.blockdef;
     blockdef_add_text(arg_blockdef, str);
     arg_blockdef->func = block_custom_arg;
+
+    ui.hover.editor.argument->data.blockdef = blockdef;
+    ui.hover.editor.edit_blockdef = blockdef;
 
     deselect_all();
     return true;
@@ -698,21 +694,17 @@ bool handle_editor_add_text_button(void) {
     size_t last_input = vector_size(blockdef->inputs);
     char str[32];
 
-    // TODO: Update block arguments when new argument is added
-    if (blockdef->ref_count > 1) {
-        deselect_all();
-        return true;
-    }
-    for (size_t i = 0; i < vector_size(blockdef->inputs); i++) {
-        if (blockdef->inputs[i].type != INPUT_ARGUMENT) continue;
-        if (blockdef->inputs[i].data.arg.blockdef->ref_count > 1) {
-            deselect_all();
-            return true;
-        }
-    }
+    Blockdef* new_blockdef = blockdef_copy(blockdef);
+    blockdef_abandon(blockdef);
+    blockdef_free(blockdef);
+    blockdef = new_blockdef;
+    blockdef->ref_count++;
 
     sprintf(str, "text%zu", last_input);
     blockdef_add_text(blockdef, str);
+
+    ui.hover.editor.argument->data.blockdef = blockdef;
+    ui.hover.editor.edit_blockdef = blockdef;
 
     deselect_all();
     return true;
@@ -722,19 +714,17 @@ bool handle_editor_del_arg_button(void) {
     Blockdef* blockdef = ui.hover.editor.argument->data.blockdef;
 
     assert(ui.hover.editor.blockdef_input != (size_t)-1);
-    if (blockdef->ref_count > 1) {
-        deselect_all();
-        return true;
-    }
-    for (size_t i = 0; i < vector_size(blockdef->inputs); i++) {
-        if (blockdef->inputs[i].type != INPUT_ARGUMENT) continue;
-        if (blockdef->inputs[i].data.arg.blockdef->ref_count > 1) {
-            deselect_all();
-            return true;
-        }
-    }
+
+    Blockdef* new_blockdef = blockdef_copy(blockdef);
+    blockdef_abandon(blockdef);
+    blockdef_free(blockdef);
+    blockdef = new_blockdef;
+    blockdef->ref_count++;
 
     blockdef_delete_input(blockdef, ui.hover.editor.blockdef_input);
+
+    ui.hover.editor.argument->data.blockdef = blockdef;
+    ui.hover.editor.edit_blockdef = blockdef;
 
     deselect_all();
     return true;
@@ -1310,8 +1300,6 @@ static bool handle_mouse_click(void) {
 
         if (ui.hover.editor.blockchain != ui.hover.editor.select_blockchain) {
             ui.hover.editor.select_blockchain = ui.hover.editor.blockchain;
-            // FIXME: Figure out how to get root blockchain here
-            // if (ui.hover.editor.select_blockchain) editor.blockchain_select_counter = ui.hover.editor.select_blockchain - editor.code;
         }
 
         if (ui.hover.editor.block != ui.hover.editor.select_block) {
