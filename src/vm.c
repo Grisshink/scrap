@@ -38,9 +38,6 @@ size_t blockdef_register(Vm* vm, Blockdef* blockdef) {
 
     vector_add(&vm->blockdefs, blockdef);
     blockdef->ref_count++;
-    if (blockdef->type == BLOCKTYPE_END && vm->end_blockdef == (size_t)-1) {
-        vm->end_blockdef = vector_size(vm->blockdefs) - 1;
-    }
 
     return vector_size(vm->blockdefs) - 1;
 }
@@ -138,7 +135,6 @@ void clear_compile_error(void) {
 Vm vm_new(void) {
     Vm vm = (Vm) {
         .blockdefs = vector_create(),
-        .end_blockdef = -1,
         .thread = thread_new(compiler_run, compiler_cleanup),
         .compiler = (Compiler) {0},
 

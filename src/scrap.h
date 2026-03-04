@@ -379,7 +379,6 @@ typedef struct {
 
 struct Vm {
     Blockdef** blockdefs;
-    size_t end_blockdef;
 
     Thread thread;
 

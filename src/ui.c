@@ -1574,9 +1574,7 @@ static bool search_blockdef(Blockdef* blockdef) {
 void update_search(void) {
     vector_clear(editor.search_list);
     for (size_t i = 0; i < vector_size(vm.blockdefs); i++) {
-        if (vm.blockdefs[i]->type == BLOCKTYPE_END) continue;
         if (!search_blockdef(vm.blockdefs[i])) continue;
-
         vector_add(&editor.search_list, vm.blockdefs[i]);
     }
 }

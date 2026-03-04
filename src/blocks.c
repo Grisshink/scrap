@@ -2320,10 +2320,6 @@ void register_blocks(Vm* vm) {
         .image_color = (BlockdefColor) { 0xff, 0xff, 0xff, 0xff },
     };
 
-    Blockdef* sc_end = blockdef_new("end", BLOCKTYPE_END, (BlockdefColor) { 0x77, 0x77, 0x77, 0xff }, block_noop);
-    blockdef_add_text(sc_end, gettext("End"));
-    blockdef_register(vm, sc_end);
-
     Blockdef* on_start = blockdef_new("on_start", BLOCKTYPE_HAT, (BlockdefColor) { 0xff, 0x77, 0x00, 0xFF }, block_on_start);
     blockdef_add_text(on_start, gettext("When"));
     blockdef_add_image(on_start, (BlockdefImage) { .image_ptr = &assets.textures.button_run, .image_color = (BlockdefColor) { 0x60, 0xff, 0x00, 0xff } });
