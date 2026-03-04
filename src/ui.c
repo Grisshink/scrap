@@ -1562,20 +1562,46 @@ static bool search_string(const char* str, const char* substr) {
     return *cur_substr == 0;
 }
 
-static bool search_blockdef(Blockdef* blockdef) {
-    if (search_string(blockdef->id, editor.search_list_search)) return true;
-    for (size_t i = 0; i < vector_size(blockdef->inputs); i++) {
-        if (blockdef->inputs[i].type != INPUT_TEXT_DISPLAY) continue;
-        if (search_string(blockdef->inputs[i].data.text, editor.search_list_search)) return true;
+static void update_search_blockdef(Blockdef* blockdef) {
+    if (!blockdef->func) return;
+
+    bool added = false;
+    if (!added && search_string(blockdef->id, editor.search_list_search)) {
+        vector_add(&editor.search_list, blockdef);
+        added = true;
     }
-    return false;
+
+    for (size_t i = 0; i < vector_size(blockdef->inputs); i++) {
+        switch (blockdef->inputs[i].type) {
+        case INPUT_TEXT_DISPLAY:
+            if (!added && search_string(blockdef->inputs[i].data.text, editor.search_list_search)) {
+                vector_add(&editor.search_list, blockdef);
+                added = true;
+            }
+            break;
+        case INPUT_ARGUMENT:
+            update_search_blockdef(blockdef->inputs[i].data.arg.blockdef);
+            break;
+        default:
+            break;
+        }
+    }
 }
 
 void update_search(void) {
     vector_clear(editor.search_list);
     for (size_t i = 0; i < vector_size(vm.blockdefs); i++) {
-        if (!search_blockdef(vm.blockdefs[i])) continue;
-        vector_add(&editor.search_list, vm.blockdefs[i]);
+        update_search_blockdef(vm.blockdefs[i]);
+    }
+    for (size_t i = 0; i < vector_size(editor.code); i++) {
+        Block* hat = editor.code[i].chain->start;
+        if (hat->blockdef->type != BLOCKTYPE_HAT) continue;
+
+        for (size_t j = 0; j < vector_size(hat->arguments); j++) {
+            Argument* arg = &hat->arguments[j];
+            if (arg->type != ARGUMENT_BLOCKDEF) continue;
+            update_search_blockdef(arg->data.blockdef);
+        }
     }
 }
 
