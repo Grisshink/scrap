@@ -218,7 +218,6 @@ void cleanup(void) {
 
     vector_free(editor.search_list_search);
     vector_free(editor.search_list);
-    vector_free(vm.compile_error);
 
     unregister_categories();
 

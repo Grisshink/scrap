@@ -156,6 +156,9 @@ void vm_free(Vm* vm) {
         compiler_free(&vm->compiler);
     }
 
+    for (size_t i = 0; i < vector_size(vm->compile_error); i++) vector_free(vm->compile_error[i]);
+    vector_free(vm->compile_error);
+
     for (ssize_t i = (ssize_t)vector_size(vm->blockdefs) - 1; i >= 0 ; i--) {
         blockdef_unregister(vm, i);
     }
