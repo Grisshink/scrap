@@ -509,6 +509,23 @@ void bytecode_free(IrBytecode* bc) {
     ir_list_free(bc->labels);
 }
 
+void bytecode_join(IrBytecode* dst, IrBytecode* src) {
+    IR_ASSERT(src->pool == dst->pool);
+
+    size_t dst_size = dst->code.size;
+
+    for (size_t i = 0; i < src->code.size; i++) {
+        ir_list_append(dst->code, src->code.items[i]);
+    }
+
+    for (size_t i = 0; i < src->labels.size; i++) {
+        src->pool->list.items[src->labels.items[i]].as.label_val.pos += dst_size;
+        ir_list_append(dst->labels, src->labels.items[i]);
+    }
+
+    bytecode_free(src);
+}
+
 IrInstructionID bytecode_push_op(IrBytecode* bc, IrOpcode op) {
     IrInstructionID id = bc->code.size;
     ir_list_append(bc->code, op);
@@ -633,7 +650,7 @@ void bytecode_print(IrBytecode* bc) {
 
     IrValueList pool_list = bc->pool->list;
 
-    printf("; === Bytecode %s ===\n", bc->name);
+    printf("; === Bytecode %s ===\n", bc->name ? bc->name : "*Unnamed*");
     while (i < bc->code.size) {
         if (label_num < bc->labels.size) {
             while (label_num < bc->labels.size && GET_LABEL(label_num).pos < i) label_num++;

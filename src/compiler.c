@@ -86,14 +86,22 @@ bool compiler_run(void* e) {
         if (value.type == DATA_TYPE_UNKNOWN) return false;
     }
 
-    ConstId entry = bytecode_push_label(&compiler->bytecode, "entry");
+    bytecode_push_label(&compiler->bytecode, "entry");
 
-    for (size_t i = 0; i < 1024; i++) {
-        bytecode_push_op_int(&compiler->bytecode, IR_PUSHI, GetRandomValue(0, 4096));
-        bytecode_push_op_float(&compiler->bytecode, IR_PUSHF, (double)GetRandomValue(0, 4096)/10.0);
-    }
-    bytecode_push_label(&compiler->bytecode, "other");
     bytecode_push_op_int(&compiler->bytecode, IR_PUSHI, GetRandomValue(0, 4096));
+    bytecode_push_op_float(&compiler->bytecode, IR_PUSHF, (double)GetRandomValue(0, 4096)/10.0);
+
+    IrBytecode other_bc = bytecode_new(NULL, compiler->const_pool);
+
+    ConstId other = bytecode_push_label(&other_bc, "other");
+    bytecode_push_op_int(&other_bc, IR_PUSHI, GetRandomValue(0, 4096));
+
+    bytecode_push_op_label(&compiler->bytecode, IR_IF, other);
+
+    bytecode_print(&compiler->bytecode);
+    bytecode_print(&other_bc);
+
+    bytecode_join(&compiler->bytecode, &other_bc);
 
     bytecode_print(&compiler->bytecode);
 

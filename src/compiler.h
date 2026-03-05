@@ -32,13 +32,8 @@ typedef struct CompilerValue CompilerValue;
 typedef CompilerValue (*BlockFunc)(Compiler* compiler, Block* block);
 
 typedef struct {
-    IrOpcode op;
-    IrValue constant;
-} IrInstruction;
-
-typedef struct {
-    IrInstruction* items;
-    size_t size, capacity;
+    DataType return_type;
+    IrBytecode bc;
 } BytecodeChunk;
 
 typedef union {
@@ -84,9 +79,12 @@ struct Compiler {
 #define DATA_COLOR(v) _DATA(DATA_TYPE_COLOR, .color_val = (v))
 #define DATA_LIST(v) _DATA(DATA_TYPE_LIST, .list_val = (v))
 #define DATA_LITERAL(v) _DATA(DATA_TYPE_LITERAL, .literal_val = (v))
-#define DATA_CHUNK(v) _DATA(DATA_TYPE_CHUNK, .chunk_val = (v))
+#define DATA_CHUNK(_t, _bc) _DATA(DATA_TYPE_CHUNK, .chunk_val = (BytecodeChunk) { \
+    .return_type = (_t), \
+    .bc = (_bc), \
+})
 
-#define EMPTY_CHUNK DATA_CHUNK((BytecodeChunk) {0})
+#define EMPTY_CHUNK DATA_CHUNK(DATA_TYPE_NULL, bytecode_new(NULL, compiler->const_pool))
 
 Compiler compiler_new(Thread* thread);
 bool compiler_run(void* e);
