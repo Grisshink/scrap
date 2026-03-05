@@ -26,6 +26,7 @@
 #include <string.h>
 
 const char* type_to_str(DataType type) {
+    static_assert(DATA_TYPE_LAST == 13, "Exhaustive data type in type_to_str");
     switch (type) {
     case DATA_TYPE_NOTHING:
         return "nothing";
@@ -51,8 +52,11 @@ const char* type_to_str(DataType type) {
         return "unknown";
     case DATA_TYPE_CHUNK:
         return "chunk";
+    case DATA_TYPE_NULL:
+        return "null";
+    default:
+        assert(false && "Unhandled type_to_str");
     }
-    assert(false && "Unhandled type_to_str");
 }
 
 Block* block_new(Blockdef* blockdef) {

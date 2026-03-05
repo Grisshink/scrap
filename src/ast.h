@@ -66,6 +66,8 @@ typedef enum {
     DATA_TYPE_COLOR,
     DATA_TYPE_CHUNK, // A chunk of compiled code. Can get merged with other chunks that will result in final compiler output
     DATA_TYPE_NULL, // No type, used in chunks to indicate that chunk did not modify the stack
+    // Must be last in enum
+    DATA_TYPE_LAST,
 } DataType;
 
 struct BlockdefColor {

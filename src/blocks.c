@@ -517,6 +517,7 @@ CompilerValue block_gc_collect(Compiler* compiler, Block* block) {
     }
 
 LLVMValueRef arg_to_value(Compiler* compiler, Block* block, FuncArg arg) {
+    static_assert(DATA_TYPE_LAST == 11, "Exhaustive data type in arg_to_value");
     switch (arg.type) {
     case DATA_TYPE_LITERAL:
         return CONST_STRING_LITERAL(arg.data.str);
@@ -533,11 +534,13 @@ LLVMValueRef arg_to_value(Compiler* compiler, Block* block, FuncArg arg) {
     case DATA_TYPE_UNKNOWN:
         compiler_set_error(compiler, block, gettext("Cannot represent %s as LLVM value"), type_to_str(arg.type));
         return NULL;
+    default:
+        assert(false && "Unhandled arg_to_value");
     }
-    assert(false && "Unhandled arg_to_value");
 }
 
 LLVMValueRef arg_to_bool(Compiler* compiler, Block* block, FuncArg arg) {
+    static_assert(DATA_TYPE_LAST == 11, "Exhaustive data type in arg_to_bool");
     switch (arg.type) {
     case DATA_TYPE_LITERAL:
         return CONST_BOOLEAN(*arg.data.str != 0);
@@ -560,11 +563,13 @@ LLVMValueRef arg_to_bool(Compiler* compiler, Block* block, FuncArg arg) {
     case DATA_TYPE_COLOR:
         compiler_set_error(compiler, block, gettext("Cannot cast type %s into %s"), type_to_str(arg.type), type_to_str(DATA_TYPE_BOOL));
         return NULL;
+    default:
+        assert(false && "Unhandled cast to bool");
     }
-    assert(false && "Unhandled cast to bool");
 }
 
 LLVMValueRef arg_to_integer(Compiler* compiler, Block* block, FuncArg arg) {
+    static_assert(DATA_TYPE_LAST == 11, "Exhaustive data type in arg_to_integer");
     switch (arg.type) {
     case DATA_TYPE_LITERAL:
         return CONST_INTEGER(atoi(arg.data.str));
@@ -586,11 +591,13 @@ LLVMValueRef arg_to_integer(Compiler* compiler, Block* block, FuncArg arg) {
     case DATA_TYPE_UNKNOWN:
         compiler_set_error(compiler, block, gettext("Cannot cast type %s into %s"), type_to_str(arg.type), type_to_str(DATA_TYPE_INTEGER));
         return NULL;
+    default:
+        assert(false && "Unhandled cast to integer");
     }
-    assert(false && "Unhandled cast to integer");
 }
 
 LLVMValueRef arg_to_float(Compiler* compiler, Block* block, FuncArg arg) {
+    static_assert(DATA_TYPE_LAST == 11, "Exhaustive data type in arg_to_float");
     switch (arg.type) {
     case DATA_TYPE_LITERAL:
         return CONST_FLOAT(atof(arg.data.str));
@@ -613,11 +620,13 @@ LLVMValueRef arg_to_float(Compiler* compiler, Block* block, FuncArg arg) {
     case DATA_TYPE_UNKNOWN:
         compiler_set_error(compiler, block, gettext("Cannot cast type %s into %s"), type_to_str(arg.type), type_to_str(DATA_TYPE_FLOAT));
         return NULL;
+    default:
+        assert(false && "Unhandled cast to float");
     }
-    assert(false && "Unhandled cast to float");
 }
 
 LLVMValueRef arg_to_any_string(Compiler* compiler, Block* block, FuncArg arg) {
+    static_assert(DATA_TYPE_LAST == 11, "Exhaustive data type in arg_to_any_string");
     switch (arg.type) {
     case DATA_TYPE_LITERAL:
         return CONST_STRING_LITERAL(arg.data.str);
@@ -641,11 +650,13 @@ LLVMValueRef arg_to_any_string(Compiler* compiler, Block* block, FuncArg arg) {
     case DATA_TYPE_UNKNOWN:
         compiler_set_error(compiler, block, gettext("Cannot cast type %s into any string"), type_to_str(arg.type));
         return NULL;
+    default:
+        assert(false && "Unhandled cast to any string");
     }
-    assert(false && "Unhandled cast to any string");
 }
 
 LLVMValueRef arg_to_string_ref(Compiler* compiler, Block* block, FuncArg arg) {
+    static_assert(DATA_TYPE_LAST == 11, "Exhaustive data type in arg_to_string_ref");
     switch (arg.type) {
     case DATA_TYPE_LITERAL:
         return build_call(compiler, "std_string_from_literal", CONST_GC, CONST_STRING_LITERAL(arg.data.str), CONST_INTEGER(strlen(arg.data.str)));
@@ -669,11 +680,13 @@ LLVMValueRef arg_to_string_ref(Compiler* compiler, Block* block, FuncArg arg) {
     case DATA_TYPE_BLOCKDEF:
         compiler_set_error(compiler, block, gettext("Cannot cast type %s into %s"), type_to_str(arg.type), type_to_str(DATA_TYPE_STRING));
         return NULL;
+    default:
+        assert(false && "Unhandled cast to string ref");
     }
-    assert(false && "Unhandled cast to string ref");
 }
 
 LLVMValueRef arg_to_color(Compiler* compiler, Block* block, FuncArg arg) {
+    static_assert(DATA_TYPE_LAST == 11, "Exhaustive data type in arg_to_color");
     switch (arg.type) {
     case DATA_TYPE_LITERAL: ;
         StdColor col = std_parse_color(arg.data.str);
@@ -696,11 +709,13 @@ LLVMValueRef arg_to_color(Compiler* compiler, Block* block, FuncArg arg) {
     case DATA_TYPE_UNKNOWN:
         compiler_set_error(compiler, block, gettext("Cannot cast type %s into %s"), type_to_str(arg.type), type_to_str(DATA_TYPE_COLOR));
         return NULL;
+    default:
+        assert(false && "Unhandled cast to color");
     }
-    assert(false && "Unhandled cast to color");
 }
 
 LLVMValueRef arg_to_list(Compiler* compiler, Block* block, FuncArg arg) {
+    static_assert(DATA_TYPE_LAST == 11, "Exhaustive data type in arg_to_list");
     switch (arg.type) {
     case DATA_TYPE_BOOL:
     case DATA_TYPE_NOTHING:
@@ -717,11 +732,13 @@ LLVMValueRef arg_to_list(Compiler* compiler, Block* block, FuncArg arg) {
         return arg.data.value;
     case DATA_TYPE_ANY:
         return build_call(compiler, "std_list_from_any", CONST_GC, arg.data.value);
+    default:
+        assert(false && "Unhandled cast to string ref");
     }
-    assert(false && "Unhandled cast to string ref");
 }
 
 LLVMValueRef arg_to_any(Compiler* compiler, Block* block, FuncArg arg) {
+    static_assert(DATA_TYPE_LAST == 11, "Exhaustive data type in arg_to_any");
     switch (arg.type) {
     case DATA_TYPE_NOTHING:
         return build_call_count(compiler, "std_any_from_value", 2, CONST_GC, CONST_INTEGER(arg.type));
@@ -739,11 +756,13 @@ LLVMValueRef arg_to_any(Compiler* compiler, Block* block, FuncArg arg) {
     case DATA_TYPE_BLOCKDEF:
         compiler_set_error(compiler, block, gettext("Cannot cast type %s into %s"), type_to_str(arg.type), type_to_str(DATA_TYPE_ANY));
         return NULL;
+    default:
+        assert(false && "Unhandled cast to string ref");
     }
-    assert(false && "Unhandled cast to string ref");
 }
 
 FuncArg arg_cast(Compiler* compiler, Block* block, FuncArg arg, DataType cast_to_type) {
+    static_assert(DATA_TYPE_LAST == 11, "Exhaustive data type in arg_cast");
     switch (cast_to_type) {
     case DATA_TYPE_LITERAL:
         if (arg.type == DATA_TYPE_LITERAL) return arg;
@@ -767,8 +786,9 @@ FuncArg arg_cast(Compiler* compiler, Block* block, FuncArg arg, DataType cast_to
     case DATA_TYPE_BLOCKDEF:
         compiler_set_error(compiler, block, gettext("Cannot cast type %s into %s"), type_to_str(arg.type), type_to_str(cast_to_type));
         return DATA_UNKNOWN;
+    default:
+        assert(false && "Unhandled cast to value typed");
     }
-    assert(false && "Unhandled cast to value typed");
 }
 
 bool block_return(Compiler* compiler, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state) {
@@ -879,6 +899,7 @@ bool block_not_eq(Compiler* compiler, Block* block, int argc, FuncArg* argv, Fun
         right = argv[1];
     }
 
+    static_assert(DATA_TYPE_LAST == 11, "Exhaustive data type in block_not_eq");
     switch (left.type) {
     case DATA_TYPE_NOTHING:
         *return_val = DATA_BOOLEAN(CONST_BOOLEAN(0));
@@ -943,6 +964,7 @@ bool block_eq(Compiler* compiler, Block* block, int argc, FuncArg* argv, FuncArg
         right = argv[1];
     }
 
+    static_assert(DATA_TYPE_LAST == 11, "Exhaustive data type in block_eq");
     switch (left.type) {
     case DATA_TYPE_NOTHING:
         *return_val = DATA_BOOLEAN(CONST_BOOLEAN(1));
@@ -1659,6 +1681,7 @@ bool block_print(Compiler* compiler, Block* block, int argc, FuncArg* argv, Func
     (void) block;
     MIN_ARG_COUNT(1);
 
+    static_assert(DATA_TYPE_LAST == 11, "Exhaustive data type in block_print");
     switch (argv[0].type) {
     case DATA_TYPE_LITERAL:
         *return_val = DATA_INTEGER(*argv[0].data.str
