@@ -30,6 +30,7 @@
 typedef struct IrExec IrExec;
 typedef struct IrValue IrValue;
 
+typedef size_t ConstId;
 typedef int IrLabelID;
 typedef size_t IrInstructionID;
 typedef bool (*IrRunFunction)(IrExec* exec);
@@ -188,7 +189,7 @@ typedef struct {
 } IrVariableFrameList;
 
 typedef struct {
-    IrLabel* items;
+    ConstId* items;
     size_t size, capacity;
 } IrLabelList;
 
@@ -198,10 +199,18 @@ typedef struct {
 } IrOpcodes;
 
 typedef struct {
+    struct {
+        ConstId* items;
+        size_t size, capacity;
+    } hash_set;
+    IrValueList list;
+} IrConstantPool;
+
+typedef struct {
     const char* name;
     unsigned int version;
     IrOpcodes code;
-    IrValueList constants;
+    IrConstantPool* pool;
     IrLabelList labels;
 } IrBytecode;
 
@@ -234,19 +243,19 @@ struct IrExec {
     IrHeap second_heap;
 };
 
-IrBytecode bytecode_new(const char* name);
+IrBytecode bytecode_new(const char* name, IrConstantPool* pool);
 void bytecode_free(IrBytecode* bc);
 
 void bytecode_print(IrBytecode* bc);
 
-IrLabelID bytecode_push_label(IrBytecode* bc, const char* name);
+ConstId bytecode_push_label(IrBytecode* bc, const char* name);
 
 IrInstructionID bytecode_push_op(IrBytecode* bc, IrOpcode op);
 IrInstructionID bytecode_push_op_int(IrBytecode* bc, IrOpcode op, int int_val);
 IrInstructionID bytecode_push_op_float(IrBytecode* bc, IrOpcode op, double float_val);
 IrInstructionID bytecode_push_op_bool(IrBytecode* bc, IrOpcode op, bool bool_val);
 IrInstructionID bytecode_push_op_func(IrBytecode* bc, IrOpcode op, IrFunction func_val);
-IrInstructionID bytecode_push_op_label(IrBytecode* bc, IrOpcode op, IrLabelID label_id);
+IrInstructionID bytecode_push_op_label(IrBytecode* bc, IrOpcode op, ConstId label_id);
 IrInstructionID bytecode_push_op_list(IrBytecode* bc, IrOpcode op, IrList* list_val);
 
 void bytecode_set_op_int(IrBytecode* bc, IrInstructionID instr_id, int int_val);
@@ -311,8 +320,6 @@ IrFunction exec_pop_func(IrExec* exec);
 #include <sys/mman.h>
 #include <errno.h>
 
-typedef unsigned short ConstId;
-
 #define ir_list_append(list, val) do { \
     if ((list).size >= (list).capacity) { \
         if ((list).capacity == 0) (list).capacity = 32; \
@@ -337,7 +344,7 @@ typedef unsigned short ConstId;
         return; \
     }
 
-#define CODE_IMMEDIATE ((bc->code.items[i + 1] << 8) | bc->code.items[i + 2])
+#define CODE_IMMEDIATE ((bc->code.items[i + 1] << 16) | (bc->code.items[i + 2] << 8) | bc->code.items[i + 3])
 
 #define IR_ASSERT(val) assert(val)
 
@@ -345,22 +352,160 @@ typedef unsigned short ConstId;
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #endif
 
-IrBytecode bytecode_new(const char* name) {
+size_t hash_value(IrValue value) {
+    size_t hash = 0;
+
+    switch (value.type) {
+    case IR_TYPE_NOTHING: hash = 0xdeadbeef; break;
+    case IR_TYPE_BYTE: hash = value.as.byte_val; break;
+    case IR_TYPE_INT: hash = value.as.int_val; break;
+    case IR_TYPE_FLOAT: hash = *(size_t*)&value.as.float_val; break;
+    case IR_TYPE_BOOL: hash = value.as.bool_val; break;
+    case IR_TYPE_LIST: ;
+        IrList* list = value.as.list_val;
+        for (size_t i = 0; i < list->size; i++) {
+            hash = (hash << 1) ^ hash_value(list->items[i]);
+        }
+        break;
+    case IR_TYPE_FUNC:
+        if (value.as.func_val.hint) {
+            size_t hint_size = strlen(value.as.func_val.hint);
+            for (size_t i = 0; i < hint_size; i++) {
+                hash = (hash << 1) ^ value.as.func_val.hint[i];
+            }
+        }
+        hash ^= (size_t)value.as.func_val.ptr; 
+        break;
+    case IR_TYPE_LABEL: ;
+        size_t label_size = strlen(value.as.label_val.name);
+        for (size_t i = 0; i < label_size; i++) {
+            hash = (hash << 1) ^ value.as.label_val.name[i];
+        }
+        break;
+    default:
+        break;
+    }
+
+    return hash;
+}
+
+bool value_equals(IrValue left, IrValue right) {
+    if (left.type != right.type) return false;
+
+    switch (left.type) {
+    case IR_TYPE_NOTHING: return true;
+    case IR_TYPE_BYTE: return left.as.byte_val == right.as.byte_val;
+    case IR_TYPE_INT: return left.as.int_val == right.as.int_val;
+    case IR_TYPE_FLOAT: return left.as.float_val == right.as.float_val;
+    case IR_TYPE_BOOL: return left.as.bool_val == right.as.bool_val;
+    case IR_TYPE_LIST: ;
+        IrList* left_list = left.as.list_val;
+        IrList* right_list = right.as.list_val;
+        if (left_list->size != right_list->size) return false; 
+        for (size_t i = 0; i < left_list->size; i++) {
+            if (!value_equals(left_list->items[i], right_list->items[i])) return false;
+        }
+        return true;
+    case IR_TYPE_FUNC:
+        if (left.as.func_val.ptr == right.as.func_val.ptr && left.as.func_val.ptr && right.as.func_val.ptr) return true;
+        if ((left.as.func_val.hint != NULL) != (right.as.func_val.hint != NULL)) return false;
+        if (left.as.func_val.hint) {
+            return !strcmp(left.as.func_val.hint, right.as.func_val.hint);
+        }
+        return true;
+    case IR_TYPE_LABEL:
+        return !strcmp(left.as.label_val.name, right.as.label_val.name);
+    }
+    return true;
+}
+
+IrConstantPool* constant_pool_new(void) {
+    IrConstantPool* pool = malloc(sizeof(IrConstantPool));
+    memset(pool, 0, sizeof(IrConstantPool));
+    return pool;
+}
+
+void constant_pool_free(IrConstantPool* pool) {
+    for (size_t i = 0; i < pool->list.size; i++) {
+        if (pool->list.items[i].type != IR_TYPE_LIST) continue;
+        bytecode_const_list_free(pool->list.items[i].as.list_val);
+    }
+    ir_list_free(pool->hash_set);
+    ir_list_free(pool->list);
+    free(pool);
+}
+
+size_t constant_pool_get(IrConstantPool* pool, IrValue value) {
+    if (pool->hash_set.capacity == 0) return (size_t)-1;
+
+    size_t hash = hash_value(value) % pool->hash_set.capacity;
+    size_t idx = pool->hash_set.items[hash];
+    if (idx == (size_t)-1) return idx;
+    while (!value_equals(pool->list.items[idx], value)) {
+        hash++;
+        if (hash >= pool->hash_set.capacity) hash = 0;
+        idx = pool->hash_set.items[hash];
+        if (idx == (size_t)-1) return idx;
+    }
+    return idx;
+}
+
+size_t constant_pool_insert(IrConstantPool* pool, IrValue value) {
+    if ((float)pool->hash_set.size / (float)pool->hash_set.capacity > 0.6 || pool->hash_set.capacity == 0) {
+        if (pool->hash_set.capacity == 0) pool->hash_set.capacity = 1024;
+        else pool->hash_set.capacity *= 2;
+
+        pool->hash_set.items = realloc(pool->hash_set.items, sizeof(*pool->hash_set.items) * pool->hash_set.capacity);
+        // This sets all buckets in hash set to -1 (empty)
+        memset(pool->hash_set.items, 0xff, sizeof(*pool->hash_set.items) * pool->hash_set.capacity);
+
+        for (size_t i = 0; i < pool->list.size; i++) {
+            size_t hash = hash_value(pool->list.items[i]) % pool->hash_set.capacity;
+            size_t idx = pool->hash_set.items[hash];
+            while (idx != (size_t)-1) {
+                hash++;
+                if (hash >= pool->hash_set.capacity) hash = 0;
+                idx = pool->hash_set.items[hash];
+            }
+            pool->hash_set.items[hash] = i;
+        }
+    }
+
+    size_t hash = hash_value(value) % pool->hash_set.capacity;
+    size_t idx = pool->hash_set.items[hash];
+
+    while (idx != (size_t)-1) {
+        if (value_equals(pool->list.items[idx], value)) {
+            if (pool->list.items[idx].as.list_val != value.as.list_val && value.type == IR_TYPE_LIST) {
+                bytecode_const_list_free(value.as.list_val);
+            }
+            return idx;
+        }
+
+        hash++;
+        if (hash >= pool->hash_set.capacity) hash = 0;
+        idx = pool->hash_set.items[hash];
+    }
+
+    // Insert value
+    idx = pool->list.size;
+    pool->hash_set.items[hash] = idx;
+    pool->hash_set.size++;
+    ir_list_append(pool->list, value);
+    return idx;
+}
+
+IrBytecode bytecode_new(const char* name, IrConstantPool* pool) {
     return (IrBytecode) {
         .name = name,
         .code = (IrOpcodes) {0},
-        .constants = (IrValueList) {0},
+        .pool = pool,
         .labels = (IrLabelList) {0},
     };
 }
 
 void bytecode_free(IrBytecode* bc) {
     ir_list_free(bc->code);
-    for (size_t i = 0; i < bc->constants.size; i++) {
-        if (bc->constants.items[i].type != IR_TYPE_LIST) continue;
-        bytecode_const_list_free(bc->constants.items[i].as.list_val);
-    }
-    ir_list_free(bc->constants);
     ir_list_free(bc->labels);
 }
 
@@ -373,25 +518,28 @@ IrInstructionID bytecode_push_op(IrBytecode* bc, IrOpcode op) {
 IrInstructionID bytecode_push_op_const(IrBytecode* bc, IrOpcode op, ConstId const_id) {
     IrInstructionID id = bc->code.size;
     ir_list_append(bc->code, op);
+    ir_list_append(bc->code, (const_id >> 16) & 255);
     ir_list_append(bc->code, (const_id >> 8) & 255);
     ir_list_append(bc->code, const_id & 255);
     return id;
 }
 
-IrLabelID bytecode_push_label(IrBytecode* bc, const char* name) {
-    IrLabel label;
-    label.name = name;
-    label.pos = bc->code.size;
+ConstId bytecode_push_label(IrBytecode* bc, const char* name) {
+    IrValue val;
+    val.type = IR_TYPE_LABEL;
+    val.as.label_val.name = name;
+    val.as.label_val.pos = bc->code.size;
+
+    assert(constant_pool_get(bc->pool, val) == (size_t)-1);
+    ConstId label = constant_pool_insert(bc->pool, val);
     ir_list_append(bc->labels, label);
-    return bc->labels.size - 1;
+    return label;
 }
 
 ConstId bytecode_push_constant(IrBytecode* bc, IrValue constant) {
-    for (size_t i = 0; i < bc->constants.size; i++) {
-        if (!memcmp(&bc->constants.items[i], &constant, sizeof(constant))) return i;
-    }
-    ir_list_append(bc->constants, constant);
-    return bc->constants.size - 1;
+    ConstId id = constant_pool_insert(bc->pool, constant);
+    IR_ASSERT(id < 0x1000000);
+    return id;
 }
 
 #define _ir_make_bc_push_op(_name, _type, _valname, _irtype) \
@@ -415,8 +563,9 @@ void bytecode_set_op(IrBytecode* bc, IrInstructionID instr_id, IrOpcode op) {
 }
 
 void bytecode_set_op_const(IrBytecode* bc, IrInstructionID instr_id, ConstId const_id) {
-    bc->code.items[instr_id + 1] = (const_id >> 8) & 255;
-    bc->code.items[instr_id + 2] = const_id & 255;
+    bc->code.items[instr_id + 1] = (const_id >> 16) & 255;
+    bc->code.items[instr_id + 2] = (const_id >> 8) & 255;
+    bc->code.items[instr_id + 3] = const_id & 255;
 }
 
 #define _ir_make_bc_set_op(_name, _type, _valname, _irtype) \
@@ -462,11 +611,9 @@ void bytecode_const_list_free(IrList* list) {
     free(list);
 }
 
-IrInstructionID bytecode_push_op_label(IrBytecode* bc, IrOpcode op, IrLabelID label_id) {
-    IrValue constant;
-    constant.type = IR_TYPE_LABEL;
-    constant.as.label_val = bc->labels.items[label_id];
-    return bytecode_push_op_const(bc, op, bytecode_push_constant(bc, constant));
+IrInstructionID bytecode_push_op_label(IrBytecode* bc, IrOpcode op, ConstId label_id) {
+    IR_ASSERT(bc->pool->list.items[label_id].type == IR_TYPE_LABEL);
+    return bytecode_push_op_const(bc, op, label_id);
 }
 
 IrFunction ir_func_by_hint(const char* hint) {
@@ -477,18 +624,21 @@ IrFunction ir_func_by_ptr(IrRunFunction func) {
     return (IrFunction) { .hint = NULL, .ptr = func };
 }
 
+#define GET_LABEL(idx) (pool_list.items[bc->labels.items[(idx)]].as.label_val)
 void bytecode_print(IrBytecode* bc) {
     size_t i         = 0,
            label_num = 0,
            op_count  = 0;
     IrFunction func;
 
+    IrValueList pool_list = bc->pool->list;
+
     printf("; === Bytecode %s ===\n", bc->name);
     while (i < bc->code.size) {
         if (label_num < bc->labels.size) {
-            while (label_num < bc->labels.size && bc->labels.items[label_num].pos < i) label_num++;
-            while (label_num < bc->labels.size && bc->labels.items[label_num].pos == i) {
-                printf("%s:\n", bc->labels.items[label_num].name);
+            while (label_num < bc->labels.size && GET_LABEL(label_num).pos < i) label_num++;
+            while (label_num < bc->labels.size && GET_LABEL(label_num).pos == i) {
+                printf("%s:\n", GET_LABEL(label_num).name);
                 label_num++;
             }
         }
@@ -498,13 +648,13 @@ void bytecode_print(IrBytecode* bc) {
         switch (bc->code.items[i]) {
         case IR_PUSHL:
             CHECK_IMMEDIATE;
-            IrList* list = bc->constants.items[CODE_IMMEDIATE].as.list_val;
+            IrList* list = pool_list.items[CODE_IMMEDIATE].as.list_val;
             if (list) {
                 printf("pushl (%p, %zu/%zu)\n", list, list->size, list->capacity);
             } else {
                 printf("pushl\n");
             }
-            i += 2;
+            i += 3;
             break;
         case IR_PUSHN: printf("pushn\n"); break;
         case IR_POP: printf("pop\n"); break;
@@ -566,27 +716,27 @@ void bytecode_print(IrBytecode* bc) {
         case IR_DYNRUN: printf("dynrun\n"); break;
         case IR_PUSHI:
             CHECK_IMMEDIATE;
-            printf("pushi %ld\n", bc->constants.items[CODE_IMMEDIATE].as.int_val);
-            i += 2;
+            printf("pushi %ld\n", pool_list.items[CODE_IMMEDIATE].as.int_val);
+            i += 3;
             break;
         case IR_PUSHF:
             CHECK_IMMEDIATE;
-            printf("pushf %g\n", bc->constants.items[CODE_IMMEDIATE].as.float_val);
-            i += 2;
+            printf("pushf %g\n", pool_list.items[CODE_IMMEDIATE].as.float_val);
+            i += 3;
             break;
         case IR_PUSHB:
             CHECK_IMMEDIATE;
-            printf("pushb %s\n", bc->constants.items[CODE_IMMEDIATE].as.bool_val ? "true" : "false");
-            i += 2;
+            printf("pushb %s\n", pool_list.items[CODE_IMMEDIATE].as.bool_val ? "true" : "false");
+            i += 3;
             break;
         case IR_PUSHLB:
             CHECK_IMMEDIATE;
-            printf("pushlb <%s>\n", bc->constants.items[CODE_IMMEDIATE].as.label_val.name);
-            i += 2;
+            printf("pushlb <%s>\n", pool_list.items[CODE_IMMEDIATE].as.label_val.name);
+            i += 3;
             break;
         case IR_PUSHFN:
             CHECK_IMMEDIATE;
-            func = bc->constants.items[CODE_IMMEDIATE].as.func_val;
+            func = pool_list.items[CODE_IMMEDIATE].as.func_val;
             if (func.ptr) {
                 if (func.hint) {
                     printf("pushfn \"%s\" (%p)\n", func.hint, func.ptr);
@@ -600,41 +750,41 @@ void bytecode_print(IrBytecode* bc) {
                     printf("pushfn inval\n");
                 }
             }
-            i += 2;
+            i += 3;
             break;
         case IR_POPC:
             CHECK_IMMEDIATE;
-            printf("popc %ld\n", bc->constants.items[CODE_IMMEDIATE].as.int_val);
-            i += 2;
+            printf("popc %ld\n", pool_list.items[CODE_IMMEDIATE].as.int_val);
+            i += 3;
             break;
         case IR_LOAD:
             CHECK_IMMEDIATE;
-            printf("load %ld\n", bc->constants.items[CODE_IMMEDIATE].as.int_val);
-            i += 2;
+            printf("load %ld\n", pool_list.items[CODE_IMMEDIATE].as.int_val);
+            i += 3;
             break;
         case IR_STORE:
             CHECK_IMMEDIATE;
-            printf("store %ld\n", bc->constants.items[CODE_IMMEDIATE].as.int_val);
-            i += 2;
+            printf("store %ld\n", pool_list.items[CODE_IMMEDIATE].as.int_val);
+            i += 3;
             break;
         case IR_JMP:
             CHECK_IMMEDIATE;
-            printf("jmp <%s>\n", bc->constants.items[CODE_IMMEDIATE].as.label_val.name);
-            i += 2;
+            printf("jmp <%s>\n", pool_list.items[CODE_IMMEDIATE].as.label_val.name);
+            i += 3;
             break;
         case IR_IF:
             CHECK_IMMEDIATE;
-            printf("if <%s>\n", bc->constants.items[CODE_IMMEDIATE].as.label_val.name);
-            i += 2;
+            printf("if <%s>\n", pool_list.items[CODE_IMMEDIATE].as.label_val.name);
+            i += 3;
             break;
         case IR_CALL:
             CHECK_IMMEDIATE;
-            printf("call <%s>\n", bc->constants.items[CODE_IMMEDIATE].as.label_val.name);
-            i += 2;
+            printf("call <%s>\n", pool_list.items[CODE_IMMEDIATE].as.label_val.name);
+            i += 3;
             break;
         case IR_RUN:
             CHECK_IMMEDIATE;
-            func = bc->constants.items[CODE_IMMEDIATE].as.func_val;
+            func = pool_list.items[CODE_IMMEDIATE].as.func_val;
             if (func.ptr) {
                 if (func.hint) {
                     printf("run \"%s\" (%p)\n", func.hint, func.ptr);
@@ -648,7 +798,7 @@ void bytecode_print(IrBytecode* bc) {
                     printf("run inval\n");
                 }
             }
-            i += 2;
+            i += 3;
             break;
         default: printf("unknown\n"); break;
         }
@@ -875,10 +1025,13 @@ IrBytecode* exec_find_bytecode(IrExec* exec, const char* bc_name) {
 }
 
 IrLabel* bytecode_find_label(IrBytecode* bc, const char* label_name) {
-    for (size_t i = 0; i < bc->labels.size; i++) {
-        if (!strcmp(bc->labels.items[i].name, label_name)) return &bc->labels.items[i];
-    }
-    return NULL;
+    IrValue label;
+    label.type = IR_TYPE_LABEL;
+    label.as.label_val.name = label_name;
+
+    ConstId id = constant_pool_get(bc->pool, label);
+    if (id == (size_t)-1) return NULL;
+    return &bc->pool->list.items[id].as.label_val;
 }
 
 bool exec_run(IrExec* exec, const char* bc_name, const char* label_name) {
@@ -1051,6 +1204,8 @@ bool exec_run_bytecode(IrExec* exec, IrBytecode* bc, size_t pos) {
     bool return_val = true;
     exec_push_variable_stack(exec);
 
+    IrValueList pool_list = bc->pool->list;
+
     IrValueList* variable_frame;
     int64_t variable_frame_pos;
 
@@ -1068,44 +1223,44 @@ bool exec_run_bytecode(IrExec* exec, IrBytecode* bc, size_t pos) {
         switch (bc->code.items[i]) {
         case IR_PUSHN: exec_push_nothing(exec); break;
         case IR_PUSHI:
-            exec_push_int(exec, bc->constants.items[CODE_IMMEDIATE].as.int_val);
-            i += 2;
+            exec_push_int(exec, pool_list.items[CODE_IMMEDIATE].as.int_val);
+            i += 3;
             break;
         case IR_PUSHF:
-            exec_push_float(exec, bc->constants.items[CODE_IMMEDIATE].as.float_val);
-            i += 2;
+            exec_push_float(exec, pool_list.items[CODE_IMMEDIATE].as.float_val);
+            i += 3;
             break;
         case IR_PUSHB:
-            exec_push_bool(exec, bc->constants.items[CODE_IMMEDIATE].as.bool_val);
-            i += 2;
+            exec_push_bool(exec, pool_list.items[CODE_IMMEDIATE].as.bool_val);
+            i += 3;
             break;
         case IR_PUSHLB:
-            exec_push_label(exec, bc->constants.items[CODE_IMMEDIATE].as.label_val);
-            i += 2;
+            exec_push_label(exec, pool_list.items[CODE_IMMEDIATE].as.label_val);
+            i += 3;
             break;
         case IR_PUSHFN:
-            exec_push_func(exec, bc->constants.items[CODE_IMMEDIATE].as.func_val);
-            i += 2;
+            exec_push_func(exec, pool_list.items[CODE_IMMEDIATE].as.func_val);
+            i += 3;
             break;
         case IR_POP: exec_pop_value(exec); break;
         case IR_POPC:
-            exec_pop_multiple(exec, bc->constants.items[CODE_IMMEDIATE].as.int_val);
-            i += 2;
+            exec_pop_multiple(exec, pool_list.items[CODE_IMMEDIATE].as.int_val);
+            i += 3;
             break;
         case IR_DUP: exec_dup_value(exec); break;
         case IR_LOAD:
             IR_ASSERT(exec->variables.size > 0);
             variable_frame = &exec->variables.items[exec->variables.size - 1];
-            variable_frame_pos = bc->constants.items[CODE_IMMEDIATE].as.int_val;
+            variable_frame_pos = pool_list.items[CODE_IMMEDIATE].as.int_val;
             IR_ASSERT(variable_frame_pos >= 0);
             IR_ASSERT((size_t)variable_frame_pos < variable_frame->size);
             exec_push_value(exec, variable_frame->items[variable_frame_pos]);
-            i += 2;
+            i += 3;
             break;
         case IR_STORE:
             IR_ASSERT(exec->variables.size > 0);
             variable_frame = &exec->variables.items[exec->variables.size - 1];
-            variable_frame_pos = bc->constants.items[CODE_IMMEDIATE].as.int_val;
+            variable_frame_pos = pool_list.items[CODE_IMMEDIATE].as.int_val;
             IR_ASSERT(variable_frame_pos >= 0);
             IR_ASSERT((size_t)variable_frame_pos <= variable_frame->size);
 
@@ -1115,7 +1270,7 @@ bool exec_run_bytecode(IrExec* exec, IrBytecode* bc, size_t pos) {
             } else {
                 variable_frame->items[variable_frame_pos] = val;
             }
-            i += 2;
+            i += 3;
             break;
         case IR_ADDI:
             right_int = exec_pop_int(exec);
@@ -1433,13 +1588,13 @@ bool exec_run_bytecode(IrExec* exec, IrBytecode* bc, size_t pos) {
             break;
 
         case IR_PUSHL:
-            list = bc->constants.items[CODE_IMMEDIATE].as.list_val;
+            list = pool_list.items[CODE_IMMEDIATE].as.list_val;
             if (!list) {
                 list = exec_list_new(exec);
                 if (!list) IR_EXEC_FAIL;
             }
             exec_push_list(exec, list);
-            i += 2;
+            i += 3;
             break;
         case IR_ADDL: ;
             left_value = exec_pop_value(exec);
@@ -1531,22 +1686,22 @@ bool exec_run_bytecode(IrExec* exec, IrBytecode* bc, size_t pos) {
             break;
 
         case IR_JMP:
-            i = bc->constants.items[CODE_IMMEDIATE].as.label_val.pos - 1;
+            i = pool_list.items[CODE_IMMEDIATE].as.label_val.pos - 1;
             break;
         case IR_IF:
             left_bool = exec_pop_bool(exec);
             if (left_bool) {
-                i = bc->constants.items[CODE_IMMEDIATE].as.label_val.pos - 1;
+                i = pool_list.items[CODE_IMMEDIATE].as.label_val.pos - 1;
             } else {
-                i += 2;
+                i += 3;
             }
             break;
         case IR_CALL:
-            if (!exec_run_bytecode(exec, bc, bc->constants.items[CODE_IMMEDIATE].as.label_val.pos)) IR_EXEC_FAIL;
-            i += 2;
+            if (!exec_run_bytecode(exec, bc, pool_list.items[CODE_IMMEDIATE].as.label_val.pos)) IR_EXEC_FAIL;
+            i += 3;
             break;
         case IR_RUN: ;
-            func = &bc->constants.items[CODE_IMMEDIATE].as.func_val;
+            func = &pool_list.items[CODE_IMMEDIATE].as.func_val;
             if (!func->ptr) {
                 if (!exec->resolve_run_function) {
                     exec_set_error(exec, "Called run instruction, but no run function resolver has been attached");
@@ -1559,7 +1714,7 @@ bool exec_run_bytecode(IrExec* exec, IrBytecode* bc, size_t pos) {
                 }
             }
             if (!func->ptr(exec)) IR_EXEC_FAIL;
-            i += 2;
+            i += 3;
             break;
         case IR_DYNJMP:
             label = exec_pop_label(exec);

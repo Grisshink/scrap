@@ -71,7 +71,10 @@ IrRunFunction resolve_function(IrExec* exec, const char* hint) {
 
 bool compiler_run(void* e) {
     Compiler* compiler = e;
-    compiler->bytecode = bytecode_new("main");
+
+    compiler->const_pool = constant_pool_new();
+
+    compiler->bytecode = bytecode_new("main", compiler->const_pool);
     compiler->exec_running = false;
 
     for (size_t i = 0; i < vector_size(compiler->code); i++) {
@@ -82,6 +85,15 @@ bool compiler_run(void* e) {
         CompilerValue value = compiler_evaluate_block(compiler, block);
         if (value.type == DATA_TYPE_UNKNOWN) return false;
     }
+
+    ConstId entry = bytecode_push_label(&compiler->bytecode, "entry");
+
+    for (size_t i = 0; i < 1024; i++) {
+        bytecode_push_op_int(&compiler->bytecode, IR_PUSHI, GetRandomValue(0, 4096));
+        bytecode_push_op_float(&compiler->bytecode, IR_PUSHF, (double)GetRandomValue(0, 4096)/10.0);
+    }
+    bytecode_push_label(&compiler->bytecode, "other");
+    bytecode_push_op_int(&compiler->bytecode, IR_PUSHI, GetRandomValue(0, 4096));
 
     bytecode_print(&compiler->bytecode);
 
@@ -110,6 +122,8 @@ void compiler_cleanup(void* e) {
     } else {
         bytecode_free(&compiler->bytecode);
     }
+
+    constant_pool_free(compiler->const_pool);
 }
 
 void compiler_set_error(Compiler* compiler, const char* fmt, ...) {

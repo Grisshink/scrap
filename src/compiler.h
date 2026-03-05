@@ -58,6 +58,7 @@ struct CompilerValue {
 struct Compiler {
     RootBlockChain* code;
 
+    IrConstantPool* const_pool;
     IrBytecode bytecode;
 
     IrExec exec;
