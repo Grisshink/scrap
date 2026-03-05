@@ -82,7 +82,8 @@ bool compiler_run(void* e) {
         Block* block = compiler->code[i].chain->start;
         if (block->blockdef->type != BLOCKTYPE_HAT) continue;
 
-        CompilerValue value = compiler_evaluate_block(compiler, block);
+        Block* next = NULL;
+        CompilerValue value = compiler_evaluate_block(compiler, block, &next);
         if (value.type == DATA_TYPE_UNKNOWN) return false;
     }
 
@@ -144,12 +145,13 @@ void compiler_set_error(Compiler* compiler, const char* fmt, ...) {
 
 CompilerValue compiler_evaluate_argument(Compiler* compiler, Argument* arg) {
     static_assert(ARGUMENT_LAST == 5, "Exhaustive argument type in compiler_evaluate_argument");
+    Block* next = NULL;
     switch (arg->type) {
     case ARGUMENT_TEXT:
     case ARGUMENT_CONST_STRING:
         return DATA_LITERAL(arg->data.text);
     case ARGUMENT_BLOCK:
-        return compiler_evaluate_block(compiler, arg->data.block);
+        return compiler_evaluate_block(compiler, arg->data.block, &next);
     case ARGUMENT_BLOCKDEF:
         compiler_set_error(compiler, gettext("Tried to evaluate blockdef"));
         return DATA_UNKNOWN;
@@ -157,10 +159,11 @@ CompilerValue compiler_evaluate_argument(Compiler* compiler, Argument* arg) {
         return DATA_COLOR(CONVERT_COLOR(arg->data.color, StdColor));
     default:
         assert(false && "Unimplemented argument type in compiler_evaluate_argument");
+        return (CompilerValue) {0};
     }
 }
 
-CompilerValue compiler_evaluate_block(Compiler* compiler, Block* block) {
+CompilerValue compiler_evaluate_block(Compiler* compiler, Block* block, Block** next_block) {
     if (!block->blockdef) {
         compiler_set_error(compiler, gettext("Tried to execute block without definition"));
         return DATA_UNKNOWN;
@@ -170,8 +173,8 @@ CompilerValue compiler_evaluate_block(Compiler* compiler, Block* block) {
         return DATA_UNKNOWN;
     }
 
-    BlockFunc execute_block = block->blockdef->func;
-    CompilerValue value = execute_block(compiler, block);
+    BlockFunc* execute_block = block->blockdef->func;
+    CompilerValue value = execute_block(compiler, block, next_block);
     if (value.type == DATA_TYPE_UNKNOWN) {
         scrap_log(LOG_ERROR, "[COMPILER] Error from block id: \"%s\" (at block %p)", block->blockdef->id, &block);
     }
@@ -179,10 +182,25 @@ CompilerValue compiler_evaluate_block(Compiler* compiler, Block* block) {
     return value;
 }
 
-CompilerValue compiler_evaluate_chain(Compiler* compiler, Block* chain) {
-    for (Block* iter = chain; iter; iter = iter->next) {
+Block* compiler_get_next_block(Block* block) {
+    if (block->next) return block->next;
+    if (block->parent.type == BLOCK_PARENT_BLOCKCHAIN) {
+        Block* parent = block->parent.as.chain->parent;
+        if (parent) return parent;
+    }
+    return NULL;
+}
+
+CompilerValue compiler_evaluate_chain(Compiler* compiler, BlockChain* chain) {
+    IrBytecode bc = bytecode_new(NULL, compiler->const_pool);
+    DataType bc_type = DATA_TYPE_NULL;
+
+    Block* iter = chain->start;
+    while (iter) {
         thread_handle_stopping_state(compiler->thread);
-        CompilerValue value = compiler_evaluate_block(compiler, iter);
+        Block* next = compiler_get_next_block(iter);
+        
+        CompilerValue value = compiler_evaluate_block(compiler, iter, &next);
         if (value.type == DATA_TYPE_UNKNOWN) {
             scrap_log(LOG_ERROR, "[COMPILER] From chain: %p", chain);
             return value;
@@ -191,6 +209,12 @@ CompilerValue compiler_evaluate_chain(Compiler* compiler, Block* chain) {
             compiler_set_error(compiler, gettext("Top level blocks should return type %s, but got %s instead"), type_to_str(DATA_TYPE_CHUNK), type_to_str(value.type));
             return DATA_UNKNOWN;
         }
+
+        bc_type = value.data.chunk_val.return_type;
+        bytecode_join(&bc, &value.data.chunk_val.bc);
+
+        iter = next;
     }
-    return EMPTY_CHUNK;
+
+    return DATA_CHUNK(bc_type, bc);
 }

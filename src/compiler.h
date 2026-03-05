@@ -29,7 +29,7 @@
 
 typedef struct Compiler Compiler;
 typedef struct CompilerValue CompilerValue;
-typedef CompilerValue (*BlockFunc)(Compiler* compiler, Block* block);
+typedef CompilerValue BlockFunc(Compiler* compiler, Block* block, Block** next_block);
 
 typedef struct {
     DataType return_type;
@@ -90,8 +90,8 @@ Compiler compiler_new(Thread* thread);
 bool compiler_run(void* e);
 void compiler_cleanup(void* e);
 void compiler_free(Compiler* compiler);
-CompilerValue compiler_evaluate_chain(Compiler* compiler, Block* chain);
-CompilerValue compiler_evaluate_block(Compiler* compiler, Block* block);
+CompilerValue compiler_evaluate_chain(Compiler* compiler, BlockChain* chain);
+CompilerValue compiler_evaluate_block(Compiler* compiler, Block* block, Block** next_block);
 CompilerValue compiler_evaluate_argument(Compiler* compiler, Argument* arg);
 void compiler_set_skip_block(Compiler* compiler);
 void compiler_set_error(Compiler* compiler, const char* fmt, ...);
