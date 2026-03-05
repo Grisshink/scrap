@@ -64,521 +64,611 @@ static MathFunc block_math_func_list[MATH_LIST_LEN] = {
 
 #include "std.h"
 
-CompilerValue block_do_nothing(Compiler* compiler, Block* block, Block** next_block) {
+CompilerValue block_do_nothing(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) compiler;
     (void) block;
     (void) next_block;
-    return DATA_UNKNOWN;
-}
-
-CompilerValue block_noop(Compiler* compiler, Block* block, Block** next_block) {
-    (void) compiler;
-    (void) block;
-    (void) next_block;
-    return DATA_UNKNOWN;
-}
-
-CompilerValue block_on_start(Compiler* compiler, Block* block, Block** next_block) {
-    (void) compiler;
-    (void) block;
-    (void) next_block;
+    (void) prev_block;
     return EMPTY_CHUNK;
 }
 
-CompilerValue block_define_block(Compiler* compiler, Block* block, Block** next_block) {
+CompilerValue block_noop(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) compiler;
     (void) block;
     (void) next_block;
+    (void) prev_block;
+    return EMPTY_CHUNK;
+}
+
+CompilerValue block_on_start(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
+    (void) next_block;
+
+    if (prev_block == (Block*)-1) {
+        assert(block->parent.type == BLOCK_PARENT_BLOCKCHAIN);
+        vector_add(&compiler->chains_to_compile, block->parent.as.chain);
+        return DATA_NOTHING;
+    } else if (prev_block == NULL) {
+        IrBytecode chunk = bytecode_new(NULL, compiler->const_pool);
+
+        IrValue label;
+        label.type = IR_TYPE_LABEL;
+        label.as.label_val.name = "entry";
+        if (constant_pool_get(compiler->const_pool, label) != (size_t)-1) {
+            compiler_set_error(compiler, gettext("Duplicate on_start block"));
+            return DATA_UNKNOWN;
+        }
+        bytecode_push_label(&chunk, "entry");
+        return DATA_CHUNK(DATA_TYPE_NULL, chunk);
+    }
+
+    assert(false && "Unreachable");
+}
+
+CompilerValue block_define_block(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
+    (void) compiler;
+    (void) block;
+    (void) next_block;
+    (void) prev_block;
     return DATA_UNKNOWN;
 }
 
-CompilerValue block_loop(Compiler* compiler, Block* block, Block** next_block) {
+CompilerValue block_loop(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) compiler;
     (void) block;
     (void) next_block;
+    (void) prev_block;
     return DATA_UNKNOWN;
 }
 
-CompilerValue block_if(Compiler* compiler, Block* block, Block** next_block) {
+CompilerValue block_if(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) compiler;
     (void) block;
     (void) next_block;
+    (void) prev_block;
     return DATA_UNKNOWN;
 }
 
-CompilerValue block_else_if(Compiler* compiler, Block* block, Block** next_block) {
+CompilerValue block_else_if(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) compiler;
     (void) block;
     (void) next_block;
+    (void) prev_block;
     return DATA_UNKNOWN;
 }
 
-CompilerValue block_else(Compiler* compiler, Block* block, Block** next_block) {
+CompilerValue block_else(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) compiler;
     (void) block;
     (void) next_block;
+    (void) prev_block;
     return DATA_UNKNOWN;
 }
 
-CompilerValue block_repeat(Compiler* compiler, Block* block, Block** next_block) {
+CompilerValue block_repeat(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) compiler;
     (void) block;
     (void) next_block;
+    (void) prev_block;
     return DATA_UNKNOWN;
 }
 
-CompilerValue block_while(Compiler* compiler, Block* block, Block** next_block) {
+CompilerValue block_while(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) compiler;
     (void) block;
     (void) next_block;
+    (void) prev_block;
     return DATA_UNKNOWN;
 }
 
-CompilerValue block_sleep(Compiler* compiler, Block* block, Block** next_block) {
+CompilerValue block_sleep(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) compiler;
     (void) block;
     (void) next_block;
+    (void) prev_block;
     return DATA_UNKNOWN;
 }
 
-CompilerValue block_declare_var(Compiler* compiler, Block* block, Block** next_block) {
+CompilerValue block_declare_var(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) compiler;
     (void) block;
     (void) next_block;
+    (void) prev_block;
     return DATA_UNKNOWN;
 }
 
-CompilerValue block_get_var(Compiler* compiler, Block* block, Block** next_block) {
+CompilerValue block_get_var(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) compiler;
     (void) block;
     (void) next_block;
+    (void) prev_block;
     return DATA_UNKNOWN;
 }
 
-CompilerValue block_set_var(Compiler* compiler, Block* block, Block** next_block) {
+CompilerValue block_set_var(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) compiler;
     (void) block;
     (void) next_block;
+    (void) prev_block;
     return DATA_UNKNOWN;
 }
 
-CompilerValue block_create_list(Compiler* compiler, Block* block, Block** next_block) {
+CompilerValue block_create_list(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) compiler;
     (void) block;
     (void) next_block;
+    (void) prev_block;
     return DATA_UNKNOWN;
 }
 
-CompilerValue block_list_add(Compiler* compiler, Block* block, Block** next_block) {
+CompilerValue block_list_add(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) compiler;
     (void) block;
     (void) next_block;
+    (void) prev_block;
     return DATA_UNKNOWN;
 }
 
-CompilerValue block_list_get(Compiler* compiler, Block* block, Block** next_block) {
+CompilerValue block_list_get(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) compiler;
     (void) block;
     (void) next_block;
+    (void) prev_block;
     return DATA_UNKNOWN;
 }
 
-CompilerValue block_list_length(Compiler* compiler, Block* block, Block** next_block) {
+CompilerValue block_list_length(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) compiler;
     (void) block;
     (void) next_block;
+    (void) prev_block;
     return DATA_UNKNOWN;
 }
 
-CompilerValue block_list_set(Compiler* compiler, Block* block, Block** next_block) {
+CompilerValue block_list_set(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) compiler;
     (void) block;
     (void) next_block;
+    (void) prev_block;
     return DATA_UNKNOWN;
 }
 
-CompilerValue block_print(Compiler* compiler, Block* block, Block** next_block) {
+CompilerValue block_print(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) compiler;
     (void) block;
     (void) next_block;
+    (void) prev_block;
     return DATA_UNKNOWN;
 }
 
-CompilerValue block_println(Compiler* compiler, Block* block, Block** next_block) {
+CompilerValue block_println(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) compiler;
     (void) block;
     (void) next_block;
+    (void) prev_block;
     return DATA_UNKNOWN;
 }
 
-CompilerValue block_cursor_x(Compiler* compiler, Block* block, Block** next_block) {
+CompilerValue block_cursor_x(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) compiler;
     (void) block;
     (void) next_block;
+    (void) prev_block;
     return DATA_UNKNOWN;
 }
 
-CompilerValue block_cursor_y(Compiler* compiler, Block* block, Block** next_block) {
+CompilerValue block_cursor_y(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) compiler;
     (void) block;
     (void) next_block;
+    (void) prev_block;
     return DATA_UNKNOWN;
 }
 
-CompilerValue block_cursor_max_x(Compiler* compiler, Block* block, Block** next_block) {
+CompilerValue block_cursor_max_x(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) compiler;
     (void) block;
     (void) next_block;
+    (void) prev_block;
     return DATA_UNKNOWN;
 }
 
-CompilerValue block_cursor_max_y(Compiler* compiler, Block* block, Block** next_block) {
+CompilerValue block_cursor_max_y(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) compiler;
     (void) block;
     (void) next_block;
+    (void) prev_block;
     return DATA_UNKNOWN;
 }
 
-CompilerValue block_set_cursor(Compiler* compiler, Block* block, Block** next_block) {
+CompilerValue block_set_cursor(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) compiler;
     (void) block;
     (void) next_block;
+    (void) prev_block;
     return DATA_UNKNOWN;
 }
 
-CompilerValue block_set_fg_color(Compiler* compiler, Block* block, Block** next_block) {
+CompilerValue block_set_fg_color(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) compiler;
     (void) block;
     (void) next_block;
+    (void) prev_block;
     return DATA_UNKNOWN;
 }
 
-CompilerValue block_set_bg_color(Compiler* compiler, Block* block, Block** next_block) {
+CompilerValue block_set_bg_color(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) compiler;
     (void) block;
     (void) next_block;
+    (void) prev_block;
     return DATA_UNKNOWN;
 }
 
-CompilerValue block_reset_color(Compiler* compiler, Block* block, Block** next_block) {
+CompilerValue block_reset_color(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) compiler;
     (void) block;
     (void) next_block;
+    (void) prev_block;
     return DATA_UNKNOWN;
 }
 
-CompilerValue block_term_clear(Compiler* compiler, Block* block, Block** next_block) {
+CompilerValue block_term_clear(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) compiler;
     (void) block;
     (void) next_block;
+    (void) prev_block;
     return DATA_UNKNOWN;
 }
 
-CompilerValue block_term_set_clear(Compiler* compiler, Block* block, Block** next_block) {
+CompilerValue block_term_set_clear(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) compiler;
     (void) block;
     (void) next_block;
+    (void) prev_block;
     return DATA_UNKNOWN;
 }
 
-CompilerValue block_input(Compiler* compiler, Block* block, Block** next_block) {
+CompilerValue block_input(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) compiler;
     (void) block;
     (void) next_block;
+    (void) prev_block;
     return DATA_UNKNOWN;
 }
 
-CompilerValue block_get_char(Compiler* compiler, Block* block, Block** next_block) {
+CompilerValue block_get_char(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) compiler;
     (void) block;
     (void) next_block;
+    (void) prev_block;
     return DATA_UNKNOWN;
 }
 
-CompilerValue block_random(Compiler* compiler, Block* block, Block** next_block) {
+CompilerValue block_random(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) compiler;
     (void) block;
     (void) next_block;
+    (void) prev_block;
     return DATA_UNKNOWN;
 }
 
-CompilerValue block_join(Compiler* compiler, Block* block, Block** next_block) {
+CompilerValue block_join(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) compiler;
     (void) block;
     (void) next_block;
+    (void) prev_block;
     return DATA_UNKNOWN;
 }
 
-CompilerValue block_ord(Compiler* compiler, Block* block, Block** next_block) {
+CompilerValue block_ord(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) compiler;
     (void) block;
     (void) next_block;
+    (void) prev_block;
     return DATA_UNKNOWN;
 }
 
-CompilerValue block_chr(Compiler* compiler, Block* block, Block** next_block) {
+CompilerValue block_chr(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) compiler;
     (void) block;
     (void) next_block;
+    (void) prev_block;
     return DATA_UNKNOWN;
 }
 
-CompilerValue block_letter_in(Compiler* compiler, Block* block, Block** next_block) {
+CompilerValue block_letter_in(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) compiler;
     (void) block;
     (void) next_block;
+    (void) prev_block;
     return DATA_UNKNOWN;
 }
 
-CompilerValue block_substring(Compiler* compiler, Block* block, Block** next_block) {
+CompilerValue block_substring(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) compiler;
     (void) block;
     (void) next_block;
+    (void) prev_block;
     return DATA_UNKNOWN;
 }
 
-CompilerValue block_length(Compiler* compiler, Block* block, Block** next_block) {
+CompilerValue block_length(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) compiler;
     (void) block;
     (void) next_block;
+    (void) prev_block;
     return DATA_UNKNOWN;
 }
 
-CompilerValue block_unix_time(Compiler* compiler, Block* block, Block** next_block) {
+CompilerValue block_unix_time(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) compiler;
     (void) block;
     (void) next_block;
+    (void) prev_block;
     return DATA_UNKNOWN;
 }
 
-CompilerValue block_convert_int(Compiler* compiler, Block* block, Block** next_block) {
+CompilerValue block_convert_int(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) compiler;
     (void) block;
     (void) next_block;
+    (void) prev_block;
     return DATA_UNKNOWN;
 }
 
-CompilerValue block_convert_float(Compiler* compiler, Block* block, Block** next_block) {
+CompilerValue block_convert_float(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) compiler;
     (void) block;
     (void) next_block;
+    (void) prev_block;
     return DATA_UNKNOWN;
 }
 
-CompilerValue block_convert_str(Compiler* compiler, Block* block, Block** next_block) {
+CompilerValue block_convert_str(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) compiler;
     (void) block;
     (void) next_block;
+    (void) prev_block;
     return DATA_UNKNOWN;
 }
 
-CompilerValue block_convert_bool(Compiler* compiler, Block* block, Block** next_block) {
+CompilerValue block_convert_bool(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) compiler;
     (void) block;
     (void) next_block;
+    (void) prev_block;
     return DATA_UNKNOWN;
 }
 
-CompilerValue block_convert_color(Compiler* compiler, Block* block, Block** next_block) {
+CompilerValue block_convert_color(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) compiler;
     (void) block;
     (void) next_block;
+    (void) prev_block;
     return DATA_UNKNOWN;
 }
 
-CompilerValue block_typeof(Compiler* compiler, Block* block, Block** next_block) {
+CompilerValue block_typeof(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) compiler;
     (void) block;
     (void) next_block;
+    (void) prev_block;
     return DATA_UNKNOWN;
 }
 
-CompilerValue block_plus(Compiler* compiler, Block* block, Block** next_block) {
+CompilerValue block_plus(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) compiler;
     (void) block;
     (void) next_block;
+    (void) prev_block;
     return DATA_UNKNOWN;
 }
 
-CompilerValue block_minus(Compiler* compiler, Block* block, Block** next_block) {
+CompilerValue block_minus(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) compiler;
     (void) block;
     (void) next_block;
+    (void) prev_block;
     return DATA_UNKNOWN;
 }
 
-CompilerValue block_mult(Compiler* compiler, Block* block, Block** next_block) {
+CompilerValue block_mult(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) compiler;
     (void) block;
     (void) next_block;
+    (void) prev_block;
     return DATA_UNKNOWN;
 }
 
-CompilerValue block_div(Compiler* compiler, Block* block, Block** next_block) {
+CompilerValue block_div(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) compiler;
     (void) block;
     (void) next_block;
+    (void) prev_block;
     return DATA_UNKNOWN;
 }
 
-CompilerValue block_rem(Compiler* compiler, Block* block, Block** next_block) {
+CompilerValue block_rem(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) compiler;
     (void) block;
     (void) next_block;
+    (void) prev_block;
     return DATA_UNKNOWN;
 }
 
-CompilerValue block_pow(Compiler* compiler, Block* block, Block** next_block) {
+CompilerValue block_pow(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) compiler;
     (void) block;
     (void) next_block;
+    (void) prev_block;
     return DATA_UNKNOWN;
 }
 
-CompilerValue block_math(Compiler* compiler, Block* block, Block** next_block) {
+CompilerValue block_math(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) compiler;
     (void) block;
     (void) next_block;
+    (void) prev_block;
     return DATA_UNKNOWN;
 }
 
-CompilerValue block_pi(Compiler* compiler, Block* block, Block** next_block) {
+CompilerValue block_pi(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) compiler;
     (void) block;
     (void) next_block;
+    (void) prev_block;
     return DATA_UNKNOWN;
 }
 
-CompilerValue block_bit_not(Compiler* compiler, Block* block, Block** next_block) {
+CompilerValue block_bit_not(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) compiler;
     (void) block;
     (void) next_block;
+    (void) prev_block;
     return DATA_UNKNOWN;
 }
 
-CompilerValue block_bit_and(Compiler* compiler, Block* block, Block** next_block) {
+CompilerValue block_bit_and(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) compiler;
     (void) block;
     (void) next_block;
+    (void) prev_block;
     return DATA_UNKNOWN;
 }
 
-CompilerValue block_bit_xor(Compiler* compiler, Block* block, Block** next_block) {
+CompilerValue block_bit_xor(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) compiler;
     (void) block;
     (void) next_block;
+    (void) prev_block;
     return DATA_UNKNOWN;
 }
 
-CompilerValue block_bit_or(Compiler* compiler, Block* block, Block** next_block) {
+CompilerValue block_bit_or(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) compiler;
     (void) block;
     (void) next_block;
+    (void) prev_block;
     return DATA_UNKNOWN;
 }
 
-CompilerValue block_less(Compiler* compiler, Block* block, Block** next_block) {
+CompilerValue block_less(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) compiler;
     (void) block;
     (void) next_block;
+    (void) prev_block;
     return DATA_UNKNOWN;
 }
 
-CompilerValue block_less_eq(Compiler* compiler, Block* block, Block** next_block) {
+CompilerValue block_less_eq(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) compiler;
     (void) block;
     (void) next_block;
+    (void) prev_block;
     return DATA_UNKNOWN;
 }
 
-CompilerValue block_more(Compiler* compiler, Block* block, Block** next_block) {
+CompilerValue block_more(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) compiler;
     (void) block;
     (void) next_block;
+    (void) prev_block;
     return DATA_UNKNOWN;
 }
 
-CompilerValue block_more_eq(Compiler* compiler, Block* block, Block** next_block) {
+CompilerValue block_more_eq(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) compiler;
     (void) block;
     (void) next_block;
+    (void) prev_block;
     return DATA_UNKNOWN;
 }
 
-CompilerValue block_not(Compiler* compiler, Block* block, Block** next_block) {
+CompilerValue block_not(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) compiler;
     (void) block;
     (void) next_block;
+    (void) prev_block;
     return DATA_UNKNOWN;
 }
 
-CompilerValue block_and(Compiler* compiler, Block* block, Block** next_block) {
+CompilerValue block_and(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) compiler;
     (void) block;
     (void) next_block;
+    (void) prev_block;
     return DATA_UNKNOWN;
 }
 
-CompilerValue block_or(Compiler* compiler, Block* block, Block** next_block) {
+CompilerValue block_or(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) compiler;
     (void) block;
     (void) next_block;
+    (void) prev_block;
     return DATA_UNKNOWN;
 }
 
-CompilerValue block_true(Compiler* compiler, Block* block, Block** next_block) {
+CompilerValue block_true(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) compiler;
     (void) block;
     (void) next_block;
+    (void) prev_block;
     return DATA_UNKNOWN;
 }
 
-CompilerValue block_false(Compiler* compiler, Block* block, Block** next_block) {
+CompilerValue block_false(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) compiler;
     (void) block;
     (void) next_block;
+    (void) prev_block;
     return DATA_UNKNOWN;
 }
 
-CompilerValue block_eq(Compiler* compiler, Block* block, Block** next_block) {
+CompilerValue block_eq(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) compiler;
     (void) block;
     (void) next_block;
+    (void) prev_block;
     return DATA_UNKNOWN;
 }
 
-CompilerValue block_not_eq(Compiler* compiler, Block* block, Block** next_block) {
+CompilerValue block_not_eq(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) compiler;
     (void) block;
     (void) next_block;
+    (void) prev_block;
     return DATA_UNKNOWN;
 }
 
-CompilerValue block_exec_custom(Compiler* compiler, Block* block, Block** next_block) {
+CompilerValue block_exec_custom(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) compiler;
     (void) block;
     (void) next_block;
+    (void) prev_block;
     return DATA_UNKNOWN;
 }
 
-CompilerValue block_custom_arg(Compiler* compiler, Block* block, Block** next_block) {
+CompilerValue block_custom_arg(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) compiler;
     (void) block;
     (void) next_block;
+    (void) prev_block;
     return DATA_UNKNOWN;
 }
 
-CompilerValue block_return(Compiler* compiler, Block* block, Block** next_block) {
+CompilerValue block_return(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) compiler;
     (void) block;
     (void) next_block;
+    (void) prev_block;
     return DATA_UNKNOWN;
 }
 
-CompilerValue block_gc_collect(Compiler* compiler, Block* block, Block** next_block) {
+CompilerValue block_gc_collect(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) compiler;
     (void) block;
     (void) next_block;
+    (void) prev_block;
     return DATA_UNKNOWN;
 }
 

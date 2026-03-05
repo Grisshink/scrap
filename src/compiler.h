@@ -29,7 +29,7 @@
 
 typedef struct Compiler Compiler;
 typedef struct CompilerValue CompilerValue;
-typedef CompilerValue BlockFunc(Compiler* compiler, Block* block, Block** next_block);
+typedef CompilerValue BlockFunc(Compiler* compiler, Block* block, Block** next_block, Block* prev_block);
 
 typedef struct {
     DataType return_type;
@@ -52,6 +52,8 @@ struct CompilerValue {
 
 struct Compiler {
     RootBlockChain* code;
+
+    BlockChain** chains_to_compile;
 
     IrConstantPool* const_pool;
     IrBytecode bytecode;
@@ -91,7 +93,7 @@ bool compiler_run(void* e);
 void compiler_cleanup(void* e);
 void compiler_free(Compiler* compiler);
 CompilerValue compiler_evaluate_chain(Compiler* compiler, BlockChain* chain);
-CompilerValue compiler_evaluate_block(Compiler* compiler, Block* block, Block** next_block);
+CompilerValue compiler_evaluate_block(Compiler* compiler, Block* block, Block** next_block, Block* prev_block);
 CompilerValue compiler_evaluate_argument(Compiler* compiler, Argument* arg);
 void compiler_set_skip_block(Compiler* compiler);
 void compiler_set_error(Compiler* compiler, const char* fmt, ...);

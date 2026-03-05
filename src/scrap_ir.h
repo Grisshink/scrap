@@ -243,6 +243,11 @@ struct IrExec {
     IrHeap second_heap;
 };
 
+IrConstantPool* constant_pool_new(void);
+void constant_pool_free(IrConstantPool* pool);
+size_t constant_pool_get(IrConstantPool* pool, IrValue value);
+size_t constant_pool_insert(IrConstantPool* pool, IrValue value);
+
 IrBytecode bytecode_new(const char* name, IrConstantPool* pool);
 void bytecode_free(IrBytecode* bc);
 

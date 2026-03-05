@@ -73,6 +73,7 @@ bool compiler_run(void* e) {
     Compiler* compiler = e;
 
     compiler->const_pool = constant_pool_new();
+    compiler->chains_to_compile = vector_create();
 
     compiler->bytecode = bytecode_new("main", compiler->const_pool);
     compiler->exec_running = false;
@@ -83,26 +84,16 @@ bool compiler_run(void* e) {
         if (block->blockdef->type != BLOCKTYPE_HAT) continue;
 
         Block* next = NULL;
-        CompilerValue value = compiler_evaluate_block(compiler, block, &next);
+        CompilerValue value = compiler_evaluate_block(compiler, block, &next, (Block*)-1);
         if (value.type == DATA_TYPE_UNKNOWN) return false;
     }
 
-    bytecode_push_label(&compiler->bytecode, "entry");
-
-    bytecode_push_op_int(&compiler->bytecode, IR_PUSHI, GetRandomValue(0, 4096));
-    bytecode_push_op_float(&compiler->bytecode, IR_PUSHF, (double)GetRandomValue(0, 4096)/10.0);
-
-    IrBytecode other_bc = bytecode_new(NULL, compiler->const_pool);
-
-    ConstId other = bytecode_push_label(&other_bc, "other");
-    bytecode_push_op_int(&other_bc, IR_PUSHI, GetRandomValue(0, 4096));
-
-    bytecode_push_op_label(&compiler->bytecode, IR_IF, other);
-
-    bytecode_print(&compiler->bytecode);
-    bytecode_print(&other_bc);
-
-    bytecode_join(&compiler->bytecode, &other_bc);
+    for (size_t i = 0; i < vector_size(compiler->chains_to_compile); i++) {
+        CompilerValue value = compiler_evaluate_chain(compiler, compiler->chains_to_compile[i]);
+        if (value.type == DATA_TYPE_UNKNOWN) return false;
+        bytecode_join(&compiler->bytecode, &value.data.chunk_val.bc);
+        bytecode_push_op(&compiler->bytecode, IR_RET);
+    }
 
     bytecode_print(&compiler->bytecode);
 
@@ -133,6 +124,7 @@ void compiler_cleanup(void* e) {
     }
 
     constant_pool_free(compiler->const_pool);
+    vector_free(compiler->chains_to_compile);
 }
 
 void compiler_set_error(Compiler* compiler, const char* fmt, ...) {
@@ -151,7 +143,7 @@ CompilerValue compiler_evaluate_argument(Compiler* compiler, Argument* arg) {
     case ARGUMENT_CONST_STRING:
         return DATA_LITERAL(arg->data.text);
     case ARGUMENT_BLOCK:
-        return compiler_evaluate_block(compiler, arg->data.block, &next);
+        return compiler_evaluate_block(compiler, arg->data.block, &next, NULL);
     case ARGUMENT_BLOCKDEF:
         compiler_set_error(compiler, gettext("Tried to evaluate blockdef"));
         return DATA_UNKNOWN;
@@ -163,7 +155,7 @@ CompilerValue compiler_evaluate_argument(Compiler* compiler, Argument* arg) {
     }
 }
 
-CompilerValue compiler_evaluate_block(Compiler* compiler, Block* block, Block** next_block) {
+CompilerValue compiler_evaluate_block(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     if (!block->blockdef) {
         compiler_set_error(compiler, gettext("Tried to execute block without definition"));
         return DATA_UNKNOWN;
@@ -174,7 +166,7 @@ CompilerValue compiler_evaluate_block(Compiler* compiler, Block* block, Block** 
     }
 
     BlockFunc* execute_block = block->blockdef->func;
-    CompilerValue value = execute_block(compiler, block, next_block);
+    CompilerValue value = execute_block(compiler, block, next_block, prev_block);
     if (value.type == DATA_TYPE_UNKNOWN) {
         scrap_log(LOG_ERROR, "[COMPILER] Error from block id: \"%s\" (at block %p)", block->blockdef->id, &block);
     }
@@ -195,24 +187,28 @@ CompilerValue compiler_evaluate_chain(Compiler* compiler, BlockChain* chain) {
     IrBytecode bc = bytecode_new(NULL, compiler->const_pool);
     DataType bc_type = DATA_TYPE_NULL;
 
+    Block* prev = NULL;
     Block* iter = chain->start;
     while (iter) {
         thread_handle_stopping_state(compiler->thread);
         Block* next = compiler_get_next_block(iter);
         
-        CompilerValue value = compiler_evaluate_block(compiler, iter, &next);
+        CompilerValue value = compiler_evaluate_block(compiler, iter, &next, prev);
         if (value.type == DATA_TYPE_UNKNOWN) {
             scrap_log(LOG_ERROR, "[COMPILER] From chain: %p", chain);
+            bytecode_free(&bc);
             return value;
         }
         if (value.type != DATA_TYPE_CHUNK) {
             compiler_set_error(compiler, gettext("Top level blocks should return type %s, but got %s instead"), type_to_str(DATA_TYPE_CHUNK), type_to_str(value.type));
+            bytecode_free(&bc);
             return DATA_UNKNOWN;
         }
 
         bc_type = value.data.chunk_val.return_type;
         bytecode_join(&bc, &value.data.chunk_val.bc);
 
+        prev = iter;
         iter = next;
     }
 
