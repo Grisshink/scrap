@@ -252,31 +252,41 @@ struct IrExec {
 };
 
 // Allocate new bytecode pool.
-// This will hold all constants used by bytecode chunks as well as the arena for all bytecode allocations
+// This will hold all constants used by bytecode chunks as well as the arena for all bytecode allocations.
 IrBytecodePool* bytecode_pool_new(void);
 
-// Frees the pool with all bytecode chunks and constants
+// Frees the pool with all bytecode chunks and constants.
 void bytecode_pool_free(IrBytecodePool* pool);
 
 // Get constant index in list of constants in bytecode pool.
-// Returns (size_t)-1 if the constant does not exist
+// Returns (size_t)-1 if the constant does not exist.
 size_t bytecode_pool_get(IrBytecodePool* pool, IrValue value);
 
 // Add constant to constant list in bytecode pool and return its index in the list.
-// If constant already exists, then it will return the index of already existing constant and free the value
+// If constant already exists, then it will return the index of already existing constant and free the value.
 size_t bytecode_pool_insert(IrBytecodePool* pool, IrValue value);
 
 // Create new bytecode chunk with associated bytecode pool.
-// All data allocated using the bytecode will be freed upon freeing the associated bytecode pool
-// If the name argument is NULL, then the bytecode name will default to *Unnamed*
+// All data allocated using the bytecode will be freed upon freeing the associated bytecode pool.
+// If the name argument is NULL, then the bytecode name will default to *Unnamed*.
 IrBytecode bytecode_new(const char* name, IrBytecodePool* pool);
 
-// Print the bytecode contents to stdout
+// Adds all code from src bytecode to the end of dst bytecode.
+// The src bytecode should not be used after calling this function.
+void bytecode_join(IrBytecode* dst, IrBytecode* src);
+
+// Print the bytecode contents to stdout.
 void bytecode_print(IrBytecode* bc);
 
+// Appends named label to the end of bytecode.
+// The returned ConstId can be used to reference the label in other bytecode functions.
 ConstId bytecode_push_label(IrBytecode* bc, const char* name);
 
+// Appends the instruction to the end of bytecode.
+// The returned IrInstructionID can be used to reference the instruction in other bytecode functions.
 IrInstructionID bytecode_push_op(IrBytecode* bc, IrOpcode op);
+
+// These functions append the instruction with constant to the end of bytecode.
 IrInstructionID bytecode_push_op_int(IrBytecode* bc, IrOpcode op, int int_val);
 IrInstructionID bytecode_push_op_float(IrBytecode* bc, IrOpcode op, double float_val);
 IrInstructionID bytecode_push_op_bool(IrBytecode* bc, IrOpcode op, bool bool_val);
@@ -284,35 +294,79 @@ IrInstructionID bytecode_push_op_func(IrBytecode* bc, IrOpcode op, IrFunction fu
 IrInstructionID bytecode_push_op_label(IrBytecode* bc, IrOpcode op, ConstId label_id);
 IrInstructionID bytecode_push_op_list(IrBytecode* bc, IrOpcode op, IrList* list_val);
 
+// These functions replace the constant in bytecode at instruction instr_id.
 void bytecode_set_op_int(IrBytecode* bc, IrInstructionID instr_id, int int_val);
 void bytecode_set_op_float(IrBytecode* bc, IrInstructionID instr_id, double float_val);
 void bytecode_set_op_bool(IrBytecode* bc, IrInstructionID instr_id, bool bool_val);
 void bytecode_set_op_func(IrBytecode* bc, IrInstructionID instr_id, IrFunction func_val);
 void bytecode_set_op_list(IrBytecode* bc, IrInstructionID instr_id, IrList* list_val);
 
+// Allocate new immutable list type that can be used in bytecode functions that operate on lists.
 IrList* bytecode_const_list_new(void);
+
+// Add value to immutable list.
 void bytecode_const_list_append(IrList* list, IrValue val);
+
+// Free the immutable list.
 void bytecode_const_list_free(IrList* list);
 
+// Create a function value that needs to be resolved at runtime using hint string.
+// The exact hint string that needs to be passed depends on current runtime function resolver,
+// which can be defined in exec using exec_set_run_function_resolver function.
 IrFunction ir_func_by_hint(const char* hint);
+
+// Create a function value with resolved function pointer.
 IrFunction ir_func_by_ptr(IrRunFunction func);
 
+// Allocate new execution engine that will execute the bytecode chunks.
+// See exec_add_bytecode and exec_run for getting your code to run.
 IrExec exec_new(size_t memory_max);
+
+// Free the execution engine.
 void exec_free(IrExec* exec);
+
+// Sets the run function resolver for this execution engine.
+// By default the function resolver is set to NULL upon exec creation which means
+// that all IR_RUN instructions will fail with runtime error when executed.
 void exec_set_run_function_resolver(IrExec* exec, IrRunFunctionResolver resolver);
+
+// Add bytecode chunk into exec for running the bytecode using exec_run function.
 void exec_add_bytecode(IrExec* exec, IrBytecode bc);
+
+// Run the named bytecode chunk from specified label_name.
+// This functions returns true upon executing IR_RET instruction at top level,
+// and false if the running bytecode caused a runtime error which you can get by accessing exec.last_error property.
 bool exec_run(IrExec* exec, const char* bc_name, const char* label_name);
+
+// Raw version of exec_run function.
+// Accepts the pos index in bytecode at which to start executing the code.
 bool exec_run_bytecode(IrExec* exec, IrBytecode* bc, size_t pos);
+
+// Prints the contents of exec stack for debugging purposes.
 void exec_print_stack(IrExec* exec);
+
+// Prints the contents of exec variable frames for debugging purposes.
 void exec_print_variables(IrExec* exec);
+
+// Triggers the garbage collection event in exec for debugging purposes.
 void exec_collect(IrExec* exec);
 
+// Pushes IrValue to exec stack.
 void exec_push_value(IrExec* exec, IrValue value);
+
+// Pops IrValue from exec stack and returns it. Produces undefined behavior when stack underflow occurs.
 IrValue exec_pop_value(IrExec* exec);
-IrValue exec_get_value(IrExec* exec);
+
+// Same as exec_pop_value, but with multiple values.
 void exec_pop_multiple(IrExec* exec, size_t count);
+
+// Similar to exec_pop_value, except it does not remove value from stack.
+IrValue exec_get_value(IrExec* exec);
+
+// Duplicates the last value in stack.
 void exec_dup_value(IrExec* exec);
 
+// Convenience functions for pushing values to exec stack of specific type.
 void exec_push_int(IrExec* exec, int64_t int_val);
 void exec_push_float(IrExec* exec, double float_val);
 void exec_push_bool(IrExec* exec, bool bool_val);
@@ -321,6 +375,7 @@ void exec_push_label(IrExec* exec, IrLabel label_val);
 void exec_push_list(IrExec* exec, IrList* list_val);
 void exec_push_nothing(IrExec* exec);
 
+// Convenience functions for getting values from exec stack of specific type.
 int64_t exec_get_int(IrExec* exec);
 double exec_get_float(IrExec* exec);
 bool exec_get_bool(IrExec* exec);
@@ -328,11 +383,13 @@ IrFunction exec_get_func(IrExec* exec);
 IrLabel exec_get_label(IrExec* exec);
 IrList* exec_get_list(IrExec* exec);
 
+// Convenience functions for popping values from exec stack of specific type.
 int64_t exec_pop_int(IrExec* exec);
 double exec_pop_float(IrExec* exec);
 bool exec_pop_bool(IrExec* exec);
 IrLabel exec_pop_label(IrExec* exec);
 IrFunction exec_pop_func(IrExec* exec);
+
 #endif // SCRAP_IR_H
 
 #ifdef SCRAP_IR_IMPLEMENTATION
