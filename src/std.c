@@ -250,9 +250,6 @@ static AnyValue std_get_any(DataType data_type, va_list va) {
     case DATA_TYPE_STRING:
         data.str_val = va_arg(va, StringHeader*);
         break;
-    case DATA_TYPE_LITERAL:
-        data.literal_val = va_arg(va, char*);
-        break;
     case DATA_TYPE_LIST:
         data.list_val = va_arg(va, List*);
         break;
@@ -471,7 +468,6 @@ StringHeader* std_string_from_color(Gc* gc, StdColor value) {
 }
 
 char* std_any_string_from_any(Gc* gc, AnyValue* value) {
-    if (value->type == DATA_TYPE_LITERAL) return value->data.literal_val;
     return std_string_from_any(gc, value)->str;
 }
 
@@ -485,8 +481,6 @@ StringHeader* std_string_from_any(Gc* gc, AnyValue* value) {
         return std_string_from_integer(gc, value->data.integer_val);
     case DATA_TYPE_FLOAT:
         return std_string_from_float(gc, value->data.float_val);
-    case DATA_TYPE_LITERAL:
-        return std_string_from_literal(gc, value->data.literal_val, strlen(value->data.literal_val));
     case DATA_TYPE_STRING:
         return value->data.str_val;
     case DATA_TYPE_BOOL:
@@ -513,8 +507,6 @@ int std_integer_from_any(AnyValue* value) {
         return (int)value->data.float_val;
     case DATA_TYPE_STRING:
         return atoi(value->data.str_val->str);
-    case DATA_TYPE_LITERAL:
-        return atoi(value->data.literal_val);
     case DATA_TYPE_COLOR:
         return *(int*)&value->data.color_val;
     default:
@@ -533,8 +525,6 @@ double std_float_from_any(AnyValue* value) {
         return value->data.float_val;
     case DATA_TYPE_STRING:
         return atof(value->data.str_val->str);
-    case DATA_TYPE_LITERAL:
-        return atof(value->data.literal_val);
     case DATA_TYPE_COLOR:
         return *(int*)&value->data.color_val;
     default:
@@ -553,8 +543,6 @@ int std_bool_from_any(AnyValue* value) {
         return value->data.float_val != 0.0;
     case DATA_TYPE_STRING:
         return value->data.str_val->size > 0;
-    case DATA_TYPE_LITERAL:
-        return *value->data.literal_val != 0;
     case DATA_TYPE_COLOR:
         return *(int*)&value->data.color_val != 0;
     default:
@@ -582,8 +570,6 @@ StdColor std_color_from_any(AnyValue* value) {
         return INT_TO_COLOR(int_val);
     case DATA_TYPE_STRING:
         return std_parse_color(value->data.str_val->str);
-    case DATA_TYPE_LITERAL:
-        return std_parse_color(value->data.literal_val);
     case DATA_TYPE_COLOR:
         return value->data.color_val;
     default:
@@ -608,8 +594,6 @@ bool std_any_is_eq(AnyValue* left, AnyValue* right) {
     switch (left->type) {
     case DATA_TYPE_NOTHING:
         return true;
-    case DATA_TYPE_LITERAL:
-        return !strcmp(left->data.literal_val, right->data.literal_val);
     case DATA_TYPE_STRING:
         return std_string_is_eq(left->data.str_val, right->data.str_val);
     case DATA_TYPE_INTEGER:
@@ -658,8 +642,6 @@ int std_term_print_any(AnyValue* any) {
     switch (any->type) {
     case DATA_TYPE_STRING:
         return std_term_print_str(any->data.str_val->str);
-    case DATA_TYPE_LITERAL:
-        return std_term_print_str(any->data.literal_val);
     case DATA_TYPE_NOTHING:
         return 0;
     case DATA_TYPE_INTEGER:
