@@ -33,6 +33,9 @@
 
 #include "term.h"
 
+#define SCRAP_IR_IMPLEMENTATION
+#include "scrap_ir.h"
+
 void scrap_set_env(const char* name, const char* value) {
 #ifdef _WIN32
     char buf[256];

@@ -22,14 +22,12 @@
 #include "ast.h"
 #include "vec.h"
 
-#define SCRAP_IR_IMPLEMENTATION
-#include "scrap_ir.h"
-
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
 #include <libintl.h>
 #include <wchar.h>
+#include <assert.h>
 
 Compiler compiler_new(Thread* thread) {
     Compiler compiler = (Compiler) {
