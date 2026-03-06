@@ -55,7 +55,7 @@ struct Compiler {
 
     BlockChain** chains_to_compile;
 
-    IrConstantPool* const_pool;
+    IrBytecodePool* bc_pool;
     IrBytecode bytecode;
 
     IrExec exec;
@@ -86,7 +86,8 @@ struct Compiler {
     .bc = (_bc), \
 })
 
-#define EMPTY_CHUNK DATA_CHUNK(DATA_TYPE_NULL, bytecode_new(NULL, compiler->const_pool))
+#define EMPTY_BYTECODE bytecode_new(NULL, compiler->bc_pool)
+#define EMPTY_CHUNK DATA_CHUNK(DATA_TYPE_NULL, EMPTY_BYTECODE)
 
 Compiler compiler_new(Thread* thread);
 bool compiler_run(void* e);

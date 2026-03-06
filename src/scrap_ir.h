@@ -199,18 +199,26 @@ typedef struct {
 } IrOpcodes;
 
 typedef struct {
+    size_t reserve_size,
+           commit_size,
+           pos,
+           commit_pos;
+} IrMemArena;
+
+typedef struct {
     struct {
         ConstId* items;
         size_t size, capacity;
     } hash_set;
-    IrValueList list;
-} IrConstantPool;
+    IrValueList list; // List of all constants that bytecode chunks can reference
+    IrMemArena* arena; // Arena for all bytecode allocations
+} IrBytecodePool;
 
 typedef struct {
     const char* name;
     unsigned int version;
     IrOpcodes code;
-    IrConstantPool* pool;
+    IrBytecodePool* pool;
     IrLabelList labels;
 } IrBytecode;
 
@@ -243,14 +251,27 @@ struct IrExec {
     IrHeap second_heap;
 };
 
-IrConstantPool* constant_pool_new(void);
-void constant_pool_free(IrConstantPool* pool);
-size_t constant_pool_get(IrConstantPool* pool, IrValue value);
-size_t constant_pool_insert(IrConstantPool* pool, IrValue value);
+// Allocate new bytecode pool.
+// This will hold all constants used by bytecode chunks as well as the arena for all bytecode allocations
+IrBytecodePool* bytecode_pool_new(void);
 
-IrBytecode bytecode_new(const char* name, IrConstantPool* pool);
-void bytecode_free(IrBytecode* bc);
+// Frees the pool with all bytecode chunks and constants
+void bytecode_pool_free(IrBytecodePool* pool);
 
+// Get constant index in list of constants in bytecode pool.
+// Returns (size_t)-1 if the constant does not exist
+size_t bytecode_pool_get(IrBytecodePool* pool, IrValue value);
+
+// Add constant to constant list in bytecode pool and return its index in the list.
+// If constant already exists, then it will return the index of already existing constant and free the value
+size_t bytecode_pool_insert(IrBytecodePool* pool, IrValue value);
+
+// Create new bytecode chunk with associated bytecode pool.
+// All data allocated using the bytecode will be freed upon freeing the associated bytecode pool
+// If the name argument is NULL, then the bytecode name will default to *Unnamed*
+IrBytecode bytecode_new(const char* name, IrBytecodePool* pool);
+
+// Print the bytecode contents to stdout
 void bytecode_print(IrBytecode* bc);
 
 ConstId bytecode_push_label(IrBytecode* bc, const char* name);
@@ -325,10 +346,23 @@ IrFunction exec_pop_func(IrExec* exec);
 #include <sys/mman.h>
 #include <errno.h>
 
+#define MiB(n) ((size_t)(n) << 20)
+#define GiB(n) ((size_t)(n) << 30)
+
+#define ir_arena_append(arena, list, val) do { \
+    if ((list).size >= (list).capacity) { \
+        size_t _old_cap = (list).capacity * sizeof(*(list).items); \
+        if ((list).capacity == 0) (list).capacity = 32; \
+        else (list).capacity *= 2; \
+        (list).items = ir_arena_realloc(arena, (list).items, _old_cap, (list).capacity * sizeof(*(list).items)); \
+    } \
+    (list).items[(list).size++] = (val); \
+} while (0)
+
 #define ir_list_append(list, val) do { \
     if ((list).size >= (list).capacity) { \
         if ((list).capacity == 0) (list).capacity = 32; \
-        (list).capacity *= 2; \
+        else (list).capacity *= 2; \
         (list).items = realloc((list).items, (list).capacity * sizeof(*(list).items)); \
     } \
     (list).items[(list).size++] = (val); \
@@ -357,6 +391,29 @@ IrFunction exec_pop_func(IrExec* exec);
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #endif
 
+#ifndef MIN
+#define MIN(a, b) (((a) < (b)) ? (a) : (b))
+#endif
+
+#define IR_ALIGN_UP_POW2(n, p) (((size_t)(n) + ((size_t)(p) - 1)) & (~((size_t)(p) - 1)))
+
+#define IR_ARENA_BASE_POS (sizeof(IrMemArena))
+#define IR_ARENA_ALIGN (sizeof(void*))
+
+IrMemArena* ir_arena_new(size_t reserve_size, size_t commit_size);
+void ir_arena_free(IrMemArena* arena);
+void* ir_arena_alloc(IrMemArena* arena, size_t size);
+void* ir_arena_realloc(IrMemArena* arena, void* ptr, size_t old_size, size_t new_size);
+void ir_arena_pop(IrMemArena* arena, size_t size);
+void ir_arena_pop_to(IrMemArena* arena, size_t pos);
+void ir_arena_clear(IrMemArena* arena);
+
+unsigned int ir_plat_get_pagesize(void);
+void* ir_plat_mem_reserve(size_t size);
+bool ir_plat_mem_commit(void* ptr, size_t size);
+bool ir_plat_mem_decommit(void* ptr, size_t size);
+bool ir_plat_mem_release(void* ptr, size_t size);
+
 size_t hash_value(IrValue value) {
     size_t hash = 0;
 
@@ -379,7 +436,7 @@ size_t hash_value(IrValue value) {
                 hash = (hash << 1) ^ value.as.func_val.hint[i];
             }
         }
-        hash ^= (size_t)value.as.func_val.ptr; 
+        hash ^= (size_t)value.as.func_val.ptr;
         break;
     case IR_TYPE_LABEL: ;
         size_t label_size = strlen(value.as.label_val.name);
@@ -406,7 +463,7 @@ bool value_equals(IrValue left, IrValue right) {
     case IR_TYPE_LIST: ;
         IrList* left_list = left.as.list_val;
         IrList* right_list = right.as.list_val;
-        if (left_list->size != right_list->size) return false; 
+        if (left_list->size != right_list->size) return false;
         for (size_t i = 0; i < left_list->size; i++) {
             if (!value_equals(left_list->items[i], right_list->items[i])) return false;
         }
@@ -424,23 +481,25 @@ bool value_equals(IrValue left, IrValue right) {
     return true;
 }
 
-IrConstantPool* constant_pool_new(void) {
-    IrConstantPool* pool = malloc(sizeof(IrConstantPool));
-    memset(pool, 0, sizeof(IrConstantPool));
+IrBytecodePool* bytecode_pool_new(void) {
+    IrBytecodePool* pool = malloc(sizeof(IrBytecodePool));
+    memset(pool, 0, sizeof(IrBytecodePool));
+    pool->arena = ir_arena_new(GiB(2), MiB(1));
     return pool;
 }
 
-void constant_pool_free(IrConstantPool* pool) {
+void bytecode_pool_free(IrBytecodePool* pool) {
     for (size_t i = 0; i < pool->list.size; i++) {
         if (pool->list.items[i].type != IR_TYPE_LIST) continue;
         bytecode_const_list_free(pool->list.items[i].as.list_val);
     }
     ir_list_free(pool->hash_set);
     ir_list_free(pool->list);
+    ir_arena_free(pool->arena);
     free(pool);
 }
 
-size_t constant_pool_get(IrConstantPool* pool, IrValue value) {
+size_t bytecode_pool_get(IrBytecodePool* pool, IrValue value) {
     if (pool->hash_set.capacity == 0) return (size_t)-1;
 
     size_t hash = hash_value(value) % pool->hash_set.capacity;
@@ -455,7 +514,7 @@ size_t constant_pool_get(IrConstantPool* pool, IrValue value) {
     return idx;
 }
 
-size_t constant_pool_insert(IrConstantPool* pool, IrValue value) {
+size_t bytecode_pool_insert(IrBytecodePool* pool, IrValue value) {
     if ((float)pool->hash_set.size / (float)pool->hash_set.capacity > 0.6 || pool->hash_set.capacity == 0) {
         if (pool->hash_set.capacity == 0) pool->hash_set.capacity = 1024;
         else pool->hash_set.capacity *= 2;
@@ -500,7 +559,7 @@ size_t constant_pool_insert(IrConstantPool* pool, IrValue value) {
     return idx;
 }
 
-IrBytecode bytecode_new(const char* name, IrConstantPool* pool) {
+IrBytecode bytecode_new(const char* name, IrBytecodePool* pool) {
     return (IrBytecode) {
         .name = name,
         .code = (IrOpcodes) {0},
@@ -509,40 +568,43 @@ IrBytecode bytecode_new(const char* name, IrConstantPool* pool) {
     };
 }
 
-void bytecode_free(IrBytecode* bc) {
-    ir_list_free(bc->code);
-    ir_list_free(bc->labels);
-}
-
 void bytecode_join(IrBytecode* dst, IrBytecode* src) {
     IR_ASSERT(src->pool == dst->pool);
 
     size_t dst_size = dst->code.size;
 
-    for (size_t i = 0; i < src->code.size; i++) {
-        ir_list_append(dst->code, src->code.items[i]);
+    IrMemArena* arena = dst->pool->arena;
+
+    if (dst->code.size == 0) {
+        dst->code = src->code;
+    } else {
+        for (size_t i = 0; i < src->code.size; i++) {
+            ir_arena_append(arena, dst->code, src->code.items[i]);
+        }
     }
 
-    for (size_t i = 0; i < src->labels.size; i++) {
-        src->pool->list.items[src->labels.items[i]].as.label_val.pos += dst_size;
-        ir_list_append(dst->labels, src->labels.items[i]);
+    if (dst->labels.size == 0) {
+        dst->labels = src->labels;
+    } else {
+        for (size_t i = 0; i < src->labels.size; i++) {
+            src->pool->list.items[src->labels.items[i]].as.label_val.pos += dst_size;
+            ir_arena_append(arena, dst->labels, src->labels.items[i]);
+        }
     }
-
-    bytecode_free(src);
 }
 
 IrInstructionID bytecode_push_op(IrBytecode* bc, IrOpcode op) {
     IrInstructionID id = bc->code.size;
-    ir_list_append(bc->code, op);
+    ir_arena_append(bc->pool->arena, bc->code, op);
     return id;
 }
 
 IrInstructionID bytecode_push_op_const(IrBytecode* bc, IrOpcode op, ConstId const_id) {
     IrInstructionID id = bc->code.size;
-    ir_list_append(bc->code, op);
-    ir_list_append(bc->code, (const_id >> 16) & 255);
-    ir_list_append(bc->code, (const_id >> 8) & 255);
-    ir_list_append(bc->code, const_id & 255);
+    ir_arena_append(bc->pool->arena, bc->code, op);
+    ir_arena_append(bc->pool->arena, bc->code, (const_id >> 16) & 255);
+    ir_arena_append(bc->pool->arena, bc->code, (const_id >> 8) & 255);
+    ir_arena_append(bc->pool->arena, bc->code, const_id & 255);
     return id;
 }
 
@@ -552,14 +614,14 @@ ConstId bytecode_push_label(IrBytecode* bc, const char* name) {
     val.as.label_val.name = name;
     val.as.label_val.pos = bc->code.size;
 
-    assert(constant_pool_get(bc->pool, val) == (size_t)-1);
-    ConstId label = constant_pool_insert(bc->pool, val);
-    ir_list_append(bc->labels, label);
+    assert(bytecode_pool_get(bc->pool, val) == (size_t)-1);
+    ConstId label = bytecode_pool_insert(bc->pool, val);
+    ir_arena_append(bc->pool->arena, bc->labels, label);
     return label;
 }
 
 ConstId bytecode_push_constant(IrBytecode* bc, IrValue constant) {
-    ConstId id = constant_pool_insert(bc->pool, constant);
+    ConstId id = bytecode_pool_insert(bc->pool, constant);
     IR_ASSERT(id < 0x1000000);
     return id;
 }
@@ -1016,9 +1078,6 @@ IrExec exec_new(size_t memory_max) {
 }
 
 void exec_free(IrExec* exec) {
-    for (size_t i = 0; i < exec->chunks.size; i++) {
-        bytecode_free(&exec->chunks.items[i]);
-    }
     ir_list_free(exec->chunks);
     ir_list_free(exec->stack);
 
@@ -1051,7 +1110,7 @@ IrLabel* bytecode_find_label(IrBytecode* bc, const char* label_name) {
     label.type = IR_TYPE_LABEL;
     label.as.label_val.name = label_name;
 
-    ConstId id = constant_pool_get(bc->pool, label);
+    ConstId id = bytecode_pool_get(bc->pool, label);
     if (id == (size_t)-1) return NULL;
     return &bc->pool->list.items[id].as.label_val;
 }
@@ -1843,5 +1902,135 @@ void exec_print_variables(IrExec* exec) {
         printf("\n");
     }
 }
+
+IrMemArena* ir_arena_new(size_t reserve_size, size_t commit_size) {
+    unsigned int pagesize = ir_plat_get_pagesize();
+
+    reserve_size = IR_ALIGN_UP_POW2(reserve_size, pagesize);
+    commit_size = IR_ALIGN_UP_POW2(commit_size, pagesize);
+
+    IrMemArena* arena = ir_plat_mem_reserve(reserve_size);
+
+    if (!ir_plat_mem_commit(arena, commit_size)) return NULL;
+
+    arena->reserve_size = reserve_size;
+    arena->commit_size = commit_size;
+    arena->pos = IR_ARENA_BASE_POS;
+    arena->commit_pos = commit_size;
+
+    return arena;
+}
+
+void ir_arena_free(IrMemArena* arena) {
+    ir_plat_mem_release(arena, arena->reserve_size);
+}
+
+void* ir_arena_alloc(IrMemArena* arena, size_t size) {
+    size_t pos_aligned = IR_ALIGN_UP_POW2(arena->pos, IR_ARENA_ALIGN);
+    size_t new_pos = pos_aligned + size;
+
+    if (new_pos > arena->reserve_size) { return NULL; }
+
+    if (new_pos > arena->commit_pos) {
+        size_t new_commit_pos = new_pos;
+        new_commit_pos += arena->commit_size - 1;
+        new_commit_pos -= new_commit_pos % arena->commit_size;
+        new_commit_pos = MIN(new_commit_pos, arena->reserve_size);
+
+        unsigned char* mem = (unsigned char*)arena + arena->commit_pos;
+        size_t commit_size = new_commit_pos - arena->commit_pos;
+
+        if (!ir_plat_mem_commit(mem, commit_size)) return NULL;
+
+        arena->commit_pos = new_commit_pos;
+    }
+
+    arena->pos = new_pos;
+
+    unsigned char* out = (unsigned char*)arena + pos_aligned;
+
+    return out;
+}
+
+void* ir_arena_realloc(IrMemArena* arena, void* ptr, size_t old_size, size_t new_size) {
+    if (!ptr || old_size == 0) return ir_arena_alloc(arena, new_size);
+
+    void* ret = ir_arena_alloc(arena, new_size);
+    memcpy(ret, ptr, old_size);
+    return ret;
+}
+
+void ir_arena_pop(IrMemArena* arena, size_t size) {
+    size = MIN(size, arena->pos - IR_ARENA_BASE_POS);
+    arena->pos -= size;
+}
+
+void ir_arena_pop_to(IrMemArena* arena, size_t pos) {
+    size_t size = pos < arena->pos ? arena->pos - pos : 0;
+    ir_arena_pop(arena, size);
+}
+
+void ir_arena_clear(IrMemArena* arena) {
+    ir_arena_pop_to(arena, IR_ARENA_BASE_POS);
+}
+
+#ifdef _WIN32
+
+#include <windows.h>
+
+unsigned long ir_plat_get_pagesize(void) {
+    SYSTEM_INFO sysinfo = { 0 };
+    GetSystemInfo(&sysinfo);
+
+    return sysinfo.dwPageSize;
+}
+
+void* ir_plat_mem_reserve(size_t size) {
+    return VirtualAlloc(NULL, size, MEM_RESERVE, PAGE_READWRITE);
+}
+
+bool ir_plat_mem_commit(void* ptr, size_t size) {
+    void* ret = VirtualAlloc(ptr, size, MEM_COMMIT, PAGE_READWRITE);
+    return ret != NULL;
+}
+
+bool ir_plat_mem_decommit(void* ptr, size_t size) {
+    return VirtualFree(ptr, size, MEM_DECOMMIT);
+}
+
+bool ir_plat_mem_release(void* ptr, size_t size) {
+    return VirtualFree(ptr, size, MEM_RELEASE);
+}
+
+#else
+
+#include <unistd.h>
+#include <sys/mman.h>
+
+unsigned int ir_plat_get_pagesize(void) {
+    return sysconf(_SC_PAGESIZE);
+}
+
+void* ir_plat_mem_reserve(size_t size) {
+    void* out = mmap(NULL, size, PROT_NONE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    if (out == MAP_FAILED) return NULL;
+    return out;
+}
+
+bool ir_plat_mem_commit(void* ptr, size_t size) {
+    return !mprotect(ptr, size, PROT_READ | PROT_WRITE);
+}
+
+bool ir_plat_mem_decommit(void* ptr, size_t size) {
+    if (mprotect(ptr, size, PROT_NONE) == -1) return false;
+    return !madvise(ptr, size, MADV_DONTNEED);
+}
+
+bool ir_plat_mem_release(void* ptr, size_t size) {
+    return !munmap(ptr, size);
+}
+
+#endif // _WIN32
+
 
 #endif // SCRAP_IR_IMPLEMENTATION

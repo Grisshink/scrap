@@ -88,12 +88,12 @@ CompilerValue block_on_start(Compiler* compiler, Block* block, Block** next_bloc
         vector_add(&compiler->chains_to_compile, block->parent.as.chain);
         return DATA_NOTHING;
     } else if (prev_block == NULL) {
-        IrBytecode chunk = bytecode_new(NULL, compiler->const_pool);
+        IrBytecode chunk = EMPTY_BYTECODE;
 
         IrValue label;
         label.type = IR_TYPE_LABEL;
         label.as.label_val.name = "entry";
-        if (constant_pool_get(compiler->const_pool, label) != (size_t)-1) {
+        if (bytecode_pool_get(compiler->bc_pool, label) != (size_t)-1) {
             compiler_set_error(compiler, gettext("Duplicate on_start block"));
             return DATA_UNKNOWN;
         }

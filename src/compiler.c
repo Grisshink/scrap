@@ -72,10 +72,10 @@ IrRunFunction resolve_function(IrExec* exec, const char* hint) {
 bool compiler_run(void* e) {
     Compiler* compiler = e;
 
-    compiler->const_pool = constant_pool_new();
+    compiler->bc_pool = bytecode_pool_new();
     compiler->chains_to_compile = vector_create();
 
-    compiler->bytecode = bytecode_new("main", compiler->const_pool);
+    compiler->bytecode = bytecode_new("main", compiler->bc_pool);
     compiler->exec_running = false;
 
     for (size_t i = 0; i < vector_size(compiler->code); i++) {
@@ -119,11 +119,9 @@ void compiler_cleanup(void* e) {
     Compiler* compiler = e;
     if (compiler->exec_running) {
         exec_free(&compiler->exec);
-    } else {
-        bytecode_free(&compiler->bytecode);
     }
 
-    constant_pool_free(compiler->const_pool);
+    bytecode_pool_free(compiler->bc_pool);
     vector_free(compiler->chains_to_compile);
 }
 
@@ -184,7 +182,7 @@ Block* compiler_get_next_block(Block* block) {
 }
 
 CompilerValue compiler_evaluate_chain(Compiler* compiler, BlockChain* chain) {
-    IrBytecode bc = bytecode_new(NULL, compiler->const_pool);
+    IrBytecode bc = EMPTY_BYTECODE;
     DataType bc_type = DATA_TYPE_NULL;
 
     Block* prev = NULL;
@@ -196,12 +194,10 @@ CompilerValue compiler_evaluate_chain(Compiler* compiler, BlockChain* chain) {
         CompilerValue value = compiler_evaluate_block(compiler, iter, &next, prev);
         if (value.type == DATA_TYPE_UNKNOWN) {
             scrap_log(LOG_ERROR, "[COMPILER] From chain: %p", chain);
-            bytecode_free(&bc);
             return value;
         }
         if (value.type != DATA_TYPE_CHUNK) {
             compiler_set_error(compiler, gettext("Top level blocks should return type %s, but got %s instead"), type_to_str(DATA_TYPE_CHUNK), type_to_str(value.type));
-            bytecode_free(&bc);
             return DATA_UNKNOWN;
         }
 
