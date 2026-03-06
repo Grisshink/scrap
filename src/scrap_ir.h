@@ -463,7 +463,7 @@ void ir_arena_pop(IrMemArena* arena, size_t size);
 void ir_arena_pop_to(IrMemArena* arena, size_t pos);
 void ir_arena_clear(IrMemArena* arena);
 
-unsigned int ir_plat_get_pagesize(void);
+unsigned long ir_plat_get_pagesize(void);
 void* ir_plat_mem_reserve(size_t size);
 bool ir_plat_mem_commit(void* ptr, size_t size);
 bool ir_plat_mem_decommit(void* ptr, size_t size);
@@ -1952,7 +1952,7 @@ void exec_print_variables(IrExec* exec) {
 }
 
 IrMemArena* ir_arena_new(size_t reserve_size, size_t commit_size) {
-    unsigned int pagesize = ir_plat_get_pagesize();
+    unsigned long pagesize = ir_plat_get_pagesize();
 
     reserve_size = IR_ALIGN_UP_POW2(reserve_size, pagesize);
     commit_size = IR_ALIGN_UP_POW2(commit_size, pagesize);
@@ -2055,7 +2055,7 @@ bool ir_plat_mem_release(void* ptr, size_t size) {
 #include <unistd.h>
 #include <sys/mman.h>
 
-unsigned int ir_plat_get_pagesize(void) {
+unsigned long ir_plat_get_pagesize(void) {
     return sysconf(_SC_PAGESIZE);
 }
 
