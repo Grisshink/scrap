@@ -234,10 +234,8 @@ typedef struct {
 } IrHeapChunk;
 
 typedef struct {
-    void* mem;
-    size_t mem_used,
-           mem_max,
-           chunks_count;
+    IrMemArena* mem;
+    size_t chunks_count, mem_max;
 } IrHeap;
 
 struct IrExec {
@@ -320,7 +318,7 @@ IrFunction ir_func_by_ptr(IrRunFunction func);
 
 // Allocate new execution engine that will execute the bytecode chunks.
 // See exec_add_bytecode and exec_run for getting your code to run.
-IrExec exec_new(size_t memory_max);
+IrExec exec_new(size_t memory_min, size_t memory_max);
 
 // Free the execution engine.
 void exec_free(IrExec* exec);
@@ -400,7 +398,6 @@ IrFunction exec_pop_func(IrExec* exec);
 #include <stdarg.h>
 #include <assert.h>
 #include <math.h>
-#include <sys/mman.h>
 #include <errno.h>
 
 #define MiB(n) ((size_t)(n) << 20)
@@ -956,24 +953,10 @@ void exec_set_error(IrExec* exec, const char* fmt, ...) {
     va_end(va);
 }
 
-static void exec_heap_lock(IrHeap* heap) {
-    if (!heap->mem) return;
-    mprotect(heap->mem, heap->mem_max, PROT_NONE);
-}
-
-static void exec_heap_unlock(IrHeap* heap) {
-    if (!heap->mem) return;
-    mprotect(heap->mem, heap->mem_max, PROT_READ | PROT_WRITE);
-}
-
 static void* exec_heap_malloc(IrHeap* heap, size_t size) {
-    // Align all chunks to 8 bytes
-    size += 7 - ((size - 1) % 8);
-
-    if (heap->mem_used + size > heap->mem_max) return NULL;
-    void* ptr = heap->mem + heap->mem_used;
-    heap->mem_used += size;
-    heap->chunks_count++;
+    if (heap->mem->pos + size > heap->mem_max) return NULL;
+    void* ptr = ir_arena_alloc(heap->mem, size);
+    if (ptr) heap->chunks_count++;
     return ptr;
 }
 
@@ -981,8 +964,8 @@ static bool exec_heap_copy_chunk(IrExec* exec, void** ref_data) {
     if (*ref_data == NULL) return false;
 
     IrHeapChunk* chunk = (*(IrHeapChunk**)ref_data) - 1;
-    if ((void*)chunk < exec->heap.mem ||
-        (void*)chunk >= exec->heap.mem + exec->heap.mem_max)
+    if ((void*)chunk < (void*)exec->heap.mem ||
+        (void*)chunk >= (void*)exec->heap.mem + exec->heap.mem->pos)
     {
         return false;
     }
@@ -1019,10 +1002,9 @@ static void exec_heap_copy_value(IrExec* exec, IrValue* value) {
 }
 
 void exec_collect(IrExec* exec) {
-    exec_heap_unlock(&exec->second_heap);
-
-    exec->second_heap.mem_used = 0;
+    ir_arena_clear(exec->second_heap.mem);
     exec->second_heap.chunks_count = 0;
+    exec->second_heap.mem_max = exec->heap.mem_max;
 
     // Copy stack values
     for (size_t i = 0; i < exec->stack.size; i++) {
@@ -1037,14 +1019,12 @@ void exec_collect(IrExec* exec) {
         }
     }
 
-    size_t memory_freed = exec->heap.mem_used - exec->second_heap.mem_used;
+    size_t memory_freed = exec->heap.mem->pos - exec->second_heap.mem->pos;
     size_t chunks_deleted = exec->heap.chunks_count - exec->second_heap.chunks_count;
 
     IrHeap temp_heap = exec->heap;
     exec->heap = exec->second_heap;
     exec->second_heap = temp_heap;
-
-    exec_heap_lock(&exec->second_heap);
 
     printf("exec_collect: %zu bytes freed, %zu chunks deleted\n", memory_freed, chunks_deleted);
 }
@@ -1059,8 +1039,16 @@ void* exec_malloc(IrExec* exec, size_t size) {
 
         chunk = exec_heap_malloc(&exec->heap, chunk_size);
         if (chunk == NULL) {
-            exec_set_error(exec, "Heap out of memory. Tried to allocate %zu bytes but only %zu bytes were free", chunk_size, exec->heap.mem_max - exec->heap.mem_used);
-            return NULL;
+            while (exec->heap.mem->pos + chunk_size > exec->heap.mem_max && exec->heap.mem_max < exec->heap.mem->reserve_size) {
+                exec->heap.mem_max = MIN(exec->heap.mem_max * 2, exec->heap.mem->reserve_size);
+            }
+            printf("exec_malloc: raising memory limit to %zu bytes\n", exec->heap.mem_max);
+            chunk = exec_heap_malloc(&exec->heap, chunk_size);
+
+            if (chunk == NULL) {
+                exec_set_error(exec, "Heap out of memory. Tried to allocate %zu bytes but only %zu bytes were free", chunk_size, exec->heap.mem->reserve_size - exec->heap.mem->pos);
+                return NULL;
+            }
         }
     }
 
@@ -1087,9 +1075,17 @@ void* exec_realloc(IrExec* exec, void* ptr, size_t new_size) {
 
         new_chunk = exec_heap_malloc(&exec->heap, new_chunk_size);
         if (new_chunk == NULL) {
-            exec_set_error(exec, "Heap out of memory. Tried to allocate %zu bytes but only %zu bytes were free", new_chunk_size, exec->heap.mem_max - exec->heap.mem_used);
-            free(new_old_chunk);
-            return NULL;
+            while (exec->heap.mem->pos + new_chunk_size > exec->heap.mem_max && exec->heap.mem_max < exec->heap.mem->reserve_size) {
+                exec->heap.mem_max = MIN(exec->heap.mem_max * 2, exec->heap.mem->reserve_size);
+            }
+            printf("exec_realloc: raising memory limit to %zu bytes\n", exec->heap.mem_max);
+            new_chunk = exec_heap_malloc(&exec->heap, new_chunk_size);
+
+            if (new_chunk == NULL) {
+                exec_set_error(exec, "Heap out of memory. Tried to allocate %zu bytes but only %zu bytes were free", new_chunk_size, exec->heap.mem_max - exec->heap.mem->pos);
+                free(new_old_chunk);
+                return NULL;
+            }
         }
     }
 
@@ -1103,31 +1099,25 @@ void* exec_realloc(IrExec* exec, void* ptr, size_t new_size) {
 }
 
 static void exec_heap_free(IrHeap* heap) {
-    if (heap->mem) munmap(heap->mem, heap->mem_max);
+    if (heap->mem) {
+        ir_arena_free(heap->mem);
+        heap->mem = NULL;
+    }
 }
 
-static IrHeap exec_heap_new(IrExec* exec, size_t memory_max) {
+static IrHeap exec_heap_new(size_t memory_min, size_t memory_max) {
     IrHeap heap = {0};
-    if (memory_max == 0) return heap;
-
-    void* mem = mmap(NULL, memory_max, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-    if ((size_t)mem == (size_t)-1) {
-        exec_set_error(exec, "Could not allocate memory for allocator: %s", strerror(errno));
-        return heap;
-    }
-
-    heap.mem = mem;
-    heap.mem_max = memory_max;
-
+    if (memory_max == 0 || memory_min > memory_max) return heap;
+    heap.mem = ir_arena_new(memory_max, memory_min);
+    heap.mem_max = memory_min;
     return heap;
 }
 
-IrExec exec_new(size_t memory_max) {
+IrExec exec_new(size_t memory_min, size_t memory_max) {
     IrExec exec = {0};
 
-    IrHeap heap = exec_heap_new(&exec, memory_max);
-    IrHeap second_heap = exec_heap_new(&exec, memory_max);
-    exec_heap_lock(&second_heap);
+    IrHeap heap = exec_heap_new(memory_min, memory_max);
+    IrHeap second_heap = exec_heap_new(memory_min, memory_max);
 
     exec.heap = heap;
     exec.second_heap = second_heap;
