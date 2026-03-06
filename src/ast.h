@@ -57,8 +57,7 @@ typedef enum {
     DATA_TYPE_NOTHING,
     DATA_TYPE_INTEGER,
     DATA_TYPE_FLOAT,
-    DATA_TYPE_LITERAL, // Literal string, stored in global memory
-    DATA_TYPE_STRING, // Pointer to a string type, managed by the current memory allocator (GC)
+    DATA_TYPE_STRING,
     DATA_TYPE_BOOL,
     DATA_TYPE_LIST,
     DATA_TYPE_ANY,

@@ -37,7 +37,7 @@ typedef struct {
 } BytecodeChunk;
 
 typedef union {
-    char* literal_val;
+    char* str_val;
     int integer_val;
     double float_val;
     IrList* list_val;
@@ -80,7 +80,7 @@ struct Compiler {
 #define DATA_BOOL(v) _DATA(DATA_TYPE_BOOL, .bool_val = (v))
 #define DATA_COLOR(v) _DATA(DATA_TYPE_COLOR, .color_val = (v))
 #define DATA_LIST(v) _DATA(DATA_TYPE_LIST, .list_val = (v))
-#define DATA_LITERAL(v) _DATA(DATA_TYPE_LITERAL, .literal_val = (v))
+#define DATA_STRING(v) _DATA(DATA_TYPE_STRING, .str_val = (v))
 #define DATA_CHUNK(_t, _bc) _DATA(DATA_TYPE_CHUNK, .chunk_val = (BytecodeChunk) { \
     .return_type = (_t), \
     .bc = (_bc), \

@@ -29,6 +29,9 @@
 #include <wchar.h>
 #include <assert.h>
 
+#define MiB(n) ((size_t)(n) << 20)
+#define GiB(n) ((size_t)(n) << 30)
+
 Compiler compiler_new(Thread* thread) {
     Compiler compiler = (Compiler) {
         .code = NULL,
@@ -95,20 +98,20 @@ bool compiler_run(void* e) {
 
     bytecode_print(&compiler->bytecode);
 
-    // compiler->exec = exec_new(1024 * 1024); // 1 MB
-    // if (compiler->exec.last_error[0] != 0) {
-    //     compiler_set_error(compiler, "Exec create error: %s", compiler->exec.last_error);
-    //     exec_free(&compiler->exec);
-    //     return false;
-    // }
-    // exec_set_run_function_resolver(&compiler->exec, resolve_function);
-    // exec_add_bytecode(&compiler->exec, compiler->bytecode);
-    // compiler->exec_running = true;
+    compiler->exec = exec_new(MiB(1), GiB(1));
+    if (compiler->exec.last_error[0] != 0) {
+        compiler_set_error(compiler, "Exec create error: %s", compiler->exec.last_error);
+        exec_free(&compiler->exec);
+        return false;
+    }
+    exec_set_run_function_resolver(&compiler->exec, resolve_function);
+    exec_add_bytecode(&compiler->exec, compiler->bytecode);
+    compiler->exec_running = true;
 
-    // if (!exec_run(&compiler->exec, "main", "entry")) {
-    //     compiler_set_error(compiler, "Runtime error: %s", compiler->exec.last_error);
-    //     return false;
-    // }
+    if (!exec_run(&compiler->exec, "main", "entry")) {
+        compiler_set_error(compiler, "Runtime error: %s", compiler->exec.last_error);
+        return false;
+    }
 
     return true;
 }
@@ -137,7 +140,7 @@ CompilerValue compiler_evaluate_argument(Compiler* compiler, Argument* arg) {
     switch (arg->type) {
     case ARGUMENT_TEXT:
     case ARGUMENT_CONST_STRING:
-        return DATA_LITERAL(arg->data.text);
+        return DATA_STRING(arg->data.text);
     case ARGUMENT_BLOCK:
         return compiler_evaluate_block(compiler, arg->data.block, &next, NULL);
     case ARGUMENT_BLOCKDEF:

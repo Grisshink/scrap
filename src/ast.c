@@ -26,7 +26,7 @@
 #include <string.h>
 
 const char* type_to_str(DataType type) {
-    static_assert(DATA_TYPE_LAST == 13, "Exhaustive data type in type_to_str");
+    static_assert(DATA_TYPE_LAST == 12, "Exhaustive data type in type_to_str");
     switch (type) {
     case DATA_TYPE_NOTHING:
         return "nothing";
@@ -36,8 +36,6 @@ const char* type_to_str(DataType type) {
         return "float";
     case DATA_TYPE_STRING:
         return "str";
-    case DATA_TYPE_LITERAL:
-        return "literal";
     case DATA_TYPE_BOOL:
         return "bool";
     case DATA_TYPE_LIST:

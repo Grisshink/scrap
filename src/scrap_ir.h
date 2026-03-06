@@ -789,7 +789,20 @@ void bytecode_print(IrBytecode* bc) {
             CHECK_IMMEDIATE;
             IrList* list = pool_list.items[CODE_IMMEDIATE].as.list_val;
             if (list) {
-                printf("pushl (%p, %zu/%zu)\n", list, list->size, list->capacity);
+                printf("pushl (%p, %zu/%zu) \"", list, list->size, list->capacity);
+                for (size_t j = 0; j < list->size; j++) {
+                    if (j > 30) {
+                        printf("...");
+                        break;
+                    }
+                    IrValue c = list->items[j];
+                    switch (c.type) {
+                    case IR_TYPE_INT: printf("%lc", c.as.int_val); break;
+                    case IR_TYPE_BYTE: printf("%c", c.as.byte_val); break;
+                    default: printf("?"); break;
+                    }
+                }
+                printf("\"\n");
             } else {
                 printf("pushl\n");
             }

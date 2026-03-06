@@ -166,7 +166,7 @@ $(BUILD_FOLDER)util.o: src/util.c $(SCRAP_HEADERS)
 	$(CC) $(CFLAGS) -c -o $@ $<
 $(BUILD_FOLDER)ui.o: src/ui.c $(SCRAP_HEADERS)
 	$(CC) $(CFLAGS) -c -o $@ $<
-$(BUILD_FOLDER)platform.o: src/platform.c
+$(BUILD_FOLDER)platform.o: src/platform.c src/scrap_ir.h
 	$(CC) $(CFLAGS) -c -o $@ $<
 $(BUILD_FOLDER)ast.o: src/ast.c src/ast.h
 	$(CC) $(CFLAGS) -c -o $@ $<
