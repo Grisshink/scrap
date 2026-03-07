@@ -40,6 +40,7 @@ typedef union {
     char* str_val;
     int integer_val;
     double float_val;
+    bool bool_val;
     IrList* list_val;
     StdColor color_val;
     BytecodeChunk chunk_val;
@@ -75,7 +76,7 @@ struct Compiler {
 
 #define DATA_UNKNOWN _DATA(DATA_TYPE_UNKNOWN, 0)
 #define DATA_NOTHING _DATA(DATA_TYPE_NOTHING, 0)
-#define DATA_INTEGER(v) _DATA(DATA_TYPE_INTEGER, .int_val = (v))
+#define DATA_INTEGER(v) _DATA(DATA_TYPE_INTEGER, .integer_val = (v))
 #define DATA_FLOAT(v) _DATA(DATA_TYPE_FLOAT, .float_val = (v))
 #define DATA_BOOL(v) _DATA(DATA_TYPE_BOOL, .bool_val = (v))
 #define DATA_COLOR(v) _DATA(DATA_TYPE_COLOR, .color_val = (v))
