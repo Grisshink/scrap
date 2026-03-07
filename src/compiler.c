@@ -197,13 +197,14 @@ CompilerValue compiler_evaluate_chain(Compiler* compiler, BlockChain* chain) {
             scrap_log(LOG_ERROR, "[COMPILER] From chain: %p", chain);
             return value;
         }
-        if (value.type != DATA_TYPE_CHUNK) {
-            compiler_set_error(compiler, gettext("Top level blocks should return type %s, but got %s instead"), type_to_str(DATA_TYPE_CHUNK), type_to_str(value.type));
-            return DATA_UNKNOWN;
-        }
 
-        bc_type = value.data.chunk_val.return_type;
-        bytecode_join(&bc, &value.data.chunk_val.bc);
+        if (value.type == DATA_TYPE_CHUNK) {
+            bc_type = value.data.chunk_val.return_type;
+            bytecode_join(&bc, &value.data.chunk_val.bc);
+            if (bc_type != DATA_TYPE_NULL && next) {
+                bytecode_push_op(&bc, IR_POP);
+            }
+        }
 
         prev = iter;
         iter = next;
