@@ -90,6 +90,10 @@ struct Compiler {
 #define EMPTY_BYTECODE bytecode_new(NULL, compiler->bc_pool)
 #define EMPTY_CHUNK DATA_CHUNK(DATA_TYPE_NULL, EMPTY_BYTECODE)
 
+// Helpful aliases to get less confused with nothing type
+#define DATA_ERROR DATA_UNKNOWN
+#define DATA_TYPE_ERROR DATA_TYPE_UNKNOWN
+
 Compiler compiler_new(Thread* thread);
 bool compiler_run(void* e);
 void compiler_cleanup(void* e);
