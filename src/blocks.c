@@ -1142,35 +1142,55 @@ CompilerValue block_bit_or(Compiler* compiler, Block* block, Block** next_block,
 }
 
 CompilerValue block_less(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
-    (void) compiler;
-    (void) block;
     (void) next_block;
     (void) prev_block;
-    return DATA_UNKNOWN;
+    CompilerValue val = evaluate_binary_op(compiler, &block->arguments[0], &block->arguments[1], IR_LESSI, IR_LESSF);
+    if (val.type == DATA_TYPE_UNKNOWN) return DATA_UNKNOWN;
+
+    if (val.type == DATA_TYPE_CHUNK) {
+        return cast_to_bc_bool(compiler, val);
+    } else {
+        return cast_to_const_bool(compiler, val);
+    }
 }
 
 CompilerValue block_less_eq(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
-    (void) compiler;
-    (void) block;
     (void) next_block;
     (void) prev_block;
-    return DATA_UNKNOWN;
+    CompilerValue val = evaluate_binary_op(compiler, &block->arguments[0], &block->arguments[1], IR_LESSEQI, IR_LESSEQF);
+    if (val.type == DATA_TYPE_UNKNOWN) return DATA_UNKNOWN;
+
+    if (val.type == DATA_TYPE_CHUNK) {
+        return cast_to_bc_bool(compiler, val);
+    } else {
+        return cast_to_const_bool(compiler, val);
+    }
 }
 
 CompilerValue block_more(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
-    (void) compiler;
-    (void) block;
     (void) next_block;
     (void) prev_block;
-    return DATA_UNKNOWN;
+    CompilerValue val = evaluate_binary_op(compiler, &block->arguments[0], &block->arguments[1], IR_MOREI, IR_MOREF);
+    if (val.type == DATA_TYPE_UNKNOWN) return DATA_UNKNOWN;
+
+    if (val.type == DATA_TYPE_CHUNK) {
+        return cast_to_bc_bool(compiler, val);
+    } else {
+        return cast_to_const_bool(compiler, val);
+    }
 }
 
 CompilerValue block_more_eq(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
-    (void) compiler;
-    (void) block;
     (void) next_block;
     (void) prev_block;
-    return DATA_UNKNOWN;
+    CompilerValue val = evaluate_binary_op(compiler, &block->arguments[0], &block->arguments[1], IR_MOREEQI, IR_MOREEQF);
+    if (val.type == DATA_TYPE_UNKNOWN) return DATA_UNKNOWN;
+
+    if (val.type == DATA_TYPE_CHUNK) {
+        return cast_to_bc_bool(compiler, val);
+    } else {
+        return cast_to_const_bool(compiler, val);
+    }
 }
 
 CompilerValue block_not(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
@@ -1214,19 +1234,125 @@ CompilerValue block_false(Compiler* compiler, Block* block, Block** next_block, 
 }
 
 CompilerValue block_eq(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
-    (void) compiler;
-    (void) block;
     (void) next_block;
     (void) prev_block;
-    return DATA_UNKNOWN;
+
+    CompilerValue left = compiler_evaluate_argument(compiler, &block->arguments[0]);
+    if (left.type == DATA_TYPE_UNKNOWN) return DATA_UNKNOWN;
+
+    CompilerValue right = compiler_evaluate_argument(compiler, &block->arguments[1]);
+    if (right.type == DATA_TYPE_UNKNOWN) return DATA_UNKNOWN;
+
+    if ((left.type != DATA_TYPE_CHUNK) != (right.type != DATA_TYPE_CHUNK)) {
+        if (left.type != DATA_TYPE_CHUNK) {
+            left = cast_to_bc(compiler, left, right.data.chunk_val.return_type);
+            if (left.type == DATA_TYPE_UNKNOWN) return DATA_UNKNOWN;
+        } else if (right.type != DATA_TYPE_CHUNK) {
+            right = cast_to_bc(compiler, right, left.data.chunk_val.return_type);
+            if (right.type == DATA_TYPE_UNKNOWN) return DATA_UNKNOWN;
+        }
+    } else if (left.type != DATA_TYPE_CHUNK && right.type != DATA_TYPE_CHUNK) {
+        if (left.type != right.type) {
+            compiler_set_error(compiler, gettext("Incompatible types %s and %s in eq block"), type_to_str(left.type), type_to_str(right.type));
+            return DATA_UNKNOWN;
+        }
+
+        static_assert(DATA_TYPE_LAST == 12, "Exhaustive data type in block_eq");
+        switch (left.type) {
+        case DATA_TYPE_NOTHING: return DATA_BOOL(true);
+        case DATA_TYPE_INTEGER: return DATA_BOOL(left.data.integer_val == right.data.integer_val);
+        case DATA_TYPE_FLOAT: return DATA_BOOL(left.data.float_val == right.data.float_val);
+        case DATA_TYPE_STRING: return DATA_BOOL(!strcmp(left.data.str_val, right.data.str_val));
+        case DATA_TYPE_BOOL: return DATA_BOOL(left.data.bool_val == right.data.bool_val);
+        case DATA_TYPE_LIST: return DATA_BOOL(left.data.list_val == right.data.list_val);
+        case DATA_TYPE_COLOR: return DATA_BOOL(!memcmp(&left.data.color_val, &right.data.color_val, sizeof(left.data.color_val)));
+        case DATA_TYPE_ANY:
+        case DATA_TYPE_BLOCKDEF:
+        case DATA_TYPE_UNKNOWN:
+        case DATA_TYPE_CHUNK:
+        case DATA_TYPE_NULL:
+            compiler_set_error(compiler, gettext("Type %s cannot be compared"), type_to_str(left.type));
+            return DATA_UNKNOWN;
+        default:
+            assert(false && "Unhandled data type in block_eq");
+        
+        }
+    }
+
+    DataType left_type  = left.data.chunk_val.return_type,
+             right_type = right.data.chunk_val.return_type;
+
+    if (left_type != right_type && left_type != DATA_TYPE_ANY && right_type != DATA_TYPE_ANY) {
+        compiler_set_error(compiler, gettext("Incompatible types %s and %s in eq block"), type_to_str(left_type), type_to_str(right_type));
+        return DATA_UNKNOWN;
+    }
+
+    IrBytecode bc = left.data.chunk_val.bc;
+    bytecode_join(&bc, &right.data.chunk_val.bc);
+    bytecode_push_op(&bc, IR_EQ);
+
+    return DATA_CHUNK(DATA_TYPE_BOOL, bc);
 }
 
 CompilerValue block_not_eq(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
-    (void) compiler;
-    (void) block;
     (void) next_block;
     (void) prev_block;
-    return DATA_UNKNOWN;
+
+    CompilerValue left = compiler_evaluate_argument(compiler, &block->arguments[0]);
+    if (left.type == DATA_TYPE_UNKNOWN) return DATA_UNKNOWN;
+
+    CompilerValue right = compiler_evaluate_argument(compiler, &block->arguments[1]);
+    if (right.type == DATA_TYPE_UNKNOWN) return DATA_UNKNOWN;
+
+    if ((left.type != DATA_TYPE_CHUNK) != (right.type != DATA_TYPE_CHUNK)) {
+        if (left.type != DATA_TYPE_CHUNK) {
+            left = cast_to_bc(compiler, left, right.data.chunk_val.return_type);
+            if (left.type == DATA_TYPE_UNKNOWN) return DATA_UNKNOWN;
+        } else if (right.type != DATA_TYPE_CHUNK) {
+            right = cast_to_bc(compiler, right, left.data.chunk_val.return_type);
+            if (right.type == DATA_TYPE_UNKNOWN) return DATA_UNKNOWN;
+        }
+    } else if (left.type != DATA_TYPE_CHUNK && right.type != DATA_TYPE_CHUNK) {
+        if (left.type != right.type) {
+            compiler_set_error(compiler, gettext("Incompatible types %s and %s in not_eq block"), type_to_str(left.type), type_to_str(right.type));
+            return DATA_UNKNOWN;
+        }
+
+        static_assert(DATA_TYPE_LAST == 12, "Exhaustive data type in block_eq");
+        switch (left.type) {
+        case DATA_TYPE_NOTHING: return DATA_BOOL(false);
+        case DATA_TYPE_INTEGER: return DATA_BOOL(left.data.integer_val != right.data.integer_val);
+        case DATA_TYPE_FLOAT: return DATA_BOOL(left.data.float_val != right.data.float_val);
+        case DATA_TYPE_STRING: return DATA_BOOL(!!strcmp(left.data.str_val, right.data.str_val));
+        case DATA_TYPE_BOOL: return DATA_BOOL(left.data.bool_val != right.data.bool_val);
+        case DATA_TYPE_LIST: return DATA_BOOL(left.data.list_val != right.data.list_val);
+        case DATA_TYPE_COLOR: return DATA_BOOL(!!memcmp(&left.data.color_val, &right.data.color_val, sizeof(left.data.color_val)));
+        case DATA_TYPE_ANY:
+        case DATA_TYPE_BLOCKDEF:
+        case DATA_TYPE_UNKNOWN:
+        case DATA_TYPE_CHUNK:
+        case DATA_TYPE_NULL:
+            compiler_set_error(compiler, gettext("Type %s cannot be compared"), type_to_str(left.type));
+            return DATA_UNKNOWN;
+        default:
+            assert(false && "Unhandled data type in block_eq");
+        
+        }
+    }
+
+    DataType left_type  = left.data.chunk_val.return_type,
+             right_type = right.data.chunk_val.return_type;
+
+    if (left_type != right_type && left_type != DATA_TYPE_ANY && right_type != DATA_TYPE_ANY) {
+        compiler_set_error(compiler, gettext("Incompatible types %s and %s in not_eq block"), type_to_str(left_type), type_to_str(right_type));
+        return DATA_UNKNOWN;
+    }
+
+    IrBytecode bc = left.data.chunk_val.bc;
+    bytecode_join(&bc, &right.data.chunk_val.bc);
+    bytecode_push_op(&bc, IR_NEQ);
+
+    return DATA_CHUNK(DATA_TYPE_BOOL, bc);
 }
 
 CompilerValue block_exec_custom(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
