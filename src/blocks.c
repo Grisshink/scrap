@@ -65,6 +65,12 @@ static MathFunc block_math_func_list[MATH_LIST_LEN] = {
 #include "std.h"
 #include <stdio.h>
 
+CompilerValue cast_to_const_string(Compiler* compiler, CompilerValue value);
+CompilerValue cast_to_const_int(Compiler* compiler, CompilerValue value);
+CompilerValue cast_to_const_float(Compiler* compiler, CompilerValue value);
+CompilerValue cast_to_const_bool(Compiler* compiler, CompilerValue value);
+CompilerValue cast_to_const_color(Compiler* compiler, CompilerValue value);
+
 CompilerValue string_to_bc(Compiler* compiler, char* str) {
     IrBytecode bc = EMPTY_BYTECODE;
     IrList* list = bytecode_const_list_new();
@@ -95,16 +101,24 @@ CompilerValue cast_to_bc_string(Compiler* compiler, CompilerValue value) {
     case DATA_TYPE_NULL:
         compiler_set_error(compiler, gettext("Cannot cast type %s into %s"), type_to_str(value.type), type_to_str(result_type));
         return DATA_UNKNOWN;
-    case DATA_TYPE_NOTHING:
-    case DATA_TYPE_FLOAT:
-    case DATA_TYPE_BOOL:
     case DATA_TYPE_LIST:
-    case DATA_TYPE_COLOR:
+        snprintf(str, 32, "%d", value.data.integer_val);
+        return string_to_bc(compiler, str);
     case DATA_TYPE_BLOCKDEF:
         assert(false && "TODO");
+    case DATA_TYPE_COLOR:
+        snprintf(str, 32, "#%02x%02x%02x%02x", value.data.color_val.r, value.data.color_val.g, value.data.color_val.b, value.data.color_val.a);
+        return string_to_bc(compiler, str);
+    case DATA_TYPE_NOTHING:
+        return string_to_bc(compiler, "nothing");
     case DATA_TYPE_INTEGER:
         snprintf(str, 32, "%d", value.data.integer_val);
         return string_to_bc(compiler, str);
+    case DATA_TYPE_FLOAT:
+        snprintf(str, 32, "%gf", value.data.float_val);
+        return string_to_bc(compiler, str);
+    case DATA_TYPE_BOOL:
+        return string_to_bc(compiler, value.data.bool_val ? "true" : "false");
     case DATA_TYPE_STRING:
         return string_to_bc(compiler, value.data.str_val);
     case DATA_TYPE_CHUNK:
@@ -147,122 +161,181 @@ CompilerValue cast_to_bc_string(Compiler* compiler, CompilerValue value) {
 }
 
 CompilerValue cast_to_bc_int(Compiler* compiler, CompilerValue value) {
-    IrBytecode bc;
     const DataType result_type = DATA_TYPE_INTEGER;
+    IrBytecode bc;
+
+    if (value.type != DATA_TYPE_CHUNK) {
+        CompilerValue integer_val = cast_to_const_int(compiler, value);
+        if (integer_val.type == DATA_TYPE_UNKNOWN) return DATA_UNKNOWN;
+
+        bc = EMPTY_BYTECODE;
+        bytecode_push_op_int(&bc, IR_PUSHI, integer_val.data.integer_val);
+        return DATA_CHUNK(result_type, bc);
+    }
+
+    bc = value.data.chunk_val.bc;
 
     static_assert(DATA_TYPE_LAST == 12, "Exhaustive data type in cast_to_bc_int");
-    switch (value.type) {
-    case DATA_TYPE_ANY:
+    switch (value.data.chunk_val.return_type) {
     case DATA_TYPE_UNKNOWN:
     case DATA_TYPE_NULL:
-        compiler_set_error(compiler, gettext("Cannot cast type %s into %s"), type_to_str(value.type), type_to_str(result_type));
+    case DATA_TYPE_BLOCKDEF:
+    case DATA_TYPE_LIST:
+    case DATA_TYPE_CHUNK:
+        compiler_set_error(compiler, gettext("Cannot cast type %s into %s"), type_to_str(value.data.chunk_val.return_type), type_to_str(result_type));
         return DATA_UNKNOWN;
     case DATA_TYPE_NOTHING:
-    case DATA_TYPE_INTEGER:
-    case DATA_TYPE_FLOAT:
-    case DATA_TYPE_BOOL:
-    case DATA_TYPE_LIST:
-    case DATA_TYPE_COLOR:
-    case DATA_TYPE_BLOCKDEF:
-        assert(false && "TODO");
-    case DATA_TYPE_STRING:
-        bc = EMPTY_BYTECODE;
-        bytecode_push_op_int(&bc, IR_PUSHI, atol(value.data.str_val));
+    case DATA_TYPE_ANY:
+        bytecode_push_op(&bc, IR_TOI);
         return DATA_CHUNK(result_type, bc);
-    case DATA_TYPE_CHUNK:
-        bc = value.data.chunk_val.bc;
-
-        static_assert(DATA_TYPE_LAST == 12, "Exhaustive data type in cast_to_bc_int");
-        switch (value.data.chunk_val.return_type) {
-        case DATA_TYPE_UNKNOWN:
-        case DATA_TYPE_NULL:
-        case DATA_TYPE_BLOCKDEF:
-        case DATA_TYPE_LIST:
-        case DATA_TYPE_CHUNK:
-            compiler_set_error(compiler, gettext("Cannot cast type %s into %s"), type_to_str(value.data.chunk_val.return_type), type_to_str(result_type));
-            return DATA_UNKNOWN;
-        case DATA_TYPE_NOTHING:
-        case DATA_TYPE_ANY:
-            bytecode_push_op(&bc, IR_TOI);
-            return DATA_CHUNK(result_type, bc);
-        case DATA_TYPE_COLOR:
-        case DATA_TYPE_INTEGER:
-            return value;
-        case DATA_TYPE_FLOAT:
-            bytecode_push_op(&bc, IR_FTOI);
-            return DATA_CHUNK(result_type, bc);
-        case DATA_TYPE_STRING:
-            bytecode_push_op(&bc, IR_ATOI);
-            return DATA_CHUNK(result_type, bc);
-        case DATA_TYPE_BOOL:
-            bytecode_push_op(&bc, IR_BTOI);
-            return DATA_CHUNK(result_type, bc);
-        default:
-            assert(false && "Unhandled data type in cast_to_bc_int");
-        }
-        assert(false && "Unreachable");
+    case DATA_TYPE_COLOR:
+    case DATA_TYPE_INTEGER:
+        return value;
+    case DATA_TYPE_FLOAT:
+        bytecode_push_op(&bc, IR_FTOI);
+        return DATA_CHUNK(result_type, bc);
+    case DATA_TYPE_STRING:
+        bytecode_push_op(&bc, IR_ATOI);
+        return DATA_CHUNK(result_type, bc);
+    case DATA_TYPE_BOOL:
+        bytecode_push_op(&bc, IR_BTOI);
+        return DATA_CHUNK(result_type, bc);
     default:
         assert(false && "Unhandled data type in cast_to_bc_int");
     }
 }
 
 CompilerValue cast_to_bc_float(Compiler* compiler, CompilerValue value) {
-    IrBytecode bc;
     const DataType result_type = DATA_TYPE_FLOAT;
+    IrBytecode bc;
+
+    if (value.type != DATA_TYPE_CHUNK) {
+        CompilerValue float_val = cast_to_const_float(compiler, value);
+        if (float_val.type == DATA_TYPE_UNKNOWN) return DATA_UNKNOWN;
+
+        bc = EMPTY_BYTECODE;
+        bytecode_push_op_float(&bc, IR_PUSHF, float_val.data.float_val);
+        return DATA_CHUNK(result_type, bc);
+    }
+
+    bc = value.data.chunk_val.bc;
 
     static_assert(DATA_TYPE_LAST == 12, "Exhaustive data type in cast_to_bc_float");
-    switch (value.type) {
-    case DATA_TYPE_ANY:
+    switch (value.data.chunk_val.return_type) {
     case DATA_TYPE_UNKNOWN:
     case DATA_TYPE_NULL:
-        compiler_set_error(compiler, gettext("Cannot cast type %s into %s"), type_to_str(value.type), type_to_str(result_type));
+    case DATA_TYPE_BLOCKDEF:
+    case DATA_TYPE_LIST:
+    case DATA_TYPE_CHUNK:
+        compiler_set_error(compiler, gettext("Cannot cast type %s into %s"), type_to_str(value.data.chunk_val.return_type), type_to_str(result_type));
         return DATA_UNKNOWN;
     case DATA_TYPE_NOTHING:
-    case DATA_TYPE_INTEGER:
-    case DATA_TYPE_FLOAT:
-    case DATA_TYPE_BOOL:
-    case DATA_TYPE_LIST:
-    case DATA_TYPE_COLOR:
-    case DATA_TYPE_BLOCKDEF:
-        assert(false && "TODO");
-    case DATA_TYPE_STRING:
-        bc = EMPTY_BYTECODE;
-        bytecode_push_op_float(&bc, IR_PUSHF, atof(value.data.str_val));
+    case DATA_TYPE_ANY:
+        bytecode_push_op(&bc, IR_TOF);
         return DATA_CHUNK(result_type, bc);
-    case DATA_TYPE_CHUNK:
-        bc = value.data.chunk_val.bc;
-
-        static_assert(DATA_TYPE_LAST == 12, "Exhaustive data type in cast_to_bc_float");
-        switch (value.data.chunk_val.return_type) {
-        case DATA_TYPE_UNKNOWN:
-        case DATA_TYPE_NULL:
-        case DATA_TYPE_BLOCKDEF:
-        case DATA_TYPE_LIST:
-        case DATA_TYPE_CHUNK:
-            compiler_set_error(compiler, gettext("Cannot cast type %s into %s"), type_to_str(value.data.chunk_val.return_type), type_to_str(result_type));
-            return DATA_UNKNOWN;
-        case DATA_TYPE_NOTHING:
-        case DATA_TYPE_ANY:
-            bytecode_push_op(&bc, IR_TOF);
-            return DATA_CHUNK(result_type, bc);
-        case DATA_TYPE_COLOR:
-        case DATA_TYPE_INTEGER:
-            bytecode_push_op(&bc, IR_ITOF);
-            return DATA_CHUNK(result_type, bc);
-        case DATA_TYPE_FLOAT:
-            return value;
-        case DATA_TYPE_STRING:
-            bytecode_push_op(&bc, IR_ATOF);
-            return DATA_CHUNK(result_type, bc);
-        case DATA_TYPE_BOOL:
-            bytecode_push_op(&bc, IR_BTOF);
-            return DATA_CHUNK(result_type, bc);
-        default:
-            assert(false && "Unhandled data type in cast_to_bc_float");
-        }
-        assert(false && "Unreachable");
+    case DATA_TYPE_COLOR:
+    case DATA_TYPE_INTEGER:
+        bytecode_push_op(&bc, IR_ITOF);
+        return DATA_CHUNK(result_type, bc);
+    case DATA_TYPE_FLOAT:
+        return value;
+    case DATA_TYPE_STRING:
+        bytecode_push_op(&bc, IR_ATOF);
+        return DATA_CHUNK(result_type, bc);
+    case DATA_TYPE_BOOL:
+        bytecode_push_op(&bc, IR_BTOF);
+        return DATA_CHUNK(result_type, bc);
     default:
         assert(false && "Unhandled data type in cast_to_bc_float");
+    }
+}
+
+CompilerValue cast_to_bc_bool(Compiler* compiler, CompilerValue value) {
+    const DataType result_type = DATA_TYPE_BOOL;
+    IrBytecode bc;
+
+    if (value.type != DATA_TYPE_CHUNK) {
+        CompilerValue bool_val = cast_to_const_bool(compiler, value);
+        if (bool_val.type == DATA_TYPE_UNKNOWN) return DATA_UNKNOWN;
+
+        bc = EMPTY_BYTECODE;
+        bytecode_push_op_bool(&bc, IR_PUSHB, bool_val.data.bool_val);
+        return DATA_CHUNK(result_type, bc);
+    }
+
+    bc = value.data.chunk_val.bc;
+
+    static_assert(DATA_TYPE_LAST == 12, "Exhaustive data type in cast_to_bc_bool");
+    switch (value.data.chunk_val.return_type) {
+    case DATA_TYPE_UNKNOWN:
+    case DATA_TYPE_NULL:
+    case DATA_TYPE_BLOCKDEF:
+    case DATA_TYPE_LIST:
+    case DATA_TYPE_CHUNK:
+        compiler_set_error(compiler, gettext("Cannot cast type %s into %s"), type_to_str(value.data.chunk_val.return_type), type_to_str(result_type));
+        return DATA_UNKNOWN;
+    case DATA_TYPE_NOTHING:
+    case DATA_TYPE_ANY:
+        bytecode_push_op(&bc, IR_TOB);
+        return DATA_CHUNK(result_type, bc);
+    case DATA_TYPE_COLOR:
+    case DATA_TYPE_INTEGER:
+        bytecode_push_op(&bc, IR_ITOB);
+        return DATA_CHUNK(result_type, bc);
+    case DATA_TYPE_FLOAT:
+        bytecode_push_op(&bc, IR_FTOB);
+        return DATA_CHUNK(result_type, bc);
+    case DATA_TYPE_STRING:
+        bytecode_push_op(&bc, IR_ATOB);
+        return DATA_CHUNK(result_type, bc);
+    case DATA_TYPE_BOOL:
+        return value;
+    default:
+        assert(false && "Unhandled data type in cast_to_bc_bool");
+    }
+}
+
+CompilerValue cast_to_bc_color(Compiler* compiler, CompilerValue value) {
+    const DataType result_type = DATA_TYPE_COLOR;
+    IrBytecode bc;
+
+    if (value.type != DATA_TYPE_CHUNK) {
+        CompilerValue color_val = cast_to_const_color(compiler, value);
+        if (color_val.type == DATA_TYPE_UNKNOWN) return DATA_UNKNOWN;
+
+        bc = EMPTY_BYTECODE;
+        bytecode_push_op_int(&bc, IR_PUSHI, *(int*)&color_val.data.color_val);
+        return DATA_CHUNK(result_type, bc);
+    }
+
+    bc = value.data.chunk_val.bc;
+
+    static_assert(DATA_TYPE_LAST == 12, "Exhaustive data type in cast_to_bc_color");
+    switch (value.data.chunk_val.return_type) {
+    case DATA_TYPE_UNKNOWN:
+    case DATA_TYPE_NULL:
+    case DATA_TYPE_BLOCKDEF:
+    case DATA_TYPE_LIST:
+    case DATA_TYPE_CHUNK:
+        compiler_set_error(compiler, gettext("Cannot cast type %s into %s"), type_to_str(value.data.chunk_val.return_type), type_to_str(result_type));
+        return DATA_UNKNOWN;
+    case DATA_TYPE_NOTHING:
+    case DATA_TYPE_ANY:
+        bytecode_push_op(&bc, IR_TOI);
+        return DATA_CHUNK(result_type, bc);
+    case DATA_TYPE_COLOR:
+    case DATA_TYPE_INTEGER:
+        return value;
+    case DATA_TYPE_FLOAT:
+        bytecode_push_op(&bc, IR_FTOI);
+        return DATA_CHUNK(result_type, bc);
+    case DATA_TYPE_STRING:
+        assert(false && "TODO");
+    case DATA_TYPE_BOOL:
+        bytecode_push_op(&bc, IR_BTOI);
+        return DATA_CHUNK(result_type, bc);
+    default:
+        assert(false && "Unhandled data type in cast_to_bc_color");
     }
 }
 
@@ -278,9 +351,9 @@ CompilerValue cast_to_bc(Compiler* compiler, CompilerValue value, DataType dst_t
     case DATA_TYPE_INTEGER: return cast_to_bc_int(compiler, value);
     case DATA_TYPE_FLOAT: return cast_to_bc_float(compiler, value);
     case DATA_TYPE_STRING: return cast_to_bc_string(compiler, value);
-    case DATA_TYPE_BOOL:
+    case DATA_TYPE_BOOL: return cast_to_bc_bool(compiler, value);
+    case DATA_TYPE_COLOR: return cast_to_bc_color(compiler, value);
     case DATA_TYPE_LIST:
-    case DATA_TYPE_COLOR:
         assert(false && "TODO");
     case DATA_TYPE_NOTHING:
     case DATA_TYPE_ANY:
@@ -292,6 +365,31 @@ CompilerValue cast_to_bc(Compiler* compiler, CompilerValue value, DataType dst_t
         return DATA_UNKNOWN;
     default:
         assert(false && "Unhandled data type in cast_to_bc");
+    }
+}
+
+CompilerValue cast_to_const_string(Compiler* compiler, CompilerValue value) {
+    DataType dst_type = DATA_TYPE_STRING;
+
+    static_assert(DATA_TYPE_LAST == 12, "Exhaustive data type in cast_to_const_string");
+    switch (value.type) {
+    case DATA_TYPE_STRING: return value;
+    case DATA_TYPE_NOTHING: return DATA_STRING("nothing");
+    case DATA_TYPE_INTEGER:
+    case DATA_TYPE_COLOR:
+    case DATA_TYPE_FLOAT:
+    case DATA_TYPE_BOOL:
+        assert(false && "TODO");
+    case DATA_TYPE_LIST:
+    case DATA_TYPE_ANY:
+    case DATA_TYPE_UNKNOWN:
+    case DATA_TYPE_CHUNK:
+    case DATA_TYPE_BLOCKDEF:
+    case DATA_TYPE_NULL:
+        compiler_set_error(compiler, gettext("Cannot cast type %s into %s"), type_to_str(value.type), type_to_str(dst_type));
+        return DATA_UNKNOWN;
+    default:
+        assert(false && "Unhandled data type in cast_to_const_string");
     }
 }
 
@@ -328,7 +426,7 @@ CompilerValue cast_to_const_float(Compiler* compiler, CompilerValue value) {
     case DATA_TYPE_FLOAT: return value;
     case DATA_TYPE_STRING: return DATA_FLOAT(atof(value.data.str_val));
     case DATA_TYPE_BOOL: return DATA_FLOAT(value.data.bool_val);
-    case DATA_TYPE_COLOR: return DATA_FLOAT(*(double*)&value.data.color_val);
+    case DATA_TYPE_COLOR: return DATA_FLOAT(*(int*)&value.data.color_val);
     case DATA_TYPE_NOTHING: return DATA_FLOAT(0.0);
     case DATA_TYPE_LIST:
     case DATA_TYPE_ANY:
@@ -343,6 +441,54 @@ CompilerValue cast_to_const_float(Compiler* compiler, CompilerValue value) {
     }
 }
 
+CompilerValue cast_to_const_bool(Compiler* compiler, CompilerValue value) {
+    DataType dst_type = DATA_TYPE_BOOL;
+
+    static_assert(DATA_TYPE_LAST == 12, "Exhaustive data type in cast_to_const_bool");
+    switch (value.type) {
+    case DATA_TYPE_INTEGER: return DATA_BOOL(value.data.integer_val != 0);
+    case DATA_TYPE_FLOAT: return DATA_BOOL(value.data.float_val != 0);
+    case DATA_TYPE_STRING: return DATA_BOOL(*value.data.str_val != 0);
+    case DATA_TYPE_BOOL: return value;
+    case DATA_TYPE_COLOR: return DATA_BOOL(*(int*)&value.data.color_val != 0);
+    case DATA_TYPE_NOTHING: return DATA_BOOL(false);
+    case DATA_TYPE_LIST:
+    case DATA_TYPE_ANY:
+    case DATA_TYPE_UNKNOWN:
+    case DATA_TYPE_CHUNK:
+    case DATA_TYPE_BLOCKDEF:
+    case DATA_TYPE_NULL:
+        compiler_set_error(compiler, gettext("Cannot cast type %s into %s"), type_to_str(value.type), type_to_str(dst_type));
+        return DATA_UNKNOWN;
+    default:
+        assert(false && "Unhandled data type in cast_to_const_bool");
+    }
+}
+
+CompilerValue cast_to_const_color(Compiler* compiler, CompilerValue value) {
+    DataType dst_type = DATA_TYPE_COLOR;
+
+    static_assert(DATA_TYPE_LAST == 12, "Exhaustive data type in cast_to_const_color");
+    switch (value.type) {
+    case DATA_TYPE_INTEGER: return DATA_COLOR(*(StdColor*)&value.data.integer_val);
+    case DATA_TYPE_FLOAT: return DATA_COLOR(*(StdColor*)&value.data.float_val);
+    case DATA_TYPE_STRING: assert(false && "TODO");
+    case DATA_TYPE_BOOL: return DATA_COLOR(value.data.bool_val ? ((StdColor) { 0xff, 0xff, 0xff, 0xff }) : ((StdColor) { 0x00, 0x00, 0x00, 0xff }));
+    case DATA_TYPE_COLOR: return value;
+    case DATA_TYPE_NOTHING: return DATA_COLOR(((StdColor) { 0x00, 0x00, 0x00, 0xff }));
+    case DATA_TYPE_LIST:
+    case DATA_TYPE_ANY:
+    case DATA_TYPE_UNKNOWN:
+    case DATA_TYPE_CHUNK:
+    case DATA_TYPE_BLOCKDEF:
+    case DATA_TYPE_NULL:
+        compiler_set_error(compiler, gettext("Cannot cast type %s into %s"), type_to_str(value.type), type_to_str(dst_type));
+        return DATA_UNKNOWN;
+    default:
+        assert(false && "Unhandled data type in cast_to_const_color");
+    }
+}
+
 CompilerValue cast_to_const(Compiler* compiler, CompilerValue value, DataType dst_type) {
     DataType src_type = value.type;
     if (src_type == dst_type) return value;
@@ -351,10 +497,10 @@ CompilerValue cast_to_const(Compiler* compiler, CompilerValue value, DataType ds
     switch (dst_type) {
     case DATA_TYPE_INTEGER: return cast_to_const_int(compiler, value);
     case DATA_TYPE_FLOAT: return cast_to_const_float(compiler, value);
-    case DATA_TYPE_STRING:
-    case DATA_TYPE_BOOL:
+    case DATA_TYPE_STRING: return cast_to_const_string(compiler, value);
+    case DATA_TYPE_BOOL: return cast_to_const_bool(compiler, value);
+    case DATA_TYPE_COLOR: return cast_to_const_color(compiler, value);
     case DATA_TYPE_LIST:
-    case DATA_TYPE_COLOR:
         assert(false && "TODO");
     case DATA_TYPE_CHUNK:
         return cast_to_bc(compiler, value, value.type);
@@ -397,8 +543,10 @@ CompilerValue evaluate_binary(Compiler* compiler, CompilerValue left, CompilerVa
 
     if (left.type != DATA_TYPE_CHUNK) {
         left = cast_to_bc(compiler, left, right.data.chunk_val.return_type);
+        if (left.type == DATA_TYPE_UNKNOWN) return DATA_UNKNOWN;
     } else if (right.type != DATA_TYPE_CHUNK) {
         right = cast_to_bc(compiler, right, left.data.chunk_val.return_type);
+        if (right.type == DATA_TYPE_UNKNOWN) return DATA_UNKNOWN;
     }
 
     bytecode_join(&left.data.chunk_val.bc, &right.data.chunk_val.bc);
@@ -496,7 +644,7 @@ CompilerValue block_noop(Compiler* compiler, Block* block, Block** next_block, B
     (void) block;
     (void) next_block;
     (void) prev_block;
-    return EMPTY_CHUNK;
+    return DATA_NOTHING;
 }
 
 CompilerValue block_on_start(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
@@ -837,43 +985,68 @@ CompilerValue block_unix_time(Compiler* compiler, Block* block, Block** next_blo
 }
 
 CompilerValue block_convert_int(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
-    (void) compiler;
-    (void) block;
     (void) next_block;
     (void) prev_block;
-    return DATA_UNKNOWN;
+    CompilerValue value = compiler_evaluate_argument(compiler, &block->arguments[0]);
+    if (value.type == DATA_TYPE_UNKNOWN) return DATA_UNKNOWN;
+
+    if (value.type == DATA_TYPE_CHUNK) {
+        return cast_to_bc_int(compiler, value);
+    } else {
+        return cast_to_const_int(compiler, value);
+    }
 }
 
 CompilerValue block_convert_float(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
-    (void) compiler;
-    (void) block;
     (void) next_block;
     (void) prev_block;
-    return DATA_UNKNOWN;
+    CompilerValue value = compiler_evaluate_argument(compiler, &block->arguments[0]);
+    if (value.type == DATA_TYPE_UNKNOWN) return DATA_UNKNOWN;
+
+    if (value.type == DATA_TYPE_CHUNK) {
+        return cast_to_bc_float(compiler, value);
+    } else {
+        return cast_to_const_float(compiler, value);
+    }
 }
 
 CompilerValue block_convert_str(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
-    (void) compiler;
-    (void) block;
     (void) next_block;
     (void) prev_block;
-    return DATA_UNKNOWN;
+    CompilerValue value = compiler_evaluate_argument(compiler, &block->arguments[0]);
+    if (value.type == DATA_TYPE_UNKNOWN) return DATA_UNKNOWN;
+
+    if (value.type == DATA_TYPE_CHUNK) {
+        return cast_to_bc_string(compiler, value);
+    } else {
+        return cast_to_const_string(compiler, value);
+    }
 }
 
 CompilerValue block_convert_bool(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
-    (void) compiler;
-    (void) block;
     (void) next_block;
     (void) prev_block;
-    return DATA_UNKNOWN;
+    CompilerValue value = compiler_evaluate_argument(compiler, &block->arguments[0]);
+    if (value.type == DATA_TYPE_UNKNOWN) return DATA_UNKNOWN;
+
+    if (value.type == DATA_TYPE_CHUNK) {
+        return cast_to_bc_bool(compiler, value);
+    } else {
+        return cast_to_const_bool(compiler, value);
+    }
 }
 
 CompilerValue block_convert_color(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
-    (void) compiler;
-    (void) block;
     (void) next_block;
     (void) prev_block;
-    return DATA_UNKNOWN;
+    CompilerValue value = compiler_evaluate_argument(compiler, &block->arguments[0]);
+    if (value.type == DATA_TYPE_UNKNOWN) return DATA_UNKNOWN;
+
+    if (value.type == DATA_TYPE_CHUNK) {
+        return cast_to_bc_color(compiler, value);
+    } else {
+        return cast_to_const_color(compiler, value);
+    }
 }
 
 CompilerValue block_typeof(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
@@ -887,7 +1060,6 @@ CompilerValue block_typeof(Compiler* compiler, Block* block, Block** next_block,
 CompilerValue block_plus(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) next_block;
     (void) prev_block;
-
     return evaluate_binary_op(compiler, &block->arguments[0], &block->arguments[1], IR_ADDI, IR_ADDF);
 }
 
