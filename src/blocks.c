@@ -99,13 +99,12 @@ CompilerValue cast_to_bc_string(Compiler* compiler, CompilerValue value) {
     case DATA_TYPE_ANY:
     case DATA_TYPE_UNKNOWN:
     case DATA_TYPE_NULL:
+    case DATA_TYPE_BLOCKDEF:
         compiler_set_error(compiler, gettext("Cannot cast type %s into %s"), type_to_str(value.type), type_to_str(result_type));
         return DATA_UNKNOWN;
     case DATA_TYPE_LIST:
         snprintf(str, 32, "%d", value.data.integer_val);
         return string_to_bc(compiler, str);
-    case DATA_TYPE_BLOCKDEF:
-        assert(false && "TODO");
     case DATA_TYPE_COLOR:
         snprintf(str, 32, "#%02x%02x%02x%02x", value.data.color_val.r, value.data.color_val.g, value.data.color_val.b, value.data.color_val.a);
         return string_to_bc(compiler, str);
@@ -354,7 +353,6 @@ CompilerValue cast_to_bc(Compiler* compiler, CompilerValue value, DataType dst_t
     case DATA_TYPE_BOOL: return cast_to_bc_bool(compiler, value);
     case DATA_TYPE_COLOR: return cast_to_bc_color(compiler, value);
     case DATA_TYPE_LIST:
-        assert(false && "TODO");
     case DATA_TYPE_NOTHING:
     case DATA_TYPE_ANY:
     case DATA_TYPE_UNKNOWN:
@@ -1108,7 +1106,7 @@ CompilerValue block_pi(Compiler* compiler, Block* block, Block** next_block, Blo
     (void) block;
     (void) next_block;
     (void) prev_block;
-    return DATA_UNKNOWN;
+    return DATA_FLOAT(M_PI);
 }
 
 CompilerValue block_bit_not(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
@@ -1204,7 +1202,7 @@ CompilerValue block_true(Compiler* compiler, Block* block, Block** next_block, B
     (void) block;
     (void) next_block;
     (void) prev_block;
-    return DATA_UNKNOWN;
+    return DATA_BOOL(true);
 }
 
 CompilerValue block_false(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
@@ -1212,7 +1210,7 @@ CompilerValue block_false(Compiler* compiler, Block* block, Block** next_block, 
     (void) block;
     (void) next_block;
     (void) prev_block;
-    return DATA_UNKNOWN;
+    return DATA_BOOL(false);
 }
 
 CompilerValue block_eq(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
