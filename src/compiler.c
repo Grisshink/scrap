@@ -1,15 +1,15 @@
 // Scrap is a project that allows anyone to build software using simple, block based interface.
 //
 // Copyright (C) 2024-2026 Grisshink
-// 
+//
 // This software is provided 'as-is', without any express or implied
 // warranty.  In no event will the authors be held liable for any damages
 // arising from the use of this software.
-// 
+//
 // Permission is granted to anyone to use this software for any purpose,
 // including commercial applications, and to alter it and redistribute it
 // freely, subject to the following restrictions:
-// 
+//
 // 1. The origin of this software must not be misrepresented; you must not
 //    claim that you wrote the original software. If you use this software
 //    in a product, an acknowledgment in the product documentation would be
@@ -29,6 +29,7 @@
 #include <wchar.h>
 #include <assert.h>
 
+#define KiB(n) ((size_t)(n) << 10)
 #define MiB(n) ((size_t)(n) << 20)
 #define GiB(n) ((size_t)(n) << 30)
 
@@ -70,6 +71,18 @@ IrRunFunction resolve_function(IrExec* exec, const char* hint) {
     return NULL;
 }
 
+static const char* format_byte_count(Compiler* compiler, size_t size) {
+    if (size < KiB(1)) {
+        return ir_arena_sprintf(compiler->arena, 32, "%zu", size);
+    } else if (size < MiB(1)) {
+        return ir_arena_sprintf(compiler->arena, 32, "%.2fKiB", (double)size / 1024.0);
+    } else if (size < GiB(1)) {
+        return ir_arena_sprintf(compiler->arena, 32, "%.2fMiB", (double)size / (1024.0 * 1024.0));
+    } else {
+        return ir_arena_sprintf(compiler->arena, 32, "%.2fGiB", (double)size / (1024.0 * 1024.0 * 1024.0));
+    }
+}
+
 bool compiler_run(void* e) {
     Compiler* compiler = e;
 
@@ -99,6 +112,15 @@ bool compiler_run(void* e) {
     }
 
     bytecode_print(&compiler->bytecode);
+
+    scrap_log(
+        LOG_INFO,
+        "[COMPILER] Arena used %s/%s bytes (%.2f%%) (Commit pos: %s)",
+        format_byte_count(compiler, compiler->arena->pos),
+        format_byte_count(compiler, compiler->arena->reserve_size),
+        (double)compiler->arena->pos / (double)compiler->arena->reserve_size * 100.0,
+        format_byte_count(compiler, compiler->arena->commit_pos)
+    );
 
     compiler->exec = exec_new(MiB(1), GiB(1));
     if (compiler->exec.last_error[0] != 0) {
@@ -193,7 +215,7 @@ CompilerValue compiler_evaluate_chain(Compiler* compiler, BlockChain* chain) {
     while (iter) {
         thread_handle_stopping_state(compiler->thread);
         Block* next = compiler_get_next_block(iter);
-        
+
         CompilerValue value = compiler_evaluate_block(compiler, iter, &next, prev);
         if (value.type == DATA_TYPE_UNKNOWN) {
             scrap_log(LOG_ERROR, "[COMPILER] From chain: %p", chain);

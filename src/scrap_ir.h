@@ -409,6 +409,7 @@ void* ir_arena_realloc(IrMemArena* arena, void* ptr, size_t old_size, size_t new
 void ir_arena_pop(IrMemArena* arena, size_t size);
 void ir_arena_pop_to(IrMemArena* arena, size_t pos);
 void ir_arena_clear(IrMemArena* arena);
+const char* ir_arena_sprintf(IrMemArena* arena, size_t max_size, const char* fmt, ...);
 
 #endif // SCRAP_IR_H
 
@@ -1988,6 +1989,18 @@ IrMemArena* ir_arena_new(size_t reserve_size, size_t commit_size) {
 
 void ir_arena_free(IrMemArena* arena) {
     ir_plat_mem_release(arena, arena->reserve_size);
+}
+
+const char* ir_arena_sprintf(IrMemArena* arena, size_t max_size, const char* fmt, ...) {
+    char* str = ir_arena_alloc(arena, max_size);
+
+    va_list va;
+    va_start(va, fmt);
+    int size = vsnprintf(str, max_size, fmt, va);
+    va_end(va);
+
+    ir_arena_pop(arena, max_size - size);
+    return str;
 }
 
 void* ir_arena_alloc(IrMemArena* arena, size_t size) {
