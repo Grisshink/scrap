@@ -136,6 +136,7 @@ CompilerValue cast_to_bc_string(Compiler* compiler, CompilerValue value) {
             bytecode_push_op(&bc, IR_NTOA);
             return DATA_CHUNK(result_type, bc);
         case DATA_TYPE_COLOR:
+            assert(false && "TODO");
         case DATA_TYPE_INTEGER:
             bytecode_push_op(&bc, IR_ITOA);
             return DATA_CHUNK(result_type, bc);
@@ -519,6 +520,28 @@ CompilerValue cast_to(Compiler* compiler, CompilerValue value, DataType dst_type
         return cast_to_bc(compiler, value, dst_type);
     } else {
         return cast_to_const(compiler, value, dst_type);
+    }
+}
+
+bool is_type_storable(DataType type) {
+    static_assert(DATA_TYPE_LAST == 12, "Exhaustive data type in is_type_storable");
+    switch (type) {
+    case DATA_TYPE_INTEGER:
+    case DATA_TYPE_FLOAT:
+    case DATA_TYPE_STRING:
+    case DATA_TYPE_BOOL:
+    case DATA_TYPE_COLOR:
+    case DATA_TYPE_LIST:
+    case DATA_TYPE_NOTHING:
+    case DATA_TYPE_ANY:
+        return true;
+    case DATA_TYPE_CHUNK:
+    case DATA_TYPE_UNKNOWN:
+    case DATA_TYPE_BLOCKDEF:
+    case DATA_TYPE_NULL:
+        return false;
+    default:
+        assert(false && "Unhandled data type in is_type_storable");
     }
 }
 
@@ -1199,27 +1222,97 @@ CompilerValue block_bit_xor(Compiler* compiler, Block* block, Block** next_block
 }
 
 CompilerValue block_declare_var(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
-    (void) compiler;
-    (void) block;
     (void) next_block;
     (void) prev_block;
-    return DATA_ERROR;
+
+    CompilerValue name = compiler_evaluate_argument(compiler, &block->arguments[0]);
+    if (name.type == DATA_TYPE_ERROR) return DATA_ERROR;
+    name = cast_to_const_string(compiler, name);
+    if (name.type == DATA_TYPE_ERROR) return DATA_ERROR;
+
+    CompilerValue value = compiler_evaluate_argument(compiler, &block->arguments[1]);
+    if (value.type == DATA_TYPE_ERROR) return DATA_ERROR;
+
+    if (value.type != DATA_TYPE_CHUNK) {
+        value = cast_to_bc(compiler, value, value.type);
+        if (value.type == DATA_TYPE_ERROR) return DATA_ERROR;
+    }
+
+    if (!is_type_storable(value.data.chunk_val.return_type)) {
+        compiler_set_error(compiler, gettext("Cannot declare variable with type %s"), type_to_str(value.data.chunk_val.return_type));
+        return DATA_ERROR;
+    }
+
+    IrBytecode bc = value.data.chunk_val.bc;
+    bytecode_push_op_int(&bc, IR_STORE, compiler->variables.size);
+
+    Variable var = {
+        .name = name.data.str_val,
+        .type = value.data.chunk_val.return_type,
+    };
+    ir_arena_append(compiler->arena, compiler->variables, var);
+
+    return DATA_CHUNK(DATA_TYPE_NULL, bc);
 }
 
 CompilerValue block_get_var(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
-    (void) compiler;
-    (void) block;
     (void) next_block;
     (void) prev_block;
-    return DATA_ERROR;
+
+    CompilerValue name = compiler_evaluate_argument(compiler, &block->arguments[0]);
+    if (name.type == DATA_TYPE_ERROR) return DATA_ERROR;
+    name = cast_to_const_string(compiler, name);
+    if (name.type == DATA_TYPE_ERROR) return DATA_ERROR;
+
+    ssize_t var_slot = compiler_find_variable(compiler, name.data.str_val);
+    if (var_slot == -1) {
+        compiler_set_error(compiler, gettext("Variable with name \"%s\" does not exist in the current scope"), name.data.str_val);
+        return DATA_ERROR;
+    }
+
+    IrBytecode bc = EMPTY_BYTECODE;
+    bytecode_push_op_int(&bc, IR_LOAD, var_slot);
+    return DATA_CHUNK(compiler->variables.items[var_slot].type, bc);
 }
 
 CompilerValue block_set_var(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
-    (void) compiler;
-    (void) block;
     (void) next_block;
     (void) prev_block;
-    return DATA_ERROR;
+
+    CompilerValue name = compiler_evaluate_argument(compiler, &block->arguments[0]);
+    if (name.type == DATA_TYPE_ERROR) return DATA_ERROR;
+    name = cast_to_const_string(compiler, name);
+    if (name.type == DATA_TYPE_ERROR) return DATA_ERROR;
+
+    ssize_t var_slot = compiler_find_variable(compiler, name.data.str_val);
+    if (var_slot == -1) {
+        compiler_set_error(compiler, gettext("Variable with name \"%s\" does not exist in the current scope"), name.data.str_val);
+        return DATA_ERROR;
+    }
+
+    CompilerValue value = compiler_evaluate_argument(compiler, &block->arguments[1]);
+    if (value.type == DATA_TYPE_ERROR) return DATA_ERROR;
+
+    if (value.type != DATA_TYPE_CHUNK) {
+        value = cast_to_bc(compiler, value, value.type);
+        if (value.type == DATA_TYPE_ERROR) return DATA_ERROR;
+    }
+
+    if (value.data.chunk_val.return_type != compiler->variables.items[var_slot].type) {
+        compiler_set_error(
+            compiler, 
+            gettext("Assign to variable \"%s\" of type %s with incompatible type %s"), 
+            name.data.str_val, 
+            type_to_str(compiler->variables.items[var_slot].type), 
+            type_to_str(value.data.chunk_val.return_type)
+        );
+        return DATA_ERROR;
+    }
+
+    IrBytecode bc = value.data.chunk_val.bc;
+    bytecode_push_op_int(&bc, IR_STORE, var_slot);
+
+    return DATA_CHUNK(DATA_TYPE_NULL, bc);
 }
 
 CompilerValue block_join(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {

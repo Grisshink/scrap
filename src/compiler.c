@@ -91,6 +91,7 @@ bool compiler_run(void* e) {
     }
 
     for (size_t i = 0; i < vector_size(compiler->chains_to_compile); i++) {
+        compiler->variables.size = 0;
         CompilerValue value = compiler_evaluate_chain(compiler, compiler->chains_to_compile[i]);
         if (value.type == DATA_TYPE_UNKNOWN) return false;
         bytecode_join(&compiler->bytecode, &value.data.chunk_val.bc);
@@ -212,4 +213,71 @@ CompilerValue compiler_evaluate_chain(Compiler* compiler, BlockChain* chain) {
     }
 
     return DATA_CHUNK(bc_type, bc);
+}
+
+void* compiler_object_info_get(Compiler* compiler, void* object) {
+    ObjectPool* pool = &compiler->object_info;
+    if (pool->hash_table.capacity == 0) return OBJECT_NOT_FOUND;
+
+    size_t hash = (size_t)object % pool->hash_table.capacity;
+    size_t idx = pool->hash_table.items[hash];
+    if (idx == (size_t)-1) return OBJECT_NOT_FOUND;
+    while (pool->items[idx].object != object) {
+        hash++;
+        if (hash >= pool->hash_table.capacity) hash = 0;
+        idx = pool->hash_table.items[hash];
+        if (idx == (size_t)-1) return OBJECT_NOT_FOUND;
+    }
+    return pool->items[idx].data;
+}
+
+size_t compiler_object_info_insert(Compiler* compiler, void* object, void* data) {
+    ObjectPool* pool = &compiler->object_info;
+
+    if ((float)pool->hash_table.size / (float)pool->hash_table.capacity > 0.6 || pool->hash_table.capacity == 0) {
+        size_t old_cap = pool->hash_table.capacity;
+
+        if (pool->hash_table.capacity == 0) pool->hash_table.capacity = 1024;
+        else pool->hash_table.capacity *= 2;
+
+        pool->hash_table.items = ir_arena_realloc(compiler->arena, pool->hash_table.items, old_cap, sizeof(*pool->hash_table.items) * pool->hash_table.capacity);
+        // This sets all buckets in hash table to -1 (empty)
+        memset(pool->hash_table.items, 0xff, sizeof(*pool->hash_table.items) * pool->hash_table.capacity);
+
+        for (size_t i = 0; i < pool->size; i++) {
+            size_t hash = (size_t)pool->items[i].object % pool->hash_table.capacity;
+            size_t idx = pool->hash_table.items[hash];
+            while (idx != (size_t)-1) {
+                hash++;
+                if (hash >= pool->hash_table.capacity) hash = 0;
+                idx = pool->hash_table.items[hash];
+            }
+            pool->hash_table.items[hash] = i;
+        }
+    }
+
+    size_t hash = (size_t)object % pool->hash_table.capacity;
+    size_t idx = pool->hash_table.items[hash];
+
+    while (idx != (size_t)-1) {
+        if (pool->items[idx].object == object) return idx;
+
+        hash++;
+        if (hash >= pool->hash_table.capacity) hash = 0;
+        idx = pool->hash_table.items[hash];
+    }
+
+    // Insert value
+    idx = pool->size;
+    pool->hash_table.items[hash] = idx;
+    pool->hash_table.size++;
+    ir_arena_append(compiler->arena, compiler->object_info, ((ObjectInfoMap) { object, data }));
+    return idx;
+}
+
+ssize_t compiler_find_variable(Compiler* compiler, const char* name) {
+    for (ssize_t i = compiler->variables.size - 1; i >= 0; i--) {
+        if (!strcmp(compiler->variables.items[i].name, name)) return i;
+    }
+    return -1;
 }

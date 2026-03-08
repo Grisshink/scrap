@@ -51,6 +51,30 @@ struct CompilerValue {
     CompilerValueData data;
 };
 
+typedef struct {
+    void* object;
+    void* data;
+} ObjectInfoMap;
+
+typedef struct {
+    struct {
+        size_t* items;
+        size_t size, capacity;
+    } hash_table;
+    ObjectInfoMap* items;
+    size_t size, capacity;
+} ObjectPool;
+
+typedef struct {
+    const char* name;
+    DataType type;
+} Variable;
+
+typedef struct {
+    Variable* items;
+    size_t size, capacity;
+} VariableList;
+
 struct Compiler {
     RootBlockChain* code;
 
@@ -59,6 +83,9 @@ struct Compiler {
     IrMemArena* arena;
     IrBytecodePool* bc_pool;
     IrBytecode bytecode;
+
+    ObjectPool object_info;
+    VariableList variables;
 
     IrExec exec;
     bool exec_running;
@@ -95,6 +122,8 @@ struct Compiler {
 #define DATA_ERROR DATA_UNKNOWN
 #define DATA_TYPE_ERROR DATA_TYPE_UNKNOWN
 
+#define OBJECT_NOT_FOUND (void*)-1
+
 Compiler compiler_new(Thread* thread);
 bool compiler_run(void* e);
 void compiler_cleanup(void* e);
@@ -104,5 +133,6 @@ CompilerValue compiler_evaluate_block(Compiler* compiler, Block* block, Block** 
 CompilerValue compiler_evaluate_argument(Compiler* compiler, Argument* arg);
 void compiler_set_skip_block(Compiler* compiler);
 void compiler_set_error(Compiler* compiler, const char* fmt, ...);
+ssize_t compiler_find_variable(Compiler* compiler, const char* name);
 
 #endif // INTERPRETER_H
