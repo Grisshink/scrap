@@ -251,7 +251,9 @@ struct IrExec {
 
 // Allocate new bytecode pool.
 // This will hold all constants used by bytecode chunks as well as the arena for all bytecode allocations.
-IrBytecodePool* bytecode_pool_new(void);
+// Note that bytecode_pool_free will also free the passed arena
+// Pass NULL to arena to let bytecode pool create it automatically
+IrBytecodePool* bytecode_pool_new(IrMemArena* arena);
 
 // Frees the pool with all bytecode chunks and constants.
 void bytecode_pool_free(IrBytecodePool* pool);
@@ -389,6 +391,25 @@ IrLabel exec_pop_label(IrExec* exec);
 IrFunction exec_pop_func(IrExec* exec);
 IrList* exec_pop_list(IrExec* exec);
 
+// Arena management functions
+#define ir_arena_append(arena, list, val) do { \
+    if ((list).size >= (list).capacity) { \
+        size_t _old_cap = (list).capacity * sizeof(*(list).items); \
+        if ((list).capacity == 0) (list).capacity = 32; \
+        else (list).capacity *= 2; \
+        (list).items = ir_arena_realloc(arena, (list).items, _old_cap, (list).capacity * sizeof(*(list).items)); \
+    } \
+    (list).items[(list).size++] = (val); \
+} while (0)
+
+IrMemArena* ir_arena_new(size_t reserve_size, size_t commit_size);
+void ir_arena_free(IrMemArena* arena);
+void* ir_arena_alloc(IrMemArena* arena, size_t size);
+void* ir_arena_realloc(IrMemArena* arena, void* ptr, size_t old_size, size_t new_size);
+void ir_arena_pop(IrMemArena* arena, size_t size);
+void ir_arena_pop_to(IrMemArena* arena, size_t pos);
+void ir_arena_clear(IrMemArena* arena);
+
 #endif // SCRAP_IR_H
 
 #ifdef SCRAP_IR_IMPLEMENTATION
@@ -403,16 +424,6 @@ IrList* exec_pop_list(IrExec* exec);
 
 #define MiB(n) ((size_t)(n) << 20)
 #define GiB(n) ((size_t)(n) << 30)
-
-#define ir_arena_append(arena, list, val) do { \
-    if ((list).size >= (list).capacity) { \
-        size_t _old_cap = (list).capacity * sizeof(*(list).items); \
-        if ((list).capacity == 0) (list).capacity = 32; \
-        else (list).capacity *= 2; \
-        (list).items = ir_arena_realloc(arena, (list).items, _old_cap, (list).capacity * sizeof(*(list).items)); \
-    } \
-    (list).items[(list).size++] = (val); \
-} while (0)
 
 #define ir_list_append(list, val) do { \
     if ((list).size >= (list).capacity) { \
@@ -454,14 +465,6 @@ IrList* exec_pop_list(IrExec* exec);
 
 #define IR_ARENA_BASE_POS (sizeof(IrMemArena))
 #define IR_ARENA_ALIGN (sizeof(void*))
-
-IrMemArena* ir_arena_new(size_t reserve_size, size_t commit_size);
-void ir_arena_free(IrMemArena* arena);
-void* ir_arena_alloc(IrMemArena* arena, size_t size);
-void* ir_arena_realloc(IrMemArena* arena, void* ptr, size_t old_size, size_t new_size);
-void ir_arena_pop(IrMemArena* arena, size_t size);
-void ir_arena_pop_to(IrMemArena* arena, size_t pos);
-void ir_arena_clear(IrMemArena* arena);
 
 unsigned long ir_plat_get_pagesize(void);
 void* ir_plat_mem_reserve(size_t size);
@@ -536,10 +539,12 @@ bool value_equals(IrValue left, IrValue right) {
     return true;
 }
 
-IrBytecodePool* bytecode_pool_new(void) {
-    IrBytecodePool* pool = malloc(sizeof(IrBytecodePool));
+IrBytecodePool* bytecode_pool_new(IrMemArena* arena) {
+    if (!arena) arena = ir_arena_new(GiB(2), MiB(1));
+
+    IrBytecodePool* pool = ir_arena_alloc(arena, sizeof(IrBytecodePool));
     memset(pool, 0, sizeof(IrBytecodePool));
-    pool->arena = ir_arena_new(GiB(2), MiB(1));
+    pool->arena = arena;
     return pool;
 }
 
@@ -551,7 +556,6 @@ void bytecode_pool_free(IrBytecodePool* pool) {
     ir_list_free(pool->hash_set);
     ir_list_free(pool->list);
     ir_arena_free(pool->arena);
-    free(pool);
 }
 
 size_t bytecode_pool_get(IrBytecodePool* pool, IrValue value) {

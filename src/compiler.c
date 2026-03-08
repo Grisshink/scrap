@@ -73,7 +73,8 @@ IrRunFunction resolve_function(IrExec* exec, const char* hint) {
 bool compiler_run(void* e) {
     Compiler* compiler = e;
 
-    compiler->bc_pool = bytecode_pool_new();
+    compiler->arena = ir_arena_new(GiB(4), MiB(1));
+    compiler->bc_pool = bytecode_pool_new(compiler->arena);
     compiler->chains_to_compile = vector_create();
 
     compiler->bytecode = bytecode_new("main", compiler->bc_pool);

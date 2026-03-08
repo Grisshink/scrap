@@ -56,6 +56,7 @@ struct Compiler {
 
     BlockChain** chains_to_compile;
 
+    IrMemArena* arena;
     IrBytecodePool* bc_pool;
     IrBytecode bytecode;
 
