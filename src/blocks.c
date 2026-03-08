@@ -514,6 +514,14 @@ CompilerValue cast_to_const(Compiler* compiler, CompilerValue value, DataType ds
     }
 }
 
+CompilerValue cast_to(Compiler* compiler, CompilerValue value, DataType dst_type) {
+    if (value.type == DATA_TYPE_CHUNK) {
+        return cast_to_bc(compiler, value, dst_type);
+    } else {
+        return cast_to_const(compiler, value, dst_type);
+    }
+}
+
 CompilerValue evaluate_binary(Compiler* compiler, CompilerValue left, CompilerValue right) {
     if (left.type == DATA_TYPE_CHUNK && right.type == DATA_TYPE_CHUNK) {
         BytecodeChunk left_chunk = left.data.chunk_val,
@@ -551,7 +559,7 @@ CompilerValue evaluate_binary(Compiler* compiler, CompilerValue left, CompilerVa
     return DATA_CHUNK(right.data.chunk_val.return_type, left.data.chunk_val.bc);
 }
 
-void cast_const_binary(Compiler* compiler, CompilerValue* left, CompilerValue* right) {
+void cast_const_binary_number(Compiler* compiler, CompilerValue* left, CompilerValue* right) {
     CompilerValue new_left, new_right;
 
     if (left->type == DATA_TYPE_FLOAT || right->type == DATA_TYPE_FLOAT) {
@@ -566,7 +574,17 @@ void cast_const_binary(Compiler* compiler, CompilerValue* left, CompilerValue* r
     *right = new_right;
 }
 
-int64_t execute_int_binary_op(int64_t left, int64_t right, IrOpcode op) {
+void cast_binary(Compiler* compiler, CompilerValue* left, CompilerValue* right, DataType type) {
+    if (left->type == DATA_TYPE_CHUNK || right->type == DATA_TYPE_CHUNK) {
+        *left = cast_to_bc(compiler, *left, type);
+        *right = cast_to_bc(compiler, *right, type);
+    } else {
+        *left = cast_to_const(compiler, *left, type);
+        *right = cast_to_const(compiler, *right, type);
+    }
+}
+
+int64_t execute_int_binary(int64_t left, int64_t right, IrOpcode op) {
     switch (op) {
     case IR_ADDI:    return left +  right;
     case IR_SUBI:    return left -  right;
@@ -577,11 +595,17 @@ int64_t execute_int_binary_op(int64_t left, int64_t right, IrOpcode op) {
     case IR_MOREI:   return left >  right;
     case IR_LESSEQI: return left <= right;
     case IR_MOREEQI: return left >= right;
+    case IR_ANDI:    return left &  right;
+    case IR_ORI:     return left |  right;
+    case IR_XORI:    return left ^  right;
+    case IR_AND:     return left && right;
+    case IR_OR:      return left || right;
+    case IR_XOR:     return (left != 0) != (right != 0);
     default: assert(false && "Invalid opcode for binary operation");
     }
 }
 
-double execute_float_binary_op(double left, double right, IrOpcode op) {
+double execute_float_binary(double left, double right, IrOpcode op) {
     switch (op) {
     case IR_ADDF:    return left +  right;
     case IR_SUBF:    return left -  right;
@@ -596,7 +620,7 @@ double execute_float_binary_op(double left, double right, IrOpcode op) {
     }
 }
 
-CompilerValue evaluate_binary_op(Compiler* compiler, Argument* left, Argument* right, IrOpcode int_op, IrOpcode float_op) {
+CompilerValue evaluate_binary_number(Compiler* compiler, Argument* left, Argument* right, IrOpcode int_op, IrOpcode float_op) {
     CompilerValue left_val = compiler_evaluate_argument(compiler, left);
     if (left_val.type == DATA_TYPE_ERROR) return DATA_ERROR;
 
@@ -604,11 +628,11 @@ CompilerValue evaluate_binary_op(Compiler* compiler, Argument* left, Argument* r
     if (right_val.type == DATA_TYPE_ERROR) return DATA_ERROR;
 
     if (left_val.type != DATA_TYPE_CHUNK && right_val.type != DATA_TYPE_CHUNK) {
-        cast_const_binary(compiler, &left_val, &right_val);
+        cast_const_binary_number(compiler, &left_val, &right_val);
         if (left_val.type == DATA_TYPE_FLOAT) {
-            return DATA_FLOAT(execute_float_binary_op(left_val.data.float_val, right_val.data.float_val, float_op));
+            return DATA_FLOAT(execute_float_binary(left_val.data.float_val, right_val.data.float_val, float_op));
         } else {
-            return DATA_INTEGER(execute_int_binary_op(left_val.data.integer_val, right_val.data.integer_val, int_op));
+            return DATA_INTEGER(execute_int_binary(left_val.data.integer_val, right_val.data.integer_val, int_op));
         }
     }
 
@@ -627,6 +651,48 @@ CompilerValue evaluate_binary_op(Compiler* compiler, Argument* left, Argument* r
     }
 
     return val;
+}
+
+CompilerValue evaluate_binary_int(Compiler* compiler, Argument* left, Argument* right, IrOpcode int_op) {
+    CompilerValue left_val = compiler_evaluate_argument(compiler, left);
+    if (left_val.type == DATA_TYPE_ERROR) return DATA_ERROR;
+
+    CompilerValue right_val = compiler_evaluate_argument(compiler, right);
+    if (right_val.type == DATA_TYPE_ERROR) return DATA_ERROR;
+
+    cast_binary(compiler, &left_val, &right_val, DATA_TYPE_INTEGER);
+    if (left_val.type == DATA_TYPE_ERROR) return DATA_ERROR;
+    if (right_val.type == DATA_TYPE_ERROR) return DATA_ERROR;
+
+    if (left_val.type == DATA_TYPE_CHUNK) {
+        IrBytecode bc = left_val.data.chunk_val.bc;
+        bytecode_join(&bc, &right_val.data.chunk_val.bc);
+        bytecode_push_op(&bc, int_op);
+        return DATA_CHUNK(DATA_TYPE_INTEGER, bc);
+    } else {
+        return DATA_INTEGER(execute_int_binary(left_val.data.integer_val, right_val.data.integer_val, int_op));
+    }
+}
+
+CompilerValue evaluate_binary_bool(Compiler* compiler, Argument* left, Argument* right, IrOpcode bool_op) {
+    CompilerValue left_val = compiler_evaluate_argument(compiler, left);
+    if (left_val.type == DATA_TYPE_ERROR) return DATA_ERROR;
+
+    CompilerValue right_val = compiler_evaluate_argument(compiler, right);
+    if (right_val.type == DATA_TYPE_ERROR) return DATA_ERROR;
+
+    cast_binary(compiler, &left_val, &right_val, DATA_TYPE_BOOL);
+    if (left_val.type == DATA_TYPE_ERROR) return DATA_ERROR;
+    if (right_val.type == DATA_TYPE_ERROR) return DATA_ERROR;
+
+    if (left_val.type == DATA_TYPE_CHUNK) {
+        IrBytecode bc = left_val.data.chunk_val.bc;
+        bytecode_join(&bc, &right_val.data.chunk_val.bc);
+        bytecode_push_op(&bc, bool_op);
+        return DATA_CHUNK(DATA_TYPE_BOOL, bc);
+    } else {
+        return DATA_BOOL(execute_int_binary(left_val.data.bool_val, right_val.data.bool_val, bool_op));
+    }
 }
 
 CompilerValue block_on_start(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
@@ -841,31 +907,31 @@ CompilerValue block_term_set_clear(Compiler* compiler, Block* block, Block** nex
 CompilerValue block_plus(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) next_block;
     (void) prev_block;
-    return evaluate_binary_op(compiler, &block->arguments[0], &block->arguments[1], IR_ADDI, IR_ADDF);
+    return evaluate_binary_number(compiler, &block->arguments[0], &block->arguments[1], IR_ADDI, IR_ADDF);
 }
 
 CompilerValue block_minus(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) next_block;
     (void) prev_block;
-    return evaluate_binary_op(compiler, &block->arguments[0], &block->arguments[1], IR_SUBI, IR_SUBF);
+    return evaluate_binary_number(compiler, &block->arguments[0], &block->arguments[1], IR_SUBI, IR_SUBF);
 }
 
 CompilerValue block_mult(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) next_block;
     (void) prev_block;
-    return evaluate_binary_op(compiler, &block->arguments[0], &block->arguments[1], IR_MULI, IR_MULF);
+    return evaluate_binary_number(compiler, &block->arguments[0], &block->arguments[1], IR_MULI, IR_MULF);
 }
 
 CompilerValue block_div(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) next_block;
     (void) prev_block;
-    return evaluate_binary_op(compiler, &block->arguments[0], &block->arguments[1], IR_DIVI, IR_DIVF);
+    return evaluate_binary_number(compiler, &block->arguments[0], &block->arguments[1], IR_DIVI, IR_DIVF);
 }
 
 CompilerValue block_rem(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) next_block;
     (void) prev_block;
-    return evaluate_binary_op(compiler, &block->arguments[0], &block->arguments[1], IR_MODI, IR_MODF);
+    return evaluate_binary_number(compiler, &block->arguments[0], &block->arguments[1], IR_MODI, IR_MODF);
 }
 
 CompilerValue block_pow(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
@@ -895,27 +961,19 @@ CompilerValue block_pi(Compiler* compiler, Block* block, Block** next_block, Blo
 CompilerValue block_less(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) next_block;
     (void) prev_block;
-    CompilerValue val = evaluate_binary_op(compiler, &block->arguments[0], &block->arguments[1], IR_LESSI, IR_LESSF);
+    CompilerValue val = evaluate_binary_number(compiler, &block->arguments[0], &block->arguments[1], IR_LESSI, IR_LESSF);
     if (val.type == DATA_TYPE_ERROR) return DATA_ERROR;
 
-    if (val.type == DATA_TYPE_CHUNK) {
-        return cast_to_bc_bool(compiler, val);
-    } else {
-        return cast_to_const_bool(compiler, val);
-    }
+    return cast_to(compiler, val, DATA_TYPE_BOOL);
 }
 
 CompilerValue block_less_eq(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) next_block;
     (void) prev_block;
-    CompilerValue val = evaluate_binary_op(compiler, &block->arguments[0], &block->arguments[1], IR_LESSEQI, IR_LESSEQF);
+    CompilerValue val = evaluate_binary_number(compiler, &block->arguments[0], &block->arguments[1], IR_LESSEQI, IR_LESSEQF);
     if (val.type == DATA_TYPE_ERROR) return DATA_ERROR;
 
-    if (val.type == DATA_TYPE_CHUNK) {
-        return cast_to_bc_bool(compiler, val);
-    } else {
-        return cast_to_const_bool(compiler, val);
-    }
+    return cast_to(compiler, val, DATA_TYPE_BOOL);
 }
 
 CompilerValue block_eq(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
@@ -1043,51 +1101,49 @@ CompilerValue block_not_eq(Compiler* compiler, Block* block, Block** next_block,
 CompilerValue block_more_eq(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) next_block;
     (void) prev_block;
-    CompilerValue val = evaluate_binary_op(compiler, &block->arguments[0], &block->arguments[1], IR_MOREEQI, IR_MOREEQF);
+    CompilerValue val = evaluate_binary_number(compiler, &block->arguments[0], &block->arguments[1], IR_MOREEQI, IR_MOREEQF);
     if (val.type == DATA_TYPE_ERROR) return DATA_ERROR;
 
-    if (val.type == DATA_TYPE_CHUNK) {
-        return cast_to_bc_bool(compiler, val);
-    } else {
-        return cast_to_const_bool(compiler, val);
-    }
+    return cast_to(compiler, val, DATA_TYPE_BOOL);
 }
 
 CompilerValue block_more(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) next_block;
     (void) prev_block;
-    CompilerValue val = evaluate_binary_op(compiler, &block->arguments[0], &block->arguments[1], IR_MOREI, IR_MOREF);
+    CompilerValue val = evaluate_binary_number(compiler, &block->arguments[0], &block->arguments[1], IR_MOREI, IR_MOREF);
     if (val.type == DATA_TYPE_ERROR) return DATA_ERROR;
 
-    if (val.type == DATA_TYPE_CHUNK) {
-        return cast_to_bc_bool(compiler, val);
-    } else {
-        return cast_to_const_bool(compiler, val);
-    }
+    return cast_to(compiler, val, DATA_TYPE_BOOL);
 }
 
 CompilerValue block_not(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
-    (void) compiler;
-    (void) block;
     (void) next_block;
     (void) prev_block;
-    return DATA_ERROR;
+
+    CompilerValue val = compiler_evaluate_argument(compiler, &block->arguments[0]);
+    if (val.type == DATA_TYPE_ERROR) return DATA_ERROR;
+
+    val = cast_to(compiler, val, DATA_TYPE_BOOL);
+    if (val.type == DATA_TYPE_ERROR) return DATA_ERROR;
+
+    if (val.type == DATA_TYPE_CHUNK) {
+        bytecode_push_op(&val.data.chunk_val.bc, IR_NOT);
+        return DATA_CHUNK(DATA_TYPE_BOOL, val.data.chunk_val.bc);
+    } else {
+        return DATA_BOOL(!val.data.bool_val);
+    }
 }
 
 CompilerValue block_and(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
-    (void) compiler;
-    (void) block;
     (void) next_block;
     (void) prev_block;
-    return DATA_ERROR;
+    return evaluate_binary_bool(compiler, &block->arguments[0], &block->arguments[1], IR_AND);
 }
 
 CompilerValue block_or(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
-    (void) compiler;
-    (void) block;
     (void) next_block;
     (void) prev_block;
-    return DATA_ERROR;
+    return evaluate_binary_bool(compiler, &block->arguments[0], &block->arguments[1], IR_OR);
 }
 
 CompilerValue block_true(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
@@ -1107,35 +1163,39 @@ CompilerValue block_false(Compiler* compiler, Block* block, Block** next_block, 
 }
 
 CompilerValue block_bit_not(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
-    (void) compiler;
-    (void) block;
     (void) next_block;
     (void) prev_block;
-    return DATA_ERROR;
+
+    CompilerValue val = compiler_evaluate_argument(compiler, &block->arguments[0]);
+    if (val.type == DATA_TYPE_ERROR) return DATA_ERROR;
+
+    val = cast_to(compiler, val, DATA_TYPE_INTEGER);
+    if (val.type == DATA_TYPE_ERROR) return DATA_ERROR;
+
+    if (val.type == DATA_TYPE_CHUNK) {
+        bytecode_push_op(&val.data.chunk_val.bc, IR_NOTI);
+        return DATA_CHUNK(DATA_TYPE_INTEGER, val.data.chunk_val.bc);
+    } else {
+        return DATA_INTEGER(~val.data.integer_val);
+    }
 }
 
 CompilerValue block_bit_and(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
-    (void) compiler;
-    (void) block;
     (void) next_block;
     (void) prev_block;
-    return DATA_ERROR;
+    return evaluate_binary_int(compiler, &block->arguments[0], &block->arguments[1], IR_ANDI);
 }
 
 CompilerValue block_bit_or(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
-    (void) compiler;
-    (void) block;
     (void) next_block;
     (void) prev_block;
-    return DATA_ERROR;
+    return evaluate_binary_int(compiler, &block->arguments[0], &block->arguments[1], IR_ORI);
 }
 
 CompilerValue block_bit_xor(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
-    (void) compiler;
-    (void) block;
     (void) next_block;
     (void) prev_block;
-    return DATA_ERROR;
+    return evaluate_binary_int(compiler, &block->arguments[0], &block->arguments[1], IR_XORI);
 }
 
 CompilerValue block_declare_var(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
@@ -1280,11 +1340,7 @@ CompilerValue block_convert_int(Compiler* compiler, Block* block, Block** next_b
     CompilerValue value = compiler_evaluate_argument(compiler, &block->arguments[0]);
     if (value.type == DATA_TYPE_ERROR) return DATA_ERROR;
 
-    if (value.type == DATA_TYPE_CHUNK) {
-        return cast_to_bc_int(compiler, value);
-    } else {
-        return cast_to_const_int(compiler, value);
-    }
+    return cast_to(compiler, value, DATA_TYPE_INTEGER);
 }
 
 CompilerValue block_convert_float(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
@@ -1293,11 +1349,7 @@ CompilerValue block_convert_float(Compiler* compiler, Block* block, Block** next
     CompilerValue value = compiler_evaluate_argument(compiler, &block->arguments[0]);
     if (value.type == DATA_TYPE_ERROR) return DATA_ERROR;
 
-    if (value.type == DATA_TYPE_CHUNK) {
-        return cast_to_bc_float(compiler, value);
-    } else {
-        return cast_to_const_float(compiler, value);
-    }
+    return cast_to(compiler, value, DATA_TYPE_FLOAT);
 }
 
 CompilerValue block_convert_str(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
@@ -1306,11 +1358,7 @@ CompilerValue block_convert_str(Compiler* compiler, Block* block, Block** next_b
     CompilerValue value = compiler_evaluate_argument(compiler, &block->arguments[0]);
     if (value.type == DATA_TYPE_ERROR) return DATA_ERROR;
 
-    if (value.type == DATA_TYPE_CHUNK) {
-        return cast_to_bc_string(compiler, value);
-    } else {
-        return cast_to_const_string(compiler, value);
-    }
+    return cast_to(compiler, value, DATA_TYPE_STRING);
 }
 
 CompilerValue block_convert_bool(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
@@ -1319,11 +1367,7 @@ CompilerValue block_convert_bool(Compiler* compiler, Block* block, Block** next_
     CompilerValue value = compiler_evaluate_argument(compiler, &block->arguments[0]);
     if (value.type == DATA_TYPE_ERROR) return DATA_ERROR;
 
-    if (value.type == DATA_TYPE_CHUNK) {
-        return cast_to_bc_bool(compiler, value);
-    } else {
-        return cast_to_const_bool(compiler, value);
-    }
+    return cast_to(compiler, value, DATA_TYPE_BOOL);
 }
 
 CompilerValue block_convert_color(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
@@ -1332,11 +1376,7 @@ CompilerValue block_convert_color(Compiler* compiler, Block* block, Block** next
     CompilerValue value = compiler_evaluate_argument(compiler, &block->arguments[0]);
     if (value.type == DATA_TYPE_ERROR) return DATA_ERROR;
 
-    if (value.type == DATA_TYPE_CHUNK) {
-        return cast_to_bc_color(compiler, value);
-    } else {
-        return cast_to_const_color(compiler, value);
-    }
+    return cast_to(compiler, value, DATA_TYPE_COLOR);
 }
 
 CompilerValue block_typeof(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
