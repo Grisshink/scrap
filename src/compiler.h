@@ -42,7 +42,7 @@ typedef union {
     double float_val;
     bool bool_val;
     IrList* list_val;
-    StdColor color_val;
+    Color color_val;
     BytecodeChunk chunk_val;
 } CompilerValueData;
 

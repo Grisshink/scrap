@@ -1,15 +1,15 @@
 // Scrap is a project that allows anyone to build software using simple, block based interface.
 //
 // Copyright (C) 2024-2026 Grisshink
-// 
+//
 // This software is provided 'as-is', without any express or implied
 // warranty.  In no event will the authors be held liable for any damages
 // arising from the use of this software.
-// 
+//
 // Permission is granted to anyone to use this software for any purpose,
 // including commercial applications, and to alter it and redistribute it
 // freely, subject to the following restrictions:
-// 
+//
 // 1. The origin of this software must not be misrepresented; you must not
 //    claim that you wrote the original software. If you use this software
 //    in a product, an acknowledgment in the product documentation would be
@@ -22,6 +22,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <time.h>
+#include <math.h>
 
 #include "std.h"
 #include "util.h"
@@ -32,8 +33,8 @@
 #include <sys/ioctl.h>
 #endif
 
-// Explicitly including rprand.h here as this translation unit will soon need 
-// to compile as standalone library, which means we should not depend on 
+// Explicitly including rprand.h here as this translation unit will soon need
+// to compile as standalone library, which means we should not depend on
 // raylib in any way
 #define RPRAND_IMPLEMENTATION
 #define RPRANDAPI static __attribute__ ((unused))
@@ -74,7 +75,7 @@ static int get_codepoint(const char *text, int *codepoint_size) {
 
         if ((octet1 == '\0') || ((octet1 >> 6) != 2)) {
             // Unexpected sequence
-            *codepoint_size = 2; 
+            *codepoint_size = 2;
             return codepoint;
         }
 
@@ -87,18 +88,18 @@ static int get_codepoint(const char *text, int *codepoint_size) {
         unsigned char octet1 = text[1];
         unsigned char octet2 = '\0';
 
-        if ((octet1 == '\0') || ((octet1 >> 6) != 2)) { 
+        if ((octet1 == '\0') || ((octet1 >> 6) != 2)) {
             // Unexpected sequence
-            *codepoint_size = 2; 
-            return codepoint; 
+            *codepoint_size = 2;
+            return codepoint;
         }
 
         octet2 = text[2];
 
-        if ((octet2 == '\0') || ((octet2 >> 6) != 2)) { 
+        if ((octet2 == '\0') || ((octet2 >> 6) != 2)) {
             // Unexpected sequence
-            *codepoint_size = 3; 
-            return codepoint; 
+            *codepoint_size = 3;
+            return codepoint;
         }
 
         // [0]xE0    [1]xA0-BF       [2]UTF8-tail(x80-BF)
@@ -107,9 +108,9 @@ static int get_codepoint(const char *text, int *codepoint_size) {
         // [0]xEE-EF [1]UTF8-tail    [2]UTF8-tail(x80-BF)
 
         if (((octet == 0xe0) && !((octet1 >= 0xa0) && (octet1 <= 0xbf))) ||
-            ((octet == 0xed) && !((octet1 >= 0x80) && (octet1 <= 0x9f)))) { 
-            *codepoint_size = 2; 
-            return codepoint; 
+            ((octet == 0xed) && !((octet1 >= 0x80) && (octet1 <= 0x9f)))) {
+            *codepoint_size = 2;
+            return codepoint;
         }
 
         if ((octet >= 0xe0) && (octet <= 0xef)) {
@@ -124,26 +125,26 @@ static int get_codepoint(const char *text, int *codepoint_size) {
         unsigned char octet2 = '\0';
         unsigned char octet3 = '\0';
 
-        if ((octet1 == '\0') || ((octet1 >> 6) != 2)) { 
+        if ((octet1 == '\0') || ((octet1 >> 6) != 2)) {
             // Unexpected sequence
-            *codepoint_size = 2; 
-            return codepoint; 
+            *codepoint_size = 2;
+            return codepoint;
         }
 
         octet2 = text[2];
 
-        if ((octet2 == '\0') || ((octet2 >> 6) != 2)) { 
+        if ((octet2 == '\0') || ((octet2 >> 6) != 2)) {
             // Unexpected sequence
-            *codepoint_size = 3; 
-            return codepoint; 
+            *codepoint_size = 3;
+            return codepoint;
         }
 
         octet3 = text[3];
 
-        if ((octet3 == '\0') || ((octet3 >> 6) != 2)) { 
+        if ((octet3 == '\0') || ((octet3 >> 6) != 2)) {
             // Unexpected sequence
-            *codepoint_size = 4; 
-            return codepoint; 
+            *codepoint_size = 4;
+            return codepoint;
         }
 
         // [0]xF0       [1]x90-BF       [2]UTF8-tail  [3]UTF8-tail
@@ -151,10 +152,10 @@ static int get_codepoint(const char *text, int *codepoint_size) {
         // [0]xF4       [1]x80-8F       [2]UTF8-tail  [3]UTF8-tail
 
         if (((octet == 0xf0) && !((octet1 >= 0x90) && (octet1 <= 0xbf))) ||
-            ((octet == 0xf4) && !((octet1 >= 0x80) && (octet1 <= 0x8f)))) { 
+            ((octet == 0xf4) && !((octet1 >= 0x80) && (octet1 <= 0x8f)))) {
             // Unexpected sequence
-            *codepoint_size = 2; 
-            return codepoint; 
+            *codepoint_size = 2;
+            return codepoint;
         }
 
         if (octet >= 0xf0) {
@@ -209,6 +210,24 @@ static int leading_ones(unsigned char byte) {
     return out;
 }
 
+#define STD_MATH_FUNC(_f) bool std_##_f(IrExec* exec) { \
+    exec_push_float(exec, _f(exec_pop_float(exec))); \
+    return true; \
+}
+
+STD_MATH_FUNC(sqrt)
+STD_MATH_FUNC(round)
+STD_MATH_FUNC(floor)
+STD_MATH_FUNC(ceil)
+STD_MATH_FUNC(sin)
+STD_MATH_FUNC(cos)
+STD_MATH_FUNC(tan)
+STD_MATH_FUNC(asin)
+STD_MATH_FUNC(acos)
+STD_MATH_FUNC(atan)
+
+#undef STD_MATH_FUNC
+
 int std_int_pow(int base, int exp) {
     if (exp == 0) return 1;
 
@@ -221,394 +240,12 @@ int std_int_pow(int base, int exp) {
     return result;
 }
 
-StdColor std_parse_color(const char* value) {
-    if (*value == '#') value++;
-    unsigned char r = 0x00, g = 0x00, b = 0x00, a = 0xff;
-    sscanf(value, "%02hhx%02hhx%02hhx%02hhx", &r, &g, &b, &a);
-    return (StdColor) { r, g, b, a };
-}
-
-List* std_list_new(Gc* gc) {
-    List* list = gc_malloc(gc, sizeof(List), DATA_TYPE_LIST);
-    list->size = 0;
-    list->capacity = 0;
-    list->values = NULL;
-    return list;
-}
-
-static AnyValue std_get_any(DataType data_type, va_list va) {
-    AnyValueData data;
-
-    switch (data_type) {
-    case DATA_TYPE_BOOL:
-    case DATA_TYPE_INTEGER:
-        data.integer_val = va_arg(va, int);
-        break;
-    case DATA_TYPE_FLOAT:
-        data.float_val = va_arg(va, double);
-        break;
-    case DATA_TYPE_STRING:
-        data.str_val = va_arg(va, StringHeader*);
-        break;
-    case DATA_TYPE_LIST:
-        data.list_val = va_arg(va, List*);
-        break;
-    case DATA_TYPE_ANY:
-        return *va_arg(va, AnyValue*);
-    case DATA_TYPE_COLOR:
-        data.color_val = va_arg(va, StdColor);
-        break;
-    default:
-        data = (AnyValueData) {0};
-        break;
-    }
-
-    return (AnyValue) {
-        .type = data_type,
-        .data = data,
-    };
-}
-
-void std_list_add(Gc* gc, List* list, DataType data_type, ...) {
-    AnyValue any;
-    
-    va_list va;
-    va_start(va, data_type);
-    any = std_get_any(data_type, va);
-    va_end(va);
-
-    std_list_add_any(gc, list, any);
-}
-
-void std_list_add_any(Gc* gc, List* list, AnyValue any) {
-    if (!list->values) {
-        list->values = gc_malloc(gc, sizeof(AnyValue), 0);
-        list->capacity = 1;
-    }
-
-    if (list->size >= list->capacity) {
-        AnyValue* new_list = gc_malloc(gc, sizeof(AnyValue) * list->size * 2, 0);
-        memcpy(new_list, list->values, sizeof(AnyValue) * list->size);
-        list->values = new_list;
-        list->capacity = list->size * 2;
-    }
-
-    list->values[list->size++] = any;
-}
-
-void std_list_set(List* list, int index, DataType data_type, ...) {
-    if (index >= list->size || index < 0) return;
-
-    AnyValue any;
-
-    va_list va;
-    va_start(va, data_type);
-    any = std_get_any(data_type, va);
-    va_end(va);
-
-    list->values[index] = any;
-}
-
-AnyValue* std_list_get(Gc* gc, List* list, int index) {
-    AnyValue* out = gc_malloc(gc, sizeof(AnyValue), DATA_TYPE_ANY);
-    *out = (AnyValue) { .type = DATA_TYPE_NOTHING };
-
-    if (index >= list->size || index < 0) return out;
-
-    *out = list->values[index];
-    return out;
-}
-
-int std_list_length(List* list) {
-    return list->size;
-}
-
-AnyValue* std_any_from_value(Gc* gc, DataType data_type, ...) {
-    AnyValue any;
-
-    va_list va;
-    va_start(va, data_type);
-    if (data_type == DATA_TYPE_ANY) {
-        return va_arg(va, AnyValue*);
-    } else {
-        any = std_get_any(data_type, va);
-    }
-    va_end(va);
-
-    AnyValue* value = gc_malloc(gc, sizeof(AnyValue), DATA_TYPE_ANY);
-    *value = any;
-    return value;
-}
-
-StringHeader* std_string_from_literal(Gc* gc, const char* literal, unsigned int size) {
-    StringHeader* out_str = gc_malloc(gc, sizeof(StringHeader) + size + 1, DATA_TYPE_STRING); // Don't forget null terminator. It is not included in size
-    memcpy(out_str->str, literal, size);
-    out_str->size = size;
-    out_str->capacity = size;
-    out_str->str[size] = 0;
-    return out_str;
-}
-
-char* std_string_get_data(StringHeader* str) {
-    return str->str;
-}
-
-StringHeader* std_string_letter_in(Gc* gc, int target, StringHeader* input_str) {
-    int pos = 0;
-    if (target <= 0) return std_string_from_literal(gc, "", 0);
-    for (char* str = input_str->str; *str; str++) {
-        // Increment pos only on the beginning of multibyte char
-        if ((*str & 0x80) == 0 || (*str & 0x40) != 0) pos++;
-
-        if (pos == target) {
-            int codepoint_size;
-            get_codepoint(str, &codepoint_size);
-            return std_string_from_literal(gc, str, codepoint_size);
-        }
-    }
-
-    return std_string_from_literal(gc, "", 0);
-}
-
-StringHeader* std_string_substring(Gc* gc, int begin, int end, StringHeader* input_str) {
-    if (begin <= 0) begin = 1;
-    if (end <= 0) return std_string_from_literal(gc, "", 0);
-    if (begin > end) return std_string_from_literal(gc, "", 0);
-
-    char* substr_start = NULL;
-    int substr_len = 0;
-
-    int pos = 0;
-    for (char* str = input_str->str; *str; str++) {
-        // Increment pos only on the beginning of multibyte char
-        if ((*str & 0x80) == 0 || (*str & 0x40) != 0) pos++;
-        if (substr_start) substr_len++;
-
-        if (pos == begin && !substr_start) {
-            substr_start = str;
-            substr_len = 1;
-        }
-        if (pos == end) {
-            if (!substr_start) return std_string_from_literal(gc, "", 0);
-            int codepoint_size;
-            get_codepoint(str, &codepoint_size);
-            substr_len += codepoint_size - 1;
-
-            return std_string_from_literal(gc, substr_start, substr_len);
-        }
-    }
-
-    if (substr_start) return std_string_from_literal(gc, substr_start, substr_len);
-    return std_string_from_literal(gc, "", 0);
-}
-
-StringHeader* std_string_join(Gc* gc, StringHeader* left, StringHeader* right) {
-    StringHeader* out_str = gc_malloc(gc, sizeof(StringHeader) + left->size + right->size + 1, DATA_TYPE_STRING);
-    memcpy(out_str->str, left->str, left->size);
-    memcpy(out_str->str + left->size, right->str, right->size);
-    out_str->size = left->size + right->size;
-    out_str->capacity = out_str->size;
-    out_str->str[out_str->size] = 0;
-    return out_str;
-}
-
-int std_string_length(StringHeader* str) {
-    int len = 0;
-    char* cur = str->str;
-    while (*cur) {
-        int mb_size = leading_ones(*cur);
-        if (mb_size == 0) mb_size = 1;
-        cur += mb_size;
-        len++;
-    }
-    return len;
-}
-
-bool std_string_is_eq(StringHeader* left, StringHeader* right) {
-    if (left->size != right->size) return false;
-    for (unsigned int i = 0; i < left->size; i++) {
-        if (left->str[i] != right->str[i]) return false;
-    }
-    return true;
-}
-
-StringHeader* std_string_chr(Gc* gc, int value) {
-    int text_size;
-    const char* text = codepoint_to_utf8(value, &text_size);
-    return std_string_from_literal(gc, text, text_size);
-}
-
-int std_string_ord(StringHeader* str) {
-    int codepoint_size;
-    int codepoint = get_codepoint(str->str, &codepoint_size);
-    (void) codepoint_size;
-    return codepoint;
-}
-
-StringHeader* std_string_from_integer(Gc* gc, int value) {
-    char str[20];
-    unsigned int len = snprintf(str, 20, "%d", value);
-    return std_string_from_literal(gc, str, len);
-}
-
-StringHeader* std_string_from_bool(Gc* gc, bool value) {
-    return value ? std_string_from_literal(gc, "true", 4) : std_string_from_literal(gc, "false", 5);
-}
-
-StringHeader* std_string_from_float(Gc* gc, double value) {
-    char str[20];
-    unsigned int len = snprintf(str, 20, "%f", value);
-    return std_string_from_literal(gc, str, len);
-}
-
-StringHeader* std_string_from_color(Gc* gc, StdColor value) {
-    char str[20];
-    unsigned int len = snprintf(str, 20, "#%02x%02x%02x%02x", value.r, value.g, value.b, value.a);
-    return std_string_from_literal(gc, str, len);
-}
-
-char* std_any_string_from_any(Gc* gc, AnyValue* value) {
-    return std_string_from_any(gc, value)->str;
-}
-
-StringHeader* std_string_from_any(Gc* gc, AnyValue* value) {
-    if (!value) return std_string_from_literal(gc, "", 0);
-    char str[32];
-    int size;
-
-    switch (value->type) {
-    case DATA_TYPE_INTEGER:
-        return std_string_from_integer(gc, value->data.integer_val);
-    case DATA_TYPE_FLOAT:
-        return std_string_from_float(gc, value->data.float_val);
-    case DATA_TYPE_STRING:
-        return value->data.str_val;
-    case DATA_TYPE_BOOL:
-        return std_string_from_bool(gc, value->data.integer_val);
-    case DATA_TYPE_LIST:
-        size = snprintf(str, 32, "*LIST (%lu)*", value->data.list_val->size);
-        return std_string_from_literal(gc, str, size);
-    case DATA_TYPE_COLOR:
-        size = snprintf(str, 10, "#%02x%02x%02x%02x", value->data.color_val.r, value->data.color_val.g, value->data.color_val.b, value->data.color_val.a);
-        return std_string_from_literal(gc, str, size);
-    default:
-        return std_string_from_literal(gc, "", 0);
-    }
-}
-
-int std_integer_from_any(AnyValue* value) {
-    if (!value) return 0;
-
-    switch (value->type) {
-    case DATA_TYPE_BOOL:
-    case DATA_TYPE_INTEGER:
-        return value->data.integer_val;
-    case DATA_TYPE_FLOAT:
-        return (int)value->data.float_val;
-    case DATA_TYPE_STRING:
-        return atoi(value->data.str_val->str);
-    case DATA_TYPE_COLOR:
-        return *(int*)&value->data.color_val;
-    default:
-        return 0;
-    }
-}
-
-double std_float_from_any(AnyValue* value) {
-    if (!value) return 0;
-
-    switch (value->type) {
-    case DATA_TYPE_BOOL:
-    case DATA_TYPE_INTEGER:
-        return (double)value->data.integer_val;
-    case DATA_TYPE_FLOAT:
-        return value->data.float_val;
-    case DATA_TYPE_STRING:
-        return atof(value->data.str_val->str);
-    case DATA_TYPE_COLOR:
-        return *(int*)&value->data.color_val;
-    default:
-        return 0;
-    }
-}
-
-int std_bool_from_any(AnyValue* value) {
-    if (!value) return 0;
-
-    switch (value->type) {
-    case DATA_TYPE_BOOL:
-    case DATA_TYPE_INTEGER:
-        return value->data.integer_val != 0;
-    case DATA_TYPE_FLOAT:
-        return value->data.float_val != 0.0;
-    case DATA_TYPE_STRING:
-        return value->data.str_val->size > 0;
-    case DATA_TYPE_COLOR:
-        return *(int*)&value->data.color_val != 0;
-    default:
-        return 0;
-    }
-}
-
-#define INT_TO_COLOR(v) ((StdColor) { \
-    ((v) >> 0 ) & 255, \
-    ((v) >> 8 ) & 255, \
-    ((v) >> 16) & 255, \
-    ((v) >> 24) & 255, \
-})
-
-StdColor std_color_from_any(AnyValue* value) {
-    if (!value) return (StdColor) { 0x00, 0x00, 0x00, 0xff };
-
-    switch (value->type) {
-    case DATA_TYPE_BOOL:
-        return value->data.integer_val ? (StdColor) { 0xff, 0xff, 0xff, 0xff } : (StdColor) { 0x00, 0x00, 0x00, 0xff };
-    case DATA_TYPE_INTEGER:
-        return INT_TO_COLOR(value->data.integer_val);
-    case DATA_TYPE_FLOAT:
-        int int_val = value->data.float_val;
-        return INT_TO_COLOR(int_val);
-    case DATA_TYPE_STRING:
-        return std_parse_color(value->data.str_val->str);
-    case DATA_TYPE_COLOR:
-        return value->data.color_val;
-    default:
-        return (StdColor) { 0x00, 0x00, 0x00, 0xff };
-    }
-}
-
-List* std_list_from_any(Gc* gc, AnyValue* value) {
-    if (!value) return 0;
-
-    switch (value->type) {
-    case DATA_TYPE_LIST:
-        return value->data.list_val;
-    default:
-        return std_list_new(gc);
-    }
-}
-
-bool std_any_is_eq(AnyValue* left, AnyValue* right) {
-    if (left->type != right->type) return false;
-
-    switch (left->type) {
-    case DATA_TYPE_NOTHING:
-        return true;
-    case DATA_TYPE_STRING:
-        return std_string_is_eq(left->data.str_val, right->data.str_val);
-    case DATA_TYPE_INTEGER:
-    case DATA_TYPE_BOOL:
-        return left->data.integer_val == right->data.integer_val;
-    case DATA_TYPE_FLOAT:
-        return left->data.float_val == right->data.float_val;
-    case DATA_TYPE_LIST:
-        return left->data.list_val == right->data.list_val;
-    case DATA_TYPE_COLOR:
-        return memcmp(&left->data.color_val, &right->data.color_val, sizeof(left->data.color_val));
-    default:
-        return false;
-    }
-}
+// StdColor std_parse_color(const char* value) {
+//     if (*value == '#') value++;
+//     unsigned char r = 0x00, g = 0x00, b = 0x00, a = 0xff;
+//     sscanf(value, "%02hhx%02hhx%02hhx%02hhx", &r, &g, &b, &a);
+//     return (StdColor) { r, g, b, a };
+// }
 
 int std_sleep(int usecs) {
     if (usecs < 0) return 0;
@@ -636,30 +273,9 @@ int std_get_random(int min, int max) {
     }
 }
 
-int std_term_print_any(AnyValue* any) {
-    if (!any) return 0;
-
-    switch (any->type) {
-    case DATA_TYPE_STRING:
-        return std_term_print_str(any->data.str_val->str);
-    case DATA_TYPE_NOTHING:
-        return 0;
-    case DATA_TYPE_INTEGER:
-        return std_term_print_integer(any->data.integer_val);
-    case DATA_TYPE_BOOL:
-        return std_term_print_bool(any->data.integer_val);
-    case DATA_TYPE_FLOAT:
-        return std_term_print_float(any->data.float_val);
-    case DATA_TYPE_LIST:
-        return std_term_print_list(any->data.list_val);
-    case DATA_TYPE_COLOR:
-        return std_term_print_color(any->data.color_val);
-    default:
-        return 0;
-    }
-}
-
 #ifdef STANDALONE_STD
+
+#include <wchar.h>
 
 static int cursor_x = 0;
 static int cursor_y = 0;
@@ -668,34 +284,19 @@ static Color bg_color = {0};
 
 void test_cancel(void) {}
 
-int std_term_print_str(const char* str) {
-    int len = printf("%s", str);
+bool std_term_print_str(IrExec* exec) {
+    IrList* list = exec_pop_list(exec);
+    if (!list) return false;
+    for (size_t i = 0; i < list->size; i++) {
+        IrValue c = list->items[i];
+        switch (c.type) {
+        case IR_TYPE_INT: printf("%lc", (wint_t)c.as.int_val); break;
+        case IR_TYPE_BYTE: printf("%c", c.as.byte_val); break;
+        default: printf("?"); break;
+        }
+    }
     fflush(stdout);
-    return len;
-}
-
-int std_term_print_integer(int value) {
-    int len = printf("%d", value);
-    fflush(stdout);
-    return len;
-}
-
-int std_term_print_float(double value) {
-    int len = printf("%f", value);
-    fflush(stdout);
-    return len;
-}
-
-int std_term_print_bool(bool value) {
-    int len = printf("%s", value ? "true" : "false");
-    fflush(stdout);
-    return len;
-}
-
-int std_term_print_color(StdColor value) {
-    int len = printf("[Color: #%02x%02x%02x%02x]", value.r, value.g, value.b, value.a);
-    fflush(stdout);
-    return len;
+    return true;
 }
 
 void std_term_set_fg_color(Color color) {
@@ -763,70 +364,80 @@ void std_term_set_cursor(int x, int y) {
     fflush(stdout);
 }
 
-StringHeader* std_term_get_char(Gc* gc) {
-    char input[10];
-    input[0] = (char)getchar();
-    if (input[0] == '\n') return std_string_from_literal(gc, "", 0);
-
-    int mb_size = leading_ones(input[0]);
-
-    if (mb_size == 0) mb_size = 1;
-    for (int i = 1; i < mb_size && i < 10; i++) input[i] = (char)getchar();
-    input[mb_size] = 0;
-
-    return std_string_from_literal(gc, input, mb_size);
-}
-
-StringHeader* std_term_get_input(Gc* gc) {
-    char* string_buf = vector_create();
-    char last_char = 0;
-    char buf[256];
-    
-    while (last_char != '\n') {
-        if (!fgets(buf, 256, stdin)) {
-            vector_free(string_buf);
-            return std_string_from_literal(gc, "", 0);
-        }
-
-        int size = strlen(buf);
-        last_char = buf[size - 1];
-        if (last_char == '\n') buf[--size] = 0;
-
-        for (char* str = buf; *str; str++) vector_add(&string_buf, *str);
-    }
-
-    StringHeader* out_string = std_string_from_literal(gc, string_buf, vector_size(string_buf));
-    vector_free(string_buf);
-
-    return out_string;
-}
-
-int std_term_print_list(List* list) {
-    int len = printf("*LIST (%lu)*", list->size);
-    fflush(stdout);
-    return len;
-}
+// StringHeader* std_term_get_char(Gc* gc) {
+//     char input[10];
+//     input[0] = (char)getchar();
+//     if (input[0] == '\n') return std_string_from_literal(gc, "", 0);
+//
+//     int mb_size = leading_ones(input[0]);
+//
+//     if (mb_size == 0) mb_size = 1;
+//     for (int i = 1; i < mb_size && i < 10; i++) input[i] = (char)getchar();
+//     input[mb_size] = 0;
+//
+//     return std_string_from_literal(gc, input, mb_size);
+// }
+//
+// StringHeader* std_term_get_input(Gc* gc) {
+//     char* string_buf = vector_create();
+//     char last_char = 0;
+//     char buf[256];
+//
+//     while (last_char != '\n') {
+//         if (!fgets(buf, 256, stdin)) {
+//             vector_free(string_buf);
+//             return std_string_from_literal(gc, "", 0);
+//         }
+//
+//         int size = strlen(buf);
+//         last_char = buf[size - 1];
+//         if (last_char == '\n') buf[--size] = 0;
+//
+//         for (char* str = buf; *str; str++) vector_add(&string_buf, *str);
+//     }
+//
+//     StringHeader* out_string = std_string_from_literal(gc, string_buf, vector_size(string_buf));
+//     vector_free(string_buf);
+//
+//     return out_string;
+// }
 
 #else
 
-int std_term_print_str(const char* str) {
-    return term_print_str(str);
-}
+bool std_term_print_str(IrExec* exec) {
+    IrList* list = exec_pop_list(exec);
+    if (!list) return false;
+    char buf[64];
+    int buf_size = 0;
 
-int std_term_print_integer(int value) {
-    return term_print_integer(value);
-}
+    char* char_buf;
+    int char_size = 0;
 
-int std_term_print_float(double value) {
-    return term_print_float(value);
-}
+    for (size_t i = 0; i < list->size; i++) {
+        IrValue c = list->items[i];
+        switch (c.type) {
+        case IR_TYPE_INT:  char_buf = (char*)codepoint_to_utf8(c.as.int_val, &char_size); break;
+        case IR_TYPE_BYTE: char_buf = (char*)codepoint_to_utf8(c.as.byte_val, &char_size); break;
+        default:           char_buf = (char*)codepoint_to_utf8('?', &char_size); break;
+        }
+        char_buf[char_size] = 0;
 
-int std_term_print_bool(bool value) {
-    return term_print_bool(value);
-}
+        if (buf_size + char_size + 1 > 64) {
+            buf[buf_size] = 0;
+            term_print_str(buf);
+            buf_size = 0;
+        }
 
-int std_term_print_color(StdColor value) {
-    return term_print_color(CONVERT_COLOR(value, TermColor));
+        strcpy(buf + buf_size, char_buf);
+        buf_size += char_size;
+    }
+
+    if (buf_size > 0) {
+        buf[buf_size] = 0;
+        term_print_str(buf);
+    }
+
+    return true;
 }
 
 void std_term_set_fg_color(TermColor color) {
@@ -845,17 +456,17 @@ void std_term_clear(void) {
     term_clear();
 }
 
-StringHeader* std_term_get_char(Gc* gc) {
-    char input[10];
-    input[0] = term_input_get_char();
-    int mb_size = leading_ones(input[0]);
-
-    if (mb_size == 0) mb_size = 1;
-    for (int i = 1; i < mb_size && i < 10; i++) input[i] = term_input_get_char();
-    input[mb_size] = 0;
-
-    return std_string_from_literal(gc, input, mb_size);
-}
+// StringHeader* std_term_get_char(Gc* gc) {
+//     char input[10];
+//     input[0] = term_input_get_char();
+//     int mb_size = leading_ones(input[0]);
+//
+//     if (mb_size == 0) mb_size = 1;
+//     for (int i = 1; i < mb_size && i < 10; i++) input[i] = term_input_get_char();
+//     input[mb_size] = 0;
+//
+//     return std_string_from_literal(gc, input, mb_size);
+// }
 
 void std_term_set_cursor(int x, int y) {
     mutex_lock(&term.lock);
@@ -895,30 +506,53 @@ int std_term_cursor_max_y(void) {
     return cur_max_y;
 }
 
-StringHeader* std_term_get_input(Gc* gc) {
-    char input_char = 0;
-    char* string_buf = vector_create();
+// StringHeader* std_term_get_input(Gc* gc) {
+//     char input_char = 0;
+//     char* string_buf = vector_create();
+//
+//     while (input_char != '\n') {
+//         char input[256];
+//         int i = 0;
+//         for (; i < 255 && input_char != '\n'; i++) input[i] = (input_char = term_input_get_char());
+//         if (input[i - 1] == '\n') input[i - 1] = 0;
+//         input[i] = 0;
+//
+//         for (char* str = input; *str; str++) vector_add(&string_buf, *str);
+//     }
+//
+//     StringHeader* out_string = std_string_from_literal(gc, string_buf, vector_size(string_buf));
+//     vector_free(string_buf);
+//
+//     return out_string;
+// }
 
-    while (input_char != '\n') {
-        char input[256];
-        int i = 0;
-        for (; i < 255 && input_char != '\n'; i++) input[i] = (input_char = term_input_get_char());
-        if (input[i - 1] == '\n') input[i - 1] = 0;
-        input[i] = 0;
+#endif // STANDALONE_STD
 
-        for (char* str = input; *str; str++) vector_add(&string_buf, *str);
+#define STD_FUNC(_f) { #_f, _f }
+IrRunFunction std_resolve_function(IrExec* exec, const char* hint) {
+    (void) exec;
+
+    struct {
+        char* name;
+        IrRunFunction func;
+    } funcs[] = {
+        STD_FUNC(std_term_print_str),
+        { "sqrt",  std_sqrt  },
+        { "round", std_round },
+        { "floor", std_floor },
+        { "ceil",  std_ceil  },
+        { "sin",   std_sin   },
+        { "cos",   std_cos   },
+        { "tan",   std_tan   },
+        { "asin",  std_asin  },
+        { "acos",  std_acos  },
+        { "atan",  std_atan  },
+        { NULL,    NULL      },
+    };
+
+    for (size_t i = 0; funcs[i].name != NULL; i++) {
+        if (!strcmp(hint, funcs[i].name)) return funcs[i].func;
     }
 
-    StringHeader* out_string = std_string_from_literal(gc, string_buf, vector_size(string_buf));
-    vector_free(string_buf);
-
-    return out_string;
+    return NULL;
 }
-
-int std_term_print_list(List* list) {
-    char converted[32];
-    snprintf(converted, 32, "*LIST (%lu)*", list->size);
-    return term_print_str(converted);
-}
-
-#endif

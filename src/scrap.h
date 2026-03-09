@@ -29,6 +29,7 @@
 #include "scrap_gui.h"
 #include "util.h"
 #include "term.h"
+#include "vec.h"
 
 typedef struct Vm Vm;
 

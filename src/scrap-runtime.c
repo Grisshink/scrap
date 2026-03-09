@@ -18,14 +18,11 @@
 //    misrepresented as being the original software.
 // 3. This notice may not be removed or altered from any source distribution.
 
-#include "gc.h"
 #include "config.h"
 
 #ifdef _WIN32
 #include <windows.h>
 #endif
-
-Gc* gc;
 
 void llvm_main(void);
 
@@ -33,9 +30,6 @@ int main(void) {
 #ifdef _WIN32
     SetConsoleOutputCP(65001);
 #endif
-    Gc _gc = gc_new(MIN_MEMORY_LIMIT, MAX_MEMORY_LIMIT);
-    gc = &_gc;
     llvm_main();
-    gc_free(gc);
     return 0;
 }

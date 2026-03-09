@@ -28,6 +28,7 @@
 #include <libintl.h>
 #include <wchar.h>
 #include <assert.h>
+#include <math.h>
 
 #define KiB(n) ((size_t)(n) << 10)
 #define MiB(n) ((size_t)(n) << 20)
@@ -62,31 +63,22 @@ bool print_str(IrExec* exec) {
     return true;
 }
 
-IrRunFunction resolve_function(IrExec* exec, const char* hint) {
-    (void) exec;
-    TraceLog(LOG_INFO, "[EXEC] Resolve: %s", hint);
-    if (!strcmp(hint, "print_str")) {
-        return print_str;
-    }
-    return NULL;
-}
-
 static const char* format_byte_count(Compiler* compiler, size_t size) {
     if (size < KiB(1)) {
         return ir_arena_sprintf(compiler->arena, 32, "%zu", size);
     } else if (size < MiB(1)) {
-        return ir_arena_sprintf(compiler->arena, 32, "%.2fKiB", (double)size / 1024.0);
+        return ir_arena_sprintf(compiler->arena, 32, "%.2gKiB", (double)size / 1024.0);
     } else if (size < GiB(1)) {
-        return ir_arena_sprintf(compiler->arena, 32, "%.2fMiB", (double)size / (1024.0 * 1024.0));
+        return ir_arena_sprintf(compiler->arena, 32, "%.2gMiB", (double)size / (1024.0 * 1024.0));
     } else {
-        return ir_arena_sprintf(compiler->arena, 32, "%.2fGiB", (double)size / (1024.0 * 1024.0 * 1024.0));
+        return ir_arena_sprintf(compiler->arena, 32, "%.2gGiB", (double)size / (1024.0 * 1024.0 * 1024.0));
     }
 }
 
 bool compiler_run(void* e) {
     Compiler* compiler = e;
 
-    compiler->arena = ir_arena_new(GiB(4), MiB(1));
+    compiler->arena = ir_arena_new(GiB(1), MiB(1));
     compiler->bc_pool = bytecode_pool_new(compiler->arena);
     compiler->chains_to_compile = vector_create();
 
@@ -128,7 +120,7 @@ bool compiler_run(void* e) {
         exec_free(&compiler->exec);
         return false;
     }
-    exec_set_run_function_resolver(&compiler->exec, resolve_function);
+    exec_set_run_function_resolver(&compiler->exec, std_resolve_function);
     exec_add_bytecode(&compiler->exec, compiler->bytecode);
     compiler->exec_running = true;
 
@@ -171,7 +163,7 @@ CompilerValue compiler_evaluate_argument(Compiler* compiler, Argument* arg) {
         compiler_set_error(compiler, gettext("Tried to evaluate blockdef"));
         return DATA_UNKNOWN;
     case ARGUMENT_COLOR:
-        return DATA_COLOR(CONVERT_COLOR(arg->data.color, StdColor));
+        return DATA_COLOR(CONVERT_COLOR(arg->data.color, Color));
     default:
         assert(false && "Unimplemented argument type in compiler_evaluate_argument");
         return (CompilerValue) {0};

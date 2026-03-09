@@ -52,8 +52,8 @@ ifeq ($(BUILD_MODE), DEBUG)
 	CFLAGS += -fsanitize=address -fsanitize=undefined -fno-omit-frame-pointer
 endif
 
-STD_OBJFILES := $(addprefix $(BUILD_FOLDER),vec-stand.o gc-stand.o std-stand.o scrap-runtime.o)
-OBJFILES := $(addprefix $(BUILD_FOLDER),filedialogs.o render.o save.o term.o blocks.o scrap.o vec.o util.o ui.o scrap_gui.o window.o cfgpath.o platform.o ast.o gc.o std.o thread.o vm.o)
+STD_OBJFILES := $(addprefix $(BUILD_FOLDER),vec-stand.o std-stand.o scrap-runtime.o)
+OBJFILES := $(addprefix $(BUILD_FOLDER),filedialogs.o render.o save.o term.o blocks.o scrap.o vec.o util.o ui.o scrap_gui.o window.o cfgpath.o platform.o ast.o std.o thread.o vm.o)
 BUNDLE_FILES := data examples extras locale LICENSE README.md CHANGELOG.md
 SCRAP_HEADERS := src/scrap.h src/ast.h src/config.h src/scrap_gui.h src/scrap_ir.h
 EXE_NAME := scrap
@@ -172,22 +172,18 @@ $(BUILD_FOLDER)ast.o: src/ast.c src/ast.h
 	$(CC) $(CFLAGS) -c -o $@ $<
 $(BUILD_FOLDER)compiler.o: src/compiler.c $(SCRAP_HEADERS)
 	$(CC) $(CFLAGS) -c -o $@ $<
-$(BUILD_FOLDER)old_compiler.o: src/old_compiler.c src/old_compiler.h src/gc.h src/ast.h $(SCRAP_HEADERS)
+$(BUILD_FOLDER)old_compiler.o: src/old_compiler.c src/old_compiler.h src/ast.h $(SCRAP_HEADERS)
 	$(CC) $(CFLAGS) -c -o $@ $<
-$(BUILD_FOLDER)gc.o: src/gc.c src/gc.h src/vec.h src/std.h
-	$(CC) $(CFLAGS) -c -o $@ $<
-$(BUILD_FOLDER)std.o: src/std.c src/std.h src/gc.h src/term.h
+$(BUILD_FOLDER)std.o: src/std.c src/std.h src/term.h
 	$(CC) $(CFLAGS) -c -o $@ $<
 $(BUILD_FOLDER)thread.o: src/thread.c src/thread.h
 	$(CC) $(CFLAGS) -c -o $@ $<
 $(BUILD_FOLDER)vm.o: src/vm.c $(SCRAP_HEADERS)
 	$(CC) $(CFLAGS) -c -o $@ $<
 
-$(BUILD_FOLDER)gc-stand.o: src/gc.c src/gc.h src/vec.h src/std.h
+$(BUILD_FOLDER)std-stand.o: src/std.c src/std.h
 	$(CC) $(STD_CFLAGS) -DSTANDALONE_STD -c -o $@ $<
-$(BUILD_FOLDER)std-stand.o: src/std.c src/std.h src/gc.h
-	$(CC) $(STD_CFLAGS) -DSTANDALONE_STD -c -o $@ $<
-$(BUILD_FOLDER)scrap-runtime.o: src/scrap-runtime.c src/gc.h
+$(BUILD_FOLDER)scrap-runtime.o: src/scrap-runtime.c
 	$(CC) $(STD_CFLAGS) -DSTANDALONE_STD -c -o $@ $<
 $(BUILD_FOLDER)vec-stand.o: src/vec.c
 	$(CC) $(STD_CFLAGS) -DSTANDALONE_STD -c -o $@ $<

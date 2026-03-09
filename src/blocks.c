@@ -469,12 +469,12 @@ CompilerValue cast_to_const_color(Compiler* compiler, CompilerValue value) {
 
     static_assert(DATA_TYPE_LAST == 12, "Exhaustive data type in cast_to_const_color");
     switch (value.type) {
-    case DATA_TYPE_INTEGER: return DATA_COLOR(*(StdColor*)&value.data.integer_val);
-    case DATA_TYPE_FLOAT: return DATA_COLOR(*(StdColor*)&value.data.float_val);
+    case DATA_TYPE_INTEGER: return DATA_COLOR(*(Color*)&value.data.integer_val);
+    case DATA_TYPE_FLOAT: return DATA_COLOR(*(Color*)&value.data.float_val);
     case DATA_TYPE_STRING: assert(false && "TODO");
-    case DATA_TYPE_BOOL: return DATA_COLOR(value.data.bool_val ? ((StdColor) { 0xff, 0xff, 0xff, 0xff }) : ((StdColor) { 0x00, 0x00, 0x00, 0xff }));
+    case DATA_TYPE_BOOL: return DATA_COLOR(value.data.bool_val ? ((Color) { 0xff, 0xff, 0xff, 0xff }) : ((Color) { 0x00, 0x00, 0x00, 0xff }));
     case DATA_TYPE_COLOR: return value;
-    case DATA_TYPE_NOTHING: return DATA_COLOR(((StdColor) { 0x00, 0x00, 0x00, 0xff }));
+    case DATA_TYPE_NOTHING: return DATA_COLOR(((Color) { 0x00, 0x00, 0x00, 0xff }));
     case DATA_TYPE_LIST:
     case DATA_TYPE_ANY:
     case DATA_TYPE_UNKNOWN:
@@ -803,7 +803,7 @@ CompilerValue block_print(Compiler* compiler, Block* block, Block** next_block, 
     if (val.type == DATA_TYPE_ERROR) return DATA_ERROR;
     assert(val.type == DATA_TYPE_CHUNK);
 
-    bytecode_push_op_func(&val.data.chunk_val.bc, IR_RUN, ir_func_by_hint("print_str"));
+    bytecode_push_op_func(&val.data.chunk_val.bc, IR_RUN, ir_func_by_hint("std_term_print_str"));
     val.data.chunk_val.return_type = DATA_TYPE_NULL;
 
     return val;
@@ -952,10 +952,31 @@ CompilerValue block_pow(Compiler* compiler, Block* block, Block** next_block, Bl
 }
 
 CompilerValue block_math(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
-    (void) compiler;
-    (void) block;
     (void) next_block;
     (void) prev_block;
+
+    CompilerValue op = compiler_evaluate_argument(compiler, &block->arguments[0]);
+    if (op.type == DATA_TYPE_ERROR) return DATA_ERROR;
+    op = cast_to_const_string(compiler, op);
+    if (op.type == DATA_TYPE_ERROR) return DATA_ERROR;
+
+    for (size_t i = 0; i < MATH_LIST_LEN; i++) {
+        if (!strcmp(block_math_list[i], op.data.str_val)) {
+            CompilerValue value = compiler_evaluate_argument(compiler, &block->arguments[1]);
+            if (value.type == DATA_TYPE_ERROR) return DATA_ERROR;
+            value = cast_to(compiler, value, DATA_TYPE_FLOAT);
+            if (value.type == DATA_TYPE_ERROR) return DATA_ERROR;
+
+            if (value.type == DATA_TYPE_CHUNK) {
+                bytecode_push_op_func(&value.data.chunk_val.bc, IR_RUN, ir_func_by_hint(op.data.str_val));
+                return value;
+            } else {
+                return DATA_FLOAT(block_math_func_list[i](value.data.float_val));
+            }
+        }
+    }
+
+    compiler_set_error(compiler, gettext("Invalid operation \"%s\" in math block"), op.data.str_val);
     return DATA_ERROR;
 }
 
