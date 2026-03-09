@@ -57,6 +57,7 @@ typedef enum {
     IR_MULI,
     IR_DIVI,
     IR_MODI,
+    IR_POWI,
 
     // Bitwise math
     IR_NOTI,
@@ -70,6 +71,7 @@ typedef enum {
     IR_MULF,
     IR_DIVF,
     IR_MODF,
+    IR_POWF,
 
     // Boolean algebra
     IR_NOT,
@@ -136,6 +138,8 @@ typedef enum {
     IR_DYNCALL, // Same as IR_CALL, but take label from stack
     IR_DYNRUN, // Same as IR_RUN, but take func from stack
     IR_RET,  // Return from function
+
+    IR_LAST,
 } IrOpcode;
 
 typedef struct {
@@ -789,6 +793,7 @@ void bytecode_print(IrBytecode* bc) {
 
         printf("    ");
 
+        static_assert(IR_LAST == 76, "Exhaustive opcode in exec_run_bytecode");
         switch (bc->code.items[i]) {
         case IR_PUSHL:
             CHECK_IMMEDIATE;
@@ -813,6 +818,7 @@ void bytecode_print(IrBytecode* bc) {
             }
             i += 3;
             break;
+        case IR_ILLEGAL: printf("inval\n"); break;
         case IR_PUSHN: printf("pushn\n"); break;
         case IR_POP: printf("pop\n"); break;
         case IR_DUP: printf("dup\n"); break;
@@ -821,6 +827,7 @@ void bytecode_print(IrBytecode* bc) {
         case IR_MULI: printf("muli\n"); break;
         case IR_DIVI: printf("divi\n"); break;
         case IR_MODI: printf("modi\n"); break;
+        case IR_POWI: printf("powi\n"); break;
         case IR_NOTI: printf("noti\n"); break;
         case IR_ANDI: printf("andi\n"); break;
         case IR_ORI: printf("ori\n"); break;
@@ -830,6 +837,7 @@ void bytecode_print(IrBytecode* bc) {
         case IR_MULF: printf("mulf\n"); break;
         case IR_DIVF: printf("divf\n"); break;
         case IR_MODF: printf("modf\n"); break;
+        case IR_POWF: printf("powf\n"); break;
         case IR_NOT: printf("not\n"); break;
         case IR_AND: printf("and\n"); break;
         case IR_OR: printf("or\n"); break;
@@ -856,6 +864,8 @@ void bytecode_print(IrBytecode* bc) {
         case IR_ATOI: printf("atoi\n"); break;
         case IR_ATOF: printf("atof\n"); break;
         case IR_ATOB: printf("atob\n"); break;
+        case IR_LTOA: printf("ltoa\n"); break;
+        case IR_NTOA: printf("ntoa\n"); break;
         case IR_TOI: printf("toi\n"); break;
         case IR_TOF: printf("tof\n"); break;
         case IR_TOB: printf("tob\n"); break;
@@ -1341,6 +1351,18 @@ void exec_pop_string(IrExec* exec, char* buf, size_t buf_len) {
     exec_get_string(list, buf, buf_len);
 }
 
+int64_t ir_int_pow(int64_t base, int64_t exp) {
+    if (exp == 0) return 1;
+
+    int64_t result = 1;
+    while (exp) {
+        if (exp & 1) result *= base;
+        exp >>= 1;
+        base *= base;
+    }
+    return result;
+}
+
 #define IR_EXEC_FAIL do { \
     return_val = false; \
     goto exec_return; \
@@ -1367,6 +1389,7 @@ bool exec_run_bytecode(IrExec* exec, IrBytecode* bc, size_t pos) {
     IrFunction* func;
 
     for (size_t i = pos; i < bc->code.size; i++) {
+        static_assert(IR_LAST == 76, "Exhaustive opcode in exec_run_bytecode");
         switch (bc->code.items[i]) {
         case IR_PUSHN: exec_push_nothing(exec); break;
         case IR_PUSHI:
@@ -1444,6 +1467,11 @@ bool exec_run_bytecode(IrExec* exec, IrBytecode* bc, size_t pos) {
             left_int  = exec_pop_int(exec);
             exec_push_int(exec, left_int % right_int);
             break;
+        case IR_POWI:
+            right_int = exec_pop_int(exec);
+            left_int  = exec_pop_int(exec);
+            exec_push_int(exec, ir_int_pow(left_int, right_int));
+            break;
         case IR_NOTI:
             left_int  = exec_pop_int(exec);
             exec_push_int(exec, ~left_int);
@@ -1487,6 +1515,11 @@ bool exec_run_bytecode(IrExec* exec, IrBytecode* bc, size_t pos) {
             right_float = exec_pop_float(exec);
             left_float  = exec_pop_float(exec);
             exec_push_float(exec, fmod(left_float, right_float));
+            break;
+        case IR_POWF:
+            right_float = exec_pop_float(exec);
+            left_float  = exec_pop_float(exec);
+            exec_push_float(exec, pow(left_float, right_float));
             break;
         case IR_NOT:
             left_bool = exec_pop_bool(exec);
@@ -1888,6 +1921,7 @@ bool exec_run_bytecode(IrExec* exec, IrBytecode* bc, size_t pos) {
             break;
         case IR_RET:
             goto exec_return;
+        case IR_ILLEGAL:
         default:
             exec_set_error(exec, "Illegal op: %d", bc->code.items[i]);
             IR_EXEC_FAIL;

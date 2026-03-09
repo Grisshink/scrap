@@ -228,18 +228,6 @@ STD_MATH_FUNC(atan)
 
 #undef STD_MATH_FUNC
 
-int std_int_pow(int base, int exp) {
-    if (exp == 0) return 1;
-
-    int result = 1;
-    while (exp) {
-        if (exp & 1) result *= base;
-        exp >>= 1;
-        base *= base;
-    }
-    return result;
-}
-
 // StdColor std_parse_color(const char* value) {
 //     if (*value == '#') value++;
 //     unsigned char r = 0x00, g = 0x00, b = 0x00, a = 0xff;

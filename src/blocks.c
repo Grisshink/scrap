@@ -555,6 +555,18 @@ void cast_binary(Compiler* compiler, CompilerValue* left, CompilerValue* right, 
     }
 }
 
+int64_t int_pow(int64_t base, int64_t exp) {
+    if (exp == 0) return 1;
+
+    int64_t result = 1;
+    while (exp) {
+        if (exp & 1) result *= base;
+        exp >>= 1;
+        base *= base;
+    }
+    return result;
+}
+
 int64_t execute_int_binary(int64_t left, int64_t right, IrOpcode op) {
     switch (op) {
     case IR_ADDI:    return left +  right;
@@ -562,6 +574,7 @@ int64_t execute_int_binary(int64_t left, int64_t right, IrOpcode op) {
     case IR_MULI:    return left *  right;
     case IR_DIVI:    return left /  right;
     case IR_MODI:    return left %  right;
+    case IR_POWI:    return int_pow(left, right);
     case IR_LESSI:   return left <  right;
     case IR_MOREI:   return left >  right;
     case IR_LESSEQI: return left <= right;
@@ -583,6 +596,7 @@ double execute_float_binary(double left, double right, IrOpcode op) {
     case IR_MULF:    return left *  right;
     case IR_DIVF:    return left /  right;
     case IR_MODF:    return fmod(left, right);
+    case IR_POWF:    return pow(left, right);
     case IR_LESSF:   return left <  right;
     case IR_MOREF:   return left >  right;
     case IR_LESSEQF: return left <= right;
@@ -598,6 +612,7 @@ DataType get_op_return_type(IrOpcode op) {
     case IR_MULI:
     case IR_DIVI:
     case IR_MODI:
+    case IR_POWI:
     case IR_ANDI:
     case IR_ORI:
     case IR_XORI:
@@ -619,6 +634,7 @@ DataType get_op_return_type(IrOpcode op) {
     case IR_MULF:
     case IR_DIVF:
     case IR_MODF:
+    case IR_POWF:
         return DATA_TYPE_FLOAT;
     default:
         assert(false && "Unhandled opcode in get_op_return_type");
@@ -944,11 +960,9 @@ CompilerValue block_rem(Compiler* compiler, Block* block, Block** next_block, Bl
 }
 
 CompilerValue block_pow(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
-    (void) compiler;
-    (void) block;
     (void) next_block;
     (void) prev_block;
-    return DATA_ERROR;
+    return evaluate_binary_number(compiler, &block->arguments[0], &block->arguments[1], IR_POWI, IR_POWF);
 }
 
 CompilerValue block_math(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
