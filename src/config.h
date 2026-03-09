@@ -28,6 +28,8 @@
 #define FONT_SYMBOLS_MAX_SIZE 1024
 #define ACTION_BAR_MAX_SIZE 128
 
+#define ELEMENT_GAP ((float)config.ui_size * 0.25)
+
 #define SHADOW_DISTANCE floorf(1.66 * (float)config.ui_size / 32.0)
 #define BLOCK_OUTLINE_SIZE (2.0 * (float)config.ui_size / 32.0)
 #define BLOCK_TEXT_SIZE floorf((float)config.ui_size * 0.6)
@@ -35,15 +37,12 @@
 #define BLOCK_PADDING (5.0 * (float)config.ui_size / 32.0)
 #define BLOCK_STRING_PADDING (10.0 * (float)config.ui_size / 32.0)
 #define BLOCK_CONTROL_INDENT (16.0 * (float)config.ui_size / 32.0)
-#define SIDE_BAR_PADDING (10.0 * (float)config.ui_size / 32.0)
 #define BLOCK_GHOST_OPACITY 0x99
 #define BLOCK_ARG_OPACITY 0xdd
 
 #define PANEL_BACKGROUND_COLOR { 0x10, 0x10, 0x10, 0xff }
 
 #define TEXT_SELECTION_COLOR { 0x00, 0x60, 0xff, 0x80 }
-
-#define WINDOW_ELEMENT_PADDING (10.0 * (float)config.ui_size / 32.0)
 
 #define DATA_PATH "data/"
 #define LOCALE_PATH "locale/"
