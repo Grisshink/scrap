@@ -250,7 +250,7 @@ static void begin_window(const char* title, Texture2D* icon, int w, int h, float
             gui_set_rect(gui, (GuiColor) { 0x30, 0x30, 0x30, 0xff });
             gui_set_direction(gui, DIRECTION_HORIZONTAL);
             gui_set_align(gui, ALIGN_LEFT, ALIGN_CENTER);
-            gui_set_gap(gui, WINDOW_ELEMENT_PADDING/2);
+            gui_set_gap(gui, ELEMENT_GAP/2);
 
             gui_grow(gui, DIRECTION_HORIZONTAL);
             if (icon) gui_image(gui, icon, config.ui_size, GUI_WHITE);
@@ -263,7 +263,7 @@ static void begin_window(const char* title, Texture2D* icon, int w, int h, float
             gui_set_padding(gui, config.ui_size * 0.5, config.ui_size * 0.5);
             gui_set_grow(gui, DIRECTION_HORIZONTAL);
             gui_set_grow(gui, DIRECTION_VERTICAL);
-            gui_set_gap(gui, WINDOW_ELEMENT_PADDING);
+            gui_set_gap(gui, ELEMENT_GAP);
 }
 
 static void end_window(void) {
@@ -303,7 +303,7 @@ static void begin_setting(const char* name, bool warning) {
     gui_element_begin(gui);
         gui_set_grow(gui, DIRECTION_HORIZONTAL);
         gui_set_direction(gui, DIRECTION_HORIZONTAL);
-        gui_set_gap(gui, WINDOW_ELEMENT_PADDING);
+        gui_set_gap(gui, ELEMENT_GAP);
         gui_set_min_size(gui, 0, config.ui_size);
 
         gui_element_begin(gui);
@@ -327,7 +327,7 @@ static void begin_setting(const char* name, bool warning) {
         gui_element_begin(gui);
             gui_set_grow(gui, DIRECTION_HORIZONTAL);
             gui_set_direction(gui, DIRECTION_HORIZONTAL);
-            gui_set_gap(gui, WINDOW_ELEMENT_PADDING);
+            gui_set_gap(gui, ELEMENT_GAP);
             gui_set_min_size(gui, 0, config.ui_size);
 }
 
@@ -452,7 +452,7 @@ static void draw_dropdown_input(int* value, char** list, int list_len) {
                 gui_set_border(gui, (GuiColor) { 0x60, 0x60, 0x60, 0xff }, 2);
                 gui_set_shader(gui, &assets.line_shader);
             }
-            gui_set_padding(gui, WINDOW_ELEMENT_PADDING, 0);
+            gui_set_padding(gui, ELEMENT_GAP, 0);
             gui_set_scissor(gui);
 
             gui_grow(gui, DIRECTION_HORIZONTAL);
@@ -483,14 +483,14 @@ static void draw_text_input(char** input, const char* hint, int* scroll, bool ed
                 gui_set_border(gui, (GuiColor) { 0x60, 0x60, 0x60, 0xff }, 2);
                 gui_set_shader(gui, &assets.line_shader);
             }
-            gui_set_padding(gui, WINDOW_ELEMENT_PADDING, 0);
+            gui_set_padding(gui, ELEMENT_GAP, 0);
             gui_set_scroll(gui, scroll);
             gui_set_scissor(gui);
 
             if (editable) {
                 InputHoverInfo info = (InputHoverInfo) {
                     .input = input,
-                    .rel_pos = (Vector2) { WINDOW_ELEMENT_PADDING + *scroll, 0 },
+                    .rel_pos = (Vector2) { ELEMENT_GAP + *scroll, 0 },
                     .font = &assets.fonts.font_cond,
                     .font_size = config.ui_size * 0.6,
                 };
@@ -519,8 +519,8 @@ static void draw_button(const char* label, Texture2D* icon, ButtonClickHandler h
         gui_element_begin(gui);
             gui_set_grow(gui, DIRECTION_HORIZONTAL);
             gui_set_grow(gui, DIRECTION_VERTICAL);
-            gui_set_padding(gui, WINDOW_ELEMENT_PADDING, 0);
-            gui_set_gap(gui, WINDOW_ELEMENT_PADDING/2);
+            gui_set_padding(gui, ELEMENT_GAP, 0);
+            gui_set_gap(gui, ELEMENT_GAP/2);
             gui_set_direction(gui, DIRECTION_HORIZONTAL);
             gui_set_align(gui, ALIGN_LEFT, ALIGN_CENTER);
             if (IsShaderValid(assets.line_shader)) {
@@ -668,7 +668,7 @@ void draw_settings_window(void) {
         gui_element_begin(gui);
             gui_set_grow(gui, DIRECTION_HORIZONTAL);
             gui_set_direction(gui, DIRECTION_HORIZONTAL);
-            gui_set_gap(gui, WINDOW_ELEMENT_PADDING);
+            gui_set_gap(gui, ELEMENT_GAP);
 
             gui_grow(gui, DIRECTION_HORIZONTAL);
             draw_button(gettext("Reset panels"), NULL, settings_on_reset_panels_button_click, NULL);
@@ -682,7 +682,7 @@ void draw_settings_window(void) {
             gui_set_floating(gui);
             gui_set_rect(gui, (GuiColor) { 0x00, 0x00, 0x00, 0x80 });
             gui_set_position(gui, gui->mouse_x + 10, gui->mouse_y + 10);
-            gui_set_padding(gui, WINDOW_ELEMENT_PADDING * 0.5, WINDOW_ELEMENT_PADDING * 0.5);
+            gui_set_padding(gui, ELEMENT_GAP * 0.5, ELEMENT_GAP * 0.5);
 
             gui_text(gui, &assets.fonts.font_cond, gettext("Needs restart for changes to take effect"), config.ui_size * 0.6, GUI_WHITE);
         gui_element_end(gui);
@@ -709,7 +709,7 @@ void draw_project_settings_window(void) {
         gui_element_begin(gui);
             gui_set_grow(gui, DIRECTION_HORIZONTAL);
             gui_set_direction(gui, DIRECTION_HORIZONTAL);
-            gui_set_gap(gui, WINDOW_ELEMENT_PADDING);
+            gui_set_gap(gui, ELEMENT_GAP);
 
             gui_grow(gui, DIRECTION_HORIZONTAL);
 
@@ -742,7 +742,7 @@ void draw_about_window(void) {
         gui_element_begin(gui);
             gui_set_direction(gui, DIRECTION_HORIZONTAL);
             gui_set_align(gui, ALIGN_LEFT, ALIGN_CENTER);
-            gui_set_gap(gui, WINDOW_ELEMENT_PADDING);
+            gui_set_gap(gui, ELEMENT_GAP);
 
             gui_image(gui, &assets.textures.icon_logo, config.ui_size, GUI_WHITE);
             gui_text(gui, &assets.fonts.font_eb, "Scrap " SCRAP_VERSION, config.ui_size * 0.8, GUI_WHITE);
@@ -763,7 +763,7 @@ void draw_about_window(void) {
         gui_element_begin(gui);
             gui_set_grow(gui, DIRECTION_HORIZONTAL);
             gui_set_direction(gui, DIRECTION_HORIZONTAL);
-            gui_set_gap(gui, WINDOW_ELEMENT_PADDING);
+            gui_set_gap(gui, ELEMENT_GAP);
 
             gui_grow(gui, DIRECTION_HORIZONTAL);
             draw_button(gettext("License"), &assets.textures.icon_file, about_on_license_button_click, NULL);
@@ -780,7 +780,7 @@ void draw_save_confirmation_window(void) {
         gui_element_begin(gui);
             gui_set_grow(gui, DIRECTION_HORIZONTAL);
             gui_set_direction(gui, DIRECTION_HORIZONTAL);
-            gui_set_gap(gui, WINDOW_ELEMENT_PADDING);
+            gui_set_gap(gui, ELEMENT_GAP);
 
             gui_grow(gui, DIRECTION_HORIZONTAL);
 
