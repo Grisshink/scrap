@@ -164,38 +164,56 @@ struct GuiElement {
 typedef GuiMeasurement (*GuiMeasureTextSliceFunc)(void* font, const char* text, unsigned int text_size, unsigned short font_size);
 typedef GuiMeasurement (*GuiMeasureImageFunc)(void* image, unsigned short size);
 
+typedef struct {
+    size_t reserve_size, commit_size,
+           pos, commit_pos;
+} GuiMemArena;
+
+typedef struct {
+    GuiDrawCommand* items;
+    size_t size, capacity;
+} GuiDrawCommandList;
+
+typedef struct {
+    GuiBounds* items;
+    size_t size, capacity;
+} GuiScissorStack;
+
 struct Gui {
-    GuiDrawCommand command_list[COMMAND_STACK_SIZE];
-    GuiDrawCommand aux_command_list[COMMAND_STACK_SIZE];
+    GuiMemArena* arena;
 
-    GuiElement elements_arena[ELEMENT_STACK_SIZE];
-    void* state_arena[STATE_STACK_SIZE];
-    GuiBounds scissor_stack[COMMAND_STACK_SIZE];
+    size_t elements_count;
 
-    size_t command_list_len;
-    size_t command_list_iter;
-    size_t command_list_last_batch;
+    GuiDrawCommandList command_list;
+    GuiDrawCommandList aux_command_list;
+    size_t command_list_iter,
+           command_list_last_batch;
 
-    size_t elements_arena_len;
-    size_t state_arena_len;
-    size_t scissor_stack_len;
+    GuiScissorStack scissor_stack;
 
     GuiMeasureTextSliceFunc measure_text;
     GuiMeasureImageFunc measure_image;
 
-    GuiElement* current_element;
+    GuiElement *root_element,
+               *current_element;
 
     unsigned short win_w, win_h;
     short mouse_x, mouse_y;
     int mouse_scroll;
 };
 
-#define GUI_GET_COMMANDS(gui, command) while (gui->command_list_iter < gui->command_list_len && (command = &gui->command_list[gui->command_list_iter++]))
+#define GUI_GET_COMMANDS(gui, command) for ( \
+    gui->command_list_iter = 0; \
+    command = gui->command_list.items[gui->command_list_iter], gui->command_list_iter < gui->command_list.size; \
+    gui->command_list_iter++ \
+)
+
 #define GUI_BLACK (GuiColor) { 0x00, 0x00, 0x00, 0xff }
 #define GUI_WHITE (GuiColor) { 0xff, 0xff, 0xff, 0xff }
 #define GUI_SUBTYPE_DEFAULT 0
 
-void gui_init(Gui* gui);
+Gui gui_new(size_t arena_size);
+void gui_free(Gui* gui);
 void gui_begin(Gui* gui);
 void gui_end(Gui* gui);
 void gui_update_window_size(Gui* gui, unsigned short win_w, unsigned short win_h);
@@ -244,5 +262,24 @@ void gui_text(Gui* gui, void* font, const char* text, unsigned short size, GuiCo
 void gui_image(Gui* gui, void* image, unsigned short size, GuiColor color);
 void gui_grow(Gui* gui, GuiElementDirection direction);
 void gui_spacer(Gui* gui, unsigned short w, unsigned short h);
+
+#define gui_arena_append(_arena, _list, _val) do { \
+    if ((_list).size >= (_list).capacity) { \
+        size_t _old_cap = (_list).capacity * sizeof(*(_list).items); \
+        if ((_list).capacity == 0) (_list).capacity = 32; \
+        else (_list).capacity *= 2; \
+        (_list).items = gui_arena_realloc(_arena, (_list).items, _old_cap, (_list).capacity * sizeof(*(_list).items)); \
+    } \
+    (_list).items[(_list).size++] = (_val); \
+} while (0)
+
+GuiMemArena* gui_arena_new(size_t reserve_size, size_t commit_size);
+void gui_arena_free(GuiMemArena* arena);
+void* gui_arena_alloc(GuiMemArena* arena, size_t size);
+void* gui_arena_realloc(GuiMemArena* arena, void* ptr, size_t old_size, size_t new_size);
+const char* gui_arena_sprintf(GuiMemArena* arena, size_t max_size, const char* fmt, ...);
+void gui_arena_pop(GuiMemArena* arena, size_t size);
+void gui_arena_pop_to(GuiMemArena* arena, size_t pos);
+void gui_arena_clear(GuiMemArena* arena);
 
 #endif // SCRAP_GUI_H

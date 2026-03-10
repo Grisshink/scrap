@@ -23,6 +23,14 @@
 #include <assert.h>
 #include <stdbool.h>
 #include <string.h>
+#include <stdio.h>
+#include <stdarg.h>
+
+#define KiB(n) ((size_t)(n) << 10)
+
+#define GUI_ALIGN_UP_POW2(n, p) (((size_t)(n) + ((size_t)(p) - 1)) & (~((size_t)(p) - 1)))
+#define GUI_ARENA_BASE_POS (sizeof(GuiMemArena))
+#define GUI_ARENA_ALIGN (sizeof(void*))
 
 #define MAX(x, y) ((x) > (y) ? (x) : (y))
 #define MIN(x, y) ((x) < (y) ? (x) : (y))
@@ -52,6 +60,11 @@
 static void gui_render(Gui* gui, GuiElement* el);
 static void flush_command_batch(Gui* gui);
 
+static unsigned long gui_plat_get_pagesize(void);
+static void* gui_plat_mem_reserve(size_t size);
+static bool gui_plat_mem_commit(void* ptr, size_t size);
+static bool gui_plat_mem_release(void* ptr, size_t size);
+
 static bool inside_scissor(GuiDrawBounds rect, GuiBounds scissor) {
     return (rect.x + rect.w > scissor.x) && (rect.x < scissor.x + scissor.w) &&
            (rect.y + rect.h > scissor.y) && (rect.y < scissor.y + scissor.h);
@@ -62,35 +75,33 @@ static bool mouse_inside(Gui* gui, GuiBounds rect) {
             (gui->mouse_y > rect.y) && (gui->mouse_y < rect.y + rect.h));
 }
 
-void gui_init(Gui* gui) {
-    gui->measure_text = NULL;
-    gui->measure_image = NULL;
-    gui->command_list_len = 0;
-    gui->elements_arena_len = 0;
-    gui->win_w = 0;
-    gui->win_h = 0;
-    gui->mouse_x = 0;
-    gui->mouse_y = 0;
-    gui->mouse_scroll = 0;
-    gui->command_list_iter = 0;
+Gui gui_new(size_t arena_size) {
+    return (Gui) {
+        .arena = gui_arena_new(MAX(arena_size, KiB(512)), KiB(512)),
+    };
+}
+
+void gui_free(Gui* gui) {
+    gui_arena_free(gui->arena);
 }
 
 void gui_begin(Gui* gui) {
-    gui->command_list_len = 0;
+    gui_arena_clear(gui->arena);
     gui->command_list_iter = 0;
-    gui->elements_arena_len = 0;
-    gui->scissor_stack_len = 0;
-    gui->state_arena_len = 0;
-    gui->current_element = NULL;
     gui->command_list_last_batch = 0;
+    gui->elements_count = 0;
+    gui->current_element = NULL;
+    gui->command_list = (GuiDrawCommandList) {0};
+    gui->aux_command_list = (GuiDrawCommandList) {0};
+    gui->scissor_stack = (GuiScissorStack) {0};
 
-    gui_element_begin(gui);
+    gui->root_element = gui_element_begin(gui);
     gui_set_fixed(gui, gui->win_w, gui->win_h);
 }
 
 void gui_end(Gui* gui) {
     gui_element_end(gui);
-    gui_render(gui, &gui->elements_arena[0]);
+    gui_render(gui, gui->root_element);
     flush_command_batch(gui);
 }
 
@@ -129,20 +140,20 @@ static bool is_command_lesseq(GuiDrawCommand* left, GuiDrawCommand* right) {
     }
 }
 
-static void merge(GuiDrawCommand* list, GuiDrawCommand* aux_list, int start, int middle, int end) {
+static void merge(GuiDrawCommandList list, GuiDrawCommandList aux_list, int start, int middle, int end) {
     int left_pos  = start,
         right_pos = middle;
 
     for (int i = start; i < end; i++) {
-        if (left_pos < middle && (right_pos >= end || is_command_lesseq(&list[left_pos], &list[right_pos]))) {
-            aux_list[i] = list[left_pos++];
+        if (left_pos < middle && (right_pos >= end || is_command_lesseq(&list.items[left_pos], &list.items[right_pos]))) {
+            aux_list.items[i] = list.items[left_pos++];
         } else {
-            aux_list[i] = list[right_pos++];
+            aux_list.items[i] = list.items[right_pos++];
         }
     }
 }
 
-static void split_and_merge_commands(GuiDrawCommand* list, GuiDrawCommand* aux_list, int start, int end) {
+static void split_and_merge_commands(GuiDrawCommandList list, GuiDrawCommandList aux_list, int start, int end) {
     if (end - start <= 1) return;
     int middle = (start + end) / 2;
 
@@ -151,31 +162,34 @@ static void split_and_merge_commands(GuiDrawCommand* list, GuiDrawCommand* aux_l
     merge(list, aux_list, start, middle, end);
 }
 
-static void sort_commands(GuiDrawCommand* list, GuiDrawCommand* aux_list, int start, int end) {
-    for (int i = start; i < end; i++) aux_list[i] = list[i];
+static void sort_commands(GuiDrawCommandList list, GuiDrawCommandList aux_list, int start, int end) {
+    for (int i = start; i < end; i++) aux_list.items[i] = list.items[i];
     split_and_merge_commands(aux_list, list, start, end);
 }
 
 static void flush_command_batch(Gui* gui) {
-    if (gui->command_list_last_batch >= gui->command_list_len) return;
+    if (gui->command_list_last_batch >= gui->command_list.size) return;
     // Skip sorting unwanted elements
-    while (gui->command_list[gui->command_list_last_batch].type > 4) gui->command_list_last_batch++;
+    while (gui->command_list.items[gui->command_list_last_batch].type > 4) gui->command_list_last_batch++;
 
-    sort_commands(gui->command_list, gui->aux_command_list, gui->command_list_last_batch, gui->command_list_len);
-    gui->command_list_last_batch = gui->command_list_len;
+    sort_commands(gui->command_list, gui->aux_command_list, gui->command_list_last_batch, gui->command_list.size);
+    gui->command_list_last_batch = gui->command_list.size;
 }
 
-static GuiDrawCommand* new_draw_command(Gui* gui, GuiDrawBounds bounds, GuiDrawType draw_type, unsigned char draw_subtype, GuiDrawData data, GuiColor color) {
-    GuiDrawCommand* command = &gui->command_list[gui->command_list_len++];
-    command->pos_x = bounds.x;
-    command->pos_y = bounds.y;
-    command->width = bounds.w;
-    command->height = bounds.h;
-    command->type = draw_type;
-    command->data = data;
-    command->color = color;
-    command->subtype = draw_subtype;
-    return command;
+
+static void new_draw_command(Gui* gui, GuiDrawBounds bounds, GuiDrawType draw_type, unsigned char draw_subtype, GuiDrawData data, GuiColor color) {
+    GuiDrawCommand command = {
+        .pos_x   = bounds.x,
+        .pos_y   = bounds.y,
+        .width   = bounds.w,
+        .height  = bounds.h,
+        .type    = draw_type,
+        .data    = data,
+        .color   = color,
+        .subtype = draw_subtype,
+    };
+    gui_arena_append(gui->arena, gui->command_list, command);
+    gui_arena_append(gui->arena, gui->aux_command_list, command);
 }
 
 static GuiBounds scissor_rect(GuiBounds rect, GuiBounds scissor) {
@@ -211,7 +225,7 @@ static void gui_get_anchor_pos(GuiElement* el, float* anchor_x, float* anchor_y)
 }
 
 static void gui_render(Gui* gui, GuiElement* el) {
-    GuiBounds prev_scissor = gui->scissor_stack_len > 0 ? gui->scissor_stack[gui->scissor_stack_len - 1] : (GuiBounds) { 0, 0, gui->win_w, gui->win_h };
+    GuiBounds prev_scissor = gui->scissor_stack.size > 0 ? gui->scissor_stack.items[gui->scissor_stack.size - 1] : (GuiBounds) { 0, 0, gui->win_w, gui->win_h };
     bool hover = false;
 
     float parent_pos_x   = 0,
@@ -261,7 +275,7 @@ static void gui_render(Gui* gui, GuiElement* el) {
         if (scissor.w > 0 && scissor.h > 0) {
             new_draw_command(gui, (GuiDrawBounds) { scissor.x, scissor.y, scissor.w, scissor.h }, DRAWTYPE_SCISSOR_SET, GUI_SUBTYPE_DEFAULT, (GuiDrawData) {0}, (GuiColor) {0});
         }
-        gui->scissor_stack[gui->scissor_stack_len++] = scissor;
+        gui_arena_append(gui->arena, gui->scissor_stack, scissor);
     }
     if (el->shader) new_draw_command(gui, el_bounds, DRAWTYPE_SHADER_BEGIN, GUI_SUBTYPE_DEFAULT, (GuiDrawData) { .shader = el->shader }, (GuiColor) {0});
 
@@ -285,24 +299,27 @@ static void gui_render(Gui* gui, GuiElement* el) {
 
         if (max > 0) {
             flush_command_batch(gui);
-            GuiDrawCommand* command = &gui->command_list[gui->command_list_len++];
-            command->type = DRAWTYPE_RECT;
-            command->subtype = GUI_SUBTYPE_DEFAULT;
-            command->color = (GuiColor) { 0xff, 0xff, 0xff, 0x80 };
+            GuiDrawCommand command;
+            command.type = DRAWTYPE_RECT;
+            command.subtype = GUI_SUBTYPE_DEFAULT;
+            command.color = (GuiColor) { 0xff, 0xff, 0xff, 0x80 };
 
             float scroll_size = (float)el_size / ((float)content_size / (float)el_size);
             float scroll_pos = (-(float)*el->scroll_value / (float)max) * ((float)el_size - scroll_size);
             if (DIRECTION(el) == DIRECTION_HORIZONTAL) {
-                command->width = scroll_size * el->scaling;
-                command->height = 5 * el->scaling;
-                command->pos_x = el_bounds.x + scroll_pos * parent_scaling;
-                command->pos_y = el_bounds.y + el_bounds.h - command->height;
+                command.width = scroll_size * el->scaling;
+                command.height = 5 * el->scaling;
+                command.pos_x = el_bounds.x + scroll_pos * parent_scaling;
+                command.pos_y = el_bounds.y + el_bounds.h - command.height;
             } else {
-                command->width = 5 * el->scaling;
-                command->height = scroll_size * el->scaling;
-                command->pos_x = el_bounds.x + el_bounds.w - command->width;
-                command->pos_y = el_bounds.y + scroll_pos * parent_scaling;
+                command.width = 5 * el->scaling;
+                command.height = scroll_size * el->scaling;
+                command.pos_x = el_bounds.x + el_bounds.w - command.width;
+                command.pos_y = el_bounds.y + scroll_pos * parent_scaling;
             }
+
+            gui_arena_append(gui->arena, gui->command_list, command);
+            gui_arena_append(gui->arena, gui->aux_command_list, command);
         }
 
         if (hover) *el->scroll_value += gui->mouse_scroll * el->scroll_scaling;
@@ -313,8 +330,8 @@ static void gui_render(Gui* gui, GuiElement* el) {
     if (FLOATING(el) || SCISSOR(el)) flush_command_batch(gui);
 
     if (SCISSOR(el)) {
-        gui->scissor_stack_len--;
-        if (gui->scissor_stack_len == 0) {
+        gui->scissor_stack.size--;
+        if (gui->scissor_stack.size == 0) {
             new_draw_command(gui, el_bounds, DRAWTYPE_SCISSOR_RESET, GUI_SUBTYPE_DEFAULT, (GuiDrawData) {0}, (GuiColor) {0});
         } else {
             if (prev_scissor.w > 0 && prev_scissor.h > 0) {
@@ -325,14 +342,13 @@ static void gui_render(Gui* gui, GuiElement* el) {
 }
 
 static GuiElement* gui_element_new(Gui* gui) {
-    assert(gui->elements_arena_len < ELEMENT_STACK_SIZE);
-
-    GuiElement* el = &gui->elements_arena[gui->elements_arena_len++];
+    GuiElement* el = gui_arena_alloc(gui->arena, sizeof(GuiElement));
     memset(el, 0, sizeof(*el));
 
     el->scaling = 1.0;
     el->size_percentage = 1.0;
     el->scroll_scaling = 64;
+    gui->elements_count++;
     return el;
 }
 
@@ -568,11 +584,11 @@ void gui_scale_element(Gui* gui, float scaling) {
 void* gui_set_state(Gui* gui, void* state, unsigned short state_len) {
     GuiElement* el = gui->current_element;
     if (el->custom_state) return el->custom_state;
-    assert(gui->state_arena_len + state_len <= STATE_STACK_SIZE);
 
-    memcpy(&gui->state_arena[gui->state_arena_len], state, state_len);
-    el->custom_state = &gui->state_arena[gui->state_arena_len];
-    gui->state_arena_len += state_len;
+    void* el_state = gui_arena_alloc(gui->arena, state_len);
+
+    memcpy(el_state, state, state_len);
+    el->custom_state = el_state;
     return el->custom_state;
 }
 
@@ -744,3 +760,137 @@ inline void gui_spacer(Gui* gui, unsigned short w, unsigned short h) {
     gui_set_min_size(gui, w, h);
     gui_element_end(gui);
 }
+
+GuiMemArena* gui_arena_new(size_t reserve_size, size_t commit_size) {
+    unsigned long pagesize = gui_plat_get_pagesize();
+
+    reserve_size = GUI_ALIGN_UP_POW2(reserve_size, pagesize);
+    commit_size = GUI_ALIGN_UP_POW2(commit_size, pagesize);
+
+    GuiMemArena* arena = gui_plat_mem_reserve(reserve_size);
+
+    if (!gui_plat_mem_commit(arena, commit_size)) return NULL;
+
+    arena->reserve_size = reserve_size;
+    arena->commit_size = commit_size;
+    arena->pos = GUI_ARENA_BASE_POS;
+    arena->commit_pos = commit_size;
+
+    return arena;
+}
+
+void gui_arena_free(GuiMemArena* arena) {
+    gui_plat_mem_release(arena, arena->reserve_size);
+}
+
+const char* gui_arena_sprintf(GuiMemArena* arena, size_t max_size, const char* fmt, ...) {
+    char* str = gui_arena_alloc(arena, max_size);
+
+    va_list va;
+    va_start(va, fmt);
+    int size = vsnprintf(str, max_size, fmt, va);
+    va_end(va);
+
+    gui_arena_pop(arena, max_size - size - 1);
+    return str;
+}
+
+void* gui_arena_alloc(GuiMemArena* arena, size_t size) {
+    size_t pos_aligned = GUI_ALIGN_UP_POW2(arena->pos, GUI_ARENA_ALIGN);
+    size_t new_pos = pos_aligned + size;
+
+    assert(new_pos <= arena->reserve_size);
+
+    if (new_pos > arena->commit_pos) {
+        size_t new_commit_pos = new_pos;
+        new_commit_pos += arena->commit_size - 1;
+        new_commit_pos -= new_commit_pos % arena->commit_size;
+        new_commit_pos = MIN(new_commit_pos, arena->reserve_size);
+
+        unsigned char* mem = (unsigned char*)arena + arena->commit_pos;
+        size_t commit_size = new_commit_pos - arena->commit_pos;
+
+        bool arena_memory_committed = gui_plat_mem_commit(mem, commit_size);
+        assert(arena_memory_committed);
+
+        arena->commit_pos = new_commit_pos;
+    }
+
+    arena->pos = new_pos;
+
+    unsigned char* out = (unsigned char*)arena + pos_aligned;
+
+    return out;
+}
+
+void* gui_arena_realloc(GuiMemArena* arena, void* ptr, size_t old_size, size_t new_size) {
+    if (!ptr || old_size == 0) return gui_arena_alloc(arena, new_size);
+
+    void* ret = gui_arena_alloc(arena, new_size);
+    memcpy(ret, ptr, old_size);
+    return ret;
+}
+
+void gui_arena_pop(GuiMemArena* arena, size_t size) {
+    size = MIN(size, arena->pos - GUI_ARENA_BASE_POS);
+    arena->pos -= size;
+}
+
+void gui_arena_pop_to(GuiMemArena* arena, size_t pos) {
+    size_t size = pos < arena->pos ? arena->pos - pos : 0;
+    gui_arena_pop(arena, size);
+}
+
+void gui_arena_clear(GuiMemArena* arena) {
+    gui_arena_pop_to(arena, GUI_ARENA_BASE_POS);
+}
+
+#ifdef _WIN32
+
+#include <windows.h>
+
+static unsigned long gui_plat_get_pagesize(void) {
+    SYSTEM_INFO sysinfo = { 0 };
+    GetSystemInfo(&sysinfo);
+
+    return sysinfo.dwPageSize;
+}
+
+static void* gui_plat_mem_reserve(size_t size) {
+    return VirtualAlloc(NULL, size, MEM_RESERVE, PAGE_READWRITE);
+}
+
+static bool gui_plat_mem_commit(void* ptr, size_t size) {
+    void* ret = VirtualAlloc(ptr, size, MEM_COMMIT, PAGE_READWRITE);
+    return ret != NULL;
+}
+
+static bool gui_plat_mem_release(void* ptr, size_t size) {
+    return VirtualFree(ptr, size, MEM_RELEASE);
+}
+
+#else
+
+#include <unistd.h>
+#include <sys/mman.h>
+
+static unsigned long gui_plat_get_pagesize(void) {
+    return sysconf(_SC_PAGESIZE);
+}
+
+static void* gui_plat_mem_reserve(size_t size) {
+    void* out = mmap(NULL, size, PROT_NONE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    if (out == MAP_FAILED) return NULL;
+    return out;
+}
+
+static bool gui_plat_mem_commit(void* ptr, size_t size) {
+    return !mprotect(ptr, size, PROT_READ | PROT_WRITE);
+}
+
+static bool gui_plat_mem_release(void* ptr, size_t size) {
+    return !munmap(ptr, size);
+}
+
+#endif // _WIN32
+

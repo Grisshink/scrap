@@ -1879,14 +1879,14 @@ bool svg_load(const char* file_name, size_t width, size_t height, Image* out_ima
 //   +     +---------+
 //             3
 //
-static void render_border_control(GuiDrawCommand* cmd) {
-    unsigned short border_w = cmd->data.border_width;
-    Color color = CONVERT_COLOR(cmd->color, Color);
+static void render_border_control(GuiDrawCommand cmd) {
+    unsigned short border_w = cmd.data.border_width;
+    Color color = CONVERT_COLOR(cmd.color, Color);
 
-    /* 1 */ DrawRectangle(cmd->pos_x, cmd->pos_y, cmd->width, border_w, color);
-    /* 2 */ DrawRectangle(cmd->pos_x + cmd->width - border_w, cmd->pos_y, border_w, cmd->height, color);
-    /* 3 */ DrawRectangle(cmd->pos_x + BLOCK_CONTROL_INDENT - border_w, cmd->pos_y + cmd->height - border_w, cmd->width - BLOCK_CONTROL_INDENT, border_w, color);
-    /* 4 */ DrawRectangle(cmd->pos_x, cmd->pos_y, border_w, cmd->height, color);
+    /* 1 */ DrawRectangle(cmd.pos_x, cmd.pos_y, cmd.width, border_w, color);
+    /* 2 */ DrawRectangle(cmd.pos_x + cmd.width - border_w, cmd.pos_y, border_w, cmd.height, color);
+    /* 3 */ DrawRectangle(cmd.pos_x + BLOCK_CONTROL_INDENT - border_w, cmd.pos_y + cmd.height - border_w, cmd.width - BLOCK_CONTROL_INDENT, border_w, color);
+    /* 4 */ DrawRectangle(cmd.pos_x, cmd.pos_y, border_w, cmd.height, color);
 }
 
 // Draw order for render_border_control_body()
@@ -1895,12 +1895,12 @@ static void render_border_control(GuiDrawCommand* cmd) {
 // 1 |     | 2
 //   +     +
 //
-static void render_border_control_body(GuiDrawCommand* cmd) {
-    unsigned short border_w = cmd->data.border_width;
-    Color color = CONVERT_COLOR(cmd->color, Color);
+static void render_border_control_body(GuiDrawCommand cmd) {
+    unsigned short border_w = cmd.data.border_width;
+    Color color = CONVERT_COLOR(cmd.color, Color);
 
-    /* 1 */ DrawRectangle(cmd->pos_x, cmd->pos_y, border_w, cmd->height, color);
-    /* 2 */ DrawRectangle(cmd->pos_x + cmd->width - border_w, cmd->pos_y, border_w, cmd->height, color);
+    /* 1 */ DrawRectangle(cmd.pos_x, cmd.pos_y, border_w, cmd.height, color);
+    /* 2 */ DrawRectangle(cmd.pos_x + cmd.width - border_w, cmd.pos_y, border_w, cmd.height, color);
 }
 
 // Draw order for render_border_control_end()
@@ -1911,14 +1911,14 @@ static void render_border_control_body(GuiDrawCommand* cmd) {
 //   +     +---------+
 //              3
 //
-static void render_border_control_end(GuiDrawCommand* cmd) {
-    unsigned short border_w = cmd->data.border_width;
-    Color color = CONVERT_COLOR(cmd->color, Color);
+static void render_border_control_end(GuiDrawCommand cmd) {
+    unsigned short border_w = cmd.data.border_width;
+    Color color = CONVERT_COLOR(cmd.color, Color);
 
-    /* 1 */ DrawRectangle(cmd->pos_x + BLOCK_CONTROL_INDENT - border_w, cmd->pos_y, cmd->width - BLOCK_CONTROL_INDENT, border_w, color);
-    /* 2 */ DrawRectangle(cmd->pos_x + cmd->width - border_w, cmd->pos_y, border_w, cmd->height, color);
-    /* 3 */ DrawRectangle(cmd->pos_x + BLOCK_CONTROL_INDENT - border_w, cmd->pos_y + cmd->height - border_w, cmd->width - BLOCK_CONTROL_INDENT, border_w, color);
-    /* 4 */ DrawRectangle(cmd->pos_x, cmd->pos_y, border_w, cmd->height, color);
+    /* 1 */ DrawRectangle(cmd.pos_x + BLOCK_CONTROL_INDENT - border_w, cmd.pos_y, cmd.width - BLOCK_CONTROL_INDENT, border_w, color);
+    /* 2 */ DrawRectangle(cmd.pos_x + cmd.width - border_w, cmd.pos_y, border_w, cmd.height, color);
+    /* 3 */ DrawRectangle(cmd.pos_x + BLOCK_CONTROL_INDENT - border_w, cmd.pos_y + cmd.height - border_w, cmd.width - BLOCK_CONTROL_INDENT, border_w, color);
+    /* 4 */ DrawRectangle(cmd.pos_x, cmd.pos_y, border_w, cmd.height, color);
 }
 
 // Draw order for render_border_end()
@@ -1928,14 +1928,14 @@ static void render_border_control_end(GuiDrawCommand* cmd) {
 // 4 |               | 2
 //   +---------------+
 //           3
-static void render_border_end(GuiDrawCommand* cmd) {
-    unsigned short border_w = cmd->data.border_width;
-    Color color = CONVERT_COLOR(cmd->color, Color);
+static void render_border_end(GuiDrawCommand cmd) {
+    unsigned short border_w = cmd.data.border_width;
+    Color color = CONVERT_COLOR(cmd.color, Color);
 
-    /* 1 */ DrawRectangle(cmd->pos_x + BLOCK_CONTROL_INDENT - border_w, cmd->pos_y, cmd->width - BLOCK_CONTROL_INDENT, border_w, color);
-    /* 2 */ DrawRectangle(cmd->pos_x + cmd->width - border_w, cmd->pos_y, border_w, cmd->height, color);
-    /* 3 */ DrawRectangle(cmd->pos_x, cmd->pos_y + cmd->height - border_w, cmd->width, border_w, color);
-    /* 4 */ DrawRectangle(cmd->pos_x, cmd->pos_y, border_w, cmd->height, color);
+    /* 1 */ DrawRectangle(cmd.pos_x + BLOCK_CONTROL_INDENT - border_w, cmd.pos_y, cmd.width - BLOCK_CONTROL_INDENT, border_w, color);
+    /* 2 */ DrawRectangle(cmd.pos_x + cmd.width - border_w, cmd.pos_y, border_w, cmd.height, color);
+    /* 3 */ DrawRectangle(cmd.pos_x, cmd.pos_y + cmd.height - border_w, cmd.width, border_w, color);
+    /* 4 */ DrawRectangle(cmd.pos_x, cmd.pos_y, border_w, cmd.height, color);
 }
 
 // Draw order for render_border_notched() and render_rect_notched()
@@ -1946,33 +1946,33 @@ static void render_border_end(GuiDrawCommand* cmd) {
 // 5 |               | 3
 //   +---------------+
 //           4
-static void render_border_notched(GuiDrawCommand* cmd) {
-    unsigned short border_w = cmd->data.border_width;
-    Color color = CONVERT_COLOR(cmd->color, Color);
+static void render_border_notched(GuiDrawCommand cmd) {
+    unsigned short border_w = cmd.data.border_width;
+    Color color = CONVERT_COLOR(cmd.color, Color);
     int notch_size = config.ui_size / 4;
 
-    /* 1 */ DrawRectangle(cmd->pos_x, cmd->pos_y, cmd->width - notch_size, border_w, color);
+    /* 1 */ DrawRectangle(cmd.pos_x, cmd.pos_y, cmd.width - notch_size, border_w, color);
     /* 2 */ DrawRectanglePro((Rectangle) {
-        cmd->pos_x + cmd->width - notch_size,
-        cmd->pos_y,
+        cmd.pos_x + cmd.width - notch_size,
+        cmd.pos_y,
         sqrtf((notch_size * notch_size) * 2),
         border_w,
     }, (Vector2) {0}, 45.0, color);
-    /* 3 */ DrawRectangle(cmd->pos_x + cmd->width - border_w, cmd->pos_y + notch_size, border_w, cmd->height - notch_size, color);
-    /* 4 */ DrawRectangle(cmd->pos_x, cmd->pos_y + cmd->height - border_w, cmd->width, border_w, color);
-    /* 5 */ DrawRectangle(cmd->pos_x, cmd->pos_y, border_w, cmd->height, color);
+    /* 3 */ DrawRectangle(cmd.pos_x + cmd.width - border_w, cmd.pos_y + notch_size, border_w, cmd.height - notch_size, color);
+    /* 4 */ DrawRectangle(cmd.pos_x, cmd.pos_y + cmd.height - border_w, cmd.width, border_w, color);
+    /* 5 */ DrawRectangle(cmd.pos_x, cmd.pos_y, border_w, cmd.height, color);
 }
 
-static void render_rect_notched(GuiDrawCommand* cmd) {
-    Color color = CONVERT_COLOR(cmd->color, Color);
+static void render_rect_notched(GuiDrawCommand cmd) {
+    Color color = CONVERT_COLOR(cmd.color, Color);
     int notch_size = config.ui_size / 4;
 
-    DrawRectangle(cmd->pos_x, cmd->pos_y, cmd->width - notch_size, cmd->height, color);
-    DrawRectangle(cmd->pos_x, cmd->pos_y + notch_size, cmd->width, cmd->height - notch_size, color);
+    DrawRectangle(cmd.pos_x, cmd.pos_y, cmd.width - notch_size, cmd.height, color);
+    DrawRectangle(cmd.pos_x, cmd.pos_y + notch_size, cmd.width, cmd.height - notch_size, color);
     DrawTriangle(
-        (Vector2) { cmd->pos_x + cmd->width - notch_size - 1, cmd->pos_y },
-        (Vector2) { cmd->pos_x + cmd->width - notch_size - 1, cmd->pos_y + notch_size },
-        (Vector2) { cmd->pos_x + cmd->width, cmd->pos_y + notch_size },
+        (Vector2) { cmd.pos_x + cmd.width - notch_size - 1, cmd.pos_y },
+        (Vector2) { cmd.pos_x + cmd.width - notch_size - 1, cmd.pos_y + notch_size },
+        (Vector2) { cmd.pos_x + cmd.width, cmd.pos_y + notch_size },
         color
     );
 }
@@ -2005,21 +2005,21 @@ static void scrap_gui_render(void) {
 #ifdef DEBUG
     bool show_bounds = IsKeyDown(KEY_F4);
 #endif
-    GuiDrawCommand* command;
+    GuiDrawCommand command;
     GUI_GET_COMMANDS(gui, command) {
-        Texture2D* image = command->data.image;
+        Texture2D* image = command.data.image;
 
-        switch (command->type) {
+        switch (command.type) {
         case DRAWTYPE_UNKNOWN:
             assert(false && "Got unknown draw type");
             break;
         case DRAWTYPE_BORDER:
-            switch (command->subtype) {
+            switch (command.subtype) {
             case BORDER_NORMAL:
                 DrawRectangleLinesEx(
-                    (Rectangle) { floor(command->pos_x), floor(command->pos_y), command->width, command->height },
-                    command->data.border_width,
-                    CONVERT_COLOR(command->color, Color)
+                    (Rectangle) { floor(command.pos_x), floor(command.pos_y), command.width, command.height },
+                    command.data.border_width,
+                    CONVERT_COLOR(command.color, Color)
                 );
                 break;
             case BORDER_CONTROL:
@@ -2043,16 +2043,16 @@ static void scrap_gui_render(void) {
             }
             break;
         case DRAWTYPE_RECT:
-            switch (command->subtype) {
+            switch (command.subtype) {
             case RECT_NORMAL:
-                DrawRectangle(command->pos_x, command->pos_y, command->width, command->height, CONVERT_COLOR(command->color, Color));
+                DrawRectangle(command.pos_x, command.pos_y, command.width, command.height, CONVERT_COLOR(command.color, Color));
                 break;
             case RECT_NOTCHED:
                 render_rect_notched(command);
                 break;
             case RECT_TERMINAL:
-                term_resize(command->width, command->height);
-                draw_term(command->pos_x, command->pos_y);
+                term_resize(command.width, command.height);
+                draw_term(command.pos_x, command.pos_y);
                 break;
             default:
                 assert(false && "Unhandled draw rect type");
@@ -2061,53 +2061,53 @@ static void scrap_gui_render(void) {
             break;
         case DRAWTYPE_TEXT:
             draw_text_slice(
-                *(Font*)command->data.text.font,
-                command->data.text.text,
-                command->pos_x,
-                command->pos_y,
-                command->data.text.text_size,
-                command->height,
-                CONVERT_COLOR(command->color, Color)
+                *(Font*)command.data.text.font,
+                command.data.text.text,
+                command.pos_x,
+                command.pos_y,
+                command.data.text.text_size,
+                command.height,
+                CONVERT_COLOR(command.color, Color)
             );
             break;
         case DRAWTYPE_IMAGE:
-            switch (command->subtype) {
+            switch (command.subtype) {
             case IMAGE_NORMAL:
                 DrawTextureEx(
                     *image,
-                    (Vector2) { command->pos_x + SHADOW_DISTANCE, command->pos_y + SHADOW_DISTANCE },
+                    (Vector2) { command.pos_x + SHADOW_DISTANCE, command.pos_y + SHADOW_DISTANCE },
                     0.0,
-                    (float)command->height / (float)image->height,
+                    (float)command.height / (float)image->height,
                     (Color) { 0x00, 0x00, 0x00, 0x80 }
                 );
                 DrawTextureEx(
                     *image,
-                    (Vector2) { command->pos_x, command->pos_y},
+                    (Vector2) { command.pos_x, command.pos_y},
                     0.0,
-                    (float)command->height / (float)image->height,
-                    CONVERT_COLOR(command->color, Color)
+                    (float)command.height / (float)image->height,
+                    CONVERT_COLOR(command.color, Color)
                 );
                 break;
             case IMAGE_STRETCHED:
                 DrawTexturePro(
                     *image,
                     (Rectangle) { 0, 0, image->width, image->height },
-                    (Rectangle) { command->pos_x, command->pos_y, command->width, command->height },
+                    (Rectangle) { command.pos_x, command.pos_y, command.width, command.height },
                     (Vector2) {0},
                     0.0,
-                    CONVERT_COLOR(command->color, Color)
+                    CONVERT_COLOR(command.color, Color)
                 );
                 break;
             }
             break;
         case DRAWTYPE_SCISSOR_SET:
-            BeginScissorMode(command->pos_x, command->pos_y, command->width, command->height);
+            BeginScissorMode(command.pos_x, command.pos_y, command.width, command.height);
             break;
         case DRAWTYPE_SCISSOR_RESET:
             EndScissorMode();
             break;
         case DRAWTYPE_SHADER_BEGIN:
-            BeginShaderMode(*(Shader*)command->data.shader);
+            BeginShaderMode(*(Shader*)command.data.shader);
             break;
         case DRAWTYPE_SHADER_END:
             EndShaderMode();
@@ -2117,7 +2117,7 @@ static void scrap_gui_render(void) {
             break;
         }
 #ifdef DEBUG
-        if (show_bounds) DrawRectangleLinesEx((Rectangle) { command->pos_x, command->pos_y, command->width, command->height }, 1.0, (Color) { 0xff, 0x00, 0xff, 0x40 });
+        if (show_bounds) DrawRectangleLinesEx((Rectangle) { command.pos_x, command.pos_y, command.width, command.height }, 1.0, (Color) { 0xff, 0x00, 0xff, 0x40 });
 #endif
     }
 }
@@ -2137,7 +2137,8 @@ static void write_debug_buffer(void) {
 #ifdef DEBUG
     if (!editor.show_debug) return;
     print_debug(&i, "UI time: %.3f", ui.ui_time);
-    print_debug(&i, "Elements: %zu/%zu, Draw: %zu/%zu", gui->elements_arena_len, ELEMENT_STACK_SIZE, gui->command_list_len, COMMAND_STACK_SIZE);
+    print_debug(&i, "Elements: %zu, Drawn: %zu", gui->elements_count, gui->command_list.size);
+    print_debug(&i, "Mem: %.3f/%.3f MiB", (double)gui->arena->pos / (1024.0 * 1024.0), (double)gui->arena->reserve_size / (1024.0 * 1024.0));
     print_debug(&i, " ");
 
     print_debug(&i, "Button handler: %p", ui.hover.button.handler);
