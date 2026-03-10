@@ -56,7 +56,7 @@ void std_term_set_clear_color(TermColor color);
 #endif
 
 // Misc
-int std_sleep(int usecs);
+bool std_sleep(IrExec* exec);
 int std_get_random(int min, int max);
 void std_set_random_seed(int seed);
 // StdColor std_parse_color(const char* value);

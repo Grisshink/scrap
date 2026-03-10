@@ -235,30 +235,53 @@ STD_MATH_FUNC(atan)
 //     return (StdColor) { r, g, b, a };
 // }
 
-int std_sleep(int usecs) {
-    if (usecs < 0) return 0;
+bool std_sleep(IrExec* exec) {
+    double secs = exec_pop_float(exec);
+
+    if (secs < 0) return true;
 #ifdef _WIN32
-    Sleep(usecs / 1000);
+    Sleep(secs * 1000);
 #else
     struct timespec sleep_time = {0};
-    sleep_time.tv_sec = usecs / 1000000;
-    sleep_time.tv_nsec = (usecs % 1000000) * 1000;
+    sleep_time.tv_sec = secs;
+    sleep_time.tv_nsec = fmod(secs, 1.0) * 1e9;
 
-    if (nanosleep(&sleep_time, &sleep_time) == -1) return 0;
+    if (nanosleep(&sleep_time, &sleep_time) == -1) return false;
 #endif
-    return usecs;
+    return true;
 }
 
-void std_set_random_seed(int seed) {
-    rprand_set_seed(seed);
+bool std_unix_time(IrExec* exec) {
+    time_t t = time(NULL);
+    if (t == (time_t)-1) return false;
+    exec_push_int(exec, t);
+    return true;
 }
 
-int std_get_random(int min, int max) {
+bool std_random_float(IrExec* exec) {
+    double max = exec_pop_float(exec);
+    double min = exec_pop_float(exec);
     if (min > max) {
-        return rprand_get_value(max, min);
-    } else {
-        return rprand_get_value(min, max);
+        double temp = max;
+        max = min;
+        min = temp;
     }
+
+    double val = (double)rprand_xoshiro() / (double)UINT32_MAX;
+    exec_push_float(exec, val * (max - min) + min);
+    return true;
+}
+
+bool std_random_int(IrExec* exec) {
+    int64_t max = exec_pop_int(exec);
+    int64_t min = exec_pop_int(exec);
+
+    if (min > max) {
+        exec_push_int(exec, rprand_get_value(max, min));
+    } else {
+        exec_push_int(exec, rprand_get_value(min, max));
+    }
+    return true;
 }
 
 #ifdef STANDALONE_STD
@@ -524,6 +547,10 @@ IrRunFunction std_resolve_function(IrExec* exec, const char* hint) {
         char* name;
         IrRunFunction func;
     } funcs[] = {
+        STD_FUNC(std_random_int),
+        STD_FUNC(std_random_float),
+        STD_FUNC(std_sleep),
+        STD_FUNC(std_unix_time),
         STD_FUNC(std_term_print_str),
         { "sqrt",  std_sqrt  },
         { "round", std_round },

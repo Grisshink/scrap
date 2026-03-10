@@ -1413,27 +1413,57 @@ CompilerValue block_list_length(Compiler* compiler, Block* block, Block** next_b
 }
 
 CompilerValue block_sleep(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
-    (void) compiler;
-    (void) block;
     (void) next_block;
     (void) prev_block;
-    return DATA_ERROR;
+    
+    CompilerValue value = compiler_evaluate_argument(compiler, &block->arguments[0]);
+    if (value.type == DATA_TYPE_ERROR) return DATA_ERROR;
+
+    value = cast_to_bc_float(compiler, value);
+    if (value.type == DATA_TYPE_ERROR) return DATA_ERROR;
+    assert(value.type == DATA_TYPE_CHUNK);
+
+    bytecode_push_op_func(&value.data.chunk_val.bc, IR_RUN, ir_func_by_hint("std_sleep"));
+    return DATA_CHUNK(DATA_TYPE_NULL, value.data.chunk_val.bc);
 }
 
 CompilerValue block_random(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
-    (void) compiler;
-    (void) block;
     (void) next_block;
     (void) prev_block;
-    return DATA_ERROR;
+
+    CompilerValue left = compiler_evaluate_argument(compiler, &block->arguments[0]);
+    if (left.type == DATA_TYPE_ERROR) return DATA_ERROR;
+
+    CompilerValue right = compiler_evaluate_argument(compiler, &block->arguments[1]);
+    if (right.type == DATA_TYPE_ERROR) return DATA_ERROR;
+
+    DataType left_type  = left.type  == DATA_TYPE_CHUNK ? left.data.chunk_val.return_type  : left.type;
+    DataType right_type = right.type == DATA_TYPE_CHUNK ? right.data.chunk_val.return_type : right.type;
+
+    if (left_type == DATA_TYPE_FLOAT || right_type == DATA_TYPE_FLOAT) {
+        left  = cast_to_bc(compiler, left,  DATA_TYPE_FLOAT);
+        right = cast_to_bc(compiler, right, DATA_TYPE_FLOAT);
+    } else {
+        left  = cast_to_bc(compiler, left,  DATA_TYPE_INTEGER);
+        right = cast_to_bc(compiler, right, DATA_TYPE_INTEGER);
+    }
+    if (left.type == DATA_TYPE_ERROR || right.type == DATA_TYPE_ERROR) return DATA_ERROR;
+
+    IrBytecode bc = left.data.chunk_val.bc;
+    bytecode_join(&bc, &right.data.chunk_val.bc);
+
+    bytecode_push_op_func(&bc, IR_RUN, ir_func_by_hint(left.data.chunk_val.return_type == DATA_TYPE_FLOAT ? "std_random_float" : "std_random_int"));
+    return DATA_CHUNK(right.data.chunk_val.return_type, bc);
 }
 
 CompilerValue block_unix_time(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
-    (void) compiler;
     (void) block;
     (void) next_block;
     (void) prev_block;
-    return DATA_ERROR;
+
+    IrBytecode bc = EMPTY_BYTECODE;
+    bytecode_push_op_func(&bc, IR_RUN, ir_func_by_hint("std_unix_time"));
+    return DATA_CHUNK(DATA_TYPE_INTEGER, bc);
 }
 
 CompilerValue block_convert_int(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
@@ -3689,7 +3719,7 @@ void register_blocks(Vm* vm) {
     Blockdef* sc_sleep = blockdef_new("sleep", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_MISC_COLOR, block_sleep);
     blockdef_add_text(sc_sleep, gettext("Sleep"));
     blockdef_add_argument(sc_sleep, "", "0", BLOCKCONSTR_UNLIMITED);
-    blockdef_add_text(sc_sleep, gettext("μs"));
+    blockdef_add_text(sc_sleep, gettext("s"));
     blockdef_register(vm, sc_sleep);
     block_category_add_blockdef(cat_misc, sc_sleep);
 
