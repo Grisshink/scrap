@@ -745,27 +745,152 @@ CompilerValue block_on_start(Compiler* compiler, Block* block, Block** next_bloc
 }
 
 CompilerValue block_if(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
-    (void) compiler;
-    (void) block;
-    (void) next_block;
-    (void) prev_block;
-    return DATA_ERROR;
+    IrBytecode bc = EMPTY_BYTECODE;
+
+    if (prev_block == block->prev) {
+        CompilerValue value = compiler_evaluate_argument(compiler, &block->arguments[0]);
+        if (value.type == DATA_TYPE_ERROR) return DATA_ERROR;
+        value = cast_to_bc_bool(compiler, value);
+        if (value.type == DATA_TYPE_ERROR) return DATA_ERROR;
+
+        IrBytecode bc_label = EMPTY_BYTECODE;
+        ConstId label = bytecode_push_label(&bc_label, ir_arena_sprintf(compiler->arena, 32, "if_false_%zu", compiler->label_counter++));
+
+        bc = value.data.chunk_val.bc;
+        bytecode_push_op_label(&bc, IR_IFNOT, label);
+
+        if (!CHAIN_EMPTY(block->contents)) {
+            IrBytecode* bc_label_ptr = ir_arena_alloc(compiler->arena, sizeof(bc_label));
+            *bc_label_ptr = bc_label;
+            compiler_object_info_insert(compiler, block, bc_label_ptr);
+
+            *next_block = block->contents->start;
+            return DATA_CHUNK(DATA_TYPE_NULL, bc);
+        } else if (!CHAIN_EMPTY(block->controlend_contents)) {
+            IrBytecode* bc_label_ptr = ir_arena_alloc(compiler->arena, sizeof(bc_label));
+            *bc_label_ptr = EMPTY_BYTECODE;
+
+            ConstId end_label = bytecode_push_label(bc_label_ptr, ir_arena_sprintf(compiler->arena, 32, "if_end_%zu", compiler->label_counter++));
+
+            bytecode_push_op_label(&bc, IR_JMP, end_label);
+
+            compiler_object_info_insert(compiler, block, bc_label_ptr);
+            compiler_object_info_insert(compiler, block->controlend_contents->start, (void*)end_label);
+            *next_block = block->controlend_contents->start;
+        }
+
+        bytecode_join(&bc, &bc_label);
+    } else if (prev_block == block->contents->end) {
+        IrBytecode* bc_label = compiler_object_info_get(compiler, block);
+        if (bc_label == OBJECT_NOT_FOUND) {
+            compiler_set_error(compiler, "Could not find end label in if block");
+            return DATA_ERROR;
+        }
+
+        IrBytecode bc_end_label = EMPTY_BYTECODE;
+        ConstId end_label = bytecode_push_label(&bc_end_label, ir_arena_sprintf(compiler->arena, 32, "if_end_%zu", compiler->label_counter++));
+
+        bytecode_push_op_label(&bc, IR_JMP, end_label);
+        bytecode_join(&bc, bc_label);
+
+        if (!CHAIN_EMPTY(block->controlend_contents)) {
+            *bc_label = bc_end_label;
+
+            compiler_object_info_insert(compiler, block->controlend_contents->start, (void*)end_label);
+            *next_block = block->controlend_contents->start;
+        } else {
+            bytecode_join(&bc, &bc_end_label);
+        }
+    } else if (prev_block == block->controlend_contents->end) {
+        IrBytecode* bc_label = compiler_object_info_get(compiler, block);
+        if (bc_label == OBJECT_NOT_FOUND) {
+            compiler_set_error(compiler, "Could not find end label in if block");
+            return DATA_ERROR;
+        }
+        bc = *bc_label;
+    }
+
+    return DATA_CHUNK(DATA_TYPE_NULL, bc);
 }
 
 CompilerValue block_else_if(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
-    (void) compiler;
-    (void) block;
-    (void) next_block;
-    (void) prev_block;
-    return DATA_ERROR;
+    Block* prev = block->prev;
+    if (!prev) prev = block->parent.as.chain->parent;
+
+    IrBytecode bc = EMPTY_BYTECODE;
+
+    if (prev_block == prev) {
+        CompilerValue value = compiler_evaluate_argument(compiler, &block->arguments[0]);
+        if (value.type == DATA_TYPE_ERROR) return DATA_ERROR;
+        value = cast_to_bc_bool(compiler, value);
+        if (value.type == DATA_TYPE_ERROR) return DATA_ERROR;
+
+        IrBytecode end_bc = EMPTY_BYTECODE;
+        ConstId end_label = bytecode_push_label(&end_bc, ir_arena_sprintf(compiler->arena, 64, "else_if_end_%zu", compiler->label_counter++));
+
+        bc = value.data.chunk_val.bc;
+        bytecode_push_op_label(&bc, IR_IFNOT, end_label);
+
+        void* label_data = compiler_object_info_get(compiler, block);
+        if (label_data == OBJECT_NOT_FOUND) {
+            compiler_set_error(compiler, "Could not find end label in else if block");
+            return DATA_ERROR;
+        }
+        ConstId label = (ConstId)label_data;
+
+        if (!CHAIN_EMPTY(block->contents)) {
+            struct {
+                ConstId label;
+                IrBytecode bc;
+            }* block_data = ir_arena_alloc(compiler->arena, sizeof(end_bc) + sizeof(ConstId));
+            block_data->label = label;
+            block_data->bc = end_bc;
+
+            compiler_object_info_insert(compiler, block, block_data);
+
+            *next_block = block->contents->start;
+        } else {
+            bytecode_push_op_label(&bc, IR_JMP, label);
+            bytecode_join(&bc, &end_bc);
+            if (block->next) compiler_object_info_insert(compiler, block->next, label_data);
+        }
+    } else if (prev_block == block->contents->end) {
+        struct {
+            ConstId label;
+            IrBytecode bc;
+        }* block_data = compiler_object_info_get(compiler, block);
+        if (block_data == OBJECT_NOT_FOUND) {
+            compiler_set_error(compiler, "Could not find end label in else if block");
+            return DATA_ERROR;
+        }
+
+        bytecode_push_op_label(&bc, IR_JMP, block_data->label);
+        bytecode_join(&bc, &block_data->bc);
+        if (block->next) compiler_object_info_insert(compiler, block->next, (void*)block_data->label);
+    }
+    return DATA_CHUNK(DATA_TYPE_NULL, bc);
 }
 
 CompilerValue block_else(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
-    (void) compiler;
-    (void) block;
-    (void) next_block;
-    (void) prev_block;
-    return DATA_ERROR;
+    Block* prev = block->prev;
+    if (!prev) prev = block->parent.as.chain->parent;
+
+    IrBytecode bc = EMPTY_BYTECODE;
+
+    if (prev_block == prev) {
+        if (!CHAIN_EMPTY(block->contents)) *next_block = block->contents->start;
+    } else {
+        void* label_data = compiler_object_info_get(compiler, block);
+        if (label_data == OBJECT_NOT_FOUND) {
+            compiler_set_error(compiler, "Could not find end label in else block");
+            return DATA_ERROR;
+        }
+        ConstId label = (ConstId)label_data;
+
+        bytecode_push_op_label(&bc, IR_JMP, label);
+        if (block->next) compiler_object_info_insert(compiler, block->next, label_data);
+    }
+    return DATA_CHUNK(DATA_TYPE_NULL, bc);
 }
 
 CompilerValue block_loop(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {

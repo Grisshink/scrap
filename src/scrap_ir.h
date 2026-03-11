@@ -131,6 +131,7 @@ typedef enum {
     // Branching
     IR_JMP,  // Jump to label
     IR_IF,   // Jump to label if input bool is true
+    IR_IFNOT, // Jump to label if input bool is false
     IR_CALL, // Call label as function, return with IR_RET opcode
     IR_RUN,  // Run native function
     IR_DYNJMP, // Same as IR_JMP, but take label from stack
@@ -649,6 +650,11 @@ void bytecode_join(IrBytecode* dst, IrBytecode* src) {
 
     if (dst->labels.size == 0) {
         dst->labels = src->labels;
+        if (dst->code.size != 0) {
+            for (size_t i = 0; i < dst->labels.size; i++) {
+                dst->pool->list.items[dst->labels.items[i]].as.label_val.pos += dst_size;
+            }
+        }
     } else {
         for (size_t i = 0; i < src->labels.size; i++) {
             src->pool->list.items[src->labels.items[i]].as.label_val.pos += dst_size;
@@ -793,7 +799,7 @@ void bytecode_print(IrBytecode* bc) {
 
         printf("    ");
 
-        static_assert(IR_LAST == 76, "Exhaustive opcode in exec_run_bytecode");
+        static_assert(IR_LAST == 77, "Exhaustive opcode in exec_run_bytecode");
         switch (bc->code.items[i]) {
         case IR_PUSHL:
             CHECK_IMMEDIATE;
@@ -942,6 +948,11 @@ void bytecode_print(IrBytecode* bc) {
         case IR_IF:
             CHECK_IMMEDIATE;
             printf("if <%s>\n", pool_list.items[CODE_IMMEDIATE].as.label_val.name);
+            i += 3;
+            break;
+        case IR_IFNOT:
+            CHECK_IMMEDIATE;
+            printf("ifnot <%s>\n", pool_list.items[CODE_IMMEDIATE].as.label_val.name);
             i += 3;
             break;
         case IR_CALL:
@@ -1389,7 +1400,7 @@ bool exec_run_bytecode(IrExec* exec, IrBytecode* bc, size_t pos) {
     IrFunction* func;
 
     for (size_t i = pos; i < bc->code.size; i++) {
-        static_assert(IR_LAST == 76, "Exhaustive opcode in exec_run_bytecode");
+        static_assert(IR_LAST == 77, "Exhaustive opcode in exec_run_bytecode");
         switch (bc->code.items[i]) {
         case IR_PUSHN: exec_push_nothing(exec); break;
         case IR_PUSHI:
@@ -1876,6 +1887,14 @@ bool exec_run_bytecode(IrExec* exec, IrBytecode* bc, size_t pos) {
                 i += 3;
             }
             break;
+        case IR_IFNOT:
+            left_bool = exec_pop_bool(exec);
+            if (!left_bool) {
+                i = pool_list.items[CODE_IMMEDIATE].as.label_val.pos - 1;
+            } else {
+                i += 3;
+            }
+            break;
         case IR_CALL:
             if (!exec_run_bytecode(exec, bc, pool_list.items[CODE_IMMEDIATE].as.label_val.pos)) IR_EXEC_FAIL;
             i += 3;
@@ -2033,7 +2052,7 @@ const char* ir_arena_sprintf(IrMemArena* arena, size_t max_size, const char* fmt
     int size = vsnprintf(str, max_size, fmt, va);
     va_end(va);
 
-    ir_arena_pop(arena, max_size - size);
+    ir_arena_pop(arena, max_size - size - 1);
     return str;
 }
 

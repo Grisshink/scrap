@@ -78,6 +78,7 @@ static const char* format_byte_count(Compiler* compiler, size_t size) {
 bool compiler_run(void* e) {
     Compiler* compiler = e;
 
+    compiler->label_counter = 0;
     compiler->arena = ir_arena_new(GiB(1), MiB(1));
     compiler->bc_pool = bytecode_pool_new(compiler->arena);
     compiler->chains_to_compile = vector_create();
@@ -228,7 +229,6 @@ CompilerValue compiler_evaluate_chain(Compiler* compiler, BlockChain* chain) {
 
     return DATA_CHUNK(bc_type, bc);
 }
-
 void* compiler_object_info_get(Compiler* compiler, void* object) {
     ObjectPool* pool = &compiler->object_info;
     if (pool->hash_table.capacity == 0) return OBJECT_NOT_FOUND;
@@ -274,7 +274,10 @@ size_t compiler_object_info_insert(Compiler* compiler, void* object, void* data)
     size_t idx = pool->hash_table.items[hash];
 
     while (idx != (size_t)-1) {
-        if (pool->items[idx].object == object) return idx;
+        if (pool->items[idx].object == object) {
+            pool->items[idx].data = data;
+            return idx;
+        }
 
         hash++;
         if (hash >= pool->hash_table.capacity) hash = 0;

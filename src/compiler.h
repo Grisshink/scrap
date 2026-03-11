@@ -94,6 +94,8 @@ struct Compiler {
     Block* current_error_block;
     BlockChain* current_error_blockchain;
 
+    size_t label_counter;
+
     Thread* thread;
 };
 
@@ -134,5 +136,8 @@ CompilerValue compiler_evaluate_argument(Compiler* compiler, Argument* arg);
 void compiler_set_skip_block(Compiler* compiler);
 void compiler_set_error(Compiler* compiler, const char* fmt, ...);
 ssize_t compiler_find_variable(Compiler* compiler, const char* name);
+
+void* compiler_object_info_get(Compiler* compiler, void* object);
+size_t compiler_object_info_insert(Compiler* compiler, void* object, void* data);
 
 #endif // INTERPRETER_H
