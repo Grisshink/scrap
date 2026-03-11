@@ -56,6 +56,12 @@ char** math_list_access(Block* block, size_t* list_len) {
 
 #ifndef USE_LLVM
 
+typedef struct {
+    ConstId label;
+    IrBytecode bc;
+    size_t var_slot;
+} ControlData;
+
 static MathFunc block_math_func_list[MATH_LIST_LEN] = {
     sqrt, round, floor, ceil,
     sin, cos, tan,
@@ -748,6 +754,8 @@ CompilerValue block_if(Compiler* compiler, Block* block, Block** next_block, Blo
     IrBytecode bc = EMPTY_BYTECODE;
 
     if (prev_block == block->prev) {
+        size_t var_slot = compiler->variables.size;
+
         CompilerValue value = compiler_evaluate_argument(compiler, &block->arguments[0]);
         if (value.type == DATA_TYPE_ERROR) return DATA_ERROR;
         value = cast_to_bc_bool(compiler, value);
@@ -760,30 +768,35 @@ CompilerValue block_if(Compiler* compiler, Block* block, Block** next_block, Blo
         bytecode_push_op_label(&bc, IR_IFNOT, label);
 
         if (!CHAIN_EMPTY(block->contents)) {
-            IrBytecode* bc_label_ptr = ir_arena_alloc(compiler->arena, sizeof(bc_label));
-            *bc_label_ptr = bc_label;
-            compiler_object_info_insert(compiler, block, bc_label_ptr);
+            ControlData* block_data = ir_arena_alloc(compiler->arena, sizeof(ControlData));
+            block_data->bc = bc_label;
+            block_data->var_slot = var_slot;
+            compiler_object_info_insert(compiler, block, block_data);
 
             *next_block = block->contents->start;
             return DATA_CHUNK(DATA_TYPE_NULL, bc);
         } else if (!CHAIN_EMPTY(block->controlend_contents)) {
-            IrBytecode* bc_label_ptr = ir_arena_alloc(compiler->arena, sizeof(bc_label));
-            *bc_label_ptr = EMPTY_BYTECODE;
+            ControlData* block_data = ir_arena_alloc(compiler->arena, sizeof(ControlData));
+            block_data->bc = EMPTY_BYTECODE;
 
-            ConstId end_label = bytecode_push_label(bc_label_ptr, ir_arena_sprintf(compiler->arena, 32, "if_end_%zu", compiler->label_counter++));
+            ConstId end_label = bytecode_push_label(&block_data->bc, ir_arena_sprintf(compiler->arena, 32, "if_end_%zu", compiler->label_counter++));
+
+            ControlData* controlend_data = ir_arena_alloc(compiler->arena, sizeof(ControlData));
+            controlend_data->label = end_label;
 
             bytecode_push_op_label(&bc, IR_JMP, end_label);
 
-            compiler_object_info_insert(compiler, block, bc_label_ptr);
-            compiler_object_info_insert(compiler, block->controlend_contents->start, (void*)end_label);
+            compiler_object_info_insert(compiler, block, block_data);
+            compiler_object_info_insert(compiler, block->controlend_contents->start, controlend_data);
             *next_block = block->controlend_contents->start;
         }
 
+        compiler->variables.size = var_slot;
         bytecode_join(&bc, &bc_label);
     } else if (prev_block == block->contents->end) {
-        IrBytecode* bc_label = compiler_object_info_get(compiler, block);
-        if (bc_label == OBJECT_NOT_FOUND) {
-            compiler_set_error(compiler, "Could not find end label in if block");
+        ControlData* block_data = compiler_object_info_get(compiler, block);
+        if (block_data == OBJECT_NOT_FOUND) {
+            compiler_set_error(compiler, "Could not find block data in if block");
             return DATA_ERROR;
         }
 
@@ -791,23 +804,28 @@ CompilerValue block_if(Compiler* compiler, Block* block, Block** next_block, Blo
         ConstId end_label = bytecode_push_label(&bc_end_label, ir_arena_sprintf(compiler->arena, 32, "if_end_%zu", compiler->label_counter++));
 
         bytecode_push_op_label(&bc, IR_JMP, end_label);
-        bytecode_join(&bc, bc_label);
+        bytecode_join(&bc, &block_data->bc);
+
+        compiler->variables.size = block_data->var_slot;
 
         if (!CHAIN_EMPTY(block->controlend_contents)) {
-            *bc_label = bc_end_label;
+            block_data->bc = bc_end_label;
 
-            compiler_object_info_insert(compiler, block->controlend_contents->start, (void*)end_label);
+            ControlData* controlend_data = ir_arena_alloc(compiler->arena, sizeof(ControlData));
+            controlend_data->label = end_label;
+
+            compiler_object_info_insert(compiler, block->controlend_contents->start, controlend_data);
             *next_block = block->controlend_contents->start;
         } else {
             bytecode_join(&bc, &bc_end_label);
         }
     } else if (prev_block == block->controlend_contents->end) {
-        IrBytecode* bc_label = compiler_object_info_get(compiler, block);
-        if (bc_label == OBJECT_NOT_FOUND) {
-            compiler_set_error(compiler, "Could not find end label in if block");
+        ControlData* block_data = compiler_object_info_get(compiler, block);
+        if (block_data == OBJECT_NOT_FOUND) {
+            compiler_set_error(compiler, "Could not find block data in if block");
             return DATA_ERROR;
         }
-        bc = *bc_label;
+        bc = block_data->bc;
     }
 
     return DATA_CHUNK(DATA_TYPE_NULL, bc);
@@ -819,7 +837,15 @@ CompilerValue block_else_if(Compiler* compiler, Block* block, Block** next_block
 
     IrBytecode bc = EMPTY_BYTECODE;
 
+    ControlData* block_data = compiler_object_info_get(compiler, block);
+    if (block_data == OBJECT_NOT_FOUND) {
+        compiler_set_error(compiler, "Could not find block data in else if block");
+        return DATA_ERROR;
+    }
+
     if (prev_block == prev) {
+        size_t var_slot = compiler->variables.size;
+
         CompilerValue value = compiler_evaluate_argument(compiler, &block->arguments[0]);
         if (value.type == DATA_TYPE_ERROR) return DATA_ERROR;
         value = cast_to_bc_bool(compiler, value);
@@ -831,42 +857,21 @@ CompilerValue block_else_if(Compiler* compiler, Block* block, Block** next_block
         bc = value.data.chunk_val.bc;
         bytecode_push_op_label(&bc, IR_IFNOT, end_label);
 
-        void* label_data = compiler_object_info_get(compiler, block);
-        if (label_data == OBJECT_NOT_FOUND) {
-            compiler_set_error(compiler, "Could not find end label in else if block");
-            return DATA_ERROR;
-        }
-        ConstId label = (ConstId)label_data;
-
         if (!CHAIN_EMPTY(block->contents)) {
-            struct {
-                ConstId label;
-                IrBytecode bc;
-            }* block_data = ir_arena_alloc(compiler->arena, sizeof(end_bc) + sizeof(ConstId));
-            block_data->label = label;
             block_data->bc = end_bc;
-
-            compiler_object_info_insert(compiler, block, block_data);
-
+            block_data->var_slot = var_slot;
             *next_block = block->contents->start;
         } else {
-            bytecode_push_op_label(&bc, IR_JMP, label);
+            bytecode_push_op_label(&bc, IR_JMP, block_data->label);
             bytecode_join(&bc, &end_bc);
-            if (block->next) compiler_object_info_insert(compiler, block->next, label_data);
+            compiler->variables.size = var_slot;
+            if (block->next) compiler_object_info_insert(compiler, block->next, block_data);
         }
     } else if (prev_block == block->contents->end) {
-        struct {
-            ConstId label;
-            IrBytecode bc;
-        }* block_data = compiler_object_info_get(compiler, block);
-        if (block_data == OBJECT_NOT_FOUND) {
-            compiler_set_error(compiler, "Could not find end label in else if block");
-            return DATA_ERROR;
-        }
-
         bytecode_push_op_label(&bc, IR_JMP, block_data->label);
         bytecode_join(&bc, &block_data->bc);
-        if (block->next) compiler_object_info_insert(compiler, block->next, (void*)block_data->label);
+        compiler->variables.size = block_data->var_slot;
+        if (block->next) compiler_object_info_insert(compiler, block->next, block_data);
     }
     return DATA_CHUNK(DATA_TYPE_NULL, bc);
 }
@@ -877,18 +882,21 @@ CompilerValue block_else(Compiler* compiler, Block* block, Block** next_block, B
 
     IrBytecode bc = EMPTY_BYTECODE;
 
-    if (prev_block == prev) {
-        if (!CHAIN_EMPTY(block->contents)) *next_block = block->contents->start;
-    } else {
-        void* label_data = compiler_object_info_get(compiler, block);
-        if (label_data == OBJECT_NOT_FOUND) {
-            compiler_set_error(compiler, "Could not find end label in else block");
-            return DATA_ERROR;
-        }
-        ConstId label = (ConstId)label_data;
+    ControlData* block_data = compiler_object_info_get(compiler, block);
+    if (block_data == OBJECT_NOT_FOUND) {
+        compiler_set_error(compiler, "Could not find block data in else block");
+        return DATA_ERROR;
+    }
 
-        bytecode_push_op_label(&bc, IR_JMP, label);
-        if (block->next) compiler_object_info_insert(compiler, block->next, label_data);
+    if (prev_block == prev) {
+        if (!CHAIN_EMPTY(block->contents)) {
+            *next_block = block->contents->start;
+            block_data->var_slot = compiler->variables.size;
+        }
+    } else {
+        bytecode_push_op_label(&bc, IR_JMP, block_data->label);
+        compiler->variables.size = block_data->var_slot;
+        if (block->next) compiler_object_info_insert(compiler, block->next, block_data);
     }
     return DATA_CHUNK(DATA_TYPE_NULL, bc);
 }
@@ -900,7 +908,10 @@ CompilerValue block_loop(Compiler* compiler, Block* block, Block** next_block, B
         ConstId loop_label = bytecode_push_label(&bc, ir_arena_sprintf(compiler->arena, 32, "loop_%zu", compiler->label_counter++));
 
         if (!CHAIN_EMPTY(block->contents)) {
-            compiler_object_info_insert(compiler, block, (void*)loop_label);
+            ControlData* block_data = ir_arena_alloc(compiler->arena, sizeof(ControlData));
+            block_data->label = loop_label;
+            block_data->var_slot = compiler->variables.size;
+            compiler_object_info_insert(compiler, block, block_data);
             *next_block = block->contents->start;
         } else {
             bytecode_push_op_int(&bc, IR_PUSHI, (int64_t)compiler->thread);
@@ -908,16 +919,16 @@ CompilerValue block_loop(Compiler* compiler, Block* block, Block** next_block, B
             bytecode_push_op_label(&bc, IR_JMP, loop_label);
         }
     } else if (prev_block == block->contents->end) {
-        void* label_data = compiler_object_info_get(compiler, block);
-        if (label_data == OBJECT_NOT_FOUND) {
+        ControlData* block_data = compiler_object_info_get(compiler, block);
+        if (block_data == OBJECT_NOT_FOUND) {
             compiler_set_error(compiler, "Could not find loop label in loop block");
             return DATA_ERROR;
         }
-        ConstId label = (ConstId)label_data;
 
         bytecode_push_op_int(&bc, IR_PUSHI, (int64_t)compiler->thread);
         bytecode_push_op_func(&bc, IR_RUN, ir_func_by_hint("std_thread_handle_stopping_state"));
-        bytecode_push_op_label(&bc, IR_JMP, label);
+        bytecode_push_op_label(&bc, IR_JMP, block_data->label);
+        compiler->variables.size = block_data->var_slot;
     }
 
     return DATA_CHUNK(DATA_TYPE_NULL, bc);
@@ -960,13 +971,9 @@ CompilerValue block_repeat(Compiler* compiler, Block* block, Block** next_block,
         bytecode_push_op_label(&bc, IR_IFNOT, loop_end);
 
         if (!CHAIN_EMPTY(block->contents)) {
-            struct {
-                ConstId loop_label;
-                size_t var_slot;
-                IrBytecode end_label;
-            }* block_data = ir_arena_alloc(compiler->arena, sizeof(end_label_bc) + sizeof(ConstId) + sizeof(var_slot));
-            block_data->loop_label = loop_label;
-            block_data->end_label = end_label_bc;
+            ControlData* block_data = ir_arena_alloc(compiler->arena, sizeof(ControlData));
+            block_data->label = loop_label;
+            block_data->bc = end_label_bc;
             block_data->var_slot = var_slot;
 
             compiler_object_info_insert(compiler, block, block_data);
@@ -986,11 +993,7 @@ CompilerValue block_repeat(Compiler* compiler, Block* block, Block** next_block,
             bytecode_join(&bc, &end_label_bc);
         }
     } else if (prev_block == block->contents->end) {
-        struct {
-            ConstId loop_label;
-            size_t var_slot;
-            IrBytecode end_label;
-        }* block_data = compiler_object_info_get(compiler, block);
+        ControlData* block_data = compiler_object_info_get(compiler, block);
         if (block_data == OBJECT_NOT_FOUND) {
             compiler_set_error(compiler, "Could not find block data in while block");
             return DATA_ERROR;
@@ -1002,12 +1005,12 @@ CompilerValue block_repeat(Compiler* compiler, Block* block, Block** next_block,
         bytecode_push_op(&bc, IR_ADDI);
         bytecode_push_op_int(&bc, IR_STORE, block_data->var_slot);
 
-        compiler->variables.size--;
+        compiler->variables.size = block_data->var_slot;
 
         bytecode_push_op_int(&bc, IR_PUSHI, (int64_t)compiler->thread);
         bytecode_push_op_func(&bc, IR_RUN, ir_func_by_hint("std_thread_handle_stopping_state"));
-        bytecode_push_op_label(&bc, IR_JMP, block_data->loop_label);
-        bytecode_join(&bc, &block_data->end_label);
+        bytecode_push_op_label(&bc, IR_JMP, block_data->label);
+        bytecode_join(&bc, &block_data->bc);
     }
 
     return DATA_CHUNK(DATA_TYPE_NULL, bc);
@@ -1032,12 +1035,10 @@ CompilerValue block_while(Compiler* compiler, Block* block, Block** next_block, 
         bytecode_push_op_label(&bc, IR_IFNOT, loop_end);
 
         if (!CHAIN_EMPTY(block->contents)) {
-            struct {
-                ConstId loop_label;
-                IrBytecode end_label;
-            }* block_data = ir_arena_alloc(compiler->arena, sizeof(end_label_bc) + sizeof(ConstId));
-            block_data->loop_label = loop_label;
-            block_data->end_label = end_label_bc;
+            ControlData* block_data = ir_arena_alloc(compiler->arena, sizeof(ControlData));
+            block_data->label = loop_label;
+            block_data->bc = end_label_bc;
+            block_data->var_slot = compiler->variables.size;
 
             compiler_object_info_insert(compiler, block, block_data);
             *next_block = block->contents->start;
@@ -1048,10 +1049,7 @@ CompilerValue block_while(Compiler* compiler, Block* block, Block** next_block, 
             bytecode_join(&bc, &end_label_bc);
         }
     } else if (prev_block == block->contents->end) {
-        struct {
-            ConstId loop_label;
-            IrBytecode end_label;
-        }* block_data = compiler_object_info_get(compiler, block);
+        ControlData* block_data = compiler_object_info_get(compiler, block);
         if (block_data == OBJECT_NOT_FOUND) {
             compiler_set_error(compiler, "Could not find block data in while block");
             return DATA_ERROR;
@@ -1059,8 +1057,9 @@ CompilerValue block_while(Compiler* compiler, Block* block, Block** next_block, 
 
         bytecode_push_op_int(&bc, IR_PUSHI, (int64_t)compiler->thread);
         bytecode_push_op_func(&bc, IR_RUN, ir_func_by_hint("std_thread_handle_stopping_state"));
-        bytecode_push_op_label(&bc, IR_JMP, block_data->loop_label);
-        bytecode_join(&bc, &block_data->end_label);
+        bytecode_push_op_label(&bc, IR_JMP, block_data->label);
+        bytecode_join(&bc, &block_data->bc);
+        compiler->variables.size = block_data->var_slot;
     }
 
     return DATA_CHUNK(DATA_TYPE_NULL, bc);
