@@ -185,6 +185,7 @@ CompilerValue compiler_evaluate_block(Compiler* compiler, Block* block, Block** 
     CompilerValue value = execute_block(compiler, block, next_block, prev_block);
     if (value.type == DATA_TYPE_UNKNOWN) {
         scrap_log(LOG_ERROR, "[COMPILER] Error from block id: \"%s\" (at block %p)", block->blockdef->id, &block);
+        if (!compiler->current_error_block) compiler->current_error_block = block;
     }
 
     return value;
@@ -212,6 +213,7 @@ CompilerValue compiler_evaluate_chain(Compiler* compiler, BlockChain* chain) {
         CompilerValue value = compiler_evaluate_block(compiler, iter, &next, prev);
         if (value.type == DATA_TYPE_UNKNOWN) {
             scrap_log(LOG_ERROR, "[COMPILER] From chain: %p", chain);
+            if (!compiler->current_error_blockchain) compiler->current_error_blockchain = chain;
             return value;
         }
 
