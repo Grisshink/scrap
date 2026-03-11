@@ -80,13 +80,13 @@ CompilerValue cast_to_const_nothing(Compiler* compiler, CompilerValue value);
 
 CompilerValue string_to_bc(Compiler* compiler, char* str) {
     IrBytecode bc = EMPTY_BYTECODE;
-    IrList* list = bytecode_const_list_new();
+    IrList* list = bytecode_const_list_new(compiler->bc_pool);
 
     int codepoint_size = 0;
     for (char* ch = str; *ch; ch += codepoint_size) {
         int codepoint = GetCodepointNext(ch, &codepoint_size);
 
-        bytecode_const_list_append(list, (IrValue) {
+        bytecode_const_list_append(compiler->bc_pool, list, (IrValue) {
             .type = IR_TYPE_INT,
             .as.int_val = codepoint,
         });

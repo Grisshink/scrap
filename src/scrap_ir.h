@@ -307,13 +307,10 @@ void bytecode_set_op_func(IrBytecode* bc, IrInstructionID instr_id, IrFunction f
 void bytecode_set_op_list(IrBytecode* bc, IrInstructionID instr_id, IrList* list_val);
 
 // Allocate new immutable list type that can be used in bytecode functions that operate on lists.
-IrList* bytecode_const_list_new(void);
+IrList* bytecode_const_list_new(IrBytecodePool* pool);
 
 // Add value to immutable list.
-void bytecode_const_list_append(IrList* list, IrValue val);
-
-// Free the immutable list.
-void bytecode_const_list_free(IrList* list);
+void bytecode_const_list_append(IrBytecodePool* pool, IrList* list, IrValue val);
 
 // Create a function value that needs to be resolved at runtime using hint string.
 // The exact hint string that needs to be passed depends on current runtime function resolver,
@@ -555,10 +552,6 @@ IrBytecodePool* bytecode_pool_new(IrMemArena* arena) {
 }
 
 void bytecode_pool_free(IrBytecodePool* pool) {
-    for (size_t i = 0; i < pool->list.size; i++) {
-        if (pool->list.items[i].type != IR_TYPE_LIST) continue;
-        bytecode_const_list_free(pool->list.items[i].as.list_val);
-    }
     ir_list_free(pool->hash_set);
     ir_list_free(pool->list);
     ir_arena_free(pool->arena);
@@ -604,12 +597,7 @@ size_t bytecode_pool_insert(IrBytecodePool* pool, IrValue value) {
     size_t idx = pool->hash_set.items[hash];
 
     while (idx != (size_t)-1) {
-        if (value_equals(pool->list.items[idx], value)) {
-            if (pool->list.items[idx].as.list_val != value.as.list_val && value.type == IR_TYPE_LIST) {
-                bytecode_const_list_free(value.as.list_val);
-            }
-            return idx;
-        }
+        if (value_equals(pool->list.items[idx], value)) return idx;
 
         hash++;
         if (hash >= pool->hash_set.capacity) hash = 0;
@@ -738,31 +726,14 @@ _ir_make_bc_set_op(bytecode_set_op_list, IrList*, list_val, IR_TYPE_LIST)
 
 #undef _ir_make_bc_set_op
 
-IrList* bytecode_const_list_new(void) {
-    IrList* list = malloc(sizeof(IrList));
+IrList* bytecode_const_list_new(IrBytecodePool* pool) {
+    IrList* list = ir_arena_alloc(pool->arena, sizeof(IrList));
     memset(list, 0, sizeof(IrList));
     return list;
 }
 
-void bytecode_const_list_append(IrList* list, IrValue val) {
-    if (list->size >= list->capacity) {
-        if (list->capacity == 0) list->capacity = 4;
-        else list->capacity *= 2;
-        list->items = realloc(list->items, sizeof(IrValue) * list->capacity);
-    }
-    list->items[list->size++] = val;
-}
-
-void bytecode_const_list_free(IrList* list) {
-    if (!list) return;
-    if (list->items) {
-        for (size_t i = 0; i < list->size; i++) {
-            if (list->items[i].type != IR_TYPE_LIST) continue;
-            bytecode_const_list_free(list->items[i].as.list_val);
-        }
-        if (!list->owned) free(list->items);
-    }
-    free(list);
+void bytecode_const_list_append(IrBytecodePool* pool, IrList* list, IrValue val) {
+    ir_arena_append(pool->arena, *list, val);
 }
 
 IrInstructionID bytecode_push_op_label(IrBytecode* bc, IrOpcode op, ConstId label_id) {
