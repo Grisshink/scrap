@@ -894,27 +894,176 @@ CompilerValue block_else(Compiler* compiler, Block* block, Block** next_block, B
 }
 
 CompilerValue block_loop(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
-    (void) compiler;
-    (void) block;
-    (void) next_block;
-    (void) prev_block;
-    return DATA_ERROR;
+    IrBytecode bc = EMPTY_BYTECODE;
+
+    if (prev_block == block->prev) {
+        ConstId loop_label = bytecode_push_label(&bc, ir_arena_sprintf(compiler->arena, 32, "loop_%zu", compiler->label_counter++));
+
+        if (!CHAIN_EMPTY(block->contents)) {
+            compiler_object_info_insert(compiler, block, (void*)loop_label);
+            *next_block = block->contents->start;
+        } else {
+            bytecode_push_op_int(&bc, IR_PUSHI, (int64_t)compiler->thread);
+            bytecode_push_op_func(&bc, IR_RUN, ir_func_by_hint("std_thread_handle_stopping_state"));
+            bytecode_push_op_label(&bc, IR_JMP, loop_label);
+        }
+    } else if (prev_block == block->contents->end) {
+        void* label_data = compiler_object_info_get(compiler, block);
+        if (label_data == OBJECT_NOT_FOUND) {
+            compiler_set_error(compiler, "Could not find loop label in loop block");
+            return DATA_ERROR;
+        }
+        ConstId label = (ConstId)label_data;
+
+        bytecode_push_op_int(&bc, IR_PUSHI, (int64_t)compiler->thread);
+        bytecode_push_op_func(&bc, IR_RUN, ir_func_by_hint("std_thread_handle_stopping_state"));
+        bytecode_push_op_label(&bc, IR_JMP, label);
+    }
+
+    return DATA_CHUNK(DATA_TYPE_NULL, bc);
 }
 
 CompilerValue block_repeat(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
-    (void) compiler;
-    (void) block;
-    (void) next_block;
-    (void) prev_block;
-    return DATA_ERROR;
+    IrBytecode bc = EMPTY_BYTECODE;
+
+    if (prev_block == block->prev) {
+        // Compute constant, it will be stored on the stack
+        CompilerValue value = compiler_evaluate_argument(compiler, &block->arguments[0]);
+        if (value.type == DATA_TYPE_ERROR) return DATA_ERROR;
+        value = cast_to_bc_int(compiler, value);
+        if (value.type == DATA_TYPE_ERROR) return DATA_ERROR;
+
+        bc = value.data.chunk_val.bc;
+
+        // Create new variable & reserve the slot for it
+        size_t var_slot = compiler->variables.size;
+        bytecode_push_op_int(&bc, IR_PUSHI, 0);
+        bytecode_push_op_int(&bc, IR_STORE, var_slot);
+
+        Variable var = {
+            .name = "__scrap_repeat_index",
+            .type = DATA_TYPE_UNKNOWN, // Compiler cannot cast anything to unknown, so any other block cannot mess with this variable
+        };
+        ir_arena_append(compiler->arena, compiler->variables, var);
+
+        // Loop start
+        ConstId loop_label = bytecode_push_label(&bc, ir_arena_sprintf(compiler->arena, 32, "repeat_%zu", compiler->label_counter++));
+
+        // Check the condition
+        bytecode_push_op(&bc, IR_DUP);
+        bytecode_push_op_int(&bc, IR_LOAD, var_slot);
+        bytecode_push_op(&bc, IR_MOREI);
+
+        IrBytecode end_label_bc = EMPTY_BYTECODE;
+        ConstId loop_end = bytecode_push_label(&end_label_bc, ir_arena_sprintf(compiler->arena, 32, "repeat_end_%zu", compiler->label_counter++));
+
+        bytecode_push_op_label(&bc, IR_IFNOT, loop_end);
+
+        if (!CHAIN_EMPTY(block->contents)) {
+            struct {
+                ConstId loop_label;
+                size_t var_slot;
+                IrBytecode end_label;
+            }* block_data = ir_arena_alloc(compiler->arena, sizeof(end_label_bc) + sizeof(ConstId) + sizeof(var_slot));
+            block_data->loop_label = loop_label;
+            block_data->end_label = end_label_bc;
+            block_data->var_slot = var_slot;
+
+            compiler_object_info_insert(compiler, block, block_data);
+            *next_block = block->contents->start;
+        } else {
+            // Increment the counter
+            bytecode_push_op_int(&bc, IR_LOAD, var_slot);
+            bytecode_push_op_int(&bc, IR_PUSHI, 1);
+            bytecode_push_op(&bc, IR_ADDI);
+            bytecode_push_op_int(&bc, IR_STORE, var_slot);
+
+            compiler->variables.size--;
+
+            bytecode_push_op_int(&bc, IR_PUSHI, (int64_t)compiler->thread);
+            bytecode_push_op_func(&bc, IR_RUN, ir_func_by_hint("std_thread_handle_stopping_state"));
+            bytecode_push_op_label(&bc, IR_JMP, loop_label);
+            bytecode_join(&bc, &end_label_bc);
+        }
+    } else if (prev_block == block->contents->end) {
+        struct {
+            ConstId loop_label;
+            size_t var_slot;
+            IrBytecode end_label;
+        }* block_data = compiler_object_info_get(compiler, block);
+        if (block_data == OBJECT_NOT_FOUND) {
+            compiler_set_error(compiler, "Could not find block data in while block");
+            return DATA_ERROR;
+        }
+
+        // Increment the counter
+        bytecode_push_op_int(&bc, IR_LOAD, block_data->var_slot);
+        bytecode_push_op_int(&bc, IR_PUSHI, 1);
+        bytecode_push_op(&bc, IR_ADDI);
+        bytecode_push_op_int(&bc, IR_STORE, block_data->var_slot);
+
+        compiler->variables.size--;
+
+        bytecode_push_op_int(&bc, IR_PUSHI, (int64_t)compiler->thread);
+        bytecode_push_op_func(&bc, IR_RUN, ir_func_by_hint("std_thread_handle_stopping_state"));
+        bytecode_push_op_label(&bc, IR_JMP, block_data->loop_label);
+        bytecode_join(&bc, &block_data->end_label);
+    }
+
+    return DATA_CHUNK(DATA_TYPE_NULL, bc);
 }
 
 CompilerValue block_while(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
-    (void) compiler;
-    (void) block;
-    (void) next_block;
-    (void) prev_block;
-    return DATA_ERROR;
+    IrBytecode bc = EMPTY_BYTECODE;
+
+    if (prev_block == block->prev) {
+        ConstId loop_label = bytecode_push_label(&bc, ir_arena_sprintf(compiler->arena, 32, "while_%zu", compiler->label_counter++));
+
+        CompilerValue value = compiler_evaluate_argument(compiler, &block->arguments[0]);
+        if (value.type == DATA_TYPE_ERROR) return DATA_ERROR;
+        value = cast_to_bc_bool(compiler, value);
+        if (value.type == DATA_TYPE_ERROR) return DATA_ERROR;
+
+        bytecode_join(&bc, &value.data.chunk_val.bc);
+
+        IrBytecode end_label_bc = EMPTY_BYTECODE;
+        ConstId loop_end = bytecode_push_label(&end_label_bc, ir_arena_sprintf(compiler->arena, 32, "while_end_%zu", compiler->label_counter++));
+
+        bytecode_push_op_label(&bc, IR_IFNOT, loop_end);
+
+        if (!CHAIN_EMPTY(block->contents)) {
+            struct {
+                ConstId loop_label;
+                IrBytecode end_label;
+            }* block_data = ir_arena_alloc(compiler->arena, sizeof(end_label_bc) + sizeof(ConstId));
+            block_data->loop_label = loop_label;
+            block_data->end_label = end_label_bc;
+
+            compiler_object_info_insert(compiler, block, block_data);
+            *next_block = block->contents->start;
+        } else {
+            bytecode_push_op_int(&bc, IR_PUSHI, (int64_t)compiler->thread);
+            bytecode_push_op_func(&bc, IR_RUN, ir_func_by_hint("std_thread_handle_stopping_state"));
+            bytecode_push_op_label(&bc, IR_JMP, loop_label);
+            bytecode_join(&bc, &end_label_bc);
+        }
+    } else if (prev_block == block->contents->end) {
+        struct {
+            ConstId loop_label;
+            IrBytecode end_label;
+        }* block_data = compiler_object_info_get(compiler, block);
+        if (block_data == OBJECT_NOT_FOUND) {
+            compiler_set_error(compiler, "Could not find block data in while block");
+            return DATA_ERROR;
+        }
+
+        bytecode_push_op_int(&bc, IR_PUSHI, (int64_t)compiler->thread);
+        bytecode_push_op_func(&bc, IR_RUN, ir_func_by_hint("std_thread_handle_stopping_state"));
+        bytecode_push_op_label(&bc, IR_JMP, block_data->loop_label);
+        bytecode_join(&bc, &block_data->end_label);
+    }
+
+    return DATA_CHUNK(DATA_TYPE_NULL, bc);
 }
 
 CompilerValue block_define_block(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {

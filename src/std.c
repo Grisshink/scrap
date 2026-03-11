@@ -26,6 +26,7 @@
 
 #include "std.h"
 #include "util.h"
+#include "thread.h"
 
 #ifdef _WIN32
 #include <windows.h>
@@ -281,6 +282,12 @@ bool std_random_int(IrExec* exec) {
     } else {
         exec_push_int(exec, rprand_get_value(min, max));
     }
+    return true;
+}
+
+bool std_thread_handle_stopping_state(IrExec* exec) {
+    Thread* thread = (void*)exec_pop_int(exec);
+    thread_handle_stopping_state(thread);
     return true;
 }
 
@@ -552,6 +559,7 @@ IrRunFunction std_resolve_function(IrExec* exec, const char* hint) {
         STD_FUNC(std_sleep),
         STD_FUNC(std_unix_time),
         STD_FUNC(std_term_print_str),
+        STD_FUNC(std_thread_handle_stopping_state),
         { "sqrt",  std_sqrt  },
         { "round", std_round },
         { "floor", std_floor },

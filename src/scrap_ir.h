@@ -292,7 +292,7 @@ ConstId bytecode_push_label(IrBytecode* bc, const char* name);
 IrInstructionID bytecode_push_op(IrBytecode* bc, IrOpcode op);
 
 // These functions append the instruction with constant to the end of bytecode.
-IrInstructionID bytecode_push_op_int(IrBytecode* bc, IrOpcode op, int int_val);
+IrInstructionID bytecode_push_op_int(IrBytecode* bc, IrOpcode op, int64_t int_val);
 IrInstructionID bytecode_push_op_float(IrBytecode* bc, IrOpcode op, double float_val);
 IrInstructionID bytecode_push_op_bool(IrBytecode* bc, IrOpcode op, bool bool_val);
 IrInstructionID bytecode_push_op_func(IrBytecode* bc, IrOpcode op, IrFunction func_val);
@@ -704,7 +704,7 @@ ConstId bytecode_push_constant(IrBytecode* bc, IrValue constant) {
         return bytecode_push_op_const(bc, op, bytecode_push_constant(bc, constant)); \
     }
 
-_ir_make_bc_push_op(bytecode_push_op_int, int, int_val, IR_TYPE_INT)
+_ir_make_bc_push_op(bytecode_push_op_int, int64_t, int_val, IR_TYPE_INT)
 _ir_make_bc_push_op(bytecode_push_op_float, double, float_val, IR_TYPE_FLOAT)
 _ir_make_bc_push_op(bytecode_push_op_bool, bool, bool_val, IR_TYPE_BOOL)
 _ir_make_bc_push_op(bytecode_push_op_func, IrFunction, func_val, IR_TYPE_FUNC)
