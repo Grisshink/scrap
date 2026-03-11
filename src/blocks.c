@@ -76,6 +76,7 @@ CompilerValue cast_to_const_int(Compiler* compiler, CompilerValue value);
 CompilerValue cast_to_const_float(Compiler* compiler, CompilerValue value);
 CompilerValue cast_to_const_bool(Compiler* compiler, CompilerValue value);
 CompilerValue cast_to_const_color(Compiler* compiler, CompilerValue value);
+CompilerValue cast_to_const_nothing(Compiler* compiler, CompilerValue value);
 
 CompilerValue string_to_bc(Compiler* compiler, char* str) {
     IrBytecode bc = EMPTY_BYTECODE;
@@ -345,6 +346,40 @@ CompilerValue cast_to_bc_color(Compiler* compiler, CompilerValue value) {
     }
 }
 
+CompilerValue cast_to_bc_nothing(Compiler* compiler, CompilerValue value) {
+    const DataType result_type = DATA_TYPE_NOTHING;
+
+    if (value.type != DATA_TYPE_CHUNK) {
+        CompilerValue nothing_val = cast_to_const_nothing(compiler, value);
+        if (nothing_val.type == DATA_TYPE_ERROR) return DATA_ERROR;
+
+        IrBytecode bc = EMPTY_BYTECODE;
+        bytecode_push_op(&bc, IR_PUSHN);
+        return DATA_CHUNK(result_type, bc);
+    }
+
+    static_assert(DATA_TYPE_LAST == 12, "Exhaustive data type in cast_to_bc_nothing");
+    switch (value.data.chunk_val.return_type) {
+    case DATA_TYPE_UNKNOWN:
+    case DATA_TYPE_NULL:
+    case DATA_TYPE_BLOCKDEF:
+    case DATA_TYPE_LIST:
+    case DATA_TYPE_CHUNK:
+    case DATA_TYPE_ANY:
+    case DATA_TYPE_COLOR:
+    case DATA_TYPE_INTEGER:
+    case DATA_TYPE_FLOAT:
+    case DATA_TYPE_STRING:
+    case DATA_TYPE_BOOL:
+        compiler_set_error(compiler, gettext("Cannot cast type %s into %s"), type_to_str(value.data.chunk_val.return_type), type_to_str(result_type));
+        return DATA_ERROR;
+    case DATA_TYPE_NOTHING:
+        return value;
+    default:
+        assert(false && "Unhandled data type in cast_to_bc_nothing");
+    }
+}
+
 CompilerValue cast_to_bc(Compiler* compiler, CompilerValue value, DataType dst_type) {
     DataType src_type = value.type;
     if (src_type == DATA_TYPE_CHUNK) {
@@ -359,8 +394,8 @@ CompilerValue cast_to_bc(Compiler* compiler, CompilerValue value, DataType dst_t
     case DATA_TYPE_STRING: return cast_to_bc_string(compiler, value);
     case DATA_TYPE_BOOL: return cast_to_bc_bool(compiler, value);
     case DATA_TYPE_COLOR: return cast_to_bc_color(compiler, value);
+    case DATA_TYPE_NOTHING: return cast_to_bc_nothing(compiler, value);
     case DATA_TYPE_LIST:
-    case DATA_TYPE_NOTHING:
     case DATA_TYPE_ANY:
     case DATA_TYPE_UNKNOWN:
     case DATA_TYPE_CHUNK:
@@ -494,6 +529,31 @@ CompilerValue cast_to_const_color(Compiler* compiler, CompilerValue value) {
     }
 }
 
+CompilerValue cast_to_const_nothing(Compiler* compiler, CompilerValue value) {
+    DataType dst_type = DATA_TYPE_NOTHING;
+
+    static_assert(DATA_TYPE_LAST == 12, "Exhaustive data type in cast_to_const_nothing");
+    switch (value.type) {
+    case DATA_TYPE_NOTHING:
+        return value;
+    case DATA_TYPE_INTEGER:
+    case DATA_TYPE_FLOAT:
+    case DATA_TYPE_STRING:
+    case DATA_TYPE_BOOL:
+    case DATA_TYPE_COLOR:
+    case DATA_TYPE_LIST:
+    case DATA_TYPE_ANY:
+    case DATA_TYPE_UNKNOWN:
+    case DATA_TYPE_CHUNK:
+    case DATA_TYPE_BLOCKDEF:
+    case DATA_TYPE_NULL:
+        compiler_set_error(compiler, gettext("Cannot cast type %s into %s"), type_to_str(value.type), type_to_str(dst_type));
+        return DATA_ERROR;
+    default:
+        assert(false && "Unhandled data type in cast_to_const_nothing");
+    }
+}
+
 CompilerValue cast_to_const(Compiler* compiler, CompilerValue value, DataType dst_type) {
     DataType src_type = value.type;
     if (src_type == dst_type) return value;
@@ -505,11 +565,9 @@ CompilerValue cast_to_const(Compiler* compiler, CompilerValue value, DataType ds
     case DATA_TYPE_STRING: return cast_to_const_string(compiler, value);
     case DATA_TYPE_BOOL: return cast_to_const_bool(compiler, value);
     case DATA_TYPE_COLOR: return cast_to_const_color(compiler, value);
-    case DATA_TYPE_LIST:
-        assert(false && "TODO");
-    case DATA_TYPE_CHUNK:
-        return cast_to_bc(compiler, value, value.type);
-    case DATA_TYPE_NOTHING:
+    case DATA_TYPE_LIST: assert(false && "TODO");
+    case DATA_TYPE_CHUNK: return cast_to_bc(compiler, value, value.type);
+    case DATA_TYPE_NOTHING: return cast_to_const_nothing(compiler, value);
     case DATA_TYPE_ANY:
     case DATA_TYPE_UNKNOWN:
     case DATA_TYPE_BLOCKDEF:
