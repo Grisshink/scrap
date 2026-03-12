@@ -303,7 +303,7 @@ static Color bg_color = {0};
 void test_cancel(void) {}
 
 bool std_term_print_str(IrExec* exec) {
-    IrList* list = exec_pop_list(exec);
+    IrList* list = exec_pop_list_string(exec);
     if (!list) return false;
     for (size_t i = 0; i < list->size; i++) {
         IrValue c = list->items[i];
@@ -423,7 +423,7 @@ void std_term_set_cursor(int x, int y) {
 #else
 
 bool std_term_print_str(IrExec* exec) {
-    IrList* list = exec_pop_list(exec);
+    IrList* list = exec_pop_list_string(exec);
     if (!list) return false;
     char buf[64];
     int buf_size = 0;

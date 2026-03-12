@@ -43,6 +43,7 @@ typedef enum {
     IR_PUSHF,       // Push float
     IR_PUSHB,       // Push bool
     IR_PUSHL,       // Push list
+    IR_PUSHA,       // Push string
     IR_PUSHLB,      // Push label
     IR_PUSHFN,      // Push func
     IR_POP,         // Pop value
@@ -119,6 +120,7 @@ typedef enum {
     IR_TOF, // any to float
     IR_TOB, // any to bool
     IR_TOA, // any to list[int]
+    IR_TOL, // any to list. Does nothing and it's only used for checking for valid type
 
     // List manipulation
     IR_ADDL,    // Add value to list
@@ -166,6 +168,7 @@ typedef enum {
     IR_TYPE_FLOAT,   // 64-bit float
     IR_TYPE_BOOL,    // Boolean, only can contain true or false
     IR_TYPE_LIST,    // Dynamic list, can contain values with different types
+    IR_TYPE_STRING,  // String type. Functionally identical to lists, except conversion instructions treat list as a string type
     IR_TYPE_FUNC,    // Pointer to native function
     IR_TYPE_LABEL,   // Pointer to label within bytecode
 } IrValueType;
@@ -375,6 +378,7 @@ void exec_push_bool(IrExec* exec, bool bool_val);
 void exec_push_func(IrExec* exec, IrFunction func_val);
 void exec_push_label(IrExec* exec, IrLabel label_val);
 void exec_push_list(IrExec* exec, IrList* list_val);
+void exec_push_list_string(IrExec* exec, IrList* list_val);
 void exec_push_nothing(IrExec* exec);
 
 // Convenience functions for getting values from exec stack of specific type.
@@ -384,6 +388,7 @@ bool exec_get_bool(IrExec* exec);
 IrFunction exec_get_func(IrExec* exec);
 IrLabel exec_get_label(IrExec* exec);
 IrList* exec_get_list(IrExec* exec);
+IrList* exec_get_list_string(IrExec* exec);
 
 // Convenience functions for popping values from exec stack of specific type.
 int64_t exec_pop_int(IrExec* exec);
@@ -392,6 +397,7 @@ bool exec_pop_bool(IrExec* exec);
 IrLabel exec_pop_label(IrExec* exec);
 IrFunction exec_pop_func(IrExec* exec);
 IrList* exec_pop_list(IrExec* exec);
+IrList* exec_pop_list_string(IrExec* exec);
 
 // Arena management functions
 #define ir_arena_append(arena, list, val) do { \
@@ -486,6 +492,10 @@ size_t hash_value(IrValue value) {
     case IR_TYPE_BOOL: hash = value.as.bool_val; break;
     case IR_TYPE_LIST: ;
         IrList* list = value.as.list_val;
+        if (!list) {
+            hash = 0x12345678;
+            break;
+        }
         for (size_t i = 0; i < list->size; i++) {
             hash = (hash << 1) ^ hash_value(list->items[i]);
         }
@@ -521,6 +531,7 @@ bool value_equals(IrValue left, IrValue right) {
     case IR_TYPE_INT: return left.as.int_val == right.as.int_val;
     case IR_TYPE_FLOAT: return left.as.float_val == right.as.float_val;
     case IR_TYPE_BOOL: return left.as.bool_val == right.as.bool_val;
+    case IR_TYPE_STRING:
     case IR_TYPE_LIST: ;
         IrList* left_list = left.as.list_val;
         IrList* right_list = right.as.list_val;
@@ -770,13 +781,25 @@ void bytecode_print(IrBytecode* bc) {
 
         printf("    ");
 
-        static_assert(IR_LAST == 77, "Exhaustive opcode in exec_run_bytecode");
+        IrList* list;
+
+        static_assert(IR_LAST == 79, "Exhaustive opcode in exec_run_bytecode");
         switch (bc->code.items[i]) {
         case IR_PUSHL:
             CHECK_IMMEDIATE;
-            IrList* list = pool_list.items[CODE_IMMEDIATE].as.list_val;
+            list = pool_list.items[CODE_IMMEDIATE].as.list_val;
             if (list) {
-                printf("pushl (%p, %zu/%zu) \"", list, list->size, list->capacity);
+                printf("pushl (%p, %zu/%zu)\n", list, list->size, list->capacity);
+            } else {
+                printf("pushl\n");
+            }
+            i += 3;
+            break;
+        case IR_PUSHA:
+            CHECK_IMMEDIATE;
+            list = pool_list.items[CODE_IMMEDIATE].as.list_val;
+            if (list) {
+                printf("pusha (%p, %zu/%zu) \"", list, list->size, list->capacity);
                 for (size_t j = 0; j < list->size; j++) {
                     if (j > 30) {
                         printf("...");
@@ -791,7 +814,7 @@ void bytecode_print(IrBytecode* bc) {
                 }
                 printf("\"\n");
             } else {
-                printf("pushl\n");
+                printf("pusha\n");
             }
             i += 3;
             break;
@@ -847,6 +870,7 @@ void bytecode_print(IrBytecode* bc) {
         case IR_TOF: printf("tof\n"); break;
         case IR_TOB: printf("tob\n"); break;
         case IR_TOA: printf("toa\n"); break;
+        case IR_TOL: printf("tol\n"); break;
         case IR_ADDL: printf("addl\n"); break;
         case IR_INDEXL: printf("indexl\n"); break;
         case IR_SETL: printf("setl\n"); break;
@@ -1216,6 +1240,7 @@ _ir_make_push(exec_push_bool, bool, bool_val, IR_TYPE_BOOL)
 _ir_make_push(exec_push_func, IrFunction, func_val, IR_TYPE_FUNC)
 _ir_make_push(exec_push_label, IrLabel, label_val, IR_TYPE_LABEL)
 _ir_make_push(exec_push_list, IrList*, list_val, IR_TYPE_LIST)
+_ir_make_push(exec_push_list_string, IrList*, list_val, IR_TYPE_STRING)
 
 #undef _ir_make_push
 
@@ -1242,6 +1267,7 @@ _ir_make_get(exec_get_bool, bool, bool_val, IR_TYPE_BOOL)
 _ir_make_get(exec_get_func, IrFunction, func_val, IR_TYPE_FUNC)
 _ir_make_get(exec_get_label, IrLabel, label_val, IR_TYPE_LABEL)
 _ir_make_get(exec_get_list, IrList*, list_val, IR_TYPE_LIST)
+_ir_make_get(exec_get_list_string, IrList*, list_val, IR_TYPE_STRING)
 
 #undef _ir_make_get
 
@@ -1273,6 +1299,7 @@ _ir_make_pop(exec_pop_bool, bool, bool_val, IR_TYPE_BOOL)
 _ir_make_pop(exec_pop_func, IrFunction, func_val, IR_TYPE_FUNC)
 _ir_make_pop(exec_pop_label, IrLabel, label_val, IR_TYPE_LABEL)
 _ir_make_pop(exec_pop_list, IrList*, list_val, IR_TYPE_LIST)
+_ir_make_pop(exec_pop_list_string, IrList*, list_val, IR_TYPE_STRING)
 
 #undef _ir_make_pop
 
@@ -1288,7 +1315,7 @@ IrList* exec_list_new(IrExec* exec) {
 bool exec_push_string(IrExec* exec, const char* str) {
     IrList* list = exec_list_new(exec);
     if (!list) return false;
-    exec_push_list(exec, list);
+    exec_push_list_string(exec, list);
 
     size_t str_len = strlen(str);
     list->size = str_len;
@@ -1297,7 +1324,7 @@ bool exec_push_string(IrExec* exec, const char* str) {
     void* items = exec_realloc(exec, list->items, list->capacity * sizeof(*list->items));
     if (!items) return false;
 
-    list = exec_get_list(exec);
+    list = exec_get_list_string(exec);
     list->items = items;
 
     for (size_t i = 0; i < str_len; i++) {
@@ -1329,7 +1356,7 @@ void exec_get_string(IrList* string, char* buf, size_t buf_len) {
 }
 
 void exec_pop_string(IrExec* exec, char* buf, size_t buf_len) {
-    IrList* list = exec_pop_list(exec);
+    IrList* list = exec_pop_list_string(exec);
     exec_get_string(list, buf, buf_len);
 }
 
@@ -1371,7 +1398,7 @@ bool exec_run_bytecode(IrExec* exec, IrBytecode* bc, size_t pos) {
     IrFunction* func;
 
     for (size_t i = pos; i < bc->code.size; i++) {
-        static_assert(IR_LAST == 77, "Exhaustive opcode in exec_run_bytecode");
+        static_assert(IR_LAST == 79, "Exhaustive opcode in exec_run_bytecode");
         switch (bc->code.items[i]) {
         case IR_PUSHN: exec_push_nothing(exec); break;
         case IR_PUSHI:
@@ -1577,6 +1604,19 @@ bool exec_run_bytecode(IrExec* exec, IrBytecode* bc, size_t pos) {
             case IR_TYPE_FLOAT: exec_push_bool(exec, left_value.as.float_val == right_value.as.float_val); break;
             case IR_TYPE_BOOL: exec_push_bool(exec, left_value.as.bool_val == right_value.as.bool_val); break;
             case IR_TYPE_LIST: exec_push_bool(exec, left_value.as.list_val == right_value.as.list_val); break;
+            case IR_TYPE_STRING:
+                if (left_value.as.list_val->size != right_value.as.list_val->size) {
+                    exec_push_bool(exec, false);
+                    break;
+                }
+                for (size_t i = 0; i < left_value.as.list_val->size; i++) {
+                    if (left_value.as.list_val->items[i].as.int_val != right_value.as.list_val->items[i].as.int_val) {
+                        exec_push_bool(exec, false);
+                        break;
+                    }
+                }
+                exec_push_bool(exec, true);
+                break;
             case IR_TYPE_FUNC:
                 if (left_value.as.func_val.ptr && right_value.as.func_val.ptr) {
                     exec_push_bool(exec, left_value.as.func_val.ptr == right_value.as.func_val.ptr);
@@ -1604,6 +1644,19 @@ bool exec_run_bytecode(IrExec* exec, IrBytecode* bc, size_t pos) {
             case IR_TYPE_FLOAT: exec_push_bool(exec, left_value.as.float_val != right_value.as.float_val); break;
             case IR_TYPE_BOOL: exec_push_bool(exec, left_value.as.bool_val != right_value.as.bool_val); break;
             case IR_TYPE_LIST: exec_push_bool(exec, left_value.as.list_val != right_value.as.list_val); break;
+            case IR_TYPE_STRING:
+                if (left_value.as.list_val->size != right_value.as.list_val->size) {
+                    exec_push_bool(exec, true);
+                    break;
+                }
+                for (size_t i = 0; i < left_value.as.list_val->size; i++) {
+                    if (left_value.as.list_val->items[i].as.int_val != right_value.as.list_val->items[i].as.int_val) {
+                        exec_push_bool(exec, true);
+                        break;
+                    }
+                }
+                exec_push_bool(exec, false);
+                break;
             case IR_TYPE_FUNC:
                 if (left_value.as.func_val.ptr && right_value.as.func_val.ptr) {
                     exec_push_bool(exec, left_value.as.func_val.ptr != right_value.as.func_val.ptr);
@@ -1644,7 +1697,11 @@ bool exec_run_bytecode(IrExec* exec, IrBytecode* bc, size_t pos) {
         case IR_LTOA:
             list = exec_pop_list(exec);
             IR_ASSERT(list != NULL);
-            snprintf(string_buf, IR_STRING_BUF_LEN, "list(%p, %zu/%zu)", list, list->size, list->capacity);
+            if (list->size == 0) {
+                snprintf(string_buf, IR_STRING_BUF_LEN, "[List: Empty]");
+            } else {
+                snprintf(string_buf, IR_STRING_BUF_LEN, "[List: %p, %zu/%zu]", list, list->size, list->capacity);
+            }
             if (!exec_push_string(exec, string_buf)) IR_EXEC_FAIL;
             break;
 
@@ -1668,14 +1725,14 @@ bool exec_run_bytecode(IrExec* exec, IrBytecode* bc, size_t pos) {
             case IR_TYPE_FLOAT: exec_push_int(exec, left_value.as.float_val); break;
             case IR_TYPE_BOOL:  exec_push_int(exec, left_value.as.bool_val); break;
             case IR_TYPE_BYTE:  exec_push_int(exec, left_value.as.byte_val); break;
-            case IR_TYPE_LIST:
+            case IR_TYPE_STRING:
                 exec_get_string(left_value.as.list_val, string_buf, IR_STRING_BUF_LEN);
                 exec_push_int(exec, atol(string_buf));
                 break;
             case IR_TYPE_NOTHING: exec_push_int(exec, 0); break;
             default:
-                IR_ASSERT(false && "Invalid toi type");
-                exec_push_int(exec, 0);
+                exec_set_error(exec, "Invalid type passed to toi");
+                IR_EXEC_FAIL;
                 break;
             }
             break;
@@ -1686,14 +1743,14 @@ bool exec_run_bytecode(IrExec* exec, IrBytecode* bc, size_t pos) {
             case IR_TYPE_FLOAT: exec_push_float(exec, left_value.as.float_val); break;
             case IR_TYPE_BOOL:  exec_push_float(exec, left_value.as.bool_val); break;
             case IR_TYPE_BYTE:  exec_push_float(exec, left_value.as.byte_val); break;
-            case IR_TYPE_LIST:
+            case IR_TYPE_STRING:
                 exec_get_string(left_value.as.list_val, string_buf, IR_STRING_BUF_LEN);
                 exec_push_float(exec, atof(string_buf));
                 break;
             case IR_TYPE_NOTHING: exec_push_float(exec, 0.0); break;
             default:
-                IR_ASSERT(false && "Invalid tof type");
-                exec_push_float(exec, 0.0);
+                exec_set_error(exec, "Invalid type passed to tof");
+                IR_EXEC_FAIL;
                 break;
             }
             break;
@@ -1704,14 +1761,14 @@ bool exec_run_bytecode(IrExec* exec, IrBytecode* bc, size_t pos) {
             case IR_TYPE_FLOAT: exec_push_bool(exec, left_value.as.float_val != 0); break;
             case IR_TYPE_BOOL:  exec_push_bool(exec, left_value.as.bool_val); break;
             case IR_TYPE_BYTE:  exec_push_bool(exec, left_value.as.byte_val != 0); break;
-            case IR_TYPE_LIST:
+            case IR_TYPE_STRING:
                 exec_get_string(left_value.as.list_val, string_buf, IR_STRING_BUF_LEN);
                 exec_push_bool(exec, string_buf[0] != '\0' ? true : false);
                 break;
             case IR_TYPE_NOTHING: exec_push_bool(exec, false); break;
             default:
-                IR_ASSERT(false && "Invalid tob type");
-                exec_push_bool(exec, false);
+                exec_set_error(exec, "Invalid type passed to tob");
+                IR_EXEC_FAIL;
                 break;
             }
             break;
@@ -1734,21 +1791,38 @@ bool exec_run_bytecode(IrExec* exec, IrBytecode* bc, size_t pos) {
                 snprintf(string_buf, IR_STRING_BUF_LEN, "%d", left_value.as.byte_val);
                 if (!exec_push_string(exec, string_buf)) IR_EXEC_FAIL;
                 break;
-            case IR_TYPE_LIST:
+            case IR_TYPE_STRING:
                 exec_push_value(exec, left_value);
+                break;
+            case IR_TYPE_LIST:
+                list = left_value.as.list_val;
+                IR_ASSERT(list != NULL);
+                if (list->size == 0) {
+                    snprintf(string_buf, IR_STRING_BUF_LEN, "[List: Empty]");
+                } else {
+                    snprintf(string_buf, IR_STRING_BUF_LEN, "[List: %p, %zu/%zu]", list, list->size, list->capacity);
+                }
+                if (!exec_push_string(exec, string_buf)) IR_EXEC_FAIL;
                 break;
             case IR_TYPE_NOTHING:
                 if (!exec_push_string(exec, "nothing")) IR_EXEC_FAIL;
                 break;
             default:
-                IR_ASSERT(false && "Invalid toa type");
-                list = exec_list_new(exec);
-                if (!list) IR_EXEC_FAIL;
-                exec_push_list(exec, list);
+                exec_set_error(exec, "Invalid type passed to toa");
+                IR_EXEC_FAIL;
                 break;
             }
             break;
-
+        case IR_TOL:
+            left_value = exec_pop_value(exec);
+            switch (left_value.type) {
+            case IR_TYPE_LIST: exec_push_value(exec, left_value); break;
+            default:
+                exec_set_error(exec, "Invalid type passed to tol");
+                IR_EXEC_FAIL;
+                break;
+            }
+            break;
         case IR_PUSHL:
             list = pool_list.items[CODE_IMMEDIATE].as.list_val;
             if (!list) {
@@ -1758,9 +1832,20 @@ bool exec_run_bytecode(IrExec* exec, IrBytecode* bc, size_t pos) {
             exec_push_list(exec, list);
             i += 3;
             break;
+        case IR_PUSHA:
+            list = pool_list.items[CODE_IMMEDIATE].as.list_val;
+            if (!list) {
+                list = exec_list_new(exec);
+                if (!list) IR_EXEC_FAIL;
+            }
+            exec_push_list_string(exec, list);
+            i += 3;
+            break;
         case IR_ADDL: ;
             left_value = exec_pop_value(exec);
-            list = exec_get_list(exec);
+            right_value = exec_get_value(exec);
+            IR_ASSERT(right_value.type == IR_TYPE_STRING || right_value.type == IR_TYPE_LIST);
+            list = right_value.as.list_val;
             IR_ASSERT(list != NULL);
 
             if (!list->owned) {
@@ -1773,7 +1858,8 @@ bool exec_run_bytecode(IrExec* exec, IrBytecode* bc, size_t pos) {
                 else list->capacity *= 2;
                 void* items = exec_realloc(exec, list->items, list->capacity * sizeof(*list->items));
                 if (!items) IR_EXEC_FAIL;
-                list = exec_get_list(exec);
+                right_value = exec_get_value(exec);
+                list = right_value.as.list_val;
                 list->items = items;
             }
             list->items[list->size++] = left_value;
@@ -1781,7 +1867,10 @@ bool exec_run_bytecode(IrExec* exec, IrBytecode* bc, size_t pos) {
             break;
         case IR_INDEXL:
             left_int = exec_pop_int(exec);
-            list = exec_pop_list(exec);
+
+            right_value = exec_pop_value(exec);
+            IR_ASSERT(right_value.type == IR_TYPE_STRING || right_value.type == IR_TYPE_LIST);
+            list = right_value.as.list_val;
             IR_ASSERT(list != NULL);
 
             if (left_int < 0 || (size_t)left_int >= list->size) {
@@ -1793,8 +1882,12 @@ bool exec_run_bytecode(IrExec* exec, IrBytecode* bc, size_t pos) {
         case IR_SETL:
             left_value = exec_pop_value(exec);
             left_int = exec_pop_int(exec);
-            list = exec_pop_list(exec);
+
+            right_value = exec_pop_value(exec);
+            IR_ASSERT(right_value.type == IR_TYPE_STRING || right_value.type == IR_TYPE_LIST);
+            list = right_value.as.list_val;
             IR_ASSERT(list != NULL);
+
             if (!list->owned) {
                 exec_set_error(exec, "Attemt to modify constant list %p", list);
                 IR_EXEC_FAIL;
@@ -1805,7 +1898,10 @@ bool exec_run_bytecode(IrExec* exec, IrBytecode* bc, size_t pos) {
         case IR_INSERTL:
             left_value = exec_pop_value(exec);
             left_int = exec_pop_int(exec);
-            list = exec_get_list(exec);
+
+            right_value = exec_get_value(exec);
+            IR_ASSERT(right_value.type == IR_TYPE_STRING || right_value.type == IR_TYPE_LIST);
+            list = right_value.as.list_val;
             IR_ASSERT(list != NULL);
 
             if (!list->owned) {
@@ -1820,7 +1916,8 @@ bool exec_run_bytecode(IrExec* exec, IrBytecode* bc, size_t pos) {
                 else list->capacity *= 2;
                 void* items = exec_realloc(exec, list->items, list->capacity * sizeof(*list->items));
                 if (!items) IR_EXEC_FAIL;
-                list = exec_get_list(exec);
+                right_value = exec_get_value(exec);
+                list = right_value.as.list_val;
                 list->items = items;
             }
             memmove(list->items + left_int + 1, list->items + left_int, (list->size - left_int) * sizeof(IrValue));
@@ -1830,7 +1927,10 @@ bool exec_run_bytecode(IrExec* exec, IrBytecode* bc, size_t pos) {
             break;
         case IR_DELL:
             left_int = exec_pop_int(exec);
-            list = exec_pop_list(exec);
+
+            right_value = exec_pop_value(exec);
+            IR_ASSERT(right_value.type == IR_TYPE_STRING || right_value.type == IR_TYPE_LIST);
+            list = right_value.as.list_val;
             IR_ASSERT(list != NULL);
 
             if (!list->owned) {
@@ -1842,8 +1942,11 @@ bool exec_run_bytecode(IrExec* exec, IrBytecode* bc, size_t pos) {
             list->size--;
             break;
         case IR_LENL:
-            list = exec_pop_list(exec);
+            right_value = exec_pop_value(exec);
+            IR_ASSERT(right_value.type == IR_TYPE_STRING || right_value.type == IR_TYPE_LIST);
+            list = right_value.as.list_val;
             IR_ASSERT(list != NULL);
+
             exec_push_int(exec, list->size);
             break;
 
@@ -1924,6 +2027,7 @@ exec_return:
 }
 
 void exec_print_value(IrValue* value) {
+    IrList* list;
     switch (value->type) {
     case IR_TYPE_NOTHING:
         printf("nothing");
@@ -1941,11 +2045,19 @@ void exec_print_value(IrValue* value) {
         printf("bool %s", value->as.bool_val ? "true" : "false");
         break;
     case IR_TYPE_LIST: ;
-        IrList* list = value->as.list_val;
+        list = value->as.list_val;
         if (!list) {
-            printf("list (empty)");
+            printf("[List: Empty]");
         } else {
-            printf("list %p (%zu/%zu)", list->items, list->size, list->capacity);
+            printf("[List: %p (%zu/%zu)]", list->items, list->size, list->capacity);
+        }
+        break;
+    case IR_TYPE_STRING: ;
+        list = value->as.list_val;
+        if (!list) {
+            printf("[String: Empty]");
+        } else {
+            printf("[String: %p (%zu/%zu)]", list->items, list->size, list->capacity);
         }
         break;
     case IR_TYPE_FUNC:
