@@ -473,11 +473,13 @@ CompilerValue cast_to_const_string(Compiler* compiler, CompilerValue value) {
     case DATA_TYPE_STRING: return value;
     case DATA_TYPE_NOTHING: return DATA_STRING("nothing");
     case DATA_TYPE_INTEGER:
+        return DATA_STRING(ir_arena_sprintf(compiler->arena, 32, "%d", value.data.integer_val));
     case DATA_TYPE_COLOR:
+        return DATA_STRING(ir_arena_sprintf(compiler->arena, 32, "#%02x%02x%02x%02x", value.data.color_val.r, value.data.color_val.g, value.data.color_val.b, value.data.color_val.a));
     case DATA_TYPE_FLOAT:
-    case DATA_TYPE_BOOL:
-        assert(false && "TODO");
-    case DATA_TYPE_LIST:
+        return DATA_STRING(ir_arena_sprintf(compiler->arena, 32, "%gf", value.data.float_val));
+    case DATA_TYPE_BOOL: return DATA_STRING(value.data.bool_val ? "true" : "false");
+    case DATA_TYPE_LIST: return DATA_STRING("[List: Empty]");
     case DATA_TYPE_ANY:
     case DATA_TYPE_UNKNOWN:
     case DATA_TYPE_CHUNK:
@@ -569,7 +571,12 @@ CompilerValue cast_to_const_color(Compiler* compiler, CompilerValue value) {
     switch (value.type) {
     case DATA_TYPE_INTEGER: return DATA_COLOR(*(Color*)&value.data.integer_val);
     case DATA_TYPE_FLOAT: return DATA_COLOR(*(Color*)&value.data.float_val);
-    case DATA_TYPE_STRING: assert(false && "TODO");
+    case DATA_TYPE_STRING:
+        char* str = value.data.str_val;
+        if (*str == '#') str++;
+        unsigned char r = 0x00, g = 0x00, b = 0x00, a = 0xff;
+        sscanf(str, "%02hhx%02hhx%02hhx%02hhx", &r, &g, &b, &a);
+        return DATA_COLOR(((Color) { r, g, b, a }));
     case DATA_TYPE_BOOL: return DATA_COLOR(value.data.bool_val ? ((Color) { 0xff, 0xff, 0xff, 0xff }) : ((Color) { 0x00, 0x00, 0x00, 0xff }));
     case DATA_TYPE_COLOR: return value;
     case DATA_TYPE_NOTHING: return DATA_COLOR(((Color) { 0x00, 0x00, 0x00, 0xff }));
