@@ -229,12 +229,30 @@ STD_MATH_FUNC(atan)
 
 #undef STD_MATH_FUNC
 
-// StdColor std_parse_color(const char* value) {
-//     if (*value == '#') value++;
-//     unsigned char r = 0x00, g = 0x00, b = 0x00, a = 0xff;
-//     sscanf(value, "%02hhx%02hhx%02hhx%02hhx", &r, &g, &b, &a);
-//     return (StdColor) { r, g, b, a };
-// }
+bool std_color_to_string(IrExec* exec) {
+    int64_t color_int = exec_pop_int(exec);
+    StdColor color = *(StdColor*)&color_int;
+
+    char str[32];
+    snprintf(str, 32, "#%02x%02x%02x%02x", color.r, color.g, color.b, color.a);
+    if (!exec_push_string(exec, str)) return false;
+    return true;
+}
+
+bool std_string_to_color(IrExec* exec) {
+    char str_buf[32];
+    exec_pop_string(exec, str_buf, 32);
+
+    char* str = str_buf;
+
+    if (*str == '#') str++;
+    unsigned char r = 0x00, g = 0x00, b = 0x00, a = 0xff;
+    sscanf(str, "%02hhx%02hhx%02hhx%02hhx", &r, &g, &b, &a);
+    StdColor color = { r, g, b, a };
+    int32_t color_int = *(int32_t*)&color;
+    exec_push_int(exec, color_int);
+    return true;
+}
 
 bool std_sleep(IrExec* exec) {
     double secs = exec_pop_float(exec);
@@ -560,6 +578,8 @@ IrRunFunction std_resolve_function(IrExec* exec, const char* hint) {
         STD_FUNC(std_unix_time),
         STD_FUNC(std_term_print_str),
         STD_FUNC(std_thread_handle_stopping_state),
+        STD_FUNC(std_color_to_string),
+        STD_FUNC(std_string_to_color),
         { "sqrt",  std_sqrt  },
         { "round", std_round },
         { "floor", std_floor },

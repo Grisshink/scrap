@@ -148,7 +148,8 @@ CompilerValue cast_to_bc_string(Compiler* compiler, CompilerValue value) {
             bytecode_push_op(&bc, IR_NTOA);
             return DATA_CHUNK(result_type, bc);
         case DATA_TYPE_COLOR:
-            assert(false && "TODO");
+            bytecode_push_op_func(&bc, IR_RUN, ir_func_by_hint("std_color_to_string"));
+            return DATA_CHUNK(result_type, bc);
         case DATA_TYPE_INTEGER:
             bytecode_push_op(&bc, IR_ITOA);
             return DATA_CHUNK(result_type, bc);
@@ -342,7 +343,8 @@ CompilerValue cast_to_bc_color(Compiler* compiler, CompilerValue value) {
         bytecode_push_op(&bc, IR_FTOI);
         return DATA_CHUNK(result_type, bc);
     case DATA_TYPE_STRING:
-        assert(false && "TODO");
+        bytecode_push_op_func(&bc, IR_RUN, ir_func_by_hint("std_string_to_color"));
+        return DATA_CHUNK(result_type, bc);
     case DATA_TYPE_BOOL:
         bytecode_push_op(&bc, IR_BTOI);
         return DATA_CHUNK(result_type, bc);

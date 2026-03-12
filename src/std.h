@@ -24,6 +24,10 @@
 #include "scrap_ir.h"
 #include <stdbool.h>
 
+typedef struct {
+    unsigned char r, g, b, a;
+} StdColor;
+
 IrRunFunction std_resolve_function(IrExec* exec, const char* hint);
 
 // Math

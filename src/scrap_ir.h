@@ -399,6 +399,15 @@ IrFunction exec_pop_func(IrExec* exec);
 IrList* exec_pop_list(IrExec* exec);
 IrList* exec_pop_list_string(IrExec* exec);
 
+// Converts ascii string to list and pushes to stack
+bool exec_push_string(IrExec* exec, const char* str);
+
+// Gets ascii buffer from string value
+void exec_get_string(IrList* string, char* buf, size_t buf_len);
+
+// Pops ascii string from stack
+void exec_pop_string(IrExec* exec, char* buf, size_t buf_len);
+
 // Arena management functions
 #define ir_arena_append(arena, list, val) do { \
     if ((list).size >= (list).capacity) { \
