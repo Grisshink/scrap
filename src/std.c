@@ -309,6 +309,74 @@ bool std_thread_handle_stopping_state(IrExec* exec) {
     return true;
 }
 
+bool std_string_join(IrExec* exec) {
+    IrList* right = exec_pop_list_string(exec);
+    IrList* left  = exec_pop_list_string(exec);
+    IR_ASSERT(left  != NULL);
+    IR_ASSERT(right != NULL);
+
+    // Push lists back to avoid them being freed by gc
+    exec_push_list_string(exec, left);
+    exec_push_list_string(exec, right);
+
+    IrList* new_list = exec_list_new(exec);
+    exec_push_list_string(exec, new_list);
+
+    new_list->capacity = left->size + right->size;
+
+    void* items = exec_malloc(exec, new_list->capacity * sizeof(*new_list->items));
+    if (!items) return false;
+
+    new_list = exec_pop_list_string(exec);
+    right = exec_pop_list_string(exec);
+    left  = exec_pop_list_string(exec);
+
+    new_list->items = items;
+
+    memcpy(new_list->items, left->items, left->size * sizeof(*left->items));
+    memcpy(new_list->items + left->size, right->items, right->size * sizeof(*right->items));
+    new_list->size = left->size + right->size;
+    exec_push_list_string(exec, new_list);
+
+    return true;
+}
+
+bool std_string_substring(IrExec* exec) {
+    IrList* str = exec_pop_list_string(exec);
+    int64_t end = exec_pop_int(exec);
+    int64_t start = exec_pop_int(exec);
+
+    start = MAX(start, 1);
+    end = MIN(end, (int64_t)str->size);
+    if (start > end || start > (int64_t)str->size || end < 1) {
+        IrList* new_list = exec_list_new(exec);
+        memset(new_list, 0, sizeof(IrList));
+        exec_push_list_string(exec, new_list);
+        return true;
+    }
+
+    exec_push_list_string(exec, str);
+
+    IrList* new_list = exec_list_new(exec);
+    exec_push_list_string(exec, new_list);
+
+    new_list->capacity = end - start + 1;
+
+    void* items = exec_malloc(exec, new_list->capacity * sizeof(*new_list->items));
+    if (!items) return false;
+
+    new_list = exec_pop_list_string(exec);
+    str = exec_pop_list_string(exec);
+
+    new_list->items = items;
+
+    memcpy(new_list->items, str->items + start - 1, (end - start + 1) * sizeof(*str->items));
+    exec_push_list_string(exec, new_list);
+    new_list->size = new_list->capacity;
+
+    return true;
+}
+
 #ifdef STANDALONE_STD
 
 #include <wchar.h>
@@ -580,6 +648,8 @@ IrRunFunction std_resolve_function(IrExec* exec, const char* hint) {
         STD_FUNC(std_thread_handle_stopping_state),
         STD_FUNC(std_color_to_string),
         STD_FUNC(std_string_to_color),
+        STD_FUNC(std_string_join),
+        STD_FUNC(std_string_substring),
         { "sqrt",  std_sqrt  },
         { "round", std_round },
         { "floor", std_floor },

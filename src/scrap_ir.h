@@ -24,8 +24,11 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <assert.h>
 
 #define IR_LAST_ERROR_SIZE 512
+
+#define IR_ASSERT(val) assert(val)
 
 typedef struct IrExec IrExec;
 typedef struct IrValue IrValue;
@@ -356,6 +359,18 @@ void exec_print_variables(IrExec* exec);
 // Triggers the garbage collection event in exec for debugging purposes.
 void exec_collect(IrExec* exec);
 
+// Sets last error value in exec. Used when raising errors from run functions.
+void exec_set_error(IrExec* exec, const char* fmt, ...);
+
+// Allocate memory using exec's garbage collector.
+// Note that any ir value that is neither in the exec stack nor in the exec variable stack
+// can get garbage collected after calling these functions.
+void* exec_malloc(IrExec* exec, size_t size);
+void* exec_realloc(IrExec* exec, void* ptr, size_t new_size);
+
+// Create new dynamic list. Note: This calls exec_malloc and can change pointers to gc allocated values
+IrList* exec_list_new(IrExec* exec);
+
 // Pushes IrValue to exec stack.
 void exec_push_value(IrExec* exec, IrValue value);
 
@@ -436,7 +451,6 @@ char* ir_arena_sprintf(IrMemArena* arena, size_t max_size, const char* fmt, ...)
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdarg.h>
-#include <assert.h>
 #include <math.h>
 #include <errno.h>
 
@@ -468,8 +482,6 @@ char* ir_arena_sprintf(IrMemArena* arena, size_t max_size, const char* fmt, ...)
     }
 
 #define CODE_IMMEDIATE ((bc->code.items[i + 1] << 16) | (bc->code.items[i + 2] << 8) | bc->code.items[i + 3])
-
-#define IR_ASSERT(val) assert(val)
 
 #ifndef MAX
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
@@ -1177,6 +1189,7 @@ void exec_free(IrExec* exec) {
     }
     ir_list_free(exec->variables);
 
+    printf("exec_free: %zu bytes allocated, %zu chunks created\n", exec->heap.mem->pos, exec->heap.chunks_count);
     exec_heap_free(&exec->heap);
     exec_heap_free(&exec->second_heap);
 }
@@ -1858,7 +1871,7 @@ bool exec_run_bytecode(IrExec* exec, IrBytecode* bc, size_t pos) {
             IR_ASSERT(list != NULL);
 
             if (!list->owned) {
-                exec_set_error(exec, "Attemt to modify constant list %p", list);
+                exec_set_error(exec, "Attempt to modify constant list %p", list);
                 IR_EXEC_FAIL;
             }
 
@@ -1882,10 +1895,11 @@ bool exec_run_bytecode(IrExec* exec, IrBytecode* bc, size_t pos) {
             list = right_value.as.list_val;
             IR_ASSERT(list != NULL);
 
-            if (left_int < 0 || (size_t)left_int >= list->size) {
-                exec_push_nothing(exec);
+            if (left_int < 1 || (size_t)left_int > list->size) {
+                exec_set_error(exec, "Out of bounds list access. Tried to index value %ld with list of size %zu", left_int, list->size);
+                IR_EXEC_FAIL;
             } else {
-                exec_push_value(exec, list->items[left_int]);
+                exec_push_value(exec, list->items[left_int - 1]);
             }
             break;
         case IR_SETL:

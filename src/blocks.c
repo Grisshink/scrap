@@ -1,15 +1,15 @@
 // Scrap is a project that allows anyone to build software using simple, block based interface.
 //
 // Copyright (C) 2024-202 Grisshink
-// 
+//
 // This software is provided 'as-is', without any express or implied
 // warranty.  In no event will the authors be held liable for any damages
 // arising from the use of this software.
-// 
+//
 // Permission is granted to anyone to use this software for any purpose,
 // including commercial applications, and to alter it and redistribute it
 // freely, subject to the following restrictions:
-// 
+//
 // 1. The origin of this software must not be misrepresented; you must not
 //    claim that you wrote the original software. If you use this software
 //    in a product, an acknowledgment in the product documentation would be
@@ -503,7 +503,7 @@ CompilerValue cast_to_const_int(Compiler* compiler, CompilerValue value) {
     case DATA_TYPE_BOOL: return DATA_INTEGER(value.data.bool_val);
     case DATA_TYPE_COLOR: return DATA_INTEGER(*(int*)&value.data.color_val);
     case DATA_TYPE_NOTHING: return DATA_INTEGER(0);
-    case DATA_TYPE_LIST: 
+    case DATA_TYPE_LIST:
     case DATA_TYPE_ANY:
     case DATA_TYPE_UNKNOWN:
     case DATA_TYPE_CHUNK:
@@ -1476,7 +1476,7 @@ CompilerValue block_eq(Compiler* compiler, Block* block, Block** next_block, Blo
             return DATA_ERROR;
         default:
             assert(false && "Unhandled data type in block_eq");
-        
+
         }
     }
 
@@ -1537,7 +1537,7 @@ CompilerValue block_not_eq(Compiler* compiler, Block* block, Block** next_block,
             return DATA_ERROR;
         default:
             assert(false && "Unhandled data type in block_eq");
-        
+
         }
     }
 
@@ -1729,10 +1729,10 @@ CompilerValue block_set_var(Compiler* compiler, Block* block, Block** next_block
 
     if (compiler->variables.items[var_slot].type != DATA_TYPE_ANY && value.data.chunk_val.return_type != compiler->variables.items[var_slot].type) {
         compiler_set_error(
-            compiler, 
-            gettext("Assign to variable \"%s\" of type %s with incompatible type %s"), 
-            name.data.str_val, 
-            type_to_str(compiler->variables.items[var_slot].type), 
+            compiler,
+            gettext("Assign to variable \"%s\" of type %s with incompatible type %s"),
+            name.data.str_val,
+            type_to_str(compiler->variables.items[var_slot].type),
             type_to_str(value.data.chunk_val.return_type)
         );
         return DATA_ERROR;
@@ -1745,51 +1745,139 @@ CompilerValue block_set_var(Compiler* compiler, Block* block, Block** next_block
 }
 
 CompilerValue block_join(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
-    (void) compiler;
-    (void) block;
     (void) next_block;
     (void) prev_block;
-    return DATA_ERROR;
+
+    CompilerValue left_val = compiler_evaluate_argument(compiler, &block->arguments[0]);
+    if (left_val.type == DATA_TYPE_ERROR) return DATA_ERROR;
+
+    CompilerValue right_val = compiler_evaluate_argument(compiler, &block->arguments[1]);
+    if (right_val.type == DATA_TYPE_ERROR) return DATA_ERROR;
+
+    cast_binary(compiler, &left_val, &right_val, DATA_TYPE_STRING);
+    if (left_val.type == DATA_TYPE_ERROR || right_val.type == DATA_TYPE_ERROR) return DATA_ERROR;
+
+    if (left_val.type == DATA_TYPE_CHUNK) {
+        IrBytecode bc = left_val.data.chunk_val.bc;
+        bytecode_join(&bc, &right_val.data.chunk_val.bc);
+        bytecode_push_op_func(&bc, IR_RUN, ir_func_by_hint("std_string_join"));
+        return DATA_CHUNK(DATA_TYPE_STRING, bc);
+    } else {
+        size_t left_len = strlen(left_val.data.str_val);
+        size_t right_len = strlen(right_val.data.str_val);
+
+        char* str = ir_arena_alloc(compiler->arena, left_len + right_len + 1);
+        strcpy(str, left_val.data.str_val);
+        strcpy(str + left_len, right_val.data.str_val);
+        return DATA_STRING(str);
+    }
 }
 
 CompilerValue block_letter_in(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
-    (void) compiler;
-    (void) block;
     (void) next_block;
     (void) prev_block;
-    return DATA_ERROR;
+
+    CompilerValue ind = compiler_evaluate_argument(compiler, &block->arguments[0]);
+    if (ind.type == DATA_TYPE_ERROR) return DATA_ERROR;
+    ind = cast_to_bc_int(compiler, ind);
+    if (ind.type == DATA_TYPE_ERROR) return DATA_ERROR;
+
+    CompilerValue str = compiler_evaluate_argument(compiler, &block->arguments[1]);
+    if (str.type == DATA_TYPE_ERROR) return DATA_ERROR;
+    str = cast_to_bc_string(compiler, str);
+    if (str.type == DATA_TYPE_ERROR) return DATA_ERROR;
+
+    IrBytecode bc = EMPTY_BYTECODE;
+
+    bytecode_push_op_list(&bc, IR_PUSHA, NULL);
+    bytecode_push_op(&bc, IR_DUP);
+
+    bytecode_join(&bc, &str.data.chunk_val.bc);
+    bytecode_join(&bc, &ind.data.chunk_val.bc);
+
+    bytecode_push_op(&bc, IR_INDEXL);
+    bytecode_push_op(&bc, IR_ADDL);
+    return DATA_CHUNK(DATA_TYPE_STRING, bc);
 }
 
 CompilerValue block_substring(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
-    (void) compiler;
-    (void) block;
     (void) next_block;
     (void) prev_block;
-    return DATA_ERROR;
+
+    CompilerValue start = compiler_evaluate_argument(compiler, &block->arguments[0]);
+    if (start.type == DATA_TYPE_ERROR) return DATA_ERROR;
+    start = cast_to_bc_int(compiler, start);
+    if (start.type == DATA_TYPE_ERROR) return DATA_ERROR;
+
+    CompilerValue end = compiler_evaluate_argument(compiler, &block->arguments[1]);
+    if (end.type == DATA_TYPE_ERROR) return DATA_ERROR;
+    end = cast_to_bc_int(compiler, end);
+    if (end.type == DATA_TYPE_ERROR) return DATA_ERROR;
+
+    CompilerValue str = compiler_evaluate_argument(compiler, &block->arguments[2]);
+    if (str.type == DATA_TYPE_ERROR) return DATA_ERROR;
+    str = cast_to_bc_string(compiler, str);
+    if (str.type == DATA_TYPE_ERROR) return DATA_ERROR;
+
+    IrBytecode bc = start.data.chunk_val.bc;
+    bytecode_join(&bc, &end.data.chunk_val.bc);
+    bytecode_join(&bc, &str.data.chunk_val.bc);
+    bytecode_push_op_func(&bc, IR_RUN, ir_func_by_hint("std_string_substring"));
+    return DATA_CHUNK(DATA_TYPE_STRING, bc);
 }
 
 CompilerValue block_length(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
-    (void) compiler;
-    (void) block;
     (void) next_block;
     (void) prev_block;
-    return DATA_ERROR;
+
+    CompilerValue str = compiler_evaluate_argument(compiler, &block->arguments[0]);
+    if (str.type == DATA_TYPE_ERROR) return DATA_ERROR;
+    str = cast_to_bc_string(compiler, str);
+    if (str.type == DATA_TYPE_ERROR) return DATA_ERROR;
+
+    bytecode_push_op(&str.data.chunk_val.bc, IR_LENL);
+    return DATA_CHUNK(DATA_TYPE_INTEGER, str.data.chunk_val.bc);
 }
 
 CompilerValue block_ord(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
-    (void) compiler;
-    (void) block;
     (void) next_block;
     (void) prev_block;
-    return DATA_ERROR;
+
+    CompilerValue str = compiler_evaluate_argument(compiler, &block->arguments[0]);
+    if (str.type == DATA_TYPE_ERROR) return DATA_ERROR;
+    str = cast_to(compiler, str, DATA_TYPE_STRING);
+    if (str.type == DATA_TYPE_ERROR) return DATA_ERROR;
+
+    if (str.type == DATA_TYPE_CHUNK) {
+        IrBytecode bc = str.data.chunk_val.bc;
+        bytecode_push_op_int(&bc, IR_PUSHI, 1);
+        bytecode_push_op(&bc, IR_INDEXL);
+        return DATA_CHUNK(DATA_TYPE_INTEGER, bc);
+    } else {
+        int bin;
+        return DATA_INTEGER(GetCodepointNext(str.data.str_val, &bin));
+    }
 }
 
 CompilerValue block_chr(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
-    (void) compiler;
-    (void) block;
     (void) next_block;
     (void) prev_block;
-    return DATA_ERROR;
+
+    CompilerValue int_val = compiler_evaluate_argument(compiler, &block->arguments[0]);
+    if (int_val.type == DATA_TYPE_ERROR) return DATA_ERROR;
+    int_val = cast_to(compiler, int_val, DATA_TYPE_INTEGER);
+    if (int_val.type == DATA_TYPE_ERROR) return DATA_ERROR;
+
+    if (int_val.type == DATA_TYPE_CHUNK) {
+        IrBytecode bc = EMPTY_BYTECODE;
+        bytecode_push_op_list(&bc, IR_PUSHA, NULL);
+        bytecode_push_op(&bc, IR_DUP);
+        bytecode_join(&bc, &int_val.data.chunk_val.bc);
+        bytecode_push_op(&bc, IR_ADDL);
+        return DATA_CHUNK(DATA_TYPE_STRING, bc);
+    } else {
+        return DATA_STRING(ir_arena_sprintf(compiler->arena, 16, "%lc", int_val.data.integer_val));
+    }
 }
 
 CompilerValue block_create_list(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
@@ -1889,7 +1977,7 @@ CompilerValue block_list_length(Compiler* compiler, Block* block, Block** next_b
 CompilerValue block_sleep(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) next_block;
     (void) prev_block;
-    
+
     CompilerValue value = compiler_evaluate_argument(compiler, &block->arguments[0]);
     if (value.type == DATA_TYPE_ERROR) return DATA_ERROR;
 
@@ -2338,7 +2426,7 @@ bool block_return(Compiler* compiler, Block* block, int argc, FuncArg* argv, Fun
     if (data_type == LLVMPointerType(LLVMInt8Type(), 0)) {
         build_call(compiler, "gc_add_temp_root", CONST_GC, argv[0].data.value);
     }
-    
+
     LLVMValueRef custom_return = arg_to_any(compiler, block, argv[0]);
     if (!custom_return) return false;
 
@@ -2346,7 +2434,7 @@ bool block_return(Compiler* compiler, Block* block, int argc, FuncArg* argv, Fun
     LLVMBuildRet(compiler->builder, custom_return);
 
     LLVMPositionBuilderAtEnd(compiler->builder, return_after_block);
-    
+
     *return_val = DATA_NOTHING;
     return true;
 }
@@ -2361,7 +2449,7 @@ bool block_custom_arg(Compiler* compiler, Block* block, int argc, FuncArg* argv,
         compiler_set_error(compiler, block, gettext("Could not find function definition for argument"));
         return false;
     }
-    
+
     if (LLVMGetBasicBlockParent(LLVMGetInsertBlock(compiler->builder)) != func->func) {
         compiler_set_error(compiler, block, gettext("Function argument block used outside of function"));
         return false;
@@ -2377,9 +2465,9 @@ bool block_exec_custom(Compiler* compiler, Block* block, int argc, FuncArg* argv
         compiler_set_error(compiler, block, gettext("Too many parameters passed into function. Got %d/32"), argc);
         return false;
     }
-    
+
     DefineFunction* define = define_function(compiler, block->blockdef);
-    
+
     LLVMTypeRef func_type = LLVMGlobalGetValueType(define->func);
     LLVMValueRef func_param_list[32];
 
@@ -3405,7 +3493,7 @@ bool block_declare_var(Compiler* compiler, Block* block, int argc, FuncArg* argv
         compiler_set_error(compiler, block, gettext("Variable declarations are not allowed inside an argument"));
         return false;
     }
-    
+
     if (argv[0].type != DATA_TYPE_LITERAL) {
         compiler_set_error(compiler, block, gettext("Invalid data type %s, expected %s"), type_to_str(argv[0].type), type_to_str(DATA_TYPE_LITERAL));
         return false;
@@ -4367,7 +4455,7 @@ void register_blocks(Vm* vm) {
     blockdef_add_image(sc_list_get, list_img);
     blockdef_add_argument(sc_list_get, "", gettext("list"), BLOCKCONSTR_UNLIMITED);
     blockdef_add_text(sc_list_get, gettext("at"));
-    blockdef_add_argument(sc_list_get, "0", "0", BLOCKCONSTR_UNLIMITED);
+    blockdef_add_argument(sc_list_get, "1", "0", BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_list_get);
     block_category_add_blockdef(cat_data, sc_list_get);
 
