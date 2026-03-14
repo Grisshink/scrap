@@ -58,6 +58,8 @@ typedef enum {
     IR_DUP,         // Duplicate last value
     IR_LOAD,        // Load variable into stack
     IR_STORE,       // Store variable from stack
+    IR_GLOAD,       // Load global variable into stack
+    IR_GSTORE,      // Store global variable from stack
 
     // Integer arithmetic
     IR_ADDI,
@@ -256,6 +258,7 @@ typedef struct {
 struct IrExec {
     IrBytecodeChunks chunks;
     IrValueList stack;
+    IrValueList globals;
     IrVariableFrameList variables;
     char last_error[IR_LAST_ERROR_SIZE];
     IrRunFunctionResolver resolve_run_function;
@@ -811,7 +814,7 @@ void bytecode_print(IrBytecode* bc) {
 
         IrList* list;
 
-        static_assert(IR_LAST == 79, "Exhaustive opcode in exec_run_bytecode");
+        static_assert(IR_LAST == 81, "Exhaustive opcode in exec_run_bytecode");
         switch (bc->code.items[i]) {
         case IR_PUSHL:
             CHECK_IMMEDIATE;
@@ -961,6 +964,16 @@ void bytecode_print(IrBytecode* bc) {
         case IR_STORE:
             CHECK_IMMEDIATE;
             printf("store %ld\n", pool_list.items[CODE_IMMEDIATE].as.int_val);
+            i += 3;
+            break;
+        case IR_GLOAD:
+            CHECK_IMMEDIATE;
+            printf("gload %ld\n", pool_list.items[CODE_IMMEDIATE].as.int_val);
+            i += 3;
+            break;
+        case IR_GSTORE:
+            CHECK_IMMEDIATE;
+            printf("gstore %ld\n", pool_list.items[CODE_IMMEDIATE].as.int_val);
             i += 3;
             break;
         case IR_JMP:
@@ -1427,7 +1440,7 @@ bool exec_run_bytecode(IrExec* exec, IrBytecode* bc, size_t pos) {
     IrFunction* func;
 
     for (size_t i = pos; i < bc->code.size; i++) {
-        static_assert(IR_LAST == 79, "Exhaustive opcode in exec_run_bytecode");
+        static_assert(IR_LAST == 81, "Exhaustive opcode in exec_run_bytecode");
         switch (bc->code.items[i]) {
         case IR_PUSHN: exec_push_nothing(exec); break;
         case IR_PUSHI:
@@ -1471,14 +1484,36 @@ bool exec_run_bytecode(IrExec* exec, IrBytecode* bc, size_t pos) {
             variable_frame_pos = pool_list.items[CODE_IMMEDIATE].as.int_val;
             IR_ASSERT(variable_frame_pos >= 0);
 
-            IrValue val = exec_pop_value(exec);
+            left_value = exec_pop_value(exec);
             if ((size_t)variable_frame_pos >= variable_frame->size) {
                 while ((size_t)variable_frame_pos > variable_frame->size) {
                     ir_list_append(*variable_frame, (IrValue) {0});
                 } 
-                ir_list_append(*variable_frame, val);
+                ir_list_append(*variable_frame, left_value);
             } else {
-                variable_frame->items[variable_frame_pos] = val;
+                variable_frame->items[variable_frame_pos] = left_value;
+            }
+            i += 3;
+            break;
+        case IR_GLOAD:
+            variable_frame_pos = pool_list.items[CODE_IMMEDIATE].as.int_val;
+            IR_ASSERT(variable_frame_pos >= 0);
+            IR_ASSERT((size_t)variable_frame_pos < exec->globals.size);
+            exec_push_value(exec, exec->globals.items[variable_frame_pos]);
+            i += 3;
+            break;
+        case IR_GSTORE:
+            variable_frame_pos = pool_list.items[CODE_IMMEDIATE].as.int_val;
+            IR_ASSERT(variable_frame_pos >= 0);
+
+            left_value = exec_pop_value(exec);
+            if ((size_t)variable_frame_pos >= exec->globals.size) {
+                while ((size_t)variable_frame_pos > exec->globals.size) {
+                    ir_list_append(exec->globals, (IrValue) {0});
+                } 
+                ir_list_append(exec->globals, left_value);
+            } else {
+                exec->globals.items[variable_frame_pos] = left_value;
             }
             i += 3;
             break;

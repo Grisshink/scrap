@@ -1848,13 +1848,21 @@ CompilerValue block_declare_var(Compiler* compiler, Block* block, Block** next_b
     }
 
     IrBytecode bc = value.data.chunk_val.bc;
-    bytecode_push_op_int(&bc, IR_STORE, compiler->variables.size);
 
     Variable var = {
         .name = name.data.str_val,
         .type = value.data.chunk_val.return_type,
     };
-    ir_arena_append(compiler->arena, compiler->variables, var);
+
+    Block* first_block = block;
+    while (first_block->prev) first_block = first_block->prev;
+    if (!strcmp(first_block->blockdef->id, "on_start")) {
+        bytecode_push_op_int(&bc, IR_GSTORE, compiler->global_variables.size);
+        ir_arena_append(compiler->arena, compiler->global_variables, var);
+    } else {
+        bytecode_push_op_int(&bc, IR_STORE, compiler->variables.size);
+        ir_arena_append(compiler->arena, compiler->variables, var);
+    }
 
     return DATA_CHUNK(DATA_TYPE_NULL, bc);
 }
@@ -1868,15 +1876,21 @@ CompilerValue block_get_var(Compiler* compiler, Block* block, Block** next_block
     name = cast_to_const_string(compiler, name);
     if (name.type == DATA_TYPE_ERROR) return DATA_ERROR;
 
-    ssize_t var_slot = compiler_find_variable(compiler, name.data.str_val);
+    bool global;
+    ssize_t var_slot = compiler_find_variable(compiler, name.data.str_val, &global);
     if (var_slot == -1) {
         compiler_set_error(compiler, gettext("Variable with name \"%s\" does not exist in the current scope"), name.data.str_val);
         return DATA_ERROR;
     }
 
     IrBytecode bc = EMPTY_BYTECODE;
-    bytecode_push_op_int(&bc, IR_LOAD, var_slot);
-    return DATA_CHUNK(compiler->variables.items[var_slot].type, bc);
+    if (global) {
+        bytecode_push_op_int(&bc, IR_GLOAD, var_slot);
+        return DATA_CHUNK(compiler->global_variables.items[var_slot].type, bc);
+    } else {
+        bytecode_push_op_int(&bc, IR_LOAD, var_slot);
+        return DATA_CHUNK(compiler->variables.items[var_slot].type, bc);
+    }
 }
 
 CompilerValue block_set_var(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
@@ -1888,7 +1902,8 @@ CompilerValue block_set_var(Compiler* compiler, Block* block, Block** next_block
     name = cast_to_const_string(compiler, name);
     if (name.type == DATA_TYPE_ERROR) return DATA_ERROR;
 
-    ssize_t var_slot = compiler_find_variable(compiler, name.data.str_val);
+    bool global;
+    ssize_t var_slot = compiler_find_variable(compiler, name.data.str_val, &global);
     if (var_slot == -1) {
         compiler_set_error(compiler, gettext("Variable with name \"%s\" does not exist in the current scope"), name.data.str_val);
         return DATA_ERROR;
@@ -1902,19 +1917,21 @@ CompilerValue block_set_var(Compiler* compiler, Block* block, Block** next_block
         if (value.type == DATA_TYPE_ERROR) return DATA_ERROR;
     }
 
-    if (compiler->variables.items[var_slot].type != DATA_TYPE_ANY && value.data.chunk_val.return_type != compiler->variables.items[var_slot].type) {
+    Variable var = global ? compiler->global_variables.items[var_slot] : compiler->variables.items[var_slot];
+
+    if (var.type != DATA_TYPE_ANY && value.data.chunk_val.return_type != var.type) {
         compiler_set_error(
             compiler,
             gettext("Assign to variable \"%s\" of type %s with incompatible type %s"),
             name.data.str_val,
-            type_to_str(compiler->variables.items[var_slot].type),
+            type_to_str(var.type),
             type_to_str(value.data.chunk_val.return_type)
         );
         return DATA_ERROR;
     }
 
     IrBytecode bc = value.data.chunk_val.bc;
-    bytecode_push_op_int(&bc, IR_STORE, var_slot);
+    bytecode_push_op_int(&bc, global ? IR_GSTORE : IR_STORE, var_slot);
 
     return DATA_CHUNK(DATA_TYPE_NULL, bc);
 }

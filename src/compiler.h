@@ -86,6 +86,7 @@ struct Compiler {
 
     ObjectPool object_info;
     VariableList variables;
+    VariableList global_variables;
 
     BlockChain* current_chain;
 
@@ -137,7 +138,7 @@ CompilerValue compiler_evaluate_block(Compiler* compiler, Block* block, Block** 
 CompilerValue compiler_evaluate_argument(Compiler* compiler, Argument* arg);
 void compiler_set_skip_block(Compiler* compiler);
 void compiler_set_error(Compiler* compiler, const char* fmt, ...);
-ssize_t compiler_find_variable(Compiler* compiler, const char* name);
+ssize_t compiler_find_variable(Compiler* compiler, const char* name, bool* global);
 
 void* compiler_object_info_get(Compiler* compiler, void* object);
 size_t compiler_object_info_insert(Compiler* compiler, void* object, void* data);

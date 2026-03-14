@@ -90,6 +90,18 @@ bool compiler_run(void* e) {
         assert(!CHAIN_EMPTY(compiler->code[i].chain));
         Block* block = compiler->code[i].chain->start;
         if (block->blockdef->type != BLOCKTYPE_HAT) continue;
+        if (strcmp(block->blockdef->id, "on_start")) continue;
+
+        Block* next = NULL;
+        CompilerValue value = compiler_evaluate_block(compiler, block, &next, (Block*)-1);
+        if (value.type == DATA_TYPE_UNKNOWN) return false;
+    }
+
+    for (size_t i = 0; i < vector_size(compiler->code); i++) {
+        assert(!CHAIN_EMPTY(compiler->code[i].chain));
+        Block* block = compiler->code[i].chain->start;
+        if (block->blockdef->type != BLOCKTYPE_HAT) continue;
+        if (!strcmp(block->blockdef->id, "on_start")) continue;
 
         Block* next = NULL;
         CompilerValue value = compiler_evaluate_block(compiler, block, &next, (Block*)-1);
@@ -303,9 +315,20 @@ size_t compiler_object_info_insert(Compiler* compiler, void* object, void* data)
     return idx;
 }
 
-ssize_t compiler_find_variable(Compiler* compiler, const char* name) {
+ssize_t compiler_find_variable(Compiler* compiler, const char* name, bool* global) {
     for (ssize_t i = compiler->variables.size - 1; i >= 0; i--) {
-        if (!strcmp(compiler->variables.items[i].name, name)) return i;
+        if (!strcmp(compiler->variables.items[i].name, name)) {
+            *global = false;
+            return i;
+        }
     }
+
+    for (ssize_t i = compiler->global_variables.size - 1; i >= 0; i--) {
+        if (!strcmp(compiler->global_variables.items[i].name, name)) {
+            *global = true;
+            return i;
+        }
+    }
+
     return -1;
 }
