@@ -101,7 +101,11 @@ bool compiler_run(void* e) {
         CompilerValue value = compiler_evaluate_chain(compiler, compiler->chains_to_compile[i]);
         if (value.type == DATA_TYPE_UNKNOWN) return false;
         bytecode_join(&compiler->bytecode, &value.data.chunk_val.bc);
-        bytecode_push_op(&compiler->bytecode, IR_RET);
+
+        Block* next = NULL;
+        value = compiler_evaluate_block(compiler, compiler->chains_to_compile[i]->start, &next, compiler->chains_to_compile[i]->end);
+        if (value.type == DATA_TYPE_UNKNOWN) return false;
+        bytecode_join(&compiler->bytecode, &value.data.chunk_val.bc);
     }
 
     bytecode_print(&compiler->bytecode);
@@ -204,6 +208,9 @@ CompilerValue compiler_evaluate_chain(Compiler* compiler, BlockChain* chain) {
     IrBytecode bc = EMPTY_BYTECODE;
     DataType bc_type = DATA_TYPE_NULL;
 
+    BlockChain* prev_chain = compiler->current_chain;
+    compiler->current_chain = chain;
+
     Block* prev = NULL;
     Block* iter = chain->start;
     while (iter) {
@@ -214,6 +221,7 @@ CompilerValue compiler_evaluate_chain(Compiler* compiler, BlockChain* chain) {
         if (value.type == DATA_TYPE_UNKNOWN) {
             scrap_log(LOG_ERROR, "[COMPILER] From chain: %p", chain);
             if (!compiler->current_error_blockchain) compiler->current_error_blockchain = chain;
+            compiler->current_chain = prev_chain;
             return value;
         }
 
@@ -229,6 +237,7 @@ CompilerValue compiler_evaluate_chain(Compiler* compiler, BlockChain* chain) {
         iter = next;
     }
 
+    compiler->current_chain = prev_chain;
     return DATA_CHUNK(bc_type, bc);
 }
 void* compiler_object_info_get(Compiler* compiler, void* object) {

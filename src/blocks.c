@@ -62,6 +62,12 @@ typedef struct {
     size_t var_slot;
 } ControlData;
 
+typedef struct {
+    ConstId label;
+    IrBytecode bc;
+    size_t arg_count;
+} CustomFunctionData;
+
 static MathFunc block_math_func_list[MATH_LIST_LEN] = {
     sqrt, round, floor, ceil,
     sin, cos, tan,
@@ -876,12 +882,13 @@ CompilerValue evaluate_binary_bool(Compiler* compiler, Argument* left, Argument*
 CompilerValue block_on_start(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) next_block;
 
+    assert(block->parent.type == BLOCK_PARENT_BLOCKCHAIN);
+
     if (prev_block == (Block*)-1) {
-        assert(block->parent.type == BLOCK_PARENT_BLOCKCHAIN);
         vector_add(&compiler->chains_to_compile, block->parent.as.chain);
         return DATA_NOTHING;
     } else if (prev_block == NULL) {
-        IrBytecode chunk = EMPTY_BYTECODE;
+        IrBytecode bc = EMPTY_BYTECODE;
 
         IrValue label;
         label.type = IR_TYPE_LABEL;
@@ -890,8 +897,12 @@ CompilerValue block_on_start(Compiler* compiler, Block* block, Block** next_bloc
             compiler_set_error(compiler, gettext("Duplicate on_start block"));
             return DATA_ERROR;
         }
-        bytecode_push_label(&chunk, "entry");
-        return DATA_CHUNK(DATA_TYPE_NULL, chunk);
+        bytecode_push_label(&bc, "entry");
+        return DATA_CHUNK(DATA_TYPE_NULL, bc);
+    } else if (prev_block == block->parent.as.chain->end) {
+        IrBytecode bc = EMPTY_BYTECODE;
+        bytecode_push_op(&compiler->bytecode, IR_RET);
+        return DATA_CHUNK(DATA_TYPE_NULL, bc);
     }
 
     assert(false && "Unreachable");
@@ -1212,20 +1223,125 @@ CompilerValue block_while(Compiler* compiler, Block* block, Block** next_block, 
     return DATA_CHUNK(DATA_TYPE_NULL, bc);
 }
 
+#define print_func_name(...) func_name_size += snprintf(func_name + func_name_size, 1024 - func_name_size, __VA_ARGS__)
 CompilerValue block_define_block(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
-    (void) compiler;
-    (void) block;
     (void) next_block;
-    (void) prev_block;
-    return DATA_ERROR;
+
+    assert(block->parent.type == BLOCK_PARENT_BLOCKCHAIN);
+    if (prev_block == (Block*)-1) {
+        assert(block->arguments[0].type == ARGUMENT_BLOCKDEF);
+
+        Blockdef* blockdef = block->arguments[0].data.blockdef;
+
+        char* func_name = ir_arena_alloc(compiler->arena, 1024);
+        size_t func_name_size = 0;
+
+        for (size_t i = 0; i < vector_size(blockdef->inputs); i++) {
+            static_assert(INPUT_LAST == 6, "Exhaustive input type in block_define_block");
+            switch (blockdef->inputs[i].type) {
+            case INPUT_TEXT_DISPLAY:
+                print_func_name("%s ", blockdef->inputs[i].data.text);
+                break;
+            case INPUT_BLOCKDEF_EDITOR:
+            case INPUT_COLOR:
+            case INPUT_DROPDOWN:
+                print_func_name("[] ");
+                break;
+            case INPUT_IMAGE_DISPLAY:
+                break;
+            case INPUT_ARGUMENT:
+                print_func_name("[] ");
+                break;
+            default:
+                assert(false && "Unhandled input type in block_define_block");
+            }
+
+            if (func_name_size >= 1024) break;
+        }
+        if (func_name_size > 1) func_name[func_name_size - 1] = 0;
+
+        IrValue label_val;
+        label_val.type = IR_TYPE_LABEL;
+        label_val.as.label_val.name = func_name;
+        if (bytecode_pool_get(compiler->bc_pool, label_val) != (size_t)-1) {
+            compiler_set_error(compiler, gettext("Duplicate function name \"%s\""), func_name);
+            return DATA_ERROR;
+        }
+
+        IrBytecode bc = EMPTY_BYTECODE;
+        ConstId label = bytecode_push_label(&bc, func_name);
+
+        CustomFunctionData* block_data = ir_arena_alloc(compiler->arena, sizeof(CustomFunctionData));
+        block_data->label = label;
+        block_data->bc = bc;
+
+        size_t arg_id = 0;
+        for (size_t i = 0; i < vector_size(blockdef->inputs); i++) {
+            if (blockdef->inputs[i].type != INPUT_ARGUMENT) continue;
+            compiler_object_info_insert(compiler, blockdef->inputs[i].data.arg.blockdef, (void*)arg_id);
+            arg_id++;
+        }
+        block_data->arg_count = arg_id;
+
+        compiler_object_info_insert(compiler, blockdef, block_data);
+
+        vector_add(&compiler->chains_to_compile, block->parent.as.chain);
+        return DATA_NOTHING;
+    } else if (prev_block == NULL) {
+        Blockdef* blockdef = block->arguments[0].data.blockdef;
+        CustomFunctionData* block_data = compiler_object_info_get(compiler, blockdef);
+        if (block_data == OBJECT_NOT_FOUND) {
+            compiler_set_error(compiler, "Could not find block data in define block");
+            return DATA_ERROR;
+        }
+
+        IrBytecode bc = block_data->bc;
+        for (ssize_t i = block_data->arg_count - 1; i >= 0; i--) {
+            bytecode_push_op_int(&bc, IR_STORE, i);
+
+            Variable var = {
+                .name = "__define_arg",
+                .type = DATA_TYPE_ANY,
+            };
+            ir_arena_append(compiler->arena, compiler->variables, var);
+        }
+
+        return DATA_CHUNK(DATA_TYPE_NULL, bc);
+    } else if (prev_block == block->parent.as.chain->end) {
+        IrBytecode bc = EMPTY_BYTECODE;
+        if (strcmp(block->parent.as.chain->end->blockdef->id, "return")) {
+            bytecode_push_op(&bc, IR_PUSHN);
+            bytecode_push_op(&bc, IR_RET);
+        }
+        return DATA_CHUNK(DATA_TYPE_NULL, bc);
+    }
+
+    assert(false && "Unreachable");
 }
 
 CompilerValue block_return(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
-    (void) compiler;
-    (void) block;
     (void) next_block;
     (void) prev_block;
-    return DATA_ERROR;
+
+    Block* define_block = compiler->current_chain->start;
+    if (strcmp(define_block->blockdef->id, "define_block")) {
+        compiler_set_error(compiler, gettext("Return block used outside of function"));
+        return DATA_ERROR;
+    }
+
+    CompilerValue value = compiler_evaluate_argument(compiler, &block->arguments[0]);
+    if (value.type == DATA_TYPE_ERROR) return DATA_ERROR;
+    if (value.type != DATA_TYPE_CHUNK) {
+        value = cast_to_bc(compiler, value, value.type);
+        if (value.type == DATA_TYPE_ERROR) return DATA_ERROR;
+    }
+
+    assert(define_block->arguments[0].type == ARGUMENT_BLOCKDEF);
+
+    IrBytecode bc = value.data.chunk_val.bc;
+    bytecode_push_op(&bc, IR_RET);
+
+    return DATA_CHUNK(DATA_TYPE_NULL, bc);
 }
 
 CompilerValue block_print(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
@@ -2106,19 +2222,66 @@ CompilerValue block_gc_collect(Compiler* compiler, Block* block, Block** next_bl
 }
 
 CompilerValue block_exec_custom(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
-    (void) compiler;
-    (void) block;
     (void) next_block;
     (void) prev_block;
-    return DATA_ERROR;
+
+    IrBytecode bc = EMPTY_BYTECODE;
+    for (size_t i = 0; i < vector_size(block->arguments); i++) {
+        CompilerValue value = compiler_evaluate_argument(compiler, &block->arguments[i]);
+        if (value.type == DATA_TYPE_ERROR) return DATA_ERROR;
+        if (value.type != DATA_TYPE_CHUNK) {
+            value = cast_to_bc(compiler, value, value.type);
+            if (value.type == DATA_TYPE_ERROR) return DATA_ERROR;
+        }
+        bytecode_join(&bc, &value.data.chunk_val.bc);
+    }
+
+    CustomFunctionData* block_data = compiler_object_info_get(compiler, block->blockdef);
+    if (block_data == OBJECT_NOT_FOUND) {
+        compiler_set_error(compiler, "Could not find block data in exec custom block");
+        return DATA_ERROR;
+    }
+
+    bytecode_push_op_label(&bc, IR_CALL, block_data->label);
+
+    return DATA_CHUNK(DATA_TYPE_ANY, bc);
 }
 
 CompilerValue block_custom_arg(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
-    (void) compiler;
-    (void) block;
     (void) next_block;
     (void) prev_block;
-    return DATA_ERROR;
+
+    Block* define_block = compiler->current_chain->start;
+    if (strcmp(define_block->blockdef->id, "define_block")) {
+        compiler_set_error(compiler, gettext("Argument block used outside of function"));
+        return DATA_ERROR;
+    }
+
+    Blockdef* root_blockdef = define_block->arguments[0].data.blockdef;
+    bool blockdef_found = false;
+    for (size_t i = 0; i < vector_size(root_blockdef->inputs); i++) {
+        if (root_blockdef->inputs[i].type != INPUT_ARGUMENT) continue;
+        if (root_blockdef->inputs[i].data.arg.blockdef == block->blockdef) {
+            blockdef_found = true;
+            break;
+        }
+    }
+
+    if (!blockdef_found) {
+        compiler_set_error(compiler, gettext("Argument block used outside of function"));
+        return DATA_ERROR;
+    }
+
+    void* block_data = compiler_object_info_get(compiler, block->blockdef);
+    if (block_data == OBJECT_NOT_FOUND) {
+        compiler_set_error(compiler, "Could not find block data in exec custom block");
+        return DATA_ERROR;
+    }
+    size_t arg_id = (size_t)block_data;
+
+    IrBytecode bc = EMPTY_BYTECODE;
+    bytecode_push_op_int(&bc, IR_LOAD, arg_id);
+    return DATA_CHUNK(compiler->variables.items[arg_id].type, bc);
 }
 
 #else

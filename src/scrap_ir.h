@@ -28,7 +28,11 @@
 
 #define IR_LAST_ERROR_SIZE 512
 
+#ifdef DEBUG
 #define IR_ASSERT(val) assert(val)
+#else
+#define IR_ASSERT(val)
+#endif
 
 typedef struct IrExec IrExec;
 typedef struct IrValue IrValue;
@@ -1463,10 +1467,12 @@ bool exec_run_bytecode(IrExec* exec, IrBytecode* bc, size_t pos) {
             variable_frame = &exec->variables.items[exec->variables.size - 1];
             variable_frame_pos = pool_list.items[CODE_IMMEDIATE].as.int_val;
             IR_ASSERT(variable_frame_pos >= 0);
-            IR_ASSERT((size_t)variable_frame_pos <= variable_frame->size);
 
             IrValue val = exec_pop_value(exec);
-            if ((size_t)variable_frame_pos == variable_frame->size) {
+            if ((size_t)variable_frame_pos >= variable_frame->size) {
+                while ((size_t)variable_frame_pos > variable_frame->size) {
+                    ir_list_append(*variable_frame, (IrValue) {0});
+                } 
                 ir_list_append(*variable_frame, val);
             } else {
                 variable_frame->items[variable_frame_pos] = val;

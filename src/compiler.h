@@ -87,6 +87,8 @@ struct Compiler {
     ObjectPool object_info;
     VariableList variables;
 
+    BlockChain* current_chain;
+
     IrExec exec;
     bool exec_running;
 
