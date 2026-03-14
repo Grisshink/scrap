@@ -34,29 +34,8 @@ IrRunFunction std_resolve_function(IrExec* exec, const char* hint);
 int std_int_pow(int base, int exp);
 
 // Terminal control
-// StringHeader* std_term_get_char(Gc* gc);
-void std_term_set_cursor(int x, int y);
-int std_term_cursor_x(void);
-int std_term_cursor_y(void);
-int std_term_cursor_max_x(void);
-int std_term_cursor_max_y(void);
-// StringHeader* std_term_get_input(Gc* gc);
-void std_term_clear(void);
-
-#ifdef STANDALONE_STD
-typedef struct {
-    unsigned char r, g, b, a;
-} Color;
-
-void std_term_set_fg_color(Color color);
-void std_term_set_bg_color(Color color);
-void std_term_set_clear_color(Color color);
-#else
+#ifndef STANDALONE_STD
 #include "term.h"
-
-void std_term_set_fg_color(TermColor color);
-void std_term_set_bg_color(TermColor color);
-void std_term_set_clear_color(TermColor color);
 #endif
 
 // Misc

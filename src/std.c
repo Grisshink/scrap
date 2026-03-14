@@ -23,7 +23,9 @@
 #include <stdio.h>
 #include <time.h>
 #include <math.h>
+#include <errno.h>
 
+#include "vec.h"
 #include "std.h"
 #include "util.h"
 #include "thread.h"
@@ -383,8 +385,8 @@ bool std_string_substring(IrExec* exec) {
 
 static int cursor_x = 0;
 static int cursor_y = 0;
-static Color clear_color = {0};
-static Color bg_color = {0};
+static StdColor clear_color = {0};
+static StdColor bg_color = {0};
 
 void test_cancel(void) {}
 
@@ -403,108 +405,157 @@ bool std_term_print_str(IrExec* exec) {
     return true;
 }
 
-void std_term_set_fg_color(Color color) {
+bool std_term_println_str(IrExec* exec) {
+    if (!std_term_print_str(exec)) return false;
+    printf("\n");
+    return true;
+}
+
+bool std_term_set_fg_color(IrExec* exec) {
+    int32_t color_val = exec_pop_int(exec);
+    StdColor color = *(StdColor*)&color_val;
     // ESC[38;2;⟨r⟩;⟨g⟩;⟨b⟩m Select RGB foreground color
     printf("\033[38;2;%d;%d;%dm", color.r, color.g, color.b);
     fflush(stdout);
+    return true;
 }
 
-void std_term_set_bg_color(Color color) {
+bool std_term_set_bg_color(IrExec* exec) {
+    int32_t color_val = exec_pop_int(exec);
+    StdColor color = *(StdColor*)&color_val;
     // ESC[48;2;⟨r⟩;⟨g⟩;⟨b⟩m Select RGB background color
     printf("\033[48;2;%d;%d;%dm", color.r, color.g, color.b);
     bg_color = color;
     fflush(stdout);
+    return true;
 }
 
-void std_term_set_clear_color(Color color) {
-    clear_color = color;
+bool std_term_set_clear_color(IrExec* exec) {
+    int32_t color_val = exec_pop_int(exec);
+    clear_color = *(StdColor*)&color_val;
+    return true;
 }
 
-int std_term_cursor_max_y(void) {
+bool std_term_cursor_max_y(IrExec* exec) {
 #ifdef _WIN32
     CONSOLE_SCREEN_BUFFER_INFO csbi;
-    if (!GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi)) return 0;
-    return csbi.srWindow.Bottom - csbi.srWindow.Top + 1;
+    if (!GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi)) return false;
+    exec_push_int(exec, csbi.srWindow.Bottom - csbi.srWindow.Top + 1);
 #else
     struct winsize w;
-    if (ioctl(0, TIOCGWINSZ, &w)) return 0;
-    return w.ws_row;
+    if (ioctl(0, TIOCGWINSZ, &w)) return false;
+    exec_push_int(exec, w.ws_row);
 #endif
+    return true;
 }
 
-int std_term_cursor_max_x(void) {
+bool std_term_cursor_max_x(IrExec* exec) {
 #ifdef _WIN32
     CONSOLE_SCREEN_BUFFER_INFO csbi;
-    if (!GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi)) return 0;
-    return csbi.srWindow.Right - csbi.srWindow.Left + 1;
+    if (!GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi)) return false;
+    exec_push_int(exec, csbi.srWindow.Right - csbi.srWindow.Left + 1);
 #else
     struct winsize w;
-    if (ioctl(0, TIOCGWINSZ, &w)) return 0;
-    return w.ws_col;
+    if (ioctl(0, TIOCGWINSZ, &w)) return false;
+    exec_push_int(exec, w.ws_col);
 #endif
+    return true;
 }
 
-int std_term_cursor_x(void) {
-    return cursor_x;
+bool std_term_cursor_x(IrExec* exec) {
+    exec_push_int(exec, cursor_x);
+    return true;
 }
 
-int std_term_cursor_y(void) {
-    return cursor_y;
+bool std_term_cursor_y(IrExec* exec) {
+    exec_push_int(exec, cursor_y);
+    return true;
 }
 
-void std_term_clear(void) {
+bool std_term_clear(IrExec* exec) {
     // ESC[48;2;⟨r⟩;⟨g⟩;⟨b⟩m Select RGB background color
     printf("\033[48;2;%d;%d;%dm", clear_color.r, clear_color.g, clear_color.b);
     printf("\033[2J");
     // ESC[48;2;⟨r⟩;⟨g⟩;⟨b⟩m Select RGB background color
     printf("\033[48;2;%d;%d;%dm", bg_color.r, bg_color.g, bg_color.b);
     fflush(stdout);
+    return true;
 }
 
-void std_term_set_cursor(int x, int y) {
+bool std_term_set_cursor(IrExec* exec) {
+    int64_t y = exec_pop_int(exec);
+    int64_t x = exec_pop_int(exec);
+
     cursor_x = x;
     cursor_y = y;
-    printf("\033[%d;%dH", y + 1, x + 1);
+    printf("\033[%ld;%ldH", y + 1, x + 1);
     fflush(stdout);
+    return true;
 }
 
-// StringHeader* std_term_get_char(Gc* gc) {
-//     char input[10];
-//     input[0] = (char)getchar();
-//     if (input[0] == '\n') return std_string_from_literal(gc, "", 0);
-//
-//     int mb_size = leading_ones(input[0]);
-//
-//     if (mb_size == 0) mb_size = 1;
-//     for (int i = 1; i < mb_size && i < 10; i++) input[i] = (char)getchar();
-//     input[mb_size] = 0;
-//
-//     return std_string_from_literal(gc, input, mb_size);
-// }
-//
-// StringHeader* std_term_get_input(Gc* gc) {
-//     char* string_buf = vector_create();
-//     char last_char = 0;
-//     char buf[256];
-//
-//     while (last_char != '\n') {
-//         if (!fgets(buf, 256, stdin)) {
-//             vector_free(string_buf);
-//             return std_string_from_literal(gc, "", 0);
-//         }
-//
-//         int size = strlen(buf);
-//         last_char = buf[size - 1];
-//         if (last_char == '\n') buf[--size] = 0;
-//
-//         for (char* str = buf; *str; str++) vector_add(&string_buf, *str);
-//     }
-//
-//     StringHeader* out_string = std_string_from_literal(gc, string_buf, vector_size(string_buf));
-//     vector_free(string_buf);
-//
-//     return out_string;
-// }
+bool std_term_get_char(IrExec* exec) {
+    char input[10];
+    input[0] = (char)getchar();
+
+    int mb_size = leading_ones(input[0]);
+
+    if (mb_size == 0) mb_size = 1;
+    for (int i = 1; i < mb_size && i < 10; i++) input[i] = (char)getchar();
+    input[mb_size] = 0;
+
+    exec_push_int(exec, get_codepoint(input, &mb_size));
+    return true;
+}
+
+bool std_term_get_input(IrExec* exec) {
+    char* string_buf = vector_create();
+    char last_char = 0;
+    char buf[256];
+
+    while (last_char != '\n') {
+        if (!fgets(buf, 256, stdin)) {
+            exec_set_error(exec, "Error getting input: %s", strerror(errno));
+            vector_free(string_buf);
+            return false;
+        }
+
+        int size = strlen(buf);
+        last_char = buf[size - 1];
+        if (last_char == '\n') buf[--size] = 0;
+
+        for (char* str = buf; *str; str++) vector_add(&string_buf, *str);
+    }
+    vector_add(&string_buf, 0);
+
+    IrList* list = exec_list_new(exec);
+    exec_push_list_string(exec, list);
+
+    size_t char_count = 0;
+    int mb_size = 0;
+    for (char* str = string_buf; *str; str += mb_size) {
+        get_codepoint(str, &mb_size);
+        char_count++;
+    }
+
+    list->size = char_count;
+    list->capacity = char_count;
+
+    IrValue* items = exec_malloc(exec, list->capacity * sizeof(*list->items));
+    list->items = items;
+
+    char_count = 0;
+    for (char* str = string_buf; *str; str += mb_size) {
+        list->items[char_count] = (IrValue) {
+            .type = IR_TYPE_INT,
+            .as.int_val = get_codepoint(str, &mb_size),
+        };
+        char_count++;
+    }
+
+    vector_free(string_buf);
+
+    return true;
+}
 
 #else
 
@@ -544,91 +595,138 @@ bool std_term_print_str(IrExec* exec) {
     return true;
 }
 
-void std_term_set_fg_color(TermColor color) {
-    return term_set_fg_color(color);
+bool std_term_println_str(IrExec* exec) {
+    if (!std_term_print_str(exec)) return false;
+    term_print_str("\n");
+    return true;
 }
 
-void std_term_set_bg_color(TermColor color) {
-    return term_set_bg_color(color);
+bool std_term_set_fg_color(IrExec* exec) {
+    int32_t color_val = exec_pop_int(exec);
+    term_set_fg_color(*(TermColor*)&color_val);
+    return true;
 }
 
-void std_term_set_clear_color(TermColor color) {
-    return term_set_clear_color(color);
+bool std_term_set_bg_color(IrExec* exec) {
+    int32_t color_val = exec_pop_int(exec);
+    term_set_bg_color(*(TermColor*)&color_val);
+    return true;
 }
 
-void std_term_clear(void) {
+bool std_term_set_clear_color(IrExec* exec) {
+    int32_t color_val = exec_pop_int(exec);
+    term_set_clear_color(*(TermColor*)&color_val);
+    return true;
+}
+
+bool std_term_clear(IrExec* exec) {
     term_clear();
+    return true;
 }
 
-// StringHeader* std_term_get_char(Gc* gc) {
-//     char input[10];
-//     input[0] = term_input_get_char();
-//     int mb_size = leading_ones(input[0]);
-//
-//     if (mb_size == 0) mb_size = 1;
-//     for (int i = 1; i < mb_size && i < 10; i++) input[i] = term_input_get_char();
-//     input[mb_size] = 0;
-//
-//     return std_string_from_literal(gc, input, mb_size);
-// }
+bool std_term_get_char(IrExec* exec) {
+    char input[10];
+    input[0] = term_input_get_char();
+    int mb_size = leading_ones(input[0]);
 
-void std_term_set_cursor(int x, int y) {
+    if (mb_size == 0) mb_size = 1;
+    for (int i = 1; i < mb_size && i < 10; i++) input[i] = term_input_get_char();
+    input[mb_size] = 0;
+
+    exec_push_int(exec, get_codepoint(input, &mb_size));
+    return true;
+}
+
+bool std_term_get_input(IrExec* exec) {
+    char input_char = 0;
+    char* string_buf = vector_create();
+
+    while (input_char != '\n') {
+        char input[256];
+        int i = 0;
+        for (; i < 255 && input_char != '\n'; i++) input[i] = (input_char = term_input_get_char());
+        if (input[i - 1] == '\n') input[i - 1] = 0;
+        input[i] = 0;
+
+        for (char* str = input; *str; str++) vector_add(&string_buf, *str);
+    }
+    vector_add(&string_buf, 0);
+
+    IrList* list = exec_list_new(exec);
+    exec_push_list_string(exec, list);
+
+    size_t char_count = 0;
+    int mb_size = 0;
+    for (char* str = string_buf; *str; str += mb_size) {
+        get_codepoint(str, &mb_size);
+        char_count++;
+    }
+
+    list->size = char_count;
+    list->capacity = char_count;
+
+    IrValue* items = exec_malloc(exec, list->capacity * sizeof(*list->items));
+    list->items = items;
+
+    char_count = 0;
+    for (char* str = string_buf; *str; str += mb_size) {
+        list->items[char_count] = (IrValue) {
+            .type = IR_TYPE_INT,
+            .as.int_val = get_codepoint(str, &mb_size),
+        };
+        char_count++;
+    }
+
+    vector_free(string_buf);
+
+    return true;
+}
+
+bool std_term_set_cursor(IrExec* exec) {
+    int64_t y = exec_pop_int(exec);
+    int64_t x = exec_pop_int(exec);
+
     mutex_lock(&term.lock);
     x = CLAMP(x, 0, term.char_w - 1);
     y = CLAMP(y, 0, term.char_h - 1);
     term.cursor_pos = x + y * term.char_w;
     mutex_unlock(&term.lock);
+    return true;
 }
 
-int std_term_cursor_x(void) {
+bool std_term_cursor_x(IrExec* exec) {
     mutex_lock(&term.lock);
     int cur_x = 0;
     if (term.char_w != 0) cur_x = term.cursor_pos % term.char_w;
     mutex_unlock(&term.lock);
-    return cur_x;
+    exec_push_int(exec, cur_x);
+    return true;
 }
 
-int std_term_cursor_y(void) {
+bool std_term_cursor_y(IrExec* exec) {
     mutex_lock(&term.lock);
     int cur_y = 0;
     if (term.char_w != 0) cur_y = term.cursor_pos / term.char_w;
     mutex_unlock(&term.lock);
-    return cur_y;
+    exec_push_int(exec, cur_y);
+    return true;
 }
 
-int std_term_cursor_max_x(void) {
+bool std_term_cursor_max_x(IrExec* exec) {
     mutex_lock(&term.lock);
     int cur_max_x = term.char_w;
     mutex_unlock(&term.lock);
-    return cur_max_x;
+    exec_push_int(exec, cur_max_x);
+    return true;
 }
 
-int std_term_cursor_max_y(void) {
+bool std_term_cursor_max_y(IrExec* exec) {
     mutex_lock(&term.lock);
     int cur_max_y = term.char_h;
     mutex_unlock(&term.lock);
-    return cur_max_y;
+    exec_push_int(exec, cur_max_y);
+    return true;
 }
-
-// StringHeader* std_term_get_input(Gc* gc) {
-//     char input_char = 0;
-//     char* string_buf = vector_create();
-//
-//     while (input_char != '\n') {
-//         char input[256];
-//         int i = 0;
-//         for (; i < 255 && input_char != '\n'; i++) input[i] = (input_char = term_input_get_char());
-//         if (input[i - 1] == '\n') input[i - 1] = 0;
-//         input[i] = 0;
-//
-//         for (char* str = input; *str; str++) vector_add(&string_buf, *str);
-//     }
-//
-//     StringHeader* out_string = std_string_from_literal(gc, string_buf, vector_size(string_buf));
-//     vector_free(string_buf);
-//
-//     return out_string;
-// }
 
 #endif // STANDALONE_STD
 
@@ -645,6 +743,18 @@ IrRunFunction std_resolve_function(IrExec* exec, const char* hint) {
         STD_FUNC(std_sleep),
         STD_FUNC(std_unix_time),
         STD_FUNC(std_term_print_str),
+        STD_FUNC(std_term_println_str),
+        STD_FUNC(std_term_get_input),
+        STD_FUNC(std_term_get_char),
+        STD_FUNC(std_term_set_cursor),
+        STD_FUNC(std_term_cursor_x),
+        STD_FUNC(std_term_cursor_y),
+        STD_FUNC(std_term_cursor_max_x),
+        STD_FUNC(std_term_cursor_max_y),
+        STD_FUNC(std_term_set_fg_color),
+        STD_FUNC(std_term_set_bg_color),
+        STD_FUNC(std_term_set_clear_color),
+        STD_FUNC(std_term_clear),
         STD_FUNC(std_thread_handle_stopping_state),
         STD_FUNC(std_color_to_string),
         STD_FUNC(std_string_to_color),

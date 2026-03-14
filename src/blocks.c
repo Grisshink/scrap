@@ -1362,107 +1362,166 @@ CompilerValue block_print(Compiler* compiler, Block* block, Block** next_block, 
 }
 
 CompilerValue block_println(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
-    (void) compiler;
-    (void) block;
     (void) next_block;
     (void) prev_block;
-    return DATA_ERROR;
+
+    CompilerValue val = compiler_evaluate_argument(compiler, &block->arguments[0]);
+    if (val.type == DATA_TYPE_ERROR) return DATA_ERROR;
+
+    val = cast_to_bc_string(compiler, val);
+    if (val.type == DATA_TYPE_ERROR) return DATA_ERROR;
+    assert(val.type == DATA_TYPE_CHUNK);
+
+    bytecode_push_op_func(&val.data.chunk_val.bc, IR_RUN, ir_func_by_hint("std_term_println_str"));
+    val.data.chunk_val.return_type = DATA_TYPE_NULL;
+
+    return val;
 }
 
 CompilerValue block_input(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
-    (void) compiler;
     (void) block;
     (void) next_block;
     (void) prev_block;
-    return DATA_ERROR;
+
+    IrBytecode bc = EMPTY_BYTECODE;
+    bytecode_push_op_func(&bc, IR_RUN, ir_func_by_hint("std_term_get_input"));
+    return DATA_CHUNK(DATA_TYPE_STRING, bc);
 }
 
 CompilerValue block_get_char(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
-    (void) compiler;
     (void) block;
     (void) next_block;
     (void) prev_block;
-    return DATA_ERROR;
+
+    IrBytecode bc = EMPTY_BYTECODE;
+    bytecode_push_op_func(&bc, IR_RUN, ir_func_by_hint("std_term_get_char"));
+    return DATA_CHUNK(DATA_TYPE_INTEGER, bc);
 }
 
 CompilerValue block_set_cursor(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
-    (void) compiler;
-    (void) block;
     (void) next_block;
     (void) prev_block;
-    return DATA_ERROR;
+
+    CompilerValue x = compiler_evaluate_argument(compiler, &block->arguments[0]);
+    if (x.type == DATA_TYPE_ERROR) return DATA_ERROR;
+    x = cast_to_bc_int(compiler, x);
+    if (x.type == DATA_TYPE_ERROR) return DATA_ERROR;
+
+    CompilerValue y = compiler_evaluate_argument(compiler, &block->arguments[1]);
+    if (y.type == DATA_TYPE_ERROR) return DATA_ERROR;
+    y = cast_to_bc_int(compiler, y);
+    if (y.type == DATA_TYPE_ERROR) return DATA_ERROR;
+
+    IrBytecode bc = x.data.chunk_val.bc;
+    bytecode_join(&bc, &y.data.chunk_val.bc);
+    bytecode_push_op_func(&bc, IR_RUN, ir_func_by_hint("std_term_set_cursor"));
+    return DATA_CHUNK(DATA_TYPE_NULL, bc);
 }
 
 CompilerValue block_cursor_x(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
-    (void) compiler;
     (void) block;
     (void) next_block;
     (void) prev_block;
-    return DATA_ERROR;
+
+    IrBytecode bc = EMPTY_BYTECODE;
+    bytecode_push_op_func(&bc, IR_RUN, ir_func_by_hint("std_term_cursor_x"));
+    return DATA_CHUNK(DATA_TYPE_INTEGER, bc);
 }
 
 CompilerValue block_cursor_y(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
-    (void) compiler;
     (void) block;
     (void) next_block;
     (void) prev_block;
-    return DATA_ERROR;
+
+    IrBytecode bc = EMPTY_BYTECODE;
+    bytecode_push_op_func(&bc, IR_RUN, ir_func_by_hint("std_term_cursor_y"));
+    return DATA_CHUNK(DATA_TYPE_INTEGER, bc);
 }
 
 CompilerValue block_cursor_max_x(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
-    (void) compiler;
     (void) block;
     (void) next_block;
     (void) prev_block;
-    return DATA_ERROR;
+
+    IrBytecode bc = EMPTY_BYTECODE;
+    bytecode_push_op_func(&bc, IR_RUN, ir_func_by_hint("std_term_cursor_max_x"));
+    return DATA_CHUNK(DATA_TYPE_INTEGER, bc);
 }
 
 CompilerValue block_cursor_max_y(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
-    (void) compiler;
     (void) block;
     (void) next_block;
     (void) prev_block;
-    return DATA_ERROR;
+
+    IrBytecode bc = EMPTY_BYTECODE;
+    bytecode_push_op_func(&bc, IR_RUN, ir_func_by_hint("std_term_cursor_max_y"));
+    return DATA_CHUNK(DATA_TYPE_INTEGER, bc);
 }
 
 CompilerValue block_set_fg_color(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
-    (void) compiler;
-    (void) block;
     (void) next_block;
     (void) prev_block;
-    return DATA_ERROR;
+
+    CompilerValue color = compiler_evaluate_argument(compiler, &block->arguments[0]);
+    if (color.type == DATA_TYPE_ERROR) return DATA_ERROR;
+    color = cast_to_bc_color(compiler, color);
+    if (color.type == DATA_TYPE_ERROR) return DATA_ERROR;
+
+    IrBytecode bc = color.data.chunk_val.bc;
+    bytecode_push_op_func(&bc, IR_RUN, ir_func_by_hint("std_term_set_fg_color"));
+    return DATA_CHUNK(DATA_TYPE_NULL, bc);
 }
 
 CompilerValue block_set_bg_color(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
-    (void) compiler;
-    (void) block;
     (void) next_block;
     (void) prev_block;
-    return DATA_ERROR;
+
+    CompilerValue color = compiler_evaluate_argument(compiler, &block->arguments[0]);
+    if (color.type == DATA_TYPE_ERROR) return DATA_ERROR;
+    color = cast_to_bc_color(compiler, color);
+    if (color.type == DATA_TYPE_ERROR) return DATA_ERROR;
+
+    IrBytecode bc = color.data.chunk_val.bc;
+    bytecode_push_op_func(&bc, IR_RUN, ir_func_by_hint("std_term_set_bg_color"));
+    return DATA_CHUNK(DATA_TYPE_NULL, bc);
 }
 
 CompilerValue block_reset_color(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
-    (void) compiler;
     (void) block;
     (void) next_block;
     (void) prev_block;
-    return DATA_ERROR;
+
+    IrBytecode bc = EMPTY_BYTECODE;
+    bytecode_push_op_int(&bc, IR_PUSHI, 0xffffffff);
+    bytecode_push_op_func(&bc, IR_RUN, ir_func_by_hint("std_term_set_fg_color"));
+    bytecode_push_op_int(&bc, IR_PUSHI, *(int*)&(BLACK));
+    bytecode_push_op_func(&bc, IR_RUN, ir_func_by_hint("std_term_set_bg_color"));
+
+    return DATA_CHUNK(DATA_TYPE_NULL, bc);
 }
 
 CompilerValue block_term_clear(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
-    (void) compiler;
     (void) block;
     (void) next_block;
     (void) prev_block;
-    return DATA_ERROR;
+
+    IrBytecode bc = EMPTY_BYTECODE;
+    bytecode_push_op_func(&bc, IR_RUN, ir_func_by_hint("std_term_clear"));
+    return DATA_CHUNK(DATA_TYPE_NULL, bc);
 }
 
 CompilerValue block_term_set_clear(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
-    (void) compiler;
-    (void) block;
     (void) next_block;
     (void) prev_block;
-    return DATA_ERROR;
+
+    CompilerValue color = compiler_evaluate_argument(compiler, &block->arguments[0]);
+    if (color.type == DATA_TYPE_ERROR) return DATA_ERROR;
+    color = cast_to_bc_color(compiler, color);
+    if (color.type == DATA_TYPE_ERROR) return DATA_ERROR;
+
+    IrBytecode bc = color.data.chunk_val.bc;
+    bytecode_push_op_func(&bc, IR_RUN, ir_func_by_hint("std_term_set_clear_color"));
+    return DATA_CHUNK(DATA_TYPE_NULL, bc);
 }
 
 CompilerValue block_plus(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
