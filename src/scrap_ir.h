@@ -1064,6 +1064,10 @@ static bool exec_heap_copy_chunk(IrExec* exec, void** ref_data) {
 
 static void exec_heap_copy_value(IrExec* exec, IrValue* value) {
     switch (value->type) {
+    case IR_TYPE_STRING: ;
+        if (!exec_heap_copy_chunk(exec, (void**)&value->as.list_val)) break;
+        if (!exec_heap_copy_chunk(exec, (void**)&value->as.list_val->items)) break;
+        break;
     case IR_TYPE_LIST: ;
         if (!exec_heap_copy_chunk(exec, (void**)&value->as.list_val)) break;
 
@@ -1093,6 +1097,10 @@ void exec_collect(IrExec* exec) {
         for (size_t j = 0; j < frame->size; j++) {
             exec_heap_copy_value(exec, &frame->items[j]);
         }
+    }
+
+    for (size_t i = 0; i < exec->globals.size; i++) {
+        exec_heap_copy_value(exec, &exec->globals.items[i]);
     }
 
     size_t memory_freed = exec->heap.mem->pos - exec->second_heap.mem->pos;
@@ -1203,6 +1211,7 @@ IrExec exec_new(size_t memory_min, size_t memory_max) {
 void exec_free(IrExec* exec) {
     ir_list_free(exec->chunks);
     ir_list_free(exec->stack);
+    ir_list_free(exec->globals);
 
     for (size_t i = 0; i < exec->variables.size; i++) {
         ir_list_free(exec->variables.items[i]);
