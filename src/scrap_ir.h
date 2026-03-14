@@ -560,6 +560,9 @@ bool value_equals(IrValue left, IrValue right) {
     case IR_TYPE_LIST: ;
         IrList* left_list = left.as.list_val;
         IrList* right_list = right.as.list_val;
+
+        if (!left_list && !right_list) return true;
+        if (!left_list || !right_list) return false;
         if (left_list->size != right_list->size) return false;
         for (size_t i = 0; i < left_list->size; i++) {
             if (!value_equals(left_list->items[i], right_list->items[i])) return false;
@@ -1921,8 +1924,8 @@ bool exec_run_bytecode(IrExec* exec, IrBytecode* bc, size_t pos) {
                 exec_set_error(exec, "Attemt to modify constant list %p", list);
                 IR_EXEC_FAIL;
             }
-            if (left_int < 0 || (size_t)left_int >= list->size) break;
-            list->items[left_int] = left_value;
+            if (left_int < 1 || (size_t)left_int > list->size) break;
+            list->items[left_int - 1] = left_value;
             break;
         case IR_INSERTL:
             left_value = exec_pop_value(exec);
@@ -1938,7 +1941,7 @@ bool exec_run_bytecode(IrExec* exec, IrBytecode* bc, size_t pos) {
                 IR_EXEC_FAIL;
             }
 
-            if (left_int < 0 || (size_t)left_int > list->size) break;
+            if (left_int < 1 || (size_t)left_int > list->size + 1) break;
 
             if (list->size >= list->capacity) {
                 if (list->capacity == 0) list->capacity = 4;
@@ -1949,7 +1952,7 @@ bool exec_run_bytecode(IrExec* exec, IrBytecode* bc, size_t pos) {
                 list = right_value.as.list_val;
                 list->items = items;
             }
-            memmove(list->items + left_int + 1, list->items + left_int, (list->size - left_int) * sizeof(IrValue));
+            memmove(list->items + left_int, list->items + left_int - 1, (list->size - left_int - 1) * sizeof(IrValue));
             list->size++;
             list->items[left_int] = left_value;
             exec_pop_value(exec);
@@ -1966,8 +1969,8 @@ bool exec_run_bytecode(IrExec* exec, IrBytecode* bc, size_t pos) {
                 exec_set_error(exec, "Attemt to modify constant list %p", list);
                 IR_EXEC_FAIL;
             }
-            if (left_int < 0 || (size_t)left_int >= list->size) break;
-            memmove(list->items + left_int, list->items + left_int + 1, (list->size - left_int - 1) * sizeof(IrValue));
+            if (left_int < 1 || (size_t)left_int > list->size) break;
+            memmove(list->items + left_int - 1, list->items + left_int, (list->size - left_int - 2) * sizeof(IrValue));
             list->size--;
             break;
         case IR_LENL:
