@@ -823,7 +823,7 @@ static void draw_block(Block* block, bool highlight, bool select, bool can_hover
                 if (editor.show_debug && block->contents->parent != block) {
                     gui_text(gui, &assets.fonts.font_cond_shadow, "Detached parent", BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0x00, 0x00, 0xff });
                 }
-                draw_blockchain(block->contents, ghost, true, editable);
+                draw_blockchain(block->contents, ghost, show_previews, editable);
             gui_element_end(gui);
         gui_element_end(gui);
 
@@ -831,7 +831,7 @@ static void draw_block(Block* block, bool highlight, bool select, bool can_hover
             if (editor.show_debug && block->controlend_contents->parent != block) {
                 gui_text(gui, &assets.fonts.font_cond_shadow, "Detached parent", BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0x00, 0x00, 0xff });
             }
-            draw_blockchain(block->controlend_contents, ghost, true, editable);
+            draw_blockchain(block->controlend_contents, ghost, show_previews, editable);
         }
 
         if (block->blockdef->type == BLOCKTYPE_CONTROL) {
