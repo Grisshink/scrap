@@ -89,13 +89,13 @@ CompilerValue cast_to_bc(Compiler* compiler, CompilerValue value, DataType dst_t
 
 CompilerValue string_to_bc(Compiler* compiler, char* str) {
     IrBytecode bc = EMPTY_BYTECODE;
-    IrList* list = bytecode_const_list_new(compiler->bc_pool);
+    IrConstList* list = bytecode_const_list_new(compiler->bc_pool);
 
     int codepoint_size = 0;
     for (char* ch = str; *ch; ch += codepoint_size) {
         int codepoint = GetCodepointNext(ch, &codepoint_size);
 
-        bytecode_const_list_append(compiler->bc_pool, list, (IrValue) {
+        bytecode_const_list_append(compiler->bc_pool, list, (IrConstValue) {
             .type = IR_TYPE_INT,
             .as.int_val = codepoint,
         });
@@ -890,7 +890,7 @@ CompilerValue block_on_start(Compiler* compiler, Block* block, Block** next_bloc
     } else if (prev_block == NULL) {
         IrBytecode bc = EMPTY_BYTECODE;
 
-        IrValue label;
+        IrConstValue label;
         label.type = IR_TYPE_LABEL;
         label.as.label_val.name = "entry";
         if (bytecode_pool_get(compiler->bc_pool, label) != (size_t)-1) {
@@ -1260,7 +1260,7 @@ CompilerValue block_define_block(Compiler* compiler, Block* block, Block** next_
         }
         if (func_name_size > 1) func_name[func_name_size - 1] = 0;
 
-        IrValue label_val;
+        IrConstValue label_val;
         label_val.type = IR_TYPE_LABEL;
         label_val.as.label_val.name = func_name;
         if (bytecode_pool_get(compiler->bc_pool, label_val) != (size_t)-1) {

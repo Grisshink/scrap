@@ -36,6 +36,7 @@
 
 typedef struct IrExec IrExec;
 typedef struct IrValue IrValue;
+typedef struct IrConstValue IrConstValue;
 
 typedef size_t ConstId;
 typedef int IrLabelID;
@@ -155,20 +156,26 @@ typedef enum {
 } IrOpcode;
 
 typedef struct {
-    const char* hint;
     IrRunFunction ptr;
+    const char* hint;
 } IrFunction;
 
 typedef struct {
-    const char* name;
     size_t pos;
+    const char* name;
 } IrLabel;
 
 typedef struct {
     IrValue* items;
     size_t size, capacity;
-    bool owned; // Is this list owned by gc? This should be false when the list is in constants list
+    bool owned;
 } IrList;
+
+typedef struct {
+    IrConstValue* items;
+    size_t size, capacity;
+    bool owned;
+} IrConstList;
 
 typedef enum {
     IR_TYPE_NOTHING, // Nothing, similar to NULL in other languages
@@ -182,7 +189,7 @@ typedef enum {
     IR_TYPE_LABEL,   // Pointer to label within bytecode
 } IrValueType;
 
-struct IrValue {
+struct IrConstValue {
     IrValueType type;
     union {
         uint8_t byte_val;
@@ -191,9 +198,27 @@ struct IrValue {
         bool bool_val;
         IrFunction func_val;
         IrLabel label_val;
+        IrConstList* list_val;
+    } as;
+};
+
+struct IrValue {
+    IrValueType type;
+    union {
+        uint8_t byte_val;
+        int64_t int_val;
+        double float_val;
+        bool bool_val;
+        IrRunFunction func_val;
+        size_t label_val;
         IrList* list_val;
     } as;
 };
+
+typedef struct {
+    IrConstValue* items;
+    size_t size, capacity;
+} IrConstValueList;
 
 typedef struct {
     IrValue* items;
@@ -227,7 +252,7 @@ typedef struct {
         ConstId* items;
         size_t size, capacity;
     } hash_set;
-    IrValueList list; // List of all constants that bytecode chunks can reference
+    IrConstValueList list; // List of all constants that bytecode chunks can reference
     IrMemArena* arena; // Arena for all bytecode allocations
 } IrBytecodePool;
 
@@ -278,11 +303,11 @@ void bytecode_pool_free(IrBytecodePool* pool);
 
 // Get constant index in list of constants in bytecode pool.
 // Returns (size_t)-1 if the constant does not exist.
-size_t bytecode_pool_get(IrBytecodePool* pool, IrValue value);
+size_t bytecode_pool_get(IrBytecodePool* pool, IrConstValue value);
 
 // Add constant to constant list in bytecode pool and return its index in the list.
 // If constant already exists, then it will return the index of already existing constant and free the value.
-size_t bytecode_pool_insert(IrBytecodePool* pool, IrValue value);
+size_t bytecode_pool_insert(IrBytecodePool* pool, IrConstValue value);
 
 // Create new bytecode chunk with associated bytecode pool.
 // All data allocated using the bytecode will be freed upon freeing the associated bytecode pool.
@@ -310,20 +335,20 @@ IrInstructionID bytecode_push_op_float(IrBytecode* bc, IrOpcode op, double float
 IrInstructionID bytecode_push_op_bool(IrBytecode* bc, IrOpcode op, bool bool_val);
 IrInstructionID bytecode_push_op_func(IrBytecode* bc, IrOpcode op, IrFunction func_val);
 IrInstructionID bytecode_push_op_label(IrBytecode* bc, IrOpcode op, ConstId label_id);
-IrInstructionID bytecode_push_op_list(IrBytecode* bc, IrOpcode op, IrList* list_val);
+IrInstructionID bytecode_push_op_list(IrBytecode* bc, IrOpcode op, IrConstList* list_val);
 
 // These functions replace the constant in bytecode at instruction instr_id.
 void bytecode_set_op_int(IrBytecode* bc, IrInstructionID instr_id, int int_val);
 void bytecode_set_op_float(IrBytecode* bc, IrInstructionID instr_id, double float_val);
 void bytecode_set_op_bool(IrBytecode* bc, IrInstructionID instr_id, bool bool_val);
 void bytecode_set_op_func(IrBytecode* bc, IrInstructionID instr_id, IrFunction func_val);
-void bytecode_set_op_list(IrBytecode* bc, IrInstructionID instr_id, IrList* list_val);
+void bytecode_set_op_list(IrBytecode* bc, IrInstructionID instr_id, IrConstList* list_val);
 
 // Allocate new immutable list type that can be used in bytecode functions that operate on lists.
-IrList* bytecode_const_list_new(IrBytecodePool* pool);
+IrConstList* bytecode_const_list_new(IrBytecodePool* pool);
 
 // Add value to immutable list.
-void bytecode_const_list_append(IrBytecodePool* pool, IrList* list, IrValue val);
+void bytecode_const_list_append(IrBytecodePool* pool, IrConstList* list, IrConstValue val);
 
 // Create a function value that needs to be resolved at runtime using hint string.
 // The exact hint string that needs to be passed depends on current runtime function resolver,
@@ -397,8 +422,8 @@ void exec_dup_value(IrExec* exec);
 void exec_push_int(IrExec* exec, int64_t int_val);
 void exec_push_float(IrExec* exec, double float_val);
 void exec_push_bool(IrExec* exec, bool bool_val);
-void exec_push_func(IrExec* exec, IrFunction func_val);
-void exec_push_label(IrExec* exec, IrLabel label_val);
+void exec_push_func(IrExec* exec, IrRunFunction func_val);
+void exec_push_label(IrExec* exec, size_t label_val);
 void exec_push_list(IrExec* exec, IrList* list_val);
 void exec_push_list_string(IrExec* exec, IrList* list_val);
 void exec_push_nothing(IrExec* exec);
@@ -407,8 +432,8 @@ void exec_push_nothing(IrExec* exec);
 int64_t exec_get_int(IrExec* exec);
 double exec_get_float(IrExec* exec);
 bool exec_get_bool(IrExec* exec);
-IrFunction exec_get_func(IrExec* exec);
-IrLabel exec_get_label(IrExec* exec);
+IrRunFunction exec_get_func(IrExec* exec);
+size_t exec_get_label(IrExec* exec);
 IrList* exec_get_list(IrExec* exec);
 IrList* exec_get_list_string(IrExec* exec);
 
@@ -416,8 +441,8 @@ IrList* exec_get_list_string(IrExec* exec);
 int64_t exec_pop_int(IrExec* exec);
 double exec_pop_float(IrExec* exec);
 bool exec_pop_bool(IrExec* exec);
-IrLabel exec_pop_label(IrExec* exec);
-IrFunction exec_pop_func(IrExec* exec);
+IrRunFunction exec_pop_func(IrExec* exec);
+size_t exec_pop_label(IrExec* exec);
 IrList* exec_pop_list(IrExec* exec);
 IrList* exec_pop_list_string(IrExec* exec);
 
@@ -509,7 +534,7 @@ bool ir_plat_mem_commit(void* ptr, size_t size);
 bool ir_plat_mem_decommit(void* ptr, size_t size);
 bool ir_plat_mem_release(void* ptr, size_t size);
 
-size_t hash_value(IrValue value) {
+size_t hash_value(IrConstValue value) {
     size_t hash = 0;
 
     switch (value.type) {
@@ -519,7 +544,7 @@ size_t hash_value(IrValue value) {
     case IR_TYPE_FLOAT: hash = *(size_t*)&value.as.float_val; break;
     case IR_TYPE_BOOL: hash = value.as.bool_val; break;
     case IR_TYPE_LIST: ;
-        IrList* list = value.as.list_val;
+        IrConstList* list = value.as.list_val;
         if (!list) {
             hash = 0x12345678;
             break;
@@ -550,7 +575,7 @@ size_t hash_value(IrValue value) {
     return hash;
 }
 
-bool value_equals(IrValue left, IrValue right) {
+bool value_equals(IrConstValue left, IrConstValue right) {
     if (left.type != right.type) return false;
 
     switch (left.type) {
@@ -561,8 +586,8 @@ bool value_equals(IrValue left, IrValue right) {
     case IR_TYPE_BOOL: return left.as.bool_val == right.as.bool_val;
     case IR_TYPE_STRING:
     case IR_TYPE_LIST: ;
-        IrList* left_list = left.as.list_val;
-        IrList* right_list = right.as.list_val;
+        IrConstList* left_list = left.as.list_val;
+        IrConstList* right_list = right.as.list_val;
 
         if (!left_list && !right_list) return true;
         if (!left_list || !right_list) return false;
@@ -599,7 +624,7 @@ void bytecode_pool_free(IrBytecodePool* pool) {
     ir_arena_free(pool->arena);
 }
 
-size_t bytecode_pool_get(IrBytecodePool* pool, IrValue value) {
+size_t bytecode_pool_get(IrBytecodePool* pool, IrConstValue value) {
     if (pool->hash_set.capacity == 0) return (size_t)-1;
 
     size_t hash = hash_value(value) % pool->hash_set.capacity;
@@ -614,7 +639,7 @@ size_t bytecode_pool_get(IrBytecodePool* pool, IrValue value) {
     return idx;
 }
 
-size_t bytecode_pool_insert(IrBytecodePool* pool, IrValue value) {
+size_t bytecode_pool_insert(IrBytecodePool* pool, IrConstValue value) {
     if ((float)pool->hash_set.size / (float)pool->hash_set.capacity > 0.6 || pool->hash_set.capacity == 0) {
         if (pool->hash_set.capacity == 0) pool->hash_set.capacity = 1024;
         else pool->hash_set.capacity *= 2;
@@ -709,7 +734,7 @@ IrInstructionID bytecode_push_op_const(IrBytecode* bc, IrOpcode op, ConstId cons
 }
 
 ConstId bytecode_push_label(IrBytecode* bc, const char* name) {
-    IrValue val;
+    IrConstValue val;
     val.type = IR_TYPE_LABEL;
     val.as.label_val.name = name;
     val.as.label_val.pos = bc->code.size;
@@ -720,7 +745,7 @@ ConstId bytecode_push_label(IrBytecode* bc, const char* name) {
     return label;
 }
 
-ConstId bytecode_push_constant(IrBytecode* bc, IrValue constant) {
+ConstId bytecode_push_constant(IrBytecode* bc, IrConstValue constant) {
     ConstId id = bytecode_pool_insert(bc->pool, constant);
     IR_ASSERT(id < 0x1000000);
     return id;
@@ -728,7 +753,7 @@ ConstId bytecode_push_constant(IrBytecode* bc, IrValue constant) {
 
 #define _ir_make_bc_push_op(_name, _type, _valname, _irtype) \
     IrInstructionID _name(IrBytecode* bc, IrOpcode op, _type _valname) { \
-        IrValue constant; \
+        IrConstValue constant; \
         constant.type = _irtype; \
         constant.as._valname = _valname; \
         return bytecode_push_op_const(bc, op, bytecode_push_constant(bc, constant)); \
@@ -738,7 +763,7 @@ _ir_make_bc_push_op(bytecode_push_op_int, int64_t, int_val, IR_TYPE_INT)
 _ir_make_bc_push_op(bytecode_push_op_float, double, float_val, IR_TYPE_FLOAT)
 _ir_make_bc_push_op(bytecode_push_op_bool, bool, bool_val, IR_TYPE_BOOL)
 _ir_make_bc_push_op(bytecode_push_op_func, IrFunction, func_val, IR_TYPE_FUNC)
-_ir_make_bc_push_op(bytecode_push_op_list, IrList*, list_val, IR_TYPE_LIST)
+_ir_make_bc_push_op(bytecode_push_op_list, IrConstList*, list_val, IR_TYPE_LIST)
 
 #undef _ir_make_bc_push_op
 
@@ -754,7 +779,7 @@ void bytecode_set_op_const(IrBytecode* bc, IrInstructionID instr_id, ConstId con
 
 #define _ir_make_bc_set_op(_name, _type, _valname, _irtype) \
     void _name(IrBytecode* bc, IrInstructionID instr_id, _type _valname) { \
-        IrValue constant; \
+        IrConstValue constant; \
         constant.type = _irtype; \
         constant.as._valname = _valname; \
         bytecode_set_op_const(bc, instr_id, bytecode_push_constant(bc, constant)); \
@@ -764,17 +789,17 @@ _ir_make_bc_set_op(bytecode_set_op_int, int, int_val, IR_TYPE_INT)
 _ir_make_bc_set_op(bytecode_set_op_float, double, float_val, IR_TYPE_FLOAT)
 _ir_make_bc_set_op(bytecode_set_op_bool, bool, bool_val, IR_TYPE_BOOL)
 _ir_make_bc_set_op(bytecode_set_op_func, IrFunction, func_val, IR_TYPE_FUNC)
-_ir_make_bc_set_op(bytecode_set_op_list, IrList*, list_val, IR_TYPE_LIST)
+_ir_make_bc_set_op(bytecode_set_op_list, IrConstList*, list_val, IR_TYPE_LIST)
 
 #undef _ir_make_bc_set_op
 
-IrList* bytecode_const_list_new(IrBytecodePool* pool) {
-    IrList* list = ir_arena_alloc(pool->arena, sizeof(IrList));
+IrConstList* bytecode_const_list_new(IrBytecodePool* pool) {
+    IrConstList* list = ir_arena_alloc(pool->arena, sizeof(IrList));
     memset(list, 0, sizeof(IrList));
     return list;
 }
 
-void bytecode_const_list_append(IrBytecodePool* pool, IrList* list, IrValue val) {
+void bytecode_const_list_append(IrBytecodePool* pool, IrConstList* list, IrConstValue val) {
     ir_arena_append(pool->arena, *list, val);
 }
 
@@ -798,7 +823,7 @@ void bytecode_print(IrBytecode* bc) {
            op_count  = 0;
     IrFunction func;
 
-    IrValueList pool_list = bc->pool->list;
+    IrConstValueList pool_list = bc->pool->list;
 
     printf("; === Bytecode %s ===\n", bc->name ? bc->name : "*Unnamed*");
     while (i < bc->code.size) {
@@ -812,7 +837,7 @@ void bytecode_print(IrBytecode* bc) {
 
         printf("    ");
 
-        IrList* list;
+        IrConstList* list;
 
         static_assert(IR_LAST == 81, "Exhaustive opcode in exec_run_bytecode");
         switch (bc->code.items[i]) {
@@ -836,7 +861,7 @@ void bytecode_print(IrBytecode* bc) {
                         printf("...");
                         break;
                     }
-                    IrValue c = list->items[j];
+                    IrConstValue c = list->items[j];
                     switch (c.type) {
                     case IR_TYPE_INT: printf("%lc", c.as.int_val); break;
                     case IR_TYPE_BYTE: printf("%c", c.as.byte_val); break;
@@ -1239,7 +1264,7 @@ IrBytecode* exec_find_bytecode(IrExec* exec, const char* bc_name) {
 }
 
 IrLabel* bytecode_find_label(IrBytecode* bc, const char* label_name) {
-    IrValue label;
+    IrConstValue label;
     label.type = IR_TYPE_LABEL;
     label.as.label_val.name = label_name;
 
@@ -1288,8 +1313,8 @@ void _name(IrExec* exec, _type _valname) { \
 _ir_make_push(exec_push_int, int64_t, int_val, IR_TYPE_INT)
 _ir_make_push(exec_push_float, double, float_val, IR_TYPE_FLOAT)
 _ir_make_push(exec_push_bool, bool, bool_val, IR_TYPE_BOOL)
-_ir_make_push(exec_push_func, IrFunction, func_val, IR_TYPE_FUNC)
-_ir_make_push(exec_push_label, IrLabel, label_val, IR_TYPE_LABEL)
+_ir_make_push(exec_push_func, IrRunFunction, func_val, IR_TYPE_FUNC)
+_ir_make_push(exec_push_label, size_t, label_val, IR_TYPE_LABEL)
 _ir_make_push(exec_push_list, IrList*, list_val, IR_TYPE_LIST)
 _ir_make_push(exec_push_list_string, IrList*, list_val, IR_TYPE_STRING)
 
@@ -1315,8 +1340,8 @@ _type _name(IrExec* exec) { \
 _ir_make_get(exec_get_int, int64_t, int_val, IR_TYPE_INT)
 _ir_make_get(exec_get_float, double, float_val, IR_TYPE_FLOAT)
 _ir_make_get(exec_get_bool, bool, bool_val, IR_TYPE_BOOL)
-_ir_make_get(exec_get_func, IrFunction, func_val, IR_TYPE_FUNC)
-_ir_make_get(exec_get_label, IrLabel, label_val, IR_TYPE_LABEL)
+_ir_make_get(exec_get_func, IrRunFunction, func_val, IR_TYPE_FUNC)
+_ir_make_get(exec_get_label, size_t, label_val, IR_TYPE_LABEL)
 _ir_make_get(exec_get_list, IrList*, list_val, IR_TYPE_LIST)
 _ir_make_get(exec_get_list_string, IrList*, list_val, IR_TYPE_STRING)
 
@@ -1347,8 +1372,8 @@ _type _name(IrExec* exec) { \
 _ir_make_pop(exec_pop_int, int64_t, int_val, IR_TYPE_INT)
 _ir_make_pop(exec_pop_float, double, float_val, IR_TYPE_FLOAT)
 _ir_make_pop(exec_pop_bool, bool, bool_val, IR_TYPE_BOOL)
-_ir_make_pop(exec_pop_func, IrFunction, func_val, IR_TYPE_FUNC)
-_ir_make_pop(exec_pop_label, IrLabel, label_val, IR_TYPE_LABEL)
+_ir_make_pop(exec_pop_func, IrRunFunction, func_val, IR_TYPE_FUNC)
+_ir_make_pop(exec_pop_label, size_t, label_val, IR_TYPE_LABEL)
 _ir_make_pop(exec_pop_list, IrList*, list_val, IR_TYPE_LIST)
 _ir_make_pop(exec_pop_list_string, IrList*, list_val, IR_TYPE_STRING)
 
@@ -1433,7 +1458,7 @@ bool exec_run_bytecode(IrExec* exec, IrBytecode* bc, size_t pos) {
     bool return_val = true;
     exec_push_variable_stack(exec);
 
-    IrValueList pool_list = bc->pool->list;
+    IrConstValueList pool_list = bc->pool->list;
 
     IrValueList* variable_frame;
     int64_t variable_frame_pos;
@@ -1445,7 +1470,7 @@ bool exec_run_bytecode(IrExec* exec, IrBytecode* bc, size_t pos) {
     bool    left_bool,  right_bool;
     IrValue left_value, right_value;
     IrList* list;
-    IrLabel label;
+    size_t label_pos;
     IrFunction* func;
 
     for (size_t i = pos; i < bc->code.size; i++) {
@@ -1465,11 +1490,11 @@ bool exec_run_bytecode(IrExec* exec, IrBytecode* bc, size_t pos) {
             i += 3;
             break;
         case IR_PUSHLB:
-            exec_push_label(exec, pool_list.items[CODE_IMMEDIATE].as.label_val);
+            exec_push_label(exec, pool_list.items[CODE_IMMEDIATE].as.label_val.pos);
             i += 3;
             break;
         case IR_PUSHFN:
-            exec_push_func(exec, pool_list.items[CODE_IMMEDIATE].as.func_val);
+            exec_push_func(exec, pool_list.items[CODE_IMMEDIATE].as.func_val.ptr);
             i += 3;
             break;
         case IR_POP: exec_pop_value(exec); break;
@@ -1692,16 +1717,8 @@ bool exec_run_bytecode(IrExec* exec, IrBytecode* bc, size_t pos) {
                 }
                 exec_push_bool(exec, true);
                 break;
-            case IR_TYPE_FUNC:
-                if (left_value.as.func_val.ptr && right_value.as.func_val.ptr) {
-                    exec_push_bool(exec, left_value.as.func_val.ptr == right_value.as.func_val.ptr);
-                } else if (left_value.as.func_val.hint && right_value.as.func_val.hint) {
-                    exec_push_bool(exec, strcmp(left_value.as.func_val.hint, right_value.as.func_val.hint) == 0);
-                } else {
-                    exec_push_bool(exec, false);
-                }
-                break;
-            case IR_TYPE_LABEL: exec_push_bool(exec, left_value.as.label_val.pos == right_value.as.label_val.pos); break;
+            case IR_TYPE_FUNC: exec_push_bool(exec, left_value.as.func_val == right_value.as.func_val); break;
+            case IR_TYPE_LABEL: exec_push_bool(exec, left_value.as.label_val == right_value.as.label_val); break;
             }
             break;
         case IR_NEQ:
@@ -1732,16 +1749,8 @@ bool exec_run_bytecode(IrExec* exec, IrBytecode* bc, size_t pos) {
                 }
                 exec_push_bool(exec, false);
                 break;
-            case IR_TYPE_FUNC:
-                if (left_value.as.func_val.ptr && right_value.as.func_val.ptr) {
-                    exec_push_bool(exec, left_value.as.func_val.ptr != right_value.as.func_val.ptr);
-                } else if (left_value.as.func_val.hint && right_value.as.func_val.hint) {
-                    exec_push_bool(exec, strcmp(left_value.as.func_val.hint, right_value.as.func_val.hint) != 0);
-                } else {
-                    exec_push_bool(exec, true);
-                }
-                break;
-            case IR_TYPE_LABEL: exec_push_bool(exec, left_value.as.label_val.pos != right_value.as.label_val.pos); break;
+            case IR_TYPE_FUNC: exec_push_bool(exec, left_value.as.func_val != right_value.as.func_val); break;
+            case IR_TYPE_LABEL: exec_push_bool(exec, left_value.as.label_val != right_value.as.label_val); break;
             }
             break;
         case IR_ITOF: exec_push_float(exec, exec_pop_int(exec)); break;
@@ -1899,7 +1908,7 @@ bool exec_run_bytecode(IrExec* exec, IrBytecode* bc, size_t pos) {
             }
             break;
         case IR_PUSHL:
-            list = pool_list.items[CODE_IMMEDIATE].as.list_val;
+            list = (IrList*)pool_list.items[CODE_IMMEDIATE].as.list_val;
             if (!list) {
                 list = exec_list_new(exec);
                 if (!list) IR_EXEC_FAIL;
@@ -1908,7 +1917,7 @@ bool exec_run_bytecode(IrExec* exec, IrBytecode* bc, size_t pos) {
             i += 3;
             break;
         case IR_PUSHA:
-            list = pool_list.items[CODE_IMMEDIATE].as.list_val;
+            list = (IrList*)pool_list.items[CODE_IMMEDIATE].as.list_val;
             if (!list) {
                 list = exec_list_new(exec);
                 if (!list) IR_EXEC_FAIL;
@@ -2066,27 +2075,27 @@ bool exec_run_bytecode(IrExec* exec, IrBytecode* bc, size_t pos) {
             i += 3;
             break;
         case IR_DYNJMP:
-            label = exec_pop_label(exec);
-            i = label.pos - 1;
+            label_pos = exec_pop_label(exec);
+            i = label_pos - 1;
             break;
         case IR_DYNIF:
-            label = exec_pop_label(exec);
+            label_pos = exec_pop_label(exec);
             left_bool = exec_pop_bool(exec);
             if (left_bool) {
-                i = label.pos - 1;
+                i = label_pos - 1;
             }
             break;
         case IR_DYNCALL:
-            label = exec_pop_label(exec);
-            if (!exec_run_bytecode(exec, bc, label.pos)) IR_EXEC_FAIL;
+            label_pos = exec_pop_label(exec);
+            if (!exec_run_bytecode(exec, bc, label_pos)) IR_EXEC_FAIL;
             break;
         case IR_DYNRUN:
-            IrFunction func_val = exec_pop_func(exec);
-            if (!func_val.ptr) {
+            IrRunFunction func = exec_pop_func(exec);
+            if (!func) {
                 exec_set_error(exec, "Resolving funcs in dynrun instruction is not allowed");
                 IR_EXEC_FAIL;
             }
-            if (!func_val.ptr(exec)) IR_EXEC_FAIL;
+            if (!func(exec)) IR_EXEC_FAIL;
             break;
         case IR_RET:
             goto exec_return;
@@ -2137,14 +2146,10 @@ void exec_print_value(IrValue* value) {
         }
         break;
     case IR_TYPE_FUNC:
-        if (value->as.func_val.ptr) {
-            printf("func %p", value->as.func_val.ptr);
-        } else {
-            printf("func \"%s\"", value->as.func_val.hint);
-        }
+        printf("func %p", value->as.func_val);
         break;
     case IR_TYPE_LABEL:
-        printf("label <%s>", value->as.label_val.name);
+        printf("label %zu", value->as.label_val);
         break;
     }
 }
