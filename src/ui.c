@@ -813,7 +813,7 @@ static void code_put_blocks(bool single) {
         vector_remove(editor.mouse_blockchains, 0);
     } else {
         for (size_t i = 0; i < vector_size(editor.mouse_blockchains); i++) {
-            RootBlockChain root = editor.mouse_blockchains[0];
+            RootBlockChain root = editor.mouse_blockchains[i];
             root.x += editor.camera_pos.x - ui.hover.panels.panel_size.x;
             root.y += editor.camera_pos.y - ui.hover.panels.panel_size.y;
             root.x /= config.ui_size / 32.0;
