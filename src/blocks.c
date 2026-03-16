@@ -1223,6 +1223,24 @@ CompilerValue block_while(Compiler* compiler, Block* block, Block** next_block, 
     return DATA_CHUNK(DATA_TYPE_NULL, bc);
 }
 
+CompilerValue block_block(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
+    if (prev_block == block->prev) {
+        if (!CHAIN_EMPTY(block->contents)) {
+            compiler_object_info_insert(compiler, block, (void*)compiler->variables.size);
+            *next_block = block->contents->start;
+        }
+    } else if (prev_block == block->contents->end) {
+        void* block_data = compiler_object_info_get(compiler, block);
+        if (block_data == OBJECT_NOT_FOUND) {
+            compiler_set_error(compiler, "Could not find block data in block block");
+            return DATA_ERROR;
+        }
+        compiler->variables.size = (size_t)block_data;
+    }
+
+    return EMPTY_CHUNK;
+}
+
 #define print_func_name(...) func_name_size += snprintf(func_name + func_name_size, 1024 - func_name_size, __VA_ARGS__)
 CompilerValue block_define_block(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) next_block;
@@ -4254,6 +4272,11 @@ void register_blocks(Vm* vm) {
     blockdef_add_argument(sc_while, "", gettext("cond."), BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_while);
     block_category_add_blockdef(cat_control, sc_while);
+
+    Blockdef* sc_block = blockdef_new("block", BLOCKTYPE_CONTROL, (BlockdefColor) CATEGORY_CONTROL_COLOR, block_block);
+    blockdef_add_text(sc_block, gettext("Block"));
+    blockdef_register(vm, sc_block);
+    block_category_add_blockdef(cat_control, sc_block);
 
     block_category_add_label(cat_control, gettext("Functions"), (Color) { 0x99, 0x00, 0xff, 0xff });
 
