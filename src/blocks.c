@@ -911,7 +911,10 @@ CompilerValue block_on_start(Compiler* compiler, Block* block, Block** next_bloc
 CompilerValue block_if(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     IrBytecode bc = EMPTY_BYTECODE;
 
-    if (prev_block == block->prev) {
+    Block* prev = block->prev;
+    if (!prev) prev = block->parent.as.chain->parent;
+
+    if (prev_block == prev) {
         size_t var_slot = compiler->variables.size;
 
         CompilerValue value = compiler_evaluate_argument(compiler, &block->arguments[0]);
@@ -1060,9 +1063,12 @@ CompilerValue block_else(Compiler* compiler, Block* block, Block** next_block, B
 }
 
 CompilerValue block_loop(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
+    Block* prev = block->prev;
+    if (!prev) prev = block->parent.as.chain->parent;
+
     IrBytecode bc = EMPTY_BYTECODE;
 
-    if (prev_block == block->prev) {
+    if (prev_block == prev) {
         ConstId loop_label = bytecode_push_label(&bc, ir_arena_sprintf(compiler->arena, 32, "loop_%zu", compiler->label_counter++));
 
         if (!CHAIN_EMPTY(block->contents)) {
@@ -1093,9 +1099,12 @@ CompilerValue block_loop(Compiler* compiler, Block* block, Block** next_block, B
 }
 
 CompilerValue block_repeat(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
+    Block* prev = block->prev;
+    if (!prev) prev = block->parent.as.chain->parent;
+
     IrBytecode bc = EMPTY_BYTECODE;
 
-    if (prev_block == block->prev) {
+    if (prev_block == prev) {
         // Compute constant, it will be stored on the stack
         CompilerValue value = compiler_evaluate_argument(compiler, &block->arguments[0]);
         if (value.type == DATA_TYPE_ERROR) return DATA_ERROR;
@@ -1175,9 +1184,12 @@ CompilerValue block_repeat(Compiler* compiler, Block* block, Block** next_block,
 }
 
 CompilerValue block_while(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
+    Block* prev = block->prev;
+    if (!prev) prev = block->parent.as.chain->parent;
+
     IrBytecode bc = EMPTY_BYTECODE;
 
-    if (prev_block == block->prev) {
+    if (prev_block == prev) {
         ConstId loop_label = bytecode_push_label(&bc, ir_arena_sprintf(compiler->arena, 32, "while_%zu", compiler->label_counter++));
 
         CompilerValue value = compiler_evaluate_argument(compiler, &block->arguments[0]);
@@ -1224,7 +1236,10 @@ CompilerValue block_while(Compiler* compiler, Block* block, Block** next_block, 
 }
 
 CompilerValue block_block(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
-    if (prev_block == block->prev) {
+    Block* prev = block->prev;
+    if (!prev) prev = block->parent.as.chain->parent;
+
+    if (prev_block == prev) {
         if (!CHAIN_EMPTY(block->contents)) {
             compiler_object_info_insert(compiler, block, (void*)compiler->variables.size);
             *next_block = block->contents->start;
