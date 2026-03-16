@@ -171,12 +171,6 @@ typedef struct {
     bool owned;
 } IrList;
 
-typedef struct {
-    IrConstValue* items;
-    size_t size, capacity;
-    bool owned;
-} IrConstList;
-
 typedef enum {
     IR_TYPE_NOTHING, // Nothing, similar to NULL in other languages
     IR_TYPE_BYTE,    // 8-bit integer, useful for representing binary data or UTF-8 sequences
@@ -198,7 +192,7 @@ struct IrConstValue {
         bool bool_val;
         IrFunction func_val;
         IrLabel label_val;
-        IrConstList* list_val;
+        IrList* list_val;
     } as;
 };
 
@@ -335,20 +329,20 @@ IrInstructionID bytecode_push_op_float(IrBytecode* bc, IrOpcode op, double float
 IrInstructionID bytecode_push_op_bool(IrBytecode* bc, IrOpcode op, bool bool_val);
 IrInstructionID bytecode_push_op_func(IrBytecode* bc, IrOpcode op, IrFunction func_val);
 IrInstructionID bytecode_push_op_label(IrBytecode* bc, IrOpcode op, ConstId label_id);
-IrInstructionID bytecode_push_op_list(IrBytecode* bc, IrOpcode op, IrConstList* list_val);
+IrInstructionID bytecode_push_op_list(IrBytecode* bc, IrOpcode op, IrList* list_val);
 
 // These functions replace the constant in bytecode at instruction instr_id.
 void bytecode_set_op_int(IrBytecode* bc, IrInstructionID instr_id, int int_val);
 void bytecode_set_op_float(IrBytecode* bc, IrInstructionID instr_id, double float_val);
 void bytecode_set_op_bool(IrBytecode* bc, IrInstructionID instr_id, bool bool_val);
 void bytecode_set_op_func(IrBytecode* bc, IrInstructionID instr_id, IrFunction func_val);
-void bytecode_set_op_list(IrBytecode* bc, IrInstructionID instr_id, IrConstList* list_val);
+void bytecode_set_op_list(IrBytecode* bc, IrInstructionID instr_id, IrList* list_val);
 
 // Allocate new immutable list type that can be used in bytecode functions that operate on lists.
-IrConstList* bytecode_const_list_new(IrBytecodePool* pool);
+IrList* bytecode_const_list_new(IrBytecodePool* pool);
 
 // Add value to immutable list.
-void bytecode_const_list_append(IrBytecodePool* pool, IrConstList* list, IrConstValue val);
+void bytecode_const_list_append(IrBytecodePool* pool, IrList* list, IrValue val);
 
 // Create a function value that needs to be resolved at runtime using hint string.
 // The exact hint string that needs to be passed depends on current runtime function resolver,
@@ -544,13 +538,17 @@ size_t hash_value(IrConstValue value) {
     case IR_TYPE_FLOAT: hash = *(size_t*)&value.as.float_val; break;
     case IR_TYPE_BOOL: hash = value.as.bool_val; break;
     case IR_TYPE_LIST: ;
-        IrConstList* list = value.as.list_val;
+        IrList* list = value.as.list_val;
         if (!list) {
             hash = 0x12345678;
             break;
         }
+        IrConstValue const_val;
         for (size_t i = 0; i < list->size; i++) {
-            hash = (hash << 1) ^ hash_value(list->items[i]);
+            IrValue val = list->items[i];
+            memset(&const_val.as, 0, sizeof(const_val.as));
+            memcpy(&const_val, &val, sizeof(val));
+            hash = (hash << 1) ^ hash_value(const_val);
         }
         break;
     case IR_TYPE_FUNC:
@@ -575,7 +573,7 @@ size_t hash_value(IrConstValue value) {
     return hash;
 }
 
-bool value_equals(IrConstValue left, IrConstValue right) {
+bool value_equals(IrValue left, IrValue right) {
     if (left.type != right.type) return false;
 
     switch (left.type) {
@@ -586,8 +584,35 @@ bool value_equals(IrConstValue left, IrConstValue right) {
     case IR_TYPE_BOOL: return left.as.bool_val == right.as.bool_val;
     case IR_TYPE_STRING:
     case IR_TYPE_LIST: ;
-        IrConstList* left_list = left.as.list_val;
-        IrConstList* right_list = right.as.list_val;
+        IrList* left_list = left.as.list_val;
+        IrList* right_list = right.as.list_val;
+
+        if (!left_list && !right_list) return true;
+        if (!left_list || !right_list) return false;
+        if (left_list->size != right_list->size) return false;
+        for (size_t i = 0; i < left_list->size; i++) {
+            if (!value_equals(left_list->items[i], right_list->items[i])) return false;
+        }
+        return true;
+    case IR_TYPE_FUNC: return left.as.func_val == right.as.func_val;
+    case IR_TYPE_LABEL: return left.as.label_val == right.as.label_val;
+    }
+    return true;
+}
+
+bool const_value_equals(IrConstValue left, IrConstValue right) {
+    if (left.type != right.type) return false;
+
+    switch (left.type) {
+    case IR_TYPE_NOTHING: return true;
+    case IR_TYPE_BYTE: return left.as.byte_val == right.as.byte_val;
+    case IR_TYPE_INT: return left.as.int_val == right.as.int_val;
+    case IR_TYPE_FLOAT: return left.as.float_val == right.as.float_val;
+    case IR_TYPE_BOOL: return left.as.bool_val == right.as.bool_val;
+    case IR_TYPE_STRING:
+    case IR_TYPE_LIST: ;
+        IrList* left_list = left.as.list_val;
+        IrList* right_list = right.as.list_val;
 
         if (!left_list && !right_list) return true;
         if (!left_list || !right_list) return false;
@@ -630,7 +655,7 @@ size_t bytecode_pool_get(IrBytecodePool* pool, IrConstValue value) {
     size_t hash = hash_value(value) % pool->hash_set.capacity;
     size_t idx = pool->hash_set.items[hash];
     if (idx == (size_t)-1) return idx;
-    while (!value_equals(pool->list.items[idx], value)) {
+    while (!const_value_equals(pool->list.items[idx], value)) {
         hash++;
         if (hash >= pool->hash_set.capacity) hash = 0;
         idx = pool->hash_set.items[hash];
@@ -664,7 +689,7 @@ size_t bytecode_pool_insert(IrBytecodePool* pool, IrConstValue value) {
     size_t idx = pool->hash_set.items[hash];
 
     while (idx != (size_t)-1) {
-        if (value_equals(pool->list.items[idx], value)) return idx;
+        if (const_value_equals(pool->list.items[idx], value)) return idx;
 
         hash++;
         if (hash >= pool->hash_set.capacity) hash = 0;
@@ -763,7 +788,7 @@ _ir_make_bc_push_op(bytecode_push_op_int, int64_t, int_val, IR_TYPE_INT)
 _ir_make_bc_push_op(bytecode_push_op_float, double, float_val, IR_TYPE_FLOAT)
 _ir_make_bc_push_op(bytecode_push_op_bool, bool, bool_val, IR_TYPE_BOOL)
 _ir_make_bc_push_op(bytecode_push_op_func, IrFunction, func_val, IR_TYPE_FUNC)
-_ir_make_bc_push_op(bytecode_push_op_list, IrConstList*, list_val, IR_TYPE_LIST)
+_ir_make_bc_push_op(bytecode_push_op_list, IrList*, list_val, IR_TYPE_LIST)
 
 #undef _ir_make_bc_push_op
 
@@ -789,17 +814,17 @@ _ir_make_bc_set_op(bytecode_set_op_int, int, int_val, IR_TYPE_INT)
 _ir_make_bc_set_op(bytecode_set_op_float, double, float_val, IR_TYPE_FLOAT)
 _ir_make_bc_set_op(bytecode_set_op_bool, bool, bool_val, IR_TYPE_BOOL)
 _ir_make_bc_set_op(bytecode_set_op_func, IrFunction, func_val, IR_TYPE_FUNC)
-_ir_make_bc_set_op(bytecode_set_op_list, IrConstList*, list_val, IR_TYPE_LIST)
+_ir_make_bc_set_op(bytecode_set_op_list, IrList*, list_val, IR_TYPE_LIST)
 
 #undef _ir_make_bc_set_op
 
-IrConstList* bytecode_const_list_new(IrBytecodePool* pool) {
-    IrConstList* list = ir_arena_alloc(pool->arena, sizeof(IrList));
+IrList* bytecode_const_list_new(IrBytecodePool* pool) {
+    IrList* list = ir_arena_alloc(pool->arena, sizeof(IrList));
     memset(list, 0, sizeof(IrList));
     return list;
 }
 
-void bytecode_const_list_append(IrBytecodePool* pool, IrConstList* list, IrConstValue val) {
+void bytecode_const_list_append(IrBytecodePool* pool, IrList* list, IrValue val) {
     ir_arena_append(pool->arena, *list, val);
 }
 
@@ -837,7 +862,7 @@ void bytecode_print(IrBytecode* bc) {
 
         printf("    ");
 
-        IrConstList* list;
+        IrList* list;
 
         static_assert(IR_LAST == 81, "Exhaustive opcode in exec_run_bytecode");
         switch (bc->code.items[i]) {
@@ -861,7 +886,7 @@ void bytecode_print(IrBytecode* bc) {
                         printf("...");
                         break;
                     }
-                    IrConstValue c = list->items[j];
+                    IrValue c = list->items[j];
                     switch (c.type) {
                     case IR_TYPE_INT: printf("%lc", c.as.int_val); break;
                     case IR_TYPE_BYTE: printf("%c", c.as.byte_val); break;

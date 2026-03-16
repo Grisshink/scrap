@@ -41,7 +41,7 @@ typedef union {
     int integer_val;
     double float_val;
     bool bool_val;
-    IrConstList* list_val;
+    IrList* list_val;
     Color color_val;
     BytecodeChunk chunk_val;
 } CompilerValueData;
