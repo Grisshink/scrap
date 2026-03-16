@@ -2266,11 +2266,21 @@ CompilerValue block_convert_color(Compiler* compiler, Block* block, Block** next
 }
 
 CompilerValue block_typeof(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
-    (void) compiler;
-    (void) block;
     (void) next_block;
     (void) prev_block;
-    return DATA_ERROR;
+
+    CompilerValue value = compiler_evaluate_argument(compiler, &block->arguments[0]);
+    if (value.type == DATA_TYPE_ERROR) return DATA_ERROR;
+
+    DataType type = value.type;
+    if (type == DATA_TYPE_CHUNK) type = value.data.chunk_val.return_type;
+    if (type == DATA_TYPE_ANY) {
+        IrBytecode bc = value.data.chunk_val.bc;
+        bytecode_push_op(&bc, IR_TYPEOF);
+        return DATA_CHUNK(DATA_TYPE_STRING, bc);
+    } else {
+        return DATA_STRING((char*)type_to_str(type));
+    }
 }
 
 CompilerValue block_noop(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
@@ -2290,11 +2300,13 @@ CompilerValue block_do_nothing(Compiler* compiler, Block* block, Block** next_bl
 }
 
 CompilerValue block_gc_collect(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
-    (void) compiler;
     (void) block;
     (void) next_block;
     (void) prev_block;
-    return DATA_ERROR;
+
+    IrBytecode bc = EMPTY_BYTECODE;
+    bytecode_push_op_func(&bc, IR_RUN, ir_func_by_hint("std_gc_collect"));
+    return DATA_CHUNK(DATA_TYPE_NULL, bc);
 }
 
 CompilerValue block_exec_custom(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {

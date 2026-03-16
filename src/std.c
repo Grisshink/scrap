@@ -379,6 +379,11 @@ bool std_string_substring(IrExec* exec) {
     return true;
 }
 
+bool std_gc_collect(IrExec* exec) {
+    exec_collect(exec);
+    return true;
+}
+
 #ifdef STANDALONE_STD
 
 #include <wchar.h>
@@ -473,6 +478,7 @@ bool std_term_cursor_y(IrExec* exec) {
 }
 
 bool std_term_clear(IrExec* exec) {
+    (void) exec;
     // ESC[48;2;⟨r⟩;⟨g⟩;⟨b⟩m Select RGB background color
     printf("\033[48;2;%d;%d;%dm", clear_color.r, clear_color.g, clear_color.b);
     printf("\033[2J");
@@ -620,6 +626,7 @@ bool std_term_set_clear_color(IrExec* exec) {
 }
 
 bool std_term_clear(IrExec* exec) {
+    (void) exec;
     term_clear();
     return true;
 }
@@ -760,6 +767,7 @@ IrRunFunction std_resolve_function(IrExec* exec, const char* hint) {
         STD_FUNC(std_string_to_color),
         STD_FUNC(std_string_join),
         STD_FUNC(std_string_substring),
+        STD_FUNC(std_gc_collect),
         { "sqrt",  std_sqrt  },
         { "round", std_round },
         { "floor", std_floor },

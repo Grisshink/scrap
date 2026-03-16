@@ -109,28 +109,30 @@ typedef enum {
     // Type conversion
     IR_ITOF, // int to float
     IR_ITOB, // int to bool
-    IR_ITOA, // int to list[int] in ascii format
+    IR_ITOA, // int to string in ascii format
 
     IR_FTOI, // float to int
     IR_FTOB, // float to bool
-    IR_FTOA, // float to list[int] in ascii format
+    IR_FTOA, // float to string in ascii format
 
     IR_BTOI, // bool to int
     IR_BTOF, // bool to float
-    IR_BTOA, // bool to list[int] int ascii format
+    IR_BTOA, // bool to string in ascii format
 
-    IR_ATOI, // list[int] to int
-    IR_ATOF, // list[int] to float
-    IR_ATOB, // list[int] to bool
+    IR_ATOI, // string to int
+    IR_ATOF, // string to float
+    IR_ATOB, // string to bool
 
-    IR_LTOA, // list to list[int] in ascii format
-    IR_NTOA, // nothing to list[int] in ascii format
+    IR_LTOA, // list to string in ascii format
+    IR_NTOA, // nothing to string in ascii format
 
     IR_TOI, // any to int
     IR_TOF, // any to float
     IR_TOB, // any to bool
-    IR_TOA, // any to list[int]
+    IR_TOA, // any to string
     IR_TOL, // any to list. Does nothing and it's only used for checking for valid type
+
+    IR_TYPEOF, // Get type of value as string
 
     // List manipulation
     IR_ADDL,    // Add value to list
@@ -864,7 +866,7 @@ void bytecode_print(IrBytecode* bc) {
 
         IrList* list;
 
-        static_assert(IR_LAST == 81, "Exhaustive opcode in exec_run_bytecode");
+        static_assert(IR_LAST == 82, "Exhaustive opcode in exec_run_bytecode");
         switch (bc->code.items[i]) {
         case IR_PUSHL:
             CHECK_IMMEDIATE;
@@ -952,6 +954,7 @@ void bytecode_print(IrBytecode* bc) {
         case IR_TOB: printf("tob\n"); break;
         case IR_TOA: printf("toa\n"); break;
         case IR_TOL: printf("tol\n"); break;
+        case IR_TYPEOF: printf("typeof\n"); break;
         case IR_ADDL: printf("addl\n"); break;
         case IR_INDEXL: printf("indexl\n"); break;
         case IR_SETL: printf("setl\n"); break;
@@ -1499,7 +1502,7 @@ bool exec_run_bytecode(IrExec* exec, IrBytecode* bc, size_t pos) {
     IrFunction* func;
 
     for (size_t i = pos; i < bc->code.size; i++) {
-        static_assert(IR_LAST == 81, "Exhaustive opcode in exec_run_bytecode");
+        static_assert(IR_LAST == 82, "Exhaustive opcode in exec_run_bytecode");
         switch (bc->code.items[i]) {
         case IR_PUSHN: exec_push_nothing(exec); break;
         case IR_PUSHI:
@@ -1929,6 +1932,41 @@ bool exec_run_bytecode(IrExec* exec, IrBytecode* bc, size_t pos) {
             default:
                 exec_set_error(exec, "Invalid type passed to tol");
                 IR_EXEC_FAIL;
+                break;
+            }
+            break;
+        case IR_TYPEOF:
+            left_value = exec_pop_value(exec);
+            switch (left_value.type) {
+            case IR_TYPE_NOTHING:
+                if (!exec_push_string(exec, "nothing")) IR_EXEC_FAIL;
+                break;
+            case IR_TYPE_BYTE:
+                if (!exec_push_string(exec, "byte")) IR_EXEC_FAIL;
+                break;
+            case IR_TYPE_INT:
+                if (!exec_push_string(exec, "integer")) IR_EXEC_FAIL;
+                break;
+            case IR_TYPE_FLOAT:
+                if (!exec_push_string(exec, "float")) IR_EXEC_FAIL;
+                break;
+            case IR_TYPE_BOOL:
+                if (!exec_push_string(exec, "bool")) IR_EXEC_FAIL;
+                break;
+            case IR_TYPE_LIST:
+                if (!exec_push_string(exec, "list")) IR_EXEC_FAIL;
+                break;
+            case IR_TYPE_STRING:
+                if (!exec_push_string(exec, "str")) IR_EXEC_FAIL;
+                break;
+            case IR_TYPE_FUNC:
+                if (!exec_push_string(exec, "func")) IR_EXEC_FAIL;
+                break;
+            case IR_TYPE_LABEL:
+                if (!exec_push_string(exec, "label")) IR_EXEC_FAIL;
+                break;
+            default:
+                assert(false && "Unhandled ir type in IR_TYPEOF");
                 break;
             }
             break;
