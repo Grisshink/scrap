@@ -58,8 +58,8 @@ static bool inside_scissor(GuiDrawBounds rect, GuiBounds scissor) {
 }
 
 static bool mouse_inside(Gui* gui, GuiBounds rect) {
-    return ((gui->mouse_x > rect.x) && (gui->mouse_x < rect.x + rect.w) &&
-            (gui->mouse_y > rect.y) && (gui->mouse_y < rect.y + rect.h));
+    return ((gui->mouse_x > rect.x) && (gui->mouse_x <= rect.x + rect.w) &&
+            (gui->mouse_y > rect.y) && (gui->mouse_y <= rect.y + rect.h));
 }
 
 void gui_init(Gui* gui) {
