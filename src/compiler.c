@@ -75,6 +75,13 @@ static const char* format_byte_count(Compiler* compiler, size_t size) {
     }
 }
 
+static RootBlockChain* find_root_blockchain(Compiler* compiler, BlockChain* chain) {
+    for (size_t i = 0; i < vector_size(compiler->code); i++) {
+        if (compiler->code[i].chain == chain) return &compiler->code[i];
+    }
+    return NULL;
+}
+
 bool compiler_run(void* e) {
     Compiler* compiler = e;
 
@@ -94,7 +101,10 @@ bool compiler_run(void* e) {
 
         Block* next = NULL;
         CompilerValue value = compiler_evaluate_block(compiler, block, &next, (Block*)-1);
-        if (value.type == DATA_TYPE_UNKNOWN) return false;
+        if (value.type == DATA_TYPE_UNKNOWN) {
+            if (!compiler->current_error_root_blockchain) compiler->current_error_root_blockchain = &compiler->code[i];
+            return false;
+        }
     }
 
     for (size_t i = 0; i < vector_size(compiler->code); i++) {
@@ -105,18 +115,31 @@ bool compiler_run(void* e) {
 
         Block* next = NULL;
         CompilerValue value = compiler_evaluate_block(compiler, block, &next, (Block*)-1);
-        if (value.type == DATA_TYPE_UNKNOWN) return false;
+        if (value.type == DATA_TYPE_UNKNOWN) {
+            if (!compiler->current_error_root_blockchain) compiler->current_error_root_blockchain = &compiler->code[i];
+            return false;
+        }
     }
 
     for (size_t i = 0; i < vector_size(compiler->chains_to_compile); i++) {
         compiler->variables.size = 0;
         CompilerValue value = compiler_evaluate_chain(compiler, compiler->chains_to_compile[i]);
-        if (value.type == DATA_TYPE_UNKNOWN) return false;
+        if (value.type == DATA_TYPE_UNKNOWN) {
+            if (!compiler->current_error_root_blockchain) {
+                compiler->current_error_root_blockchain = find_root_blockchain(compiler, compiler->chains_to_compile[i]);
+            }
+            return false;
+        }
         bytecode_join(&compiler->bytecode, &value.data.chunk_val.bc);
 
         Block* next = NULL;
         value = compiler_evaluate_block(compiler, compiler->chains_to_compile[i]->start, &next, compiler->chains_to_compile[i]->end);
-        if (value.type == DATA_TYPE_UNKNOWN) return false;
+        if (value.type == DATA_TYPE_UNKNOWN) {
+            if (!compiler->current_error_root_blockchain) {
+                compiler->current_error_root_blockchain = find_root_blockchain(compiler, compiler->chains_to_compile[i]);
+            }
+            return false;
+        }
         bytecode_join(&compiler->bytecode, &value.data.chunk_val.bc);
     }
 

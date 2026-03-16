@@ -1572,11 +1572,11 @@ static void draw_code(void) {
             editor.code[i].y * config.ui_size / 32.0 - editor.camera_pos.y,
         };
         Rectangle code_size = ui.hover.panels.code_panel_bounds;
-        // if (&editor.code[i] != ui.hover.editor.select_blockchain) {
+        if (&editor.code[i] != ui.hover.editor.select_root_blockchain) {
             if (chain_pos.x > code_size.width || chain_pos.y > code_size.height) continue;
             if (editor.code[i].width > 0 && editor.code[i].height > 0 &&
                 (chain_pos.x + editor.code[i].width < 0 || chain_pos.y + editor.code[i].height < 0)) continue;
-        // }
+        }
         GuiElement* el = gui_element_begin(gui);
             gui_set_floating(gui);
             gui_set_position(gui, chain_pos.x, chain_pos.y);

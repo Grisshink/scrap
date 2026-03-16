@@ -96,6 +96,7 @@ struct Compiler {
     char current_error[MAX_ERROR_LEN];
     Block* current_error_block;
     BlockChain* current_error_blockchain;
+    RootBlockChain* current_error_root_blockchain;
 
     size_t label_counter;
 

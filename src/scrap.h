@@ -121,6 +121,7 @@ typedef struct {
     Block* select_block;
     Argument* select_argument;
     BlockChain* select_blockchain;
+    RootBlockChain* select_root_blockchain;
     Vector2 select_block_pos;
     bool select_valid;
 
@@ -387,6 +388,7 @@ struct Vm {
     char** compile_error;
     Block* compile_error_block;
     BlockChain* compile_error_blockchain;
+    RootBlockChain* compile_error_root_blockchain;
 
     int start_timeout; // = -1;
 #ifdef USE_LLVM

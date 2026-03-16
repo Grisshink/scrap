@@ -608,6 +608,7 @@ bool handle_category_click(void) {
 bool handle_jump_to_block_button_click(void) {
     ui.hover.editor.select_block = vm.compile_error_block;
     ui.hover.editor.select_blockchain = vm.compile_error_blockchain;
+    ui.hover.editor.select_root_blockchain = vm.compile_error_root_blockchain;
     return true;
 }
 
@@ -924,6 +925,7 @@ static void code_detach_argument(void) {
     root.chain->start->parent.as.chain = root.chain;
     vector_add(&editor.mouse_blockchains, root);
 
+    ui.hover.editor.select_root_blockchain = NULL;
     ui.hover.editor.select_blockchain = NULL;
     ui.hover.editor.select_block = NULL;
     ui.hover.select_input = NULL;
@@ -1141,6 +1143,7 @@ static bool handle_code_editor_click(bool mouse_empty) {
 
         ui.hover.editor.edit_blockdef = NULL;
         ui.hover.editor.edit_block = NULL;
+        ui.hover.editor.select_root_blockchain = NULL;
         ui.hover.editor.select_blockchain = NULL;
         ui.hover.editor.select_block = NULL;
     } else {
@@ -1470,8 +1473,7 @@ static bool handle_code_panel_key_press(void) {
         ui.hover.editor.select_argument = NULL;
         ui.hover.editor.select_block = editor.code[editor.blockchain_select_counter].chain->start;
         ui.hover.editor.select_blockchain = editor.code[editor.blockchain_select_counter].chain;
-        editor.camera_pos.x = editor.code[editor.blockchain_select_counter].x - 50;
-        editor.camera_pos.y = editor.code[editor.blockchain_select_counter].y - 50;
+        ui.hover.editor.select_root_blockchain = &editor.code[editor.blockchain_select_counter];
         actionbar_show(TextFormat(gettext("Jump to chain (%d/%d)"), editor.blockchain_select_counter + 1, vector_size(editor.code)));
         ui.render_surface_needs_redraw = true;
         return true;
@@ -1688,6 +1690,7 @@ static void handle_mouse_wheel(void) {
         ui.hover.editor.select_argument = NULL;
         ui.hover.select_input = NULL;
         ui.hover.editor.select_blockchain = NULL;
+        ui.hover.editor.select_root_blockchain = NULL;
     }
 }
 
@@ -1777,6 +1780,7 @@ void scrap_gui_process_ui(void) {
         ui.hover.editor.select_argument = NULL;
         ui.hover.select_input = NULL;
         ui.hover.editor.select_blockchain = NULL;
+        ui.hover.editor.select_root_blockchain = NULL;
         ui.render_surface_needs_redraw = true;
         if (ui.dropdown.shown) handle_dropdown_close();
     } else if (IsMouseButtonDown(MOUSE_BUTTON_MIDDLE) || IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
@@ -1838,6 +1842,7 @@ void scrap_gui_process_ui(void) {
             scrap_log(LOG_WARNING, "Invalid selection: %p", ui.hover.editor.select_block);
             ui.hover.editor.select_block = NULL;
             ui.hover.editor.select_blockchain = NULL;
+            ui.hover.editor.select_root_blockchain = NULL;
         }
 
         if (vector_size(editor.mouse_blockchains) > 0 &&

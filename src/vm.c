@@ -141,6 +141,7 @@ Vm vm_new(void) {
         .compile_error = vector_create(),
         .compile_error_block = NULL,
         .compile_error_blockchain = NULL,
+        .compile_error_root_blockchain = NULL,
         .start_timeout = -1,
 #ifdef USE_LLVM
         .start_mode = COMPILER_MODE_JIT,
@@ -232,6 +233,7 @@ void vm_handle_running_thread(void) {
         }
         vm.compile_error_block = vm.compiler.current_error_block;
         vm.compile_error_blockchain = vm.compiler.current_error_blockchain;
+        vm.compile_error_root_blockchain = vm.compiler.current_error_root_blockchain;
         compiler_free(&vm.compiler);
         ui.render_surface_needs_redraw = true;
     } else if (thread_is_running(&vm.thread)) {
