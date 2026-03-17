@@ -773,7 +773,7 @@ void draw_about_window(void) {
 
 void draw_save_confirmation_window(void) {
     begin_window(gettext("Confirm save"), &assets.textures.icon_about, 500 * config.ui_size / 32.0, 0, window.animation_ease);
-        gui_text(gui, &assets.fonts.font_cond, gettext("Project is modified. Save the changes and quit?"), config.ui_size * 0.6, GUI_WHITE);
+        gui_text(gui, &assets.fonts.font_cond, gettext("Project is modified. Save the changes before quitting?"), config.ui_size * 0.6, GUI_WHITE);
 
         gui_grow(gui, DIRECTION_VERTICAL);
 

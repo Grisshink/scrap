@@ -666,8 +666,8 @@ msgid "Confirm save"
 msgstr "Подтвердите сохранение"
 
 #: window.c
-msgid "Project is modified. Save the changes and quit?"
-msgstr "Проект изменён. Сохранить изменения и выйти?"
+msgid "Project is modified. Save the changes before quitting?"
+msgstr "Проект изменён. Сохранить изменения перед выходом?"
 
 #: window.c
 msgid "Yes"
