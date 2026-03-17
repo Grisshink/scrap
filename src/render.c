@@ -141,12 +141,15 @@ static void draw_term(int x, int y) {
         }
         pos.y += term.font_size;
     }
-    if (fmod(GetTime(), 1.0) <= 0.5) {
-        Vector2 cursor_pos = (Vector2) {
-            final_pos.x + (term.cursor_pos % term.char_w) * term.char_size.x,
-            final_pos.y + (term.cursor_pos / term.char_w) * term.font_size,
-        };
+
+    Vector2 cursor_pos = (Vector2) {
+        final_pos.x + (term.cursor_pos % term.char_w) * term.char_size.x,
+        final_pos.y + (term.cursor_pos / term.char_w) * term.font_size,
+    };
+    if (ui.hover.panels.panel && ui.hover.panels.panel->type == PANEL_TERM) {
         DrawRectangle(cursor_pos.x, cursor_pos.y, BLOCK_OUTLINE_SIZE, term.font_size, CONVERT_COLOR(term.cursor_fg_color, Color));
+    } else {
+        DrawRectangleLinesEx((Rectangle) { cursor_pos.x, cursor_pos.y, term.char_size.x, term.font_size }, BLOCK_OUTLINE_SIZE, CONVERT_COLOR(term.cursor_fg_color, Color));
     }
 
 unlock_term:
