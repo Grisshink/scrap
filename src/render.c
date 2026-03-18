@@ -102,10 +102,10 @@ static void draw_dots(void) {
 }
 
 static void draw_term(int x, int y) {
-    mutex_lock(&term.lock);
+    if (term.char_w == 0 || term.char_h == 0) return;
+    if (!term.buffer) return;
 
-    if (term.char_w == 0 || term.char_h == 0) goto unlock_term;
-    if (!term.buffer) goto unlock_term;
+    term_wait_for_output();
 
     Rectangle final_pos = { x, y, term.size.x, term.size.y };
     DrawRectangleRec(final_pos, BLACK);
@@ -151,9 +151,6 @@ static void draw_term(int x, int y) {
     } else {
         DrawRectangleLinesEx((Rectangle) { cursor_pos.x, cursor_pos.y, term.char_size.x, term.font_size }, BLOCK_OUTLINE_SIZE, CONVERT_COLOR(term.cursor_fg_color, Color));
     }
-
-unlock_term:
-    mutex_unlock(&term.lock);
 }
 
 void prerender_font_shadow(Font* font) {

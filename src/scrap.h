@@ -554,4 +554,7 @@ void scrap_set_env(const char* name, const char* value);
 bool spawn_process(char* command, char* error, size_t error_len);
 #endif
 
+pid_t spawn_process_pty(char* command, char* error, size_t error_len);
+bool wait_for_process_pty(pid_t pid, char* error, size_t error_len);
+
 #endif // SCRAP_H

@@ -92,6 +92,8 @@ bool compiler_run(void* e) {
 
     compiler->bytecode = bytecode_new("main", compiler->bc_pool);
     compiler->exec_running = false;
+    compiler->pid = -1;
+    compiler->pid_terminate_attempted = false;
 
     for (size_t i = 0; i < vector_size(compiler->code); i++) {
         assert(!CHAIN_EMPTY(compiler->code[i].chain));
@@ -154,26 +156,47 @@ bool compiler_run(void* e) {
         format_byte_count(compiler, compiler->arena->commit_pos)
     );
 
-    compiler->exec = exec_new(MiB(1), GiB(1));
-    if (compiler->exec.last_error[0] != 0) {
-        compiler_set_error(compiler, "Exec create error: %s", compiler->exec.last_error);
-        exec_free(&compiler->exec);
-        return false;
-    }
-    exec_set_run_function_resolver(&compiler->exec, std_resolve_function);
-    exec_add_bytecode(&compiler->exec, compiler->bytecode);
-    compiler->exec_running = true;
+    thread_handle_stopping_state(compiler->thread);
 
-    if (!exec_run(&compiler->exec, "main", "entry")) {
-        compiler_set_error(compiler, "Runtime error: %s", compiler->exec.last_error);
+    char error_buf[512];
+
+    compiler->pid = spawn_process_pty("bash", error_buf, 512);
+
+    if (compiler->pid == -1) {
+        compiler_set_error(compiler, "%s", error_buf);
         return false;
     }
+
+    if (!wait_for_process_pty(compiler->pid, error_buf, 512)) {
+        compiler_set_error(compiler, "%s", error_buf);
+        return false;
+    }
+
+    compiler->pid = -1;
+    compiler->pid_terminate_attempted = false;
+
+    // compiler->exec = exec_new(MiB(1), GiB(1));
+    // if (compiler->exec.last_error[0] != 0) {
+    //     compiler_set_error(compiler, "Exec create error: %s", compiler->exec.last_error);
+    //     exec_free(&compiler->exec);
+    //     return false;
+    // }
+    // exec_set_run_function_resolver(&compiler->exec, std_resolve_function);
+    // exec_add_bytecode(&compiler->exec, compiler->bytecode);
+    // compiler->exec_running = true;
+
+    // if (!exec_run(&compiler->exec, "main", "entry")) {
+    //     compiler_set_error(compiler, "Runtime error: %s", compiler->exec.last_error);
+    //     return false;
+    // }
 
     return true;
 }
 
 void compiler_cleanup(void* e) {
     Compiler* compiler = e;
+    compiler->pid = -1;
+    compiler->pid_terminate_attempted = false;
     if (compiler->exec_running) {
         exec_free(&compiler->exec);
     }

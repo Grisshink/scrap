@@ -101,6 +101,9 @@ struct Compiler {
     size_t label_counter;
 
     Thread* thread;
+
+    bool pid_terminate_attempted;
+    pid_t pid;
 };
 
 #define _DATA(_t, ...) (CompilerValue) { \

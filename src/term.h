@@ -49,7 +49,6 @@ typedef struct {
     void* font;
     unsigned short font_size;
 
-    Mutex lock;
     TermVec size;
     int char_w, char_h;
     int cursor_pos;
@@ -60,10 +59,13 @@ typedef struct {
 
     TermColor clear_color;
 
-    sem_t input_sem;
+    int master_fd;
+    int slave_fd;
+
+    char* output_buf;
+
     char input_buf[TERM_INPUT_BUF_SIZE];
-    int buf_start;
-    int buf_end;
+    int input_buf_size;
 } Terminal;
 
 extern Terminal term;
@@ -71,6 +73,7 @@ extern Terminal term;
 void term_init(MeasureTextSliceFunc measure_text, void* font, unsigned short font_size);
 void term_input_put_char(char ch);
 char term_input_get_char(void);
+bool term_wait_for_output(void);
 void term_scroll_down(void);
 void term_set_fg_color(TermColor color);
 void term_set_bg_color(TermColor color);

@@ -23,6 +23,9 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <libintl.h>
+#include <signal.h>
+#include <string.h>
+#include <errno.h>
 
 Block* block_new_ms(Blockdef* blockdef) {
     Block* block = block_new(blockdef);
@@ -197,8 +200,21 @@ bool vm_start(void) {
 
 bool vm_stop(void) {
     if (!thread_is_running(&vm.thread)) return false;
-    scrap_log(LOG_INFO, "STOP");
-    thread_stop(&vm.thread);
+    if (vm.compiler.pid != -1) {
+        if (vm.compiler.pid_terminate_attempted) {
+            scrap_log(LOG_WARNING, "[VM] Killing pid %zu", vm.compiler.pid);
+        } else {
+            scrap_log(LOG_INFO, "[VM] Terminating pid %zu", vm.compiler.pid);
+        }
+
+        if (kill(vm.compiler.pid, vm.compiler.pid_terminate_attempted ? SIGKILL : SIGTERM) == -1) {
+            scrap_log(LOG_ERROR, "kill: %s", strerror(errno));
+        }
+        vm.compiler.pid_terminate_attempted = true;
+    } else {
+        scrap_log(LOG_INFO, "STOP");
+        thread_stop(&vm.thread);
+    }
     ui.render_surface_needs_redraw = true;
     return true;
 }
@@ -237,12 +253,10 @@ void vm_handle_running_thread(void) {
         compiler_free(&vm.compiler);
         ui.render_surface_needs_redraw = true;
     } else if (thread_is_running(&vm.thread)) {
-        mutex_lock(&term.lock);
         if (find_panel(editor.tabs[editor.current_tab].root_panel, PANEL_TERM) && term.is_buffer_dirty) {
             ui.render_surface_needs_redraw = true;
             term.is_buffer_dirty = false;
         }
-        mutex_unlock(&term.lock);
     } else {
         if (vector_size(vm.compile_error) > 0) ui.render_surface_needs_redraw = true;
     }

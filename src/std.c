@@ -384,7 +384,7 @@ bool std_gc_collect(IrExec* exec) {
     return true;
 }
 
-#ifdef STANDALONE_STD
+#if 1 //def STANDALONE_STD
 
 #include <wchar.h>
 

@@ -30,6 +30,7 @@
 #include <string.h>
 #include <errno.h>
 #include <libintl.h>
+#include <utmp.h>
 
 #include "term.h"
 
@@ -46,8 +47,6 @@ void scrap_set_env(const char* name, const char* value) {
     setenv(name, value, false);
 #endif // _WIN32
 }
-
-#ifdef USE_LLVM
 
 #ifndef _WIN32
 static size_t next_arg(char* cmd, size_t i, char** out_arg) {
@@ -73,6 +72,73 @@ static size_t next_arg(char* cmd, size_t i, char** out_arg) {
     }
 }
 #endif
+
+pid_t spawn_process_pty(char* command, char* error, size_t error_len) {
+    pid_t pid = fork();
+    if (pid == -1) {
+        snprintf(error, error_len, gettext("Failed to fork a process: %s"), strerror(errno));
+        return pid;
+    }
+
+    if (pid == 0) {
+        // We are newborn
+
+        login_tty(term.slave_fd);
+
+        // Parse command line
+        char* name;
+        char* args[256];
+        size_t arg_len = 1;
+
+        size_t i = 0;
+        i = next_arg(command, i, &name);
+        args[0] = name;
+        args[255] = NULL;
+
+        while (args[arg_len - 1] && arg_len < 255) i = next_arg(command, i, &args[arg_len++]);
+
+        printf("Name: %s\n", name);
+
+        printf("Args: ");
+        for (char** arg = args; *arg; arg++) {
+            printf("\"%s\", ", *arg);
+        }
+        printf("\n");
+
+        // Replace da child
+        if (execvp(name, args) == -1) {
+            perror("execvp");
+            exit(1);
+        }
+
+        // Unreachable
+    }
+    return pid;
+}
+
+bool wait_for_process_pty(pid_t pid, char* error, size_t error_len) {
+    // Wait for child to terminate
+    int status;
+    waitpid(pid, &status, 0);
+    
+    if (WIFEXITED(status)) {
+        int exit_code = WEXITSTATUS(status);
+        if (exit_code == 0) {
+            return true;
+        } else {
+            snprintf(error, error_len, gettext("Command exited with exit code: %d"), exit_code);
+            return false;
+        }
+    } else if (WIFSIGNALED(status)) {
+        snprintf(error, error_len, gettext("Command signaled with signal number: %d"), WTERMSIG(status));
+        return false;
+    } else {
+        snprintf(error, error_len, gettext("Received unknown child status :/"));
+        return false;
+    }
+}
+
+#ifdef USE_LLVM
 
 bool spawn_process(char* command, char* error, size_t error_len) {
 #ifdef _WIN32
