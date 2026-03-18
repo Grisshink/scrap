@@ -1633,9 +1633,18 @@ static void handle_key_press(void) {
     if (ui.hover.panels.panel) {
         if (ui.hover.panels.panel->type == PANEL_TERM) {
             if (!thread_is_running(&vm.thread)) return;
+            if (vm.compiler.pid == -1) return;
+
             if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_KP_ENTER)) {
                 term_input_put_char('\n');
-                term_print_str("\n");
+                term_flush_input();
+                ui.render_surface_needs_redraw = true;
+                return;
+            }
+
+            if (IsKeyPressed(KEY_BACKSPACE) || IsKeyPressedRepeat(KEY_BACKSPACE)) {
+                term_input_put_char('\b');
+                term_flush_input();
                 ui.render_surface_needs_redraw = true;
                 return;
             }
@@ -1647,11 +1656,7 @@ static void handle_key_press(void) {
                 for (int i = 0; i < utf_size; i++) {
                     term_input_put_char(utf_char[i]);
                 }
-                // CodepointToUTF8() returns an array, not a null terminated string, so we copy it to satisfy constraints
-                char utf_str[7];
-                memcpy(utf_str, utf_char, utf_size);
-                utf_str[utf_size] = 0;
-                term_print_str(utf_str);
+                term_flush_input();
                 ui.render_surface_needs_redraw = true;
             }
             return;

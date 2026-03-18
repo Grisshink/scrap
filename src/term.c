@@ -114,6 +114,11 @@ void term_input_put_char(char ch) {
     }
 }
 
+void term_flush_input(void) {
+    write(term.master_fd, term.input_buf, term.input_buf_size);
+    term.input_buf_size = 0;
+}
+
 int term_read_output(void) {
     if (term.master_fd == -1) return -1;
 
@@ -360,6 +365,18 @@ int term_print_str(const char* str) {
             term.cursor_pos = term.char_w * term.char_h - term.char_w;
             term_scroll_down();
         }
+        if (*str == '\b') {
+            int pos = --term.cursor_pos;
+            strncpy(term.buffer[pos].ch, " ", ARRLEN(term.buffer[pos].ch));
+            term.buffer[pos].fg_color = TERM_WHITE;
+            term.buffer[pos].bg_color = term.clear_color;
+            str++;
+            continue;
+        }
+        if (*str == '\a') { // Bell char, skip it
+            str++;
+            continue;
+        }
         if (*str == '\t') {
             term_print_str("    ");
             str++;
@@ -381,6 +398,11 @@ int term_print_str(const char* str) {
         }
         if (*str == '\r') {
             term.cursor_pos -= term.cursor_pos % term.char_w;
+            str++;
+            continue;
+        }
+        if ((unsigned char)*str < 32 || *str == 0x7f) {
+            scrap_log(LOG_WARNING, "Unhandled control char 0x%02X", (unsigned char)*str);
             str++;
             continue;
         }
@@ -445,7 +467,7 @@ void term_clear(void) {
         term.buffer[i].fg_color = TERM_WHITE;
         term.buffer[i].bg_color = term.clear_color;
     }
-    // term.cursor_pos = 0;
+    term.cursor_pos = 0;
 }
 
 void term_resize(float screen_w, float screen_h) {
@@ -457,6 +479,17 @@ void term_resize(float screen_w, float screen_h) {
         new_char_h = (int)new_buffer_size.y;
 
     if (term.char_w != new_char_w || term.char_h != new_char_h) {
+        if (term.master_fd != -1) {
+            struct winsize w = {
+                .ws_col = new_char_w,
+                .ws_row = new_char_h,
+            };
+
+            if (ioctl(term.master_fd, TIOCSWINSZ, &w) == -1) {
+                scrap_log(LOG_ERROR, "ioctl: %s", strerror(errno));
+            }
+        }
+
         int buf_size = new_char_w * new_char_h * sizeof(*term.buffer);
         TerminalChar* new_buffer = malloc(buf_size);
         if (term.buffer) {

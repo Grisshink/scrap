@@ -87,5 +87,6 @@ void term_clear(void);
 void term_resize(float screen_w, float screen_h);
 void term_free(void);
 void term_restart(void);
+void term_flush_input(void);
 
 #endif // TERM_H
