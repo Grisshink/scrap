@@ -105,8 +105,6 @@ static void draw_term(int x, int y) {
     if (term.char_w == 0 || term.char_h == 0) return;
     if (!term.buffer) return;
 
-    term_wait_for_output();
-
     Rectangle final_pos = { x, y, term.size.x, term.size.y };
     DrawRectangleRec(final_pos, BLACK);
 

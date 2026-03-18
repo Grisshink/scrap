@@ -262,6 +262,8 @@ void vm_handle_running_thread(void) {
         compiler_free(&vm.compiler);
         ui.render_surface_needs_redraw = true;
     } else if (thread_is_running(&vm.thread)) {
+        term_wait_for_output();
+
         if (find_panel(editor.tabs[editor.current_tab].root_panel, PANEL_TERM) && term.is_buffer_dirty) {
             ui.render_surface_needs_redraw = true;
             term.is_buffer_dirty = false;
