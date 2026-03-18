@@ -140,7 +140,7 @@ bool term_wait_for_output(void) {
     while (!err) err = term_read_output();
     vector_add(&term.output_buf, 0);
 
-    term_print_str(term.output_buf);
+    if (vector_size(term.output_buf) > 1) term_print_str(term.output_buf);
 
     return err == 1;
 }
@@ -167,6 +167,7 @@ void term_set_clear_color(TermColor color) {
 }
 
 void handle_graphic_mode(int args[5]) {
+
     switch (args[0]) {
     case 0: // Reset
         term.cursor_fg_color = TERM_WHITE;
@@ -182,7 +183,13 @@ void handle_graphic_mode(int args[5]) {
     case 35: case 95: term.cursor_fg_color = TERM_PURPLE; break;
     case 36: case 96: term.cursor_fg_color = TERM_CYAN; break;
     case 37: case 97: term.cursor_fg_color = TERM_WHITE; break;
-
+    case 38:
+        if (args[1] == 5) {
+            // 256-color mode is not supported
+        } else if (args[1] == 2) {
+            term.cursor_fg_color = (TermColor) { args[2], args[3], args[4], 0xff };
+        }
+        break;
     // Background colors
     case 40: case 100: term.cursor_bg_color = TERM_BLACK; break;
     case 41: case 101: term.cursor_bg_color = TERM_RED; break;
@@ -192,12 +199,17 @@ void handle_graphic_mode(int args[5]) {
     case 45: case 105: term.cursor_bg_color = TERM_PURPLE; break;
     case 46: case 106: term.cursor_bg_color = TERM_CYAN; break;
     case 47: case 107: term.cursor_bg_color = TERM_WHITE; break;
-
+    case 48:
+        if (args[1] == 5) {
+            // 256-color mode is not supported
+        } else if (args[1] == 2) {
+            term.cursor_bg_color = (TermColor) { args[2], args[3], args[4], 0xff };
+        }
+        break;
     default:
         // Not supported
         break;
     }
-
 }
 
 const char* read_args(const char* str, int* args, int* arg_count) {
@@ -229,10 +241,16 @@ int handle_escapes(const char* escape) {
         return str - escape;
     }
 
+    if (command >= 0x20 && command <= 0x2f) { // Changing terminal fonts are not supported
+        str++;
+        return str - escape;
+    }
+
     if (command == '[') { // CSI
         str++;
 
         str = read_args(str, args, &arg_count);
+        memset(args + arg_count, 0, sizeof(int) * (5 - arg_count));
 
         int clear_mode;
 
@@ -253,6 +271,7 @@ int handle_escapes(const char* escape) {
             term.cursor_pos -= term.cursor_pos % term.char_w;
             term.cursor_pos += arg_count ? args[0] - 1 : 0; break;
             break;
+        case 'f':
         case 'H': // Cursor set pos
             int pos_y = arg_count > 0 ? args[0] - 1 : 0;
             int pos_x = arg_count > 1 ? args[1] - 1 : 0;
@@ -313,6 +332,14 @@ int handle_escapes(const char* escape) {
                 break;
             }
             str++;
+        }
+        str++;
+    } else if (command == 'D') { // LF line feed
+        term.cursor_pos += term.char_w;
+        term.cursor_pos -= term.cursor_pos % term.char_w;
+        if (term.cursor_pos >= term.char_w * term.char_h) {
+            term.cursor_pos -= term.char_w;
+            term_scroll_down();
         }
         str++;
     } else {
@@ -418,7 +445,7 @@ void term_clear(void) {
         term.buffer[i].fg_color = TERM_WHITE;
         term.buffer[i].bg_color = term.clear_color;
     }
-    term.cursor_pos = 0;
+    // term.cursor_pos = 0;
 }
 
 void term_resize(float screen_w, float screen_h) {

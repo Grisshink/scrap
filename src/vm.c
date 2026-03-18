@@ -231,6 +231,8 @@ bool vm_stop(void) {
 void vm_handle_running_thread(void) {
     ThreadReturnCode thread_return = thread_try_join(&vm.thread);
     if (thread_return != THREAD_RETURN_RUNNING) {
+        term_wait_for_output();
+
         switch (thread_return) {
         case THREAD_RETURN_SUCCESS:
             actionbar_show(gettext("Vm executed successfully"));
