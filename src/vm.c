@@ -155,7 +155,16 @@ Vm vm_new(void) {
 
 void vm_free(Vm* vm) {
     if (thread_is_running(&vm->thread)) {
+        if (vm->compiler.pid != -1) {
+            scrap_log(LOG_WARNING, "[VM] Killing pid %zu", vm->compiler.pid);
+
+            if (kill(vm->compiler.pid, SIGKILL) == -1) {
+                scrap_log(LOG_ERROR, "kill: %s", strerror(errno));
+            }
+        }
+
         thread_stop(&vm->thread);
+
         thread_join(&vm->thread);
         compiler_free(&vm->compiler);
     }
