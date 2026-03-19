@@ -44,6 +44,32 @@ typedef struct {
 
 typedef TermVec (*MeasureTextSliceFunc)(void* font, const char* text, unsigned int text_size, unsigned short font_size);
 
+typedef enum {
+    TERM_NONE,
+    TERM_UTF,
+    TERM_ESCAPE_COMMAND,
+    TERM_ESCAPE_CSI,
+    TERM_ESCAPE_OSC,
+    TERM_ESCAPE_PRIVATE,
+} TermMode;
+
+typedef struct {
+    TermMode mode;
+
+    int mb_current, mb_count;
+
+    char prev_char;
+
+    bool string_mode;
+
+    bool arg_mode;
+    char arg_buf[64];
+    int arg_buf_size;
+
+    int args[5];
+    int args_size;
+} TermPrintState;
+
 typedef struct {
     MeasureTextSliceFunc measure_text;
     void* font;
@@ -66,6 +92,8 @@ typedef struct {
 
     char input_buf[TERM_INPUT_BUF_SIZE];
     int input_buf_size;
+
+    TermPrintState print_state;
 } Terminal;
 
 extern Terminal term;
@@ -78,7 +106,7 @@ void term_scroll_down(void);
 void term_set_fg_color(TermColor color);
 void term_set_bg_color(TermColor color);
 void term_set_clear_color(TermColor color);
-int term_print_str(const char* str);
+void term_print_str(const char* str);
 int term_print_integer(int value);
 int term_print_float(double value);
 int term_print_bool(bool value);

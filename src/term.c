@@ -65,6 +65,7 @@ void term_init(MeasureTextSliceFunc measure_text, void* font, unsigned short fon
     term.master_fd = -1;
     term.slave_fd = -1;
     term.output_buf = vector_create();
+    memset(&term.print_state, 0, sizeof(term.print_state));
 
     if (openpty(&term.master_fd, &term.slave_fd, NULL, NULL, NULL) == -1) {
         scrap_log(LOG_ERROR, "openpty: %s", strerror(errno));
@@ -83,6 +84,7 @@ void term_restart(void) {
     term.cursor_bg_color = TERM_BLACK;
     term.clear_color = TERM_BLACK;
     vector_clear(term.output_buf);
+    memset(&term.print_state, 0, sizeof(term.print_state));
     term_clear();
 }
 
@@ -150,6 +152,15 @@ bool term_wait_for_output(void) {
     return err == 1;
 }
 
+void term_scroll_up(void) {
+    memmove(term.buffer + term.char_w, term.buffer, term.char_w * (term.char_h - 1) * sizeof(*term.buffer));
+    for (int i = 0; i < term.char_w; i++) {
+        strncpy(term.buffer[i].ch, " ", ARRLEN(term.buffer[i].ch));
+        term.buffer[i].fg_color = TERM_WHITE;
+        term.buffer[i].bg_color = term.clear_color;
+    }
+}
+
 void term_scroll_down(void) {
     memmove(term.buffer, term.buffer + term.char_w, term.char_w * (term.char_h - 1) * sizeof(*term.buffer));
     for (int i = term.char_w * (term.char_h - 1); i < term.char_w * term.char_h; i++) {
@@ -171,9 +182,8 @@ void term_set_clear_color(TermColor color) {
     term.clear_color = color;
 }
 
-void handle_graphic_mode(int args[5]) {
-
-    switch (args[0]) {
+void handle_graphic_mode(void) {
+    switch (term.print_state.args[0]) {
     case 0: // Reset
         term.cursor_fg_color = TERM_WHITE;
         term.cursor_bg_color = TERM_BLACK;
@@ -189,10 +199,10 @@ void handle_graphic_mode(int args[5]) {
     case 36: case 96: term.cursor_fg_color = TERM_CYAN; break;
     case 37: case 97: term.cursor_fg_color = TERM_WHITE; break;
     case 38:
-        if (args[1] == 5) {
+        if (term.print_state.args[1] == 5) {
             // 256-color mode is not supported
-        } else if (args[1] == 2) {
-            term.cursor_fg_color = (TermColor) { args[2], args[3], args[4], 0xff };
+        } else if (term.print_state.args[1] == 2) {
+            term.cursor_fg_color = (TermColor) { term.print_state.args[2], term.print_state.args[3], term.print_state.args[4], 0xff };
         }
         break;
     // Background colors
@@ -205,10 +215,10 @@ void handle_graphic_mode(int args[5]) {
     case 46: case 106: term.cursor_bg_color = TERM_CYAN; break;
     case 47: case 107: term.cursor_bg_color = TERM_WHITE; break;
     case 48:
-        if (args[1] == 5) {
+        if (term.print_state.args[1] == 5) {
             // 256-color mode is not supported
-        } else if (args[1] == 2) {
-            term.cursor_bg_color = (TermColor) { args[2], args[3], args[4], 0xff };
+        } else if (term.print_state.args[1] == 2) {
+            term.cursor_bg_color = (TermColor) { term.print_state.args[2], term.print_state.args[3], term.print_state.args[4], 0xff };
         }
         break;
     default:
@@ -217,73 +227,35 @@ void handle_graphic_mode(int args[5]) {
     }
 }
 
-const char* read_args(const char* str, int* args, int* arg_count) {
-    *arg_count = 0;
-    char* arg_end;
-    for (size_t i = 0; i < 5; i++) {
-        args[i] = strtol(str, &arg_end, 10);
-        if (str == arg_end) break;
-        str = arg_end;
-        (*arg_count)++;
-        if (*str == ';') str++;
-    }
-    return str;
-}
-
-int handle_escapes(const char* escape) {
-    const char* str = escape;
-    str++;
-
-    int args[5];
-    int arg_count = 0;
-
-    char command = *str;
-    if (command >= 0x30 && command <= 0x3f) { // Private ranges are not supported
-        str++;
-        const char* prev_str = str;
-        str = read_args(str, args, &arg_count);
-        if (prev_str != str) str++;
-        return str - escape;
-    }
-
-    if (command >= 0x20 && command <= 0x2f) { // Changing terminal fonts are not supported
-        str++;
-        return str - escape;
-    }
-
-    if (command == '[') { // CSI
-        str++;
-
-        str = read_args(str, args, &arg_count);
-        memset(args + arg_count, 0, sizeof(int) * (5 - arg_count));
-
+void exec_escape(char command) {
+    if (term.print_state.mode == TERM_ESCAPE_CSI) {
+        term.print_state.mode = TERM_NONE;
         int clear_mode;
-
-        switch (*str) {
-        case 'A': term.cursor_pos -= term.char_w * (arg_count ? args[0] : 1); break; // Cursor up
-        case 'B': term.cursor_pos += term.char_w * (arg_count ? args[0] : 1); break; // Cursor down
-        case 'C': term.cursor_pos += arg_count ? args[0] : 1; break; // Cursor right
-        case 'D': term.cursor_pos -= arg_count ? args[0] : 1; break; // Cursor left
+        switch (command) {
+        case 'A': term.cursor_pos -= term.char_w * (term.print_state.args_size ? term.print_state.args[0] : 1); break; // Cursor up
+        case 'B': term.cursor_pos += term.char_w * (term.print_state.args_size ? term.print_state.args[0] : 1); break; // Cursor down
+        case 'C': term.cursor_pos += term.print_state.args_size ? term.print_state.args[0] : 1; break; // Cursor right
+        case 'D': term.cursor_pos -= term.print_state.args_size ? term.print_state.args[0] : 1; break; // Cursor left
         case 'E': // Cursor next line
-            term.cursor_pos += term.char_w * (arg_count ? args[0] : 1);
+            term.cursor_pos += term.char_w * (term.print_state.args_size ? term.print_state.args[0] : 1);
             term.cursor_pos -= term.cursor_pos % term.char_w;
             break;
         case 'F': // Cursor prev line
-            term.cursor_pos -= term.char_w * (arg_count ? args[0] : 1);
+            term.cursor_pos -= term.char_w * (term.print_state.args_size ? term.print_state.args[0] : 1);
             term.cursor_pos -= term.cursor_pos % term.char_w;
             break;
         case 'G': // Cursor set col
             term.cursor_pos -= term.cursor_pos % term.char_w;
-            term.cursor_pos += arg_count ? args[0] - 1 : 0; break;
+            term.cursor_pos += term.print_state.args_size ? term.print_state.args[0] - 1 : 0; break;
             break;
         case 'f':
         case 'H': // Cursor set pos
-            int pos_y = arg_count > 0 ? args[0] - 1 : 0;
-            int pos_x = arg_count > 1 ? args[1] - 1 : 0;
+            int pos_y = term.print_state.args_size > 0 ? term.print_state.args[0] - 1 : 0;
+            int pos_x = term.print_state.args_size > 1 ? term.print_state.args[1] - 1 : 0;
             term.cursor_pos = pos_x + pos_y * term.char_w;
             break;
         case 'J': // Erase term
-            clear_mode = arg_count > 0 ? args[0] : 0;
+            clear_mode = term.print_state.args[0];
             if (clear_mode == 0) {
                 term_clear_forward(term.cursor_pos);
             } else if (clear_mode == 1) {
@@ -293,9 +265,9 @@ int handle_escapes(const char* escape) {
             }
             break;
         case 'K': // Erase line
-            clear_mode = arg_count > 0 ? args[0] : 0;
+            clear_mode = term.print_state.args[0];
             if (clear_mode == 0) {
-                int end_pos = term.char_w - (term.cursor_pos % term.char_w);
+                int end_pos = term.cursor_pos + term.char_w - (term.cursor_pos % term.char_w);
                 for (int pos = term.cursor_pos; pos < end_pos; pos++) {
                     strncpy(term.buffer[pos].ch, " ", ARRLEN(term.buffer[pos].ch));
                     term.buffer[pos].fg_color = TERM_WHITE;
@@ -310,7 +282,7 @@ int handle_escapes(const char* escape) {
                 }
             } else if (clear_mode == 2) {
                 int start_pos = term.cursor_pos - (term.cursor_pos % term.char_w);
-                int end_pos = term.char_w - (term.cursor_pos % term.char_w);
+                int end_pos = term.cursor_pos + term.char_w - (term.cursor_pos % term.char_w);
                 for (int pos = start_pos; pos < end_pos; pos++) {
                     strncpy(term.buffer[pos].ch, " ", ARRLEN(term.buffer[pos].ch));
                     term.buffer[pos].fg_color = TERM_WHITE;
@@ -318,78 +290,141 @@ int handle_escapes(const char* escape) {
                 }
             }
             break;
-        case 'm': handle_graphic_mode(args); break;
+        case 'm': handle_graphic_mode(); break;
         case '?':
-            str++;
-            str = read_args(str, args, &arg_count);
+            term.print_state.mode = TERM_ESCAPE_PRIVATE;
+            term.print_state.arg_mode = true;
+            term.print_state.args_size = 0;
+            term.print_state.arg_buf_size = 0;
             break;
         default:
-            scrap_log(LOG_WARNING, "Unhandled CSI: %c (0x%02X)", *str, (unsigned char)*str);
-            term_print_str("[csi]");
+            scrap_log(LOG_WARNING, "Unhandled CSI: %c (0x%02X)", command, (unsigned char)command);
             break;
         }
-        str++;
-    } else if (command == ']' || command == 'k') { // OSC
-        while (1) {
-            if (str[0] == '\a' || (unsigned char)str[0] == 0x9c) break;
-            if (str[0] == '\033' && str[1] == '\\') {
-                str++;
-                break;
-            }
-            str++;
-        }
-        str++;
-    } else if (command == 'D') { // LF line feed
-        term.cursor_pos += term.char_w;
-        term.cursor_pos -= term.cursor_pos % term.char_w;
-        if (term.cursor_pos >= term.char_w * term.char_h) {
-            term.cursor_pos -= term.char_w;
-            term_scroll_down();
-        }
-        str++;
     } else {
-        scrap_log(LOG_WARNING, "Unhandled escape: %c (0x%02X)", *str, (unsigned char)*str);
-        term_print_str("[esc]");
+        term.print_state.mode = TERM_NONE;
     }
-
-    return str - escape;
 }
 
-int term_print_str(const char* str) {
-    int len = 0;
+void handle_args(char ch) {
+    if (ch >= '0' && ch <= '9') {
+        term.print_state.arg_buf[term.print_state.arg_buf_size++] = ch;
+        return;
+    }
+    term.print_state.arg_buf[term.print_state.arg_buf_size] = 0;
+    if (term.print_state.arg_buf_size != 0) {
+        term.print_state.arg_buf_size = 0;
+        term.print_state.args[term.print_state.args_size++] = atoi(term.print_state.arg_buf);
+    }
+
+    if (ch != ';') {
+        term.print_state.arg_mode = false;
+        memset(term.print_state.args + term.print_state.args_size, 0, sizeof(int) * (5 - term.print_state.args_size));
+        exec_escape(ch);
+    }
+}
+
+void handle_escapes(char command) {
+    if (command == '[') {
+        term.print_state.mode = TERM_ESCAPE_CSI;
+        term.print_state.arg_mode = true;
+        term.print_state.args_size = 0;
+        term.print_state.arg_buf_size = 0;
+    } else if (command == ']' || command == 'k') {
+        term.print_state.mode = TERM_ESCAPE_OSC;
+        term.print_state.string_mode = true;
+    } else if (command == 'M') { // \n but backward
+        term.cursor_pos -= term.char_w;
+        if (term.cursor_pos < 0) {
+            term.cursor_pos += term.char_w;
+            term_scroll_up();
+        }
+        term.print_state.mode = TERM_NONE;
+    } else {
+        term.print_state.mode = TERM_NONE;
+        term.print_state.arg_mode = false;
+        term.print_state.string_mode = false;
+    }
+}
+
+#define ADVANCE_CHAR do { \
+    term.print_state.prev_char = *str; \
+    str++;  \
+} while (0)
+
+void term_print_str(const char* str) {
     assert(term.buffer != NULL);
 
     if (*str) term.is_buffer_dirty = true;
     while (*str) {
-        if (term.cursor_pos >= term.char_w * term.char_h) {
-            term.cursor_pos = term.char_w * term.char_h - term.char_w;
-            term_scroll_down();
+        if (term.print_state.mode == TERM_UTF) {
+            assert(term.print_state.mb_current < term.print_state.mb_count);
+            term.buffer[term.cursor_pos].ch[term.print_state.mb_current++] = *str;
+            if (term.print_state.mb_current == term.print_state.mb_count) {
+                term.print_state.mode = TERM_NONE;
+
+                term.buffer[term.cursor_pos].fg_color = term.cursor_fg_color;
+                term.buffer[term.cursor_pos].bg_color = term.cursor_bg_color;
+                term.buffer[term.cursor_pos].ch[term.print_state.mb_current] = 0;
+
+                term.cursor_pos++;
+                if (term.cursor_pos >= term.char_w * term.char_h) {
+                    term.cursor_pos = term.char_w * term.char_h - term.char_w;
+                    term_scroll_down();
+                }
+            }
+            ADVANCE_CHAR;
+            continue;
         }
+
+        if (term.print_state.string_mode) {
+            if (*str == '\a' || (*str == '\\' && term.print_state.prev_char == '\033')) {
+                term.print_state.string_mode = false;
+                term.print_state.mode = TERM_NONE;
+            }
+            ADVANCE_CHAR;
+            continue;
+        }
+
+        if (term.print_state.arg_mode) {
+            handle_args(*str);
+            ADVANCE_CHAR;
+            continue;
+        }
+
+        if (term.print_state.mode == TERM_ESCAPE_COMMAND) {
+            handle_escapes(*str);
+            ADVANCE_CHAR;
+            continue;
+        }
+
+        if (*str == '\033') {
+            term.print_state.mode = TERM_ESCAPE_COMMAND;
+            ADVANCE_CHAR;
+            continue;
+        }
+
         if (*str == '\b') {
             int pos = --term.cursor_pos;
             strncpy(term.buffer[pos].ch, " ", ARRLEN(term.buffer[pos].ch));
             term.buffer[pos].fg_color = TERM_WHITE;
             term.buffer[pos].bg_color = term.clear_color;
-            str++;
+            ADVANCE_CHAR;
             continue;
         }
         if (*str == '\a') { // Bell char, skip it
-            str++;
+            ADVANCE_CHAR;
             continue;
         }
         if (*str == '\t') {
             term_print_str("    ");
-            str++;
-            continue;
-        }
-        if (*str == '\033') {
-            str += handle_escapes(str);
+            ADVANCE_CHAR;
             continue;
         }
         if (*str == '\n') {
             term.cursor_pos += term.char_w;
             term.cursor_pos -= term.cursor_pos % term.char_w;
-            str++;
+            ADVANCE_CHAR;
             if (term.cursor_pos >= term.char_w * term.char_h) {
                 term.cursor_pos -= term.char_w;
                 term_scroll_down();
@@ -398,51 +433,37 @@ int term_print_str(const char* str) {
         }
         if (*str == '\r') {
             term.cursor_pos -= term.cursor_pos % term.char_w;
-            str++;
+            ADVANCE_CHAR;
             continue;
         }
+
         if ((unsigned char)*str < 32 || *str == 0x7f) {
             scrap_log(LOG_WARNING, "Unhandled control char 0x%02X", (unsigned char)*str);
-            str++;
+            ADVANCE_CHAR;
             continue;
         }
 
         int mb_size = leading_ones(*str);
         if (mb_size == 0) mb_size = 1;
-        int i = 0;
-        for (; i < mb_size; i++) term.buffer[term.cursor_pos].ch[i] = str[i];
-        term.buffer[term.cursor_pos].ch[i] = 0;
-        term.buffer[term.cursor_pos].fg_color = term.cursor_fg_color;
-        term.buffer[term.cursor_pos].bg_color = term.cursor_bg_color;
 
-        str += mb_size;
-        term.cursor_pos++;
-        len++;
+        if (mb_size > 1) {
+            term.print_state.mode = TERM_UTF;
+            term.print_state.mb_count = mb_size;
+            term.print_state.mb_current = 0;
+        } else {
+            term.buffer[term.cursor_pos].ch[0] = *str;
+            term.buffer[term.cursor_pos].ch[1] = 0;
+            term.buffer[term.cursor_pos].fg_color = term.cursor_fg_color;
+            term.buffer[term.cursor_pos].bg_color = term.cursor_bg_color;
+            ADVANCE_CHAR;
+
+            term.cursor_pos++;
+            if (term.cursor_pos >= term.char_w * term.char_h) {
+                term.cursor_pos = term.char_w * term.char_h - term.char_w;
+                term_scroll_down();
+            }
+        }
     }
-
-    return len;
-}
-
-int term_print_integer(int value) {
-    char converted[12];
-    snprintf(converted, 12, "%d", value);
-    return term_print_str(converted);
-}
-
-int term_print_float(double value) {
-    char converted[20];
-    snprintf(converted, 20, "%f", value);
-    return term_print_str(converted);
-}
-
-int term_print_bool(bool value) {
-    return term_print_str(value ? "true" : "false");
-}
-
-int term_print_color(TermColor value) {
-    char converted[30];
-    snprintf(converted, 30, "[Color: #%02x%02x%02x%02x]", value.r, value.g, value.b, value.a);
-    return term_print_str(converted);
 }
 
 static void term_clear_forward(int pos) {
