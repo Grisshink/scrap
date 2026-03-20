@@ -73,6 +73,40 @@ static size_t next_arg(char* cmd, size_t i, char** out_arg) {
 }
 #endif
 
+const char* sig_to_str(int signum) {
+    switch (signum) {
+    case SIGINT: return "SIGINT";
+    case SIGILL: return "SIGILL";
+    case SIGABRT: return "SIGABRT";
+    case SIGFPE: return "SIGFPE";
+    case SIGSEGV: return "SIGSEGV";
+    case SIGTERM: return "SIGTERM";
+    case SIGHUP: return "SIGHUP";
+    case SIGQUIT: return "SIGQUIT";
+    case SIGTRAP: return "SIGTRAP";
+    case SIGKILL: return "SIGKILL";
+    case SIGPIPE: return "SIGPIPE";
+    case SIGALRM: return "SIGALRM";
+    case SIGBUS: return "SIGBUS";
+    case SIGSYS: return "SIGSYS";
+    case SIGURG: return "SIGURG";
+    case SIGSTOP: return "SIGSTOP";
+    case SIGTSTP: return "SIGTSTP";
+    case SIGCONT: return "SIGCONT";
+    case SIGCHLD: return "SIGCHLD";
+    case SIGTTIN: return "SIGTTIN";
+    case SIGTTOU: return "SIGTTOU";
+    case SIGPOLL: return "SIGPOLL";
+    case SIGXFSZ: return "SIGXFSZ";
+    case SIGXCPU: return "SIGXCPU";
+    case SIGVTALRM: return "SIGVTALRM";
+    case SIGPROF: return "SIGPROF";
+    case SIGUSR1: return "SIGUSR1";
+    case SIGUSR2: return "SIGUSR2";
+    }
+    return "SIGidk";
+}
+
 void child_handler(int sig) {
     (void) sig;
     // Noop: This handler is only needed to unblock the pselect call in term_wait_for_output function
@@ -138,8 +172,13 @@ bool wait_for_process_pty(pid_t pid, char* error, size_t error_len) {
             return false;
         }
     } else if (WIFSIGNALED(status)) {
-        snprintf(error, error_len, gettext("Command signaled with signal number: %d"), WTERMSIG(status));
-        return false;
+        int signum = WTERMSIG(status);
+        if (signum == SIGTERM) {
+            return true;
+        } else {
+            snprintf(error, error_len, gettext("Command signaled with signal %s"), sig_to_str(signum));
+            return false;
+        }
     } else {
         snprintf(error, error_len, gettext("Received unknown child status :/"));
         return false;
