@@ -161,11 +161,12 @@ bool compiler_run(void* e) {
     char error_buf[512];
 
     compiler->pid = spawn_process_pty("bash", error_buf, 512);
-
     if (compiler->pid == -1) {
         compiler_set_error(compiler, "%s", error_buf);
         return false;
     }
+
+    while (term_wait_for_output());
 
     if (!wait_for_process_pty(compiler->pid, error_buf, 512)) {
         compiler_set_error(compiler, "%s", error_buf);

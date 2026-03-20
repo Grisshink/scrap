@@ -202,13 +202,14 @@ Image setup(void) {
 }
 
 void cleanup(void) {
-    term_free();
-
     for (size_t i = 0; i < vector_size(editor.mouse_blockchains); i++) blockchain_free(editor.mouse_blockchains[i].chain);
     vector_free(editor.mouse_blockchains);
     for (size_t i = 0; i < vector_size(editor.code); i++) blockchain_free(editor.code[i].chain);
     vector_free(editor.code);
     vm_free(&vm);
+
+    // Free the terminal after vm as vm still can reference the terminal
+    term_free();
 
     vector_free(editor.blockchain_render_layer_widths);
     free(gui);

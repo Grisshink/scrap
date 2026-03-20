@@ -73,6 +73,11 @@ static size_t next_arg(char* cmd, size_t i, char** out_arg) {
 }
 #endif
 
+void child_handler(int sig) {
+    (void) sig;
+    // Noop: This handler is only needed to unblock the pselect call in term_wait_for_output function
+}
+
 pid_t spawn_process_pty(char* command, char* error, size_t error_len) {
     pid_t pid = fork();
     if (pid == -1) {
@@ -112,6 +117,9 @@ pid_t spawn_process_pty(char* command, char* error, size_t error_len) {
         }
 
         // Unreachable
+    } else {
+        struct sigaction act = { .sa_handler = child_handler };
+        if (sigaction(SIGCHLD, &act, NULL) == -1) perror("sigaction");
     }
     return pid;
 }

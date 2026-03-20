@@ -134,13 +134,20 @@ int term_read_output(void) {
 
     if (buf_size == 0) return -1; // EOF
 
-    scrap_log(LOG_INFO, "[TERM] read: %d", buf_size);
-
     for (int i = 0; i < buf_size; i++) vector_add(&term.output_buf, read_buf[i]);
     return 0;
 }
 
 bool term_wait_for_output(void) {
+    fd_set fds;
+    FD_ZERO(&fds);
+    FD_SET(term.master_fd, &fds);
+
+    if (pselect(term.master_fd + 1, &fds, NULL, NULL, NULL, NULL) == -1) {
+        if (errno != EINTR) scrap_log(LOG_ERROR, "[TERM] pselect: %s", strerror(errno));
+        return false;
+    }
+
     vector_clear(term.output_buf);
 
     int err = 0;

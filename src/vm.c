@@ -231,7 +231,6 @@ bool vm_stop(void) {
 void vm_handle_running_thread(void) {
     ThreadReturnCode thread_return = thread_try_join(&vm.thread);
     if (thread_return != THREAD_RETURN_RUNNING) {
-        term_wait_for_output();
         switch (thread_return) {
         case THREAD_RETURN_SUCCESS:
             actionbar_show(gettext("Vm executed successfully"));
@@ -263,8 +262,6 @@ void vm_handle_running_thread(void) {
         compiler_free(&vm.compiler);
         ui.render_surface_needs_redraw = true;
     } else if (thread_is_running(&vm.thread)) {
-        term_wait_for_output();
-
         if (find_panel(editor.tabs[editor.current_tab].root_panel, PANEL_TERM) && term.is_buffer_dirty) {
             ui.render_surface_needs_redraw = true;
             term.is_buffer_dirty = false;
