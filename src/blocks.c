@@ -101,7 +101,7 @@ CompilerValue string_to_bc(Compiler* compiler, char* str) {
         });
     }
 
-    bytecode_push_op_list(&bc, IR_PUSHA, list);
+    bytecode_push_op_list_string(&bc, IR_PUSHA, list);
     return DATA_CHUNK(DATA_TYPE_STRING, bc);
 }
 

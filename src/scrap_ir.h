@@ -332,6 +332,7 @@ IrInstructionID bytecode_push_op_bool(IrBytecode* bc, IrOpcode op, bool bool_val
 IrInstructionID bytecode_push_op_func(IrBytecode* bc, IrOpcode op, IrFunction func_val);
 IrInstructionID bytecode_push_op_label(IrBytecode* bc, IrOpcode op, ConstId label_id);
 IrInstructionID bytecode_push_op_list(IrBytecode* bc, IrOpcode op, IrList* list_val);
+IrInstructionID bytecode_push_op_list_string(IrBytecode* bc, IrOpcode op, IrList* list_val);
 
 // These functions replace the constant in bytecode at instruction instr_id.
 void bytecode_set_op_int(IrBytecode* bc, IrInstructionID instr_id, int int_val);
@@ -345,6 +346,12 @@ IrList* bytecode_const_list_new(IrBytecodePool* pool);
 
 // Add value to immutable list.
 void bytecode_const_list_append(IrBytecodePool* pool, IrList* list, IrValue val);
+
+// Save bytecode into file.
+void bytecode_save(IrBytecode* bc, const char* filepath);
+
+// Load bytecode from file.
+bool bytecode_load(IrBytecodePool* pool, IrBytecode* bc, const char* filepath);
 
 // Create a function value that needs to be resolved at runtime using hint string.
 // The exact hint string that needs to be passed depends on current runtime function resolver,
@@ -465,6 +472,7 @@ void exec_pop_string(IrExec* exec, char* buf, size_t buf_len);
 IrMemArena* ir_arena_new(size_t reserve_size, size_t commit_size);
 void ir_arena_free(IrMemArena* arena);
 void* ir_arena_alloc(IrMemArena* arena, size_t size);
+void* ir_arena_alloc_packed(IrMemArena* arena, size_t size);
 void* ir_arena_realloc(IrMemArena* arena, void* ptr, size_t old_size, size_t new_size);
 void ir_arena_pop(IrMemArena* arena, size_t size);
 void ir_arena_pop_to(IrMemArena* arena, size_t pos);
@@ -482,6 +490,11 @@ char* ir_arena_sprintf(IrMemArena* arena, size_t max_size, const char* fmt, ...)
 #include <math.h>
 #include <errno.h>
 
+#define IR_SAVE_MIN_VERSION 1
+#define IR_SAVE_MAX_VERSION 1
+#define IR_SAVE_IDENT "SCRAP_IR"
+
+#define KiB(n) ((size_t)(n) << 10)
 #define MiB(n) ((size_t)(n) << 20)
 #define GiB(n) ((size_t)(n) << 30)
 
@@ -523,6 +536,12 @@ char* ir_arena_sprintf(IrMemArena* arena, size_t max_size, const char* fmt, ...)
 
 #define IR_ARENA_BASE_POS (sizeof(IrMemArena))
 #define IR_ARENA_ALIGN (sizeof(void*))
+
+typedef struct {
+    void* ptr;
+    size_t pos;
+    size_t size;
+} IrSave;
 
 unsigned long ir_plat_get_pagesize(void);
 void* ir_plat_mem_reserve(size_t size);
@@ -709,6 +728,7 @@ size_t bytecode_pool_insert(IrBytecodePool* pool, IrConstValue value) {
 IrBytecode bytecode_new(const char* name, IrBytecodePool* pool) {
     return (IrBytecode) {
         .name = name,
+        .version = IR_SAVE_MAX_VERSION,
         .code = (IrOpcodes) {0},
         .pool = pool,
         .labels = (IrLabelList) {0},
@@ -791,6 +811,7 @@ _ir_make_bc_push_op(bytecode_push_op_float, double, float_val, IR_TYPE_FLOAT)
 _ir_make_bc_push_op(bytecode_push_op_bool, bool, bool_val, IR_TYPE_BOOL)
 _ir_make_bc_push_op(bytecode_push_op_func, IrFunction, func_val, IR_TYPE_FUNC)
 _ir_make_bc_push_op(bytecode_push_op_list, IrList*, list_val, IR_TYPE_LIST)
+_ir_make_bc_push_op(bytecode_push_op_list_string, IrList*, list_val, IR_TYPE_STRING)
 
 #undef _ir_make_bc_push_op
 
@@ -833,6 +854,429 @@ void bytecode_const_list_append(IrBytecodePool* pool, IrList* list, IrValue val)
 IrInstructionID bytecode_push_op_label(IrBytecode* bc, IrOpcode op, ConstId label_id) {
     IR_ASSERT(bc->pool->list.items[label_id].type == IR_TYPE_LABEL);
     return bytecode_push_op_const(bc, op, label_id);
+}
+
+void* bytecode_load_raw(IrSave* save, size_t data_size) {
+    if (save->pos + data_size > save->size) return NULL;
+    void* ptr = save->ptr + save->pos;
+    save->pos += data_size;
+    return ptr;
+}
+
+bool bytecode_load_varint(IrSave* save, uint64_t* varint) {
+    *varint = 0;
+
+    unsigned char* chunk = NULL;
+    do {
+        chunk = bytecode_load_raw(save, sizeof(unsigned char));
+        if (!chunk) return false;
+        *varint <<= 7;
+        *varint |= *chunk & 0x7f;
+    } while ((*chunk & 0x80) == 0);
+    return true;
+}
+
+bool bytecode_load_array(IrSave* save, void** data, size_t data_size, size_t* count) {
+    if (!bytecode_load_varint(save, count)) return false;
+
+    void* arr = NULL;
+
+    if (count != 0) {
+        arr = bytecode_load_raw(save, data_size * (*count));
+        if (!arr) return false;
+    }
+
+    *data = arr;
+    return true;
+}
+
+size_t* bytecode_load_varint_array(IrSave* save, IrBytecodePool* pool, size_t* count) {
+    if (!bytecode_load_varint(save, count)) return NULL;
+
+    size_t* arr = ir_arena_alloc(pool->arena, sizeof(size_t) * (*count));
+
+    for (size_t i = 0; i < *count; i++) {
+        if (!bytecode_load_varint(save, arr + i)) return NULL;
+    }
+
+    return arr;
+}
+
+bool bytecode_load_value(IrSave* save, IrBytecodePool* pool, IrValue* value) {
+    uint64_t type_val;
+    if (!bytecode_load_varint(save, &type_val)) return false;
+    IrValueType type = type_val;
+
+    value->type = type;
+
+    IrList* list;
+    size_t list_size;
+
+    switch (type) {
+    case IR_TYPE_NOTHING: break;
+    case IR_TYPE_BYTE:
+        uint64_t byte_val;
+        if (!bytecode_load_varint(save, &byte_val)) return false;
+        value->as.byte_val = byte_val;
+        break;
+    case IR_TYPE_INT:
+        uint64_t int_val;
+        if (!bytecode_load_varint(save, &int_val)) return false;
+        value->as.int_val = *(int64_t*)&int_val;
+        break;
+    case IR_TYPE_FLOAT:
+        double* float_val = bytecode_load_raw(save, sizeof(double));
+        if (!float_val) return false;
+        value->as.float_val = *float_val;
+        break;
+    case IR_TYPE_BOOL:
+        uint64_t bool_val;
+        if (!bytecode_load_varint(save, &bool_val)) return false;
+        value->as.bool_val = bool_val;
+        break;
+    case IR_TYPE_LIST:
+        list = bytecode_const_list_new(pool);
+
+        if (!bytecode_load_varint(save, &list_size)) return false;
+        for (size_t i = 0; i < list_size; i++) {
+            IrValue val;
+            if (!bytecode_load_value(save, pool, &val)) return false;
+            bytecode_const_list_append(pool, list, val);
+        }
+        value->as.list_val = list;
+        break;
+    case IR_TYPE_STRING:
+        list = bytecode_const_list_new(pool);
+
+        if (!bytecode_load_varint(save, &list_size)) return false;
+        for (size_t i = 0; i < list_size; i++) {
+            uint64_t val;
+            if (!bytecode_load_varint(save, &val)) return false;
+            bytecode_const_list_append(pool, list, (IrValue) {
+                .type = IR_TYPE_INT,
+                .as.int_val = *(int64_t*)&val,
+            });
+        }
+        value->as.list_val = list;
+        break;
+    case IR_TYPE_FUNC:
+    case IR_TYPE_LABEL:
+        assert(false && "TODO");
+        break;
+    }
+
+    return true;
+}
+
+bool bytecode_load_const_value(IrSave* save, IrBytecodePool* pool, IrConstValue* value) {
+    uint64_t type_val;
+    if (!bytecode_load_varint(save, &type_val)) return false;
+    IrValueType type = type_val;
+
+    value->type = type;
+
+    IrList* list;
+    size_t list_size;
+
+    switch (type) {
+    case IR_TYPE_NOTHING: break;
+    case IR_TYPE_BYTE:
+        uint64_t byte_val;
+        if (!bytecode_load_varint(save, &byte_val)) return false;
+        value->as.byte_val = byte_val;
+        break;
+    case IR_TYPE_INT:
+        uint64_t int_val;
+        if (!bytecode_load_varint(save, &int_val)) return false;
+        value->as.int_val = *(int64_t*)&int_val;
+        break;
+    case IR_TYPE_FLOAT:
+        double* float_val = bytecode_load_raw(save, sizeof(double));
+        if (!float_val) return false;
+        value->as.float_val = *float_val;
+        break;
+    case IR_TYPE_BOOL:
+        uint64_t bool_val;
+        if (!bytecode_load_varint(save, &bool_val)) return false;
+        value->as.bool_val = bool_val;
+        break;
+    case IR_TYPE_LIST:
+        list = bytecode_const_list_new(pool);
+
+        if (!bytecode_load_varint(save, &list_size)) return false;
+        for (size_t i = 0; i < list_size; i++) {
+            IrValue val;
+            if (!bytecode_load_value(save, pool, &val)) return false;
+            bytecode_const_list_append(pool, list, val);
+        }
+        value->as.list_val = list;
+        break;
+    case IR_TYPE_STRING:
+        list = bytecode_const_list_new(pool);
+
+        if (!bytecode_load_varint(save, &list_size)) return false;
+        for (size_t i = 0; i < list_size; i++) {
+            uint64_t val;
+            if (!bytecode_load_varint(save, &val)) return false;
+            bytecode_const_list_append(pool, list, (IrValue) {
+                .type = IR_TYPE_INT,
+                .as.int_val = *(int64_t*)&val,
+            });
+        }
+        value->as.list_val = list;
+        break;
+    case IR_TYPE_FUNC:
+        size_t hint_size;
+        char* hint;
+
+        if (!bytecode_load_array(save, (void**)&hint, sizeof(char), &hint_size)) return false;
+        char* hint_str = ir_arena_alloc(pool->arena, hint_size + 1);
+        memcpy(hint_str, hint, hint_size);
+        hint_str[hint_size] = 0;
+
+        value->as.func_val.hint = hint_str;
+        value->as.func_val.ptr = NULL;
+        break;
+    case IR_TYPE_LABEL:
+        size_t label_size;
+        char* label;
+
+        if (!bytecode_load_array(save, (void**)&label, sizeof(char), &label_size)) return false;
+        char* label_str = ir_arena_alloc(pool->arena, label_size + 1);
+        memcpy(label_str, label, label_size);
+        label_str[label_size] = 0;
+
+        size_t label_pos;
+        if (!bytecode_load_varint(save, &label_pos)) return false;
+
+        value->as.label_val.name = label_str;
+        value->as.label_val.pos = label_pos;
+        break;
+    }
+
+    return true;
+}
+
+#define IR_LOAD_FAIL do { \
+    return_val = false; \
+    goto load_return; \
+} while (0)
+
+bool bytecode_load(IrBytecodePool* pool, IrBytecode* bc, const char* filepath) {
+    bool return_val = true;
+
+    if (pool->list.size > 0) return false;
+
+    FILE* f = fopen(filepath, "rb");
+    if (!f) return false;
+
+    fseek(f, 0, SEEK_END);
+    long file_size = ftell(f);
+    fseek(f, 0, SEEK_SET);
+
+    char* data = malloc(file_size);
+    file_size = fread(data, 1, file_size, f);
+
+    IrSave save = {
+        .ptr = data,
+        .pos = 0,
+        .size = file_size,
+    };
+
+    size_t ident_size;
+    char* ident;
+
+    if (!bytecode_load_array(&save, (void**)&ident, sizeof(char), &ident_size)) IR_LOAD_FAIL;
+
+    if (strncmp(ident, IR_SAVE_IDENT, ident_size)) {
+        printf("Invalid ident: %.*s\n", (int)ident_size, ident);
+        IR_LOAD_FAIL;
+    }
+
+    uint64_t version;
+    if (!bytecode_load_varint(&save, &version)) IR_LOAD_FAIL;
+
+    if (version < IR_SAVE_MIN_VERSION || version > IR_SAVE_MAX_VERSION) {
+        printf("Invalid version: %lu. Supported bytecode versions: %d-%d\n", version, IR_SAVE_MIN_VERSION, IR_SAVE_MAX_VERSION);
+        IR_LOAD_FAIL;
+    }
+
+    size_t pool_size;
+    if (!bytecode_load_varint(&save, &pool_size)) IR_LOAD_FAIL;
+
+    for (size_t i = 0; i < pool_size; i++) {
+        IrConstValue value;
+        if (!bytecode_load_const_value(&save, pool, &value)) IR_LOAD_FAIL;
+        ir_list_append(pool->list, value);
+    }
+
+    size_t code_size;
+    void* code;
+    if (!bytecode_load_array(&save, &code, sizeof(unsigned char), &code_size)) IR_LOAD_FAIL;
+
+    void* code_ptr = ir_arena_alloc(pool->arena, code_size * sizeof(unsigned char));
+    memcpy(code_ptr, code, code_size * sizeof(unsigned char));
+
+    size_t labels_size;
+    size_t* labels = bytecode_load_varint_array(&save, pool, &labels_size);
+    if (!labels) IR_LOAD_FAIL;
+
+    *bc = bytecode_new(NULL, pool);
+
+    bc->version = version;
+
+    bc->code.size = code_size;
+    bc->code.capacity = code_size;
+    bc->code.items = code_ptr;
+
+    bc->labels.size = labels_size;
+    bc->labels.capacity = labels_size;
+    bc->labels.items = labels;
+
+load_return:
+    free(data);
+    fclose(f);
+    return return_val;
+}
+
+void bytecode_save_varint(IrMemArena* save, uint64_t val) {
+    uint8_t buf[16];
+    size_t buf_size = 0;
+
+    do {
+        buf[15 - buf_size++] = val & 0x7f;
+        val >>= 7;
+    } while (val);
+
+    buf[15] |= 1 << 7;
+
+    uint8_t* ptr = ir_arena_alloc_packed(save, sizeof(uint8_t) * buf_size);
+    memcpy(ptr, buf + 16 - buf_size, sizeof(uint8_t) * buf_size);
+}
+
+void bytecode_save_raw(IrMemArena* save, const void* data, size_t data_size) {
+    assert(data_size != 0);
+    void* ptr = ir_arena_alloc_packed(save, data_size);
+    memcpy(ptr, data, data_size);
+}
+
+void bytecode_save_array(IrMemArena* save, const void* data, size_t data_size, size_t count) {
+    assert(data_size != 0);
+    bytecode_save_varint(save, count);
+
+    if (count != 0) {
+        assert(data != NULL);
+        void* ptr = ir_arena_alloc_packed(save, count * data_size);
+        memcpy(ptr, data, count * data_size);
+    }
+}
+
+void bytecode_save_varint_array(IrMemArena* save, const size_t* data, size_t count) {
+    bytecode_save_varint(save, count);
+
+    if (count == 0) return;
+
+    assert(data != NULL);
+    for (size_t i = 0; i < count; i++) {
+        bytecode_save_varint(save, data[i]);
+    }
+}
+
+void bytecode_save_value(IrMemArena* save, IrValue value) {
+    bytecode_save_varint(save, value.type);
+
+    IrList* list;
+
+    switch (value.type) {
+    case IR_TYPE_NOTHING: break;
+    case IR_TYPE_BYTE: bytecode_save_varint(save, value.as.byte_val); break;
+    case IR_TYPE_INT: bytecode_save_varint(save, *(uint64_t*)&value.as.int_val); break;
+    case IR_TYPE_FLOAT: bytecode_save_raw(save, &value.as.float_val, sizeof(double)); break;
+    case IR_TYPE_BOOL: bytecode_save_varint(save, value.as.bool_val); break;
+    case IR_TYPE_LIST:
+        list = value.as.list_val;
+        bytecode_save_varint(save, list->size);
+        for (size_t i = 0; i < list->size; i++) {
+            bytecode_save_value(save, list->items[i]);
+        }
+        break;
+    case IR_TYPE_STRING:
+        list = value.as.list_val;
+        bytecode_save_varint(save, list->size);
+        for (size_t i = 0; i < list->size; i++) {
+            IrValue val = list->items[i];
+            if (val.type != IR_TYPE_INT && val.type != IR_TYPE_BYTE) val.as.int_val = '?';
+            bytecode_save_varint(save, *(uint64_t*)&val.as.int_val);
+        }
+        break;
+    case IR_TYPE_FUNC:
+    case IR_TYPE_LABEL:
+        assert(false && "TODO");
+        break;
+    }
+}
+
+void bytecode_save_const_value(IrMemArena* save, IrConstValue value) {
+    bytecode_save_varint(save, value.type);
+
+    IrList* list;
+
+    switch (value.type) {
+    case IR_TYPE_NOTHING: break;
+    case IR_TYPE_BYTE: bytecode_save_varint(save, value.as.byte_val); break;
+    case IR_TYPE_INT: bytecode_save_varint(save, *(uint64_t*)&value.as.int_val); break;
+    case IR_TYPE_FLOAT: bytecode_save_raw(save, &value.as.float_val, sizeof(double)); break;
+    case IR_TYPE_BOOL: bytecode_save_varint(save, value.as.bool_val); break;
+    case IR_TYPE_LIST:
+        list = value.as.list_val;
+        bytecode_save_varint(save, list->size);
+        for (size_t i = 0; i < list->size; i++) {
+            bytecode_save_value(save, list->items[i]);
+        }
+        break;
+    case IR_TYPE_STRING:
+        list = value.as.list_val;
+        bytecode_save_varint(save, list->size);
+        for (size_t i = 0; i < list->size; i++) {
+            IrValue val = list->items[i];
+            if (val.type != IR_TYPE_INT && val.type != IR_TYPE_BYTE) val.as.int_val = '?';
+            bytecode_save_varint(save, *(uint64_t*)&val.as.int_val);
+        }
+        break;
+    case IR_TYPE_FUNC:
+        assert(value.as.func_val.hint != NULL);
+        bytecode_save_array(save, value.as.func_val.hint, sizeof(char), strlen(value.as.func_val.hint));
+        break;
+    case IR_TYPE_LABEL:
+        assert(value.as.label_val.name != NULL);
+        bytecode_save_array(save, value.as.label_val.name, sizeof(char), strlen(value.as.label_val.name));
+        bytecode_save_varint(save, value.as.label_val.pos);
+        break;
+    }
+}
+
+void bytecode_save(IrBytecode* bc, const char* filepath) {
+    FILE* f = fopen(filepath, "wb");
+    if (!f) return;
+
+    IrMemArena* save = ir_arena_new(GiB(4), KiB(512));
+
+    bytecode_save_array(save, IR_SAVE_IDENT, sizeof(char), sizeof(IR_SAVE_IDENT) - 1);
+    bytecode_save_varint(save, IR_SAVE_MAX_VERSION);
+
+    bytecode_save_varint(save, bc->pool->list.size);
+    for (size_t i = 0; i < bc->pool->list.size; i++) {
+        bytecode_save_const_value(save, bc->pool->list.items[i]);
+    }
+
+    bytecode_save_array(save, bc->code.items, sizeof(unsigned char), bc->code.size);
+    bytecode_save_varint_array(save, bc->labels.items, bc->labels.size);
+
+    fwrite(save + 1, 1, save->pos - IR_ARENA_BASE_POS, f);
+
+    ir_arena_free(save);
+
+    fclose(f);
 }
 
 IrFunction ir_func_by_hint(const char* hint) {
@@ -1550,7 +1994,7 @@ bool exec_run_bytecode(IrExec* exec, IrBytecode* bc, size_t pos) {
             if ((size_t)variable_frame_pos >= variable_frame->size) {
                 while ((size_t)variable_frame_pos > variable_frame->size) {
                     ir_list_append(*variable_frame, (IrValue) {0});
-                } 
+                }
                 ir_list_append(*variable_frame, left_value);
             } else {
                 variable_frame->items[variable_frame_pos] = left_value;
@@ -1572,7 +2016,7 @@ bool exec_run_bytecode(IrExec* exec, IrBytecode* bc, size_t pos) {
             if ((size_t)variable_frame_pos >= exec->globals.size) {
                 while ((size_t)variable_frame_pos > exec->globals.size) {
                     ir_list_append(exec->globals, (IrValue) {0});
-                } 
+                }
                 ir_list_append(exec->globals, left_value);
             } else {
                 exec->globals.items[variable_frame_pos] = left_value;
@@ -2281,6 +2725,33 @@ char* ir_arena_sprintf(IrMemArena* arena, size_t max_size, const char* fmt, ...)
 
     ir_arena_pop(arena, max_size - size - 1);
     return str;
+}
+
+void* ir_arena_alloc_packed(IrMemArena* arena, size_t size) {
+    size_t old_pos = arena->pos;
+    size_t new_pos = old_pos + size;
+
+    if (new_pos > arena->reserve_size) { return NULL; }
+
+    if (new_pos > arena->commit_pos) {
+        size_t new_commit_pos = new_pos;
+        new_commit_pos += arena->commit_size - 1;
+        new_commit_pos -= new_commit_pos % arena->commit_size;
+        new_commit_pos = MIN(new_commit_pos, arena->reserve_size);
+
+        unsigned char* mem = (unsigned char*)arena + arena->commit_pos;
+        size_t commit_size = new_commit_pos - arena->commit_pos;
+
+        if (!ir_plat_mem_commit(mem, commit_size)) return NULL;
+
+        arena->commit_pos = new_commit_pos;
+    }
+
+    arena->pos = new_pos;
+
+    unsigned char* out = (unsigned char*)arena + old_pos;
+
+    return out;
 }
 
 void* ir_arena_alloc(IrMemArena* arena, size_t size) {

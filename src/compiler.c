@@ -158,23 +158,35 @@ bool compiler_run(void* e) {
 
     thread_handle_stopping_state(compiler->thread);
 
-    char error_buf[512];
+    bytecode_save(&compiler->bytecode, "bytecode.scrb");
 
-    compiler->pid = spawn_process_pty("bash", error_buf, 512);
-    if (compiler->pid == -1) {
-        compiler_set_error(compiler, "%s", error_buf);
+    IrBytecodePool* pool = bytecode_pool_new(compiler->arena);
+    IrBytecode loaded_bc;
+
+    if (!bytecode_load(pool, &loaded_bc, "bytecode.scrb")) {
+        compiler_set_error(compiler, "Could not load bytecode");
         return false;
     }
 
-    while (term_wait_for_output());
+    bytecode_print(&loaded_bc);
 
-    if (!wait_for_process_pty(compiler->pid, error_buf, 512)) {
-        compiler_set_error(compiler, "%s", error_buf);
-        return false;
-    }
+    // char error_buf[512];
 
-    compiler->pid = -1;
-    compiler->pid_terminate_attempted = false;
+    // compiler->pid = spawn_process_pty("bash", error_buf, 512);
+    // if (compiler->pid == -1) {
+    //     compiler_set_error(compiler, "%s", error_buf);
+    //     return false;
+    // }
+
+    // while (term_wait_for_output());
+
+    // if (!wait_for_process_pty(compiler->pid, error_buf, 512)) {
+    //     compiler_set_error(compiler, "%s", error_buf);
+    //     return false;
+    // }
+
+    // compiler->pid = -1;
+    // compiler->pid_terminate_attempted = false;
 
     // compiler->exec = exec_new(MiB(1), GiB(1));
     // if (compiler->exec.last_error[0] != 0) {
