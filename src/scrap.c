@@ -329,6 +329,8 @@ int start_runtime(char* bc_path) {
     }
     bc.name = "main";
 
+    std_init();
+
     IrExec exec = exec_new(MiB(1), GiB(1));
     if (exec.last_error[0] != 0) {
         printf("Exec create error: %s\n", exec.last_error);

@@ -231,6 +231,10 @@ STD_MATH_FUNC(atan)
 
 #undef STD_MATH_FUNC
 
+void std_init(void) {
+    rprand_set_seed(time(NULL));
+}
+
 bool std_color_to_string(IrExec* exec) {
     int64_t color_int = exec_pop_int(exec);
     StdColor color = *(StdColor*)&color_int;

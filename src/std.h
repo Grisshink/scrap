@@ -30,6 +30,8 @@ typedef struct {
 
 IrRunFunction std_resolve_function(IrExec* exec, const char* hint);
 
+void std_init(void);
+
 // Math
 int std_int_pow(int base, int exp);
 
