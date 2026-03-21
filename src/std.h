@@ -23,6 +23,7 @@
 
 #include "scrap_ir.h"
 #include <stdbool.h>
+#include "term.h"
 
 typedef struct {
     unsigned char r, g, b, a;
@@ -31,9 +32,5 @@ typedef struct {
 IrRunFunction std_resolve_function(IrExec* exec, const char* hint);
 
 void std_init(void);
-
-#ifndef STANDALONE_STD
-#include "term.h"
-#endif
 
 #endif // SCRAP_STD_H

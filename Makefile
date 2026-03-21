@@ -46,23 +46,14 @@ else
 	LDFLAGS += -fsanitize=address -fsanitize=undefined -fno-omit-frame-pointer
 endif
 
-STD_CFLAGS := $(CFLAGS) -fPIC
-
 ifeq ($(BUILD_MODE), DEBUG)
 	CFLAGS += -fsanitize=address -fsanitize=undefined -fno-omit-frame-pointer
 endif
 
-STD_OBJFILES := $(addprefix $(BUILD_FOLDER),vec-stand.o std-stand.o scrap-runtime.o)
 OBJFILES := $(addprefix $(BUILD_FOLDER),filedialogs.o render.o save.o term.o blocks.o scrap.o vec.o util.o ui.o scrap_gui.o window.o cfgpath.o platform.o ast.o std.o thread.o vm.o)
 BUNDLE_FILES := data examples extras locale LICENSE README.md CHANGELOG.md
 SCRAP_HEADERS := src/scrap.h src/ast.h src/config.h src/scrap_gui.h src/scrap_ir.h
 EXE_NAME := scrap
-
-ifeq ($(TARGET), WINDOWS)
-	STD_NAME := libscrapstd-win.a
-else
-	STD_NAME := libscrapstd.a
-endif
 
 ifeq ($(USE_LLVM), FALSE)
 	OBJFILES += $(addprefix $(BUILD_FOLDER),compiler.o)
@@ -90,14 +81,14 @@ endif
 
 .PHONY: all clean target translations
 
-all: target std translations
+all: target translations
 
 mkbuild:
 	mkdir -p $(BUILD_FOLDER)
 
 clean:
 	$(MAKE) -C raylib/src clean
-	rm -f scrap.res $(EXE_NAME) $(EXE_NAME).exe libscrapstd.a libscrapstd-win.a
+	rm -f scrap.res $(EXE_NAME) $(EXE_NAME).exe
 	rm -rf locale $(BUILD_FOLDER)
 
 translations:
@@ -111,7 +102,7 @@ translations:
 	msgfmt -o locale/uk/LC_MESSAGES/scrap.mo locale/uk/LC_MESSAGES/scrap.po
 	rm locale/uk/LC_MESSAGES/scrap.po
 
-install: translations target std
+install: translations target
 	mkdir -p $(PREFIX)/share/scrap
 	mkdir -p $(PREFIX)/share/doc/scrap
 	mkdir -p $(PREFIX)/bin
@@ -142,9 +133,6 @@ $(EXE_NAME).exe: $(OBJFILES)
 $(EXE_NAME): $(OBJFILES)
 	$(MAKE) -C raylib/src CC=$(CC) PLATFORM_OS=$(TARGET)
 	$(CC) -o $@ $^ raylib/src/libraylib.a $(LDFLAGS)
-
-std: mkbuild $(STD_OBJFILES)
-	ar rcs $(STD_NAME) $(STD_OBJFILES)
 
 $(BUILD_FOLDER)scrap.o: src/scrap.c $(SCRAP_HEADERS)
 	$(CC) $(CFLAGS) -c -o $@ $<
@@ -180,13 +168,6 @@ $(BUILD_FOLDER)thread.o: src/thread.c src/thread.h
 	$(CC) $(CFLAGS) -c -o $@ $<
 $(BUILD_FOLDER)vm.o: src/vm.c $(SCRAP_HEADERS)
 	$(CC) $(CFLAGS) -c -o $@ $<
-
-$(BUILD_FOLDER)std-stand.o: src/std.c src/std.h
-	$(CC) $(STD_CFLAGS) -DSTANDALONE_STD -c -o $@ $<
-$(BUILD_FOLDER)scrap-runtime.o: src/scrap-runtime.c
-	$(CC) $(STD_CFLAGS) -DSTANDALONE_STD -c -o $@ $<
-$(BUILD_FOLDER)vec-stand.o: src/vec.c
-	$(CC) $(STD_CFLAGS) -DSTANDALONE_STD -c -o $@ $<
 
 $(BUILD_FOLDER)filedialogs.o: external/tinyfiledialogs.c
 	$(CC) $(CFLAGS) -c -o $@ $<

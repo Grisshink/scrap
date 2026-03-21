@@ -41,7 +41,7 @@ jobs:
           make USE_LLVM=TRUE LLVM_CONFIG=llvm-config-19 LLVM_LINK_STATIC=TRUE
           mkdir -p build/scrap-${SCRAP_VERSION}-llvm-linux
           cp -r data examples extras locale build/scrap-${SCRAP_VERSION}-llvm-linux/
-          cp LICENSE README.md CHANGELOG.md scrap libscrapstd.a build/scrap-${SCRAP_VERSION}-llvm-linux/
+          cp LICENSE README.md CHANGELOG.md scrap build/scrap-${SCRAP_VERSION}-llvm-linux/
           tar --directory=build -czf build/scrap-${SCRAP_VERSION}-llvm-linux.tar.gz scrap-${SCRAP_VERSION}-llvm-linux
           mkdir -p dist
           mv build/*.gz dist/
@@ -52,7 +52,7 @@ jobs:
           make
           mkdir -p build/scrap-${SCRAP_VERSION}-linux
           cp -r data examples extras locale build/scrap-${SCRAP_VERSION}-linux/
-          cp LICENSE README.md CHANGELOG.md scrap libscrapstd.a build/scrap-${SCRAP_VERSION}-linux/
+          cp LICENSE README.md CHANGELOG.md scrap build/scrap-${SCRAP_VERSION}-linux/
           tar --directory=build -czf build/scrap-${SCRAP_VERSION}-linux.tar.gz scrap-${SCRAP_VERSION}-linux
           mv build/*.gz dist/
           
@@ -99,7 +99,7 @@ jobs:
           mkdir -p build/scrap.AppDir
           cp scrap build/scrap.AppDir/AppRun
           cp -r data locale build/scrap.AppDir/
-          cp scrap.desktop libscrapstd.a extras/scrap.png build/scrap.AppDir/
+          cp scrap.desktop extras/scrap.png build/scrap.AppDir/
           mkdir -p dist
           appimagetool --appimage-extract-and-run build/scrap.AppDir build/Scrap-${SCRAP_VERSION}-llvm.AppImage
           mv build/Scrap-${SCRAP_VERSION}-llvm.AppImage dist/
@@ -111,7 +111,7 @@ jobs:
           mkdir -p build/scrap.AppDir
           cp scrap build/scrap.AppDir/AppRun
           cp -r data locale build/scrap.AppDir/
-          cp scrap.desktop libscrapstd.a extras/scrap.png build/scrap.AppDir/
+          cp scrap.desktop extras/scrap.png build/scrap.AppDir/
           appimagetool --appimage-extract-and-run build/scrap.AppDir build/Scrap-${SCRAP_VERSION}.AppImage
           mv build/Scrap-${SCRAP_VERSION}.AppImage dist/
           
@@ -150,7 +150,7 @@ jobs:
            make USE_LLVM=TRUE TARGET=WINDOWS
            mkdir -p build/scrap-${SCRAP_VERSION}-llvm-windows64
            cp -r locale data examples extras build/scrap-${SCRAP_VERSION}-llvm-windows64/
-           cp CHANGELOG.md LICENSE README.md libscrapstd-win.a scrap.exe build/scrap-${SCRAP_VERSION}-llvm-windows64/
+           cp CHANGELOG.md LICENSE README.md scrap.exe build/scrap-${SCRAP_VERSION}-llvm-windows64/
            powershell.exe -Command "Compress-Archive -Path build/scrap-${SCRAP_VERSION}-llvm-windows64 -DestinationPath build/scrap-${SCRAP_VERSION}-llvm-windows64.zip -Force"
            mkdir -p dist
            mv build/*.zip dist/
@@ -161,7 +161,7 @@ jobs:
           make TARGET=WINDOWS
           mkdir -p build/scrap-${SCRAP_VERSION}-windows64
           cp -r locale data examples extras build/scrap-${SCRAP_VERSION}-windows64/
-          cp CHANGELOG.md LICENSE README.md libscrapstd-win.a scrap.exe build/scrap-${SCRAP_VERSION}-windows64/
+          cp CHANGELOG.md LICENSE README.md scrap.exe build/scrap-${SCRAP_VERSION}-windows64/
           powershell.exe -Command "Compress-Archive -Path build/scrap-${SCRAP_VERSION}-windows64 -DestinationPath build/scrap-${SCRAP_VERSION}-windows64.zip -Force"
           mv build/*.zip dist/
 
