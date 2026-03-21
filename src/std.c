@@ -485,6 +485,8 @@ bool std_term_clear(IrExec* exec) {
 bool std_term_set_cursor(IrExec* exec) {
     int64_t y = exec_pop_int(exec);
     int64_t x = exec_pop_int(exec);
+    x = MAX(x, 0);
+    y = MAX(y, 0);
 
     cursor_x = x;
     cursor_y = y;

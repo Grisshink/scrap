@@ -259,6 +259,10 @@ void exec_escape(char command) {
         case 'H': // Cursor set pos
             int pos_y = term.print_state.args_size > 0 ? term.print_state.args[0] - 1 : 0;
             int pos_x = term.print_state.args_size > 1 ? term.print_state.args[1] - 1 : 0;
+
+            pos_x = CLAMP(pos_x, 0, term.char_w - 1);
+            pos_y = CLAMP(pos_y, 0, term.char_h - 1);
+
             term.cursor_pos = pos_x + pos_y * term.char_w;
             break;
         case 'J': // Erase term
