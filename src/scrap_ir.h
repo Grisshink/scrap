@@ -1001,9 +1001,14 @@ bool bytecode_load_const_value(IrSave* save, IrBytecodePool* pool, IrConstValue*
         value->as.bool_val = bool_val;
         break;
     case IR_TYPE_LIST:
+        if (!bytecode_load_varint(save, &list_size)) return false;
+        if (list_size == (size_t)-1) {
+            value->as.list_val = NULL;
+            break;
+        }
+
         list = bytecode_const_list_new(pool);
 
-        if (!bytecode_load_varint(save, &list_size)) return false;
         for (size_t i = 0; i < list_size; i++) {
             IrValue val;
             if (!bytecode_load_value(save, pool, &val)) return false;
@@ -1195,6 +1200,7 @@ void bytecode_save_value(IrMemArena* save, IrValue value) {
     case IR_TYPE_BOOL: bytecode_save_varint(save, value.as.bool_val); break;
     case IR_TYPE_LIST:
         list = value.as.list_val;
+        assert(list != NULL);
         bytecode_save_varint(save, list->size);
         for (size_t i = 0; i < list->size; i++) {
             bytecode_save_value(save, list->items[i]);
@@ -1229,6 +1235,11 @@ void bytecode_save_const_value(IrMemArena* save, IrConstValue value) {
     case IR_TYPE_BOOL: bytecode_save_varint(save, value.as.bool_val); break;
     case IR_TYPE_LIST:
         list = value.as.list_val;
+        if (!list) {
+            bytecode_save_varint(save, -1);
+            break;
+        }
+
         bytecode_save_varint(save, list->size);
         for (size_t i = 0; i < list->size; i++) {
             bytecode_save_value(save, list->items[i]);
