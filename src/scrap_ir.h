@@ -1107,7 +1107,7 @@ bool bytecode_load(IrBytecodePool* pool, IrBytecode* bc, const char* filepath) {
     for (size_t i = 0; i < pool_size; i++) {
         IrConstValue value;
         if (!bytecode_load_const_value(&save, pool, &value)) IR_LOAD_FAIL;
-        ir_list_append(pool->list, value);
+        bytecode_pool_insert(pool, value);
     }
 
     size_t code_size;

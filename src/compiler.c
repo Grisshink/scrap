@@ -160,48 +160,27 @@ bool compiler_run(void* e) {
 
     bytecode_save(&compiler->bytecode, "bytecode.scrb");
 
-    IrBytecodePool* pool = bytecode_pool_new(compiler->arena);
-    IrBytecode loaded_bc;
+    char error_buf[512];
 
-    if (!bytecode_load(pool, &loaded_bc, "bytecode.scrb")) {
-        compiler_set_error(compiler, "Could not load bytecode");
+    char* cmd = ir_arena_sprintf(compiler->arena, 2048, "%sscrap -run bytecode.scrb", GetApplicationDirectory());
+
+    compiler->pid = spawn_process_pty(cmd, error_buf, 512);
+    if (compiler->pid == -1) {
+        compiler_set_error(compiler, "%s", error_buf);
         return false;
     }
 
-    bytecode_print(&loaded_bc);
+    while (term_wait_for_output());
 
-    // char error_buf[512];
+    if (!wait_for_process_pty(compiler->pid, error_buf, 512)) {
+        compiler_set_error(compiler, "%s", error_buf);
+        return false;
+    }
 
-    // compiler->pid = spawn_process_pty("bash", error_buf, 512);
-    // if (compiler->pid == -1) {
-    //     compiler_set_error(compiler, "%s", error_buf);
-    //     return false;
-    // }
+    thread_handle_stopping_state(compiler->thread);
 
-    // while (term_wait_for_output());
-
-    // if (!wait_for_process_pty(compiler->pid, error_buf, 512)) {
-    //     compiler_set_error(compiler, "%s", error_buf);
-    //     return false;
-    // }
-
-    // compiler->pid = -1;
-    // compiler->pid_terminate_attempted = false;
-
-    // compiler->exec = exec_new(MiB(1), GiB(1));
-    // if (compiler->exec.last_error[0] != 0) {
-    //     compiler_set_error(compiler, "Exec create error: %s", compiler->exec.last_error);
-    //     exec_free(&compiler->exec);
-    //     return false;
-    // }
-    // exec_set_run_function_resolver(&compiler->exec, std_resolve_function);
-    // exec_add_bytecode(&compiler->exec, compiler->bytecode);
-    // compiler->exec_running = true;
-
-    // if (!exec_run(&compiler->exec, "main", "entry")) {
-    //     compiler_set_error(compiler, "Runtime error: %s", compiler->exec.last_error);
-    //     return false;
-    // }
+    compiler->pid = -1;
+    compiler->pid_terminate_attempted = false;
 
     return true;
 }

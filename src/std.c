@@ -305,12 +305,6 @@ bool std_random_int(IrExec* exec) {
     return true;
 }
 
-bool std_thread_handle_stopping_state(IrExec* exec) {
-    Thread* thread = (void*)exec_pop_int(exec);
-    thread_handle_stopping_state(thread);
-    return true;
-}
-
 bool std_string_join(IrExec* exec) {
     IrList* right = exec_pop_list_string(exec);
     IrList* left  = exec_pop_list_string(exec);
@@ -762,7 +756,6 @@ IrRunFunction std_resolve_function(IrExec* exec, const char* hint) {
         STD_FUNC(std_term_set_bg_color),
         STD_FUNC(std_term_set_clear_color),
         STD_FUNC(std_term_clear),
-        STD_FUNC(std_thread_handle_stopping_state),
         STD_FUNC(std_color_to_string),
         STD_FUNC(std_string_to_color),
         STD_FUNC(std_string_join),

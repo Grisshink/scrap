@@ -1078,8 +1078,6 @@ CompilerValue block_loop(Compiler* compiler, Block* block, Block** next_block, B
             compiler_object_info_insert(compiler, block, block_data);
             *next_block = block->contents->start;
         } else {
-            bytecode_push_op_int(&bc, IR_PUSHI, (int64_t)compiler->thread);
-            bytecode_push_op_func(&bc, IR_RUN, ir_func_by_hint("std_thread_handle_stopping_state"));
             bytecode_push_op_label(&bc, IR_JMP, loop_label);
         }
     } else if (prev_block == block->contents->end) {
@@ -1089,8 +1087,6 @@ CompilerValue block_loop(Compiler* compiler, Block* block, Block** next_block, B
             return DATA_ERROR;
         }
 
-        bytecode_push_op_int(&bc, IR_PUSHI, (int64_t)compiler->thread);
-        bytecode_push_op_func(&bc, IR_RUN, ir_func_by_hint("std_thread_handle_stopping_state"));
         bytecode_push_op_label(&bc, IR_JMP, block_data->label);
         compiler->variables.size = block_data->var_slot;
     }
@@ -1154,8 +1150,6 @@ CompilerValue block_repeat(Compiler* compiler, Block* block, Block** next_block,
 
             compiler->variables.size--;
 
-            bytecode_push_op_int(&bc, IR_PUSHI, (int64_t)compiler->thread);
-            bytecode_push_op_func(&bc, IR_RUN, ir_func_by_hint("std_thread_handle_stopping_state"));
             bytecode_push_op_label(&bc, IR_JMP, loop_label);
             bytecode_join(&bc, &end_label_bc);
         }
@@ -1174,8 +1168,6 @@ CompilerValue block_repeat(Compiler* compiler, Block* block, Block** next_block,
 
         compiler->variables.size = block_data->var_slot;
 
-        bytecode_push_op_int(&bc, IR_PUSHI, (int64_t)compiler->thread);
-        bytecode_push_op_func(&bc, IR_RUN, ir_func_by_hint("std_thread_handle_stopping_state"));
         bytecode_push_op_label(&bc, IR_JMP, block_data->label);
         bytecode_join(&bc, &block_data->bc);
     }
@@ -1213,8 +1205,6 @@ CompilerValue block_while(Compiler* compiler, Block* block, Block** next_block, 
             compiler_object_info_insert(compiler, block, block_data);
             *next_block = block->contents->start;
         } else {
-            bytecode_push_op_int(&bc, IR_PUSHI, (int64_t)compiler->thread);
-            bytecode_push_op_func(&bc, IR_RUN, ir_func_by_hint("std_thread_handle_stopping_state"));
             bytecode_push_op_label(&bc, IR_JMP, loop_label);
             bytecode_join(&bc, &end_label_bc);
         }
@@ -1225,8 +1215,6 @@ CompilerValue block_while(Compiler* compiler, Block* block, Block** next_block, 
             return DATA_ERROR;
         }
 
-        bytecode_push_op_int(&bc, IR_PUSHI, (int64_t)compiler->thread);
-        bytecode_push_op_func(&bc, IR_RUN, ir_func_by_hint("std_thread_handle_stopping_state"));
         bytecode_push_op_label(&bc, IR_JMP, block_data->label);
         bytecode_join(&bc, &block_data->bc);
         compiler->variables.size = block_data->var_slot;

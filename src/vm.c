@@ -220,6 +220,8 @@ bool vm_stop(void) {
             scrap_log(LOG_ERROR, "kill: %s", strerror(errno));
         }
         vm.compiler.pid_terminate_attempted = true;
+
+        thread_stop(&vm.thread);
     } else {
         scrap_log(LOG_INFO, "STOP");
         thread_stop(&vm.thread);

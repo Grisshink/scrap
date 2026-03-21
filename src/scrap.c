@@ -32,6 +32,10 @@
 #include <string.h>
 #include <stdio.h>
 
+#define KiB(n) ((size_t)(n) << 10)
+#define MiB(n) ((size_t)(n) << 20)
+#define GiB(n) ((size_t)(n) << 30)
+
 // Global Variables
 
 Config config;
@@ -229,8 +233,7 @@ void cleanup(void) {
     CloseWindow();
 }
 
-// Main function: Initializes configurations, sets up window, processes input, renders GUI, and cleans up resources on exit
-int main(void) {
+void start_editor(void) {
     SetTraceLogCallback(scrap_log_va);
     config_new(&config);
     config_new(&window_config);
@@ -312,5 +315,65 @@ int main(void) {
     }
 
     cleanup();
+}
+
+int start_runtime(char* bc_path) {
+    IrMemArena* arena = ir_arena_new(GiB(1), KiB(512));
+    IrBytecodePool* pool = bytecode_pool_new(arena);
+    IrBytecode bc;
+
+    if (!bytecode_load(pool, &bc, bc_path)) {
+        printf("Bytecode load error\n");
+        bytecode_pool_free(pool);
+        return 1;
+    }
+    bc.name = "main";
+
+    IrExec exec = exec_new(MiB(1), GiB(1));
+    if (exec.last_error[0] != 0) {
+        printf("Exec create error: %s\n", exec.last_error);
+        bytecode_pool_free(pool);
+        return 1;
+    }
+
+    exec_set_run_function_resolver(&exec, std_resolve_function);
+    exec_add_bytecode(&exec, bc);
+
+    if (!exec_run(&exec, "main", "entry")) {
+        printf("Runtime error: %s\n", exec.last_error);
+        bytecode_pool_free(pool);
+        exec_free(&exec);
+        return 1;
+    }
+
+    bytecode_pool_free(pool);
+    exec_free(&exec);
+    return 0;
+}
+
+void usage(char* exe_name) {
+    printf("Usage %s [-h] [-run BYTECODE_PATH]\n", exe_name);
+    printf("Flags:\n");
+    printf("    -h                 -- Show help\n");
+    printf("    -run BYTECODE_PATH -- Run .scrb file at path\n");
+    exit(1);
+}
+
+int main(int argc, char** argv) {
+    if (argc == 1) {
+        start_editor();
+        return 0;
+    }
+
+    if (!strcmp(argv[1], "-h")) {
+        usage(argv[0]);
+    } else if (!strcmp(argv[1], "-run")) {
+        if (argc < 3) usage(argv[0]);
+
+        return start_runtime(argv[2]);
+    } else {
+        usage(argv[0]);
+    }
+
     return 0;
 }
