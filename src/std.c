@@ -36,9 +36,8 @@
 #include <sys/ioctl.h>
 #endif
 
-// Explicitly including rprand.h here as this translation unit will soon need
-// to compile as standalone library, which means we should not depend on
-// raylib in any way
+#include <wchar.h>
+
 #define RPRAND_IMPLEMENTATION
 #define RPRANDAPI static __attribute__ ((unused))
 #include "../external/rprand.h"
@@ -382,10 +381,6 @@ bool std_gc_collect(IrExec* exec) {
     return true;
 }
 
-#if 1 //def STANDALONE_STD
-
-#include <wchar.h>
-
 static int cursor_x = 0;
 static int cursor_y = 0;
 static StdColor clear_color = {0};
@@ -562,180 +557,6 @@ bool std_term_get_input(IrExec* exec) {
 
     return true;
 }
-
-#else
-
-bool std_term_print_str(IrExec* exec) {
-    IrList* list = exec_pop_list_string(exec);
-    if (!list) return false;
-    char buf[64];
-    int buf_size = 0;
-
-    char* char_buf;
-    int char_size = 0;
-
-    for (size_t i = 0; i < list->size; i++) {
-        IrValue c = list->items[i];
-        switch (c.type) {
-        case IR_TYPE_INT:  char_buf = (char*)codepoint_to_utf8(c.as.int_val, &char_size); break;
-        case IR_TYPE_BYTE: char_buf = (char*)codepoint_to_utf8(c.as.byte_val, &char_size); break;
-        default:           char_buf = (char*)codepoint_to_utf8('?', &char_size); break;
-        }
-        char_buf[char_size] = 0;
-
-        if (buf_size + char_size + 1 > 64) {
-            buf[buf_size] = 0;
-            term_print_str(buf);
-            buf_size = 0;
-        }
-
-        strcpy(buf + buf_size, char_buf);
-        buf_size += char_size;
-    }
-
-    if (buf_size > 0) {
-        buf[buf_size] = 0;
-        term_print_str(buf);
-    }
-
-    return true;
-}
-
-bool std_term_println_str(IrExec* exec) {
-    if (!std_term_print_str(exec)) return false;
-    term_print_str("\n");
-    return true;
-}
-
-bool std_term_set_fg_color(IrExec* exec) {
-    int32_t color_val = exec_pop_int(exec);
-    term_set_fg_color(*(TermColor*)&color_val);
-    return true;
-}
-
-bool std_term_set_bg_color(IrExec* exec) {
-    int32_t color_val = exec_pop_int(exec);
-    term_set_bg_color(*(TermColor*)&color_val);
-    return true;
-}
-
-bool std_term_set_clear_color(IrExec* exec) {
-    int32_t color_val = exec_pop_int(exec);
-    term_set_clear_color(*(TermColor*)&color_val);
-    return true;
-}
-
-bool std_term_clear(IrExec* exec) {
-    (void) exec;
-    term_clear();
-    return true;
-}
-
-bool std_term_get_char(IrExec* exec) {
-    char input[10];
-    input[0] = term_input_get_char();
-    int mb_size = leading_ones(input[0]);
-
-    if (mb_size == 0) mb_size = 1;
-    for (int i = 1; i < mb_size && i < 10; i++) input[i] = term_input_get_char();
-    input[mb_size] = 0;
-
-    exec_push_int(exec, get_codepoint(input, &mb_size));
-    return true;
-}
-
-bool std_term_get_input(IrExec* exec) {
-    char input_char = 0;
-    char* string_buf = vector_create();
-
-    while (input_char != '\n') {
-        char input[256];
-        int i = 0;
-        for (; i < 255 && input_char != '\n'; i++) input[i] = (input_char = term_input_get_char());
-        if (input[i - 1] == '\n') input[i - 1] = 0;
-        input[i] = 0;
-
-        for (char* str = input; *str; str++) vector_add(&string_buf, *str);
-    }
-    vector_add(&string_buf, 0);
-
-    IrList* list = exec_list_new(exec);
-    exec_push_list_string(exec, list);
-
-    size_t char_count = 0;
-    int mb_size = 0;
-    for (char* str = string_buf; *str; str += mb_size) {
-        get_codepoint(str, &mb_size);
-        char_count++;
-    }
-
-    list->size = char_count;
-    list->capacity = char_count;
-
-    IrValue* items = exec_malloc(exec, list->capacity * sizeof(*list->items));
-    list->items = items;
-
-    char_count = 0;
-    for (char* str = string_buf; *str; str += mb_size) {
-        list->items[char_count] = (IrValue) {
-            .type = IR_TYPE_INT,
-            .as.int_val = get_codepoint(str, &mb_size),
-        };
-        char_count++;
-    }
-
-    vector_free(string_buf);
-
-    return true;
-}
-
-bool std_term_set_cursor(IrExec* exec) {
-    int64_t y = exec_pop_int(exec);
-    int64_t x = exec_pop_int(exec);
-
-    mutex_lock(&term.lock);
-    x = CLAMP(x, 0, term.char_w - 1);
-    y = CLAMP(y, 0, term.char_h - 1);
-    term.cursor_pos = x + y * term.char_w;
-    mutex_unlock(&term.lock);
-    return true;
-}
-
-bool std_term_cursor_x(IrExec* exec) {
-    mutex_lock(&term.lock);
-    int cur_x = 0;
-    if (term.char_w != 0) cur_x = term.cursor_pos % term.char_w;
-    mutex_unlock(&term.lock);
-    exec_push_int(exec, cur_x);
-    return true;
-}
-
-bool std_term_cursor_y(IrExec* exec) {
-    mutex_lock(&term.lock);
-    int cur_y = 0;
-    if (term.char_w != 0) cur_y = term.cursor_pos / term.char_w;
-    mutex_unlock(&term.lock);
-    exec_push_int(exec, cur_y);
-    return true;
-}
-
-bool std_term_cursor_max_x(IrExec* exec) {
-    mutex_lock(&term.lock);
-    int cur_max_x = term.char_w;
-    mutex_unlock(&term.lock);
-    exec_push_int(exec, cur_max_x);
-    return true;
-}
-
-bool std_term_cursor_max_y(IrExec* exec) {
-    mutex_lock(&term.lock);
-    int cur_max_y = term.char_h;
-    mutex_unlock(&term.lock);
-    exec_push_int(exec, cur_max_y);
-    return true;
-}
-
-#endif // STANDALONE_STD
 
 #define STD_FUNC(_f) { #_f, _f }
 IrRunFunction std_resolve_function(IrExec* exec, const char* hint) {

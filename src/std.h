@@ -32,18 +32,8 @@ IrRunFunction std_resolve_function(IrExec* exec, const char* hint);
 
 void std_init(void);
 
-// Math
-int std_int_pow(int base, int exp);
-
-// Terminal control
 #ifndef STANDALONE_STD
 #include "term.h"
 #endif
-
-// Misc
-bool std_sleep(IrExec* exec);
-int std_get_random(int min, int max);
-void std_set_random_seed(int seed);
-// StdColor std_parse_color(const char* value);
 
 #endif // SCRAP_STD_H
