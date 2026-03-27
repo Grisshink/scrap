@@ -38,6 +38,8 @@
 #endif
 
 #include <wchar.h>
+#include <termios.h>
+#include <unistd.h>
 
 #define RPRAND_IMPLEMENTATION
 #define RPRANDAPI static __attribute__ ((unused))
@@ -406,10 +408,64 @@ bool std_gc_collect(IrExec* exec) {
 
 static int cursor_x = 0;
 static int cursor_y = 0;
+static bool cursor_dirty = false;
 static StdColor clear_color = {0};
 static StdColor bg_color = {0};
 
 void test_cancel(void) {}
+
+bool std_refresh_cursor_pos(IrExec* exec) {
+    if (!cursor_dirty) return true;
+
+    struct termios term_old_attrs;
+    struct termios term_new_attrs;
+
+    if (tcgetattr(0, &term_old_attrs) == -1) {
+        exec_set_error(exec, "tcgetattr: %s", strerror(errno));
+        return false;
+    }
+
+    term_new_attrs = term_old_attrs;
+    term_new_attrs.c_lflag &= ~ICANON;
+    term_new_attrs.c_lflag &= ~ECHO;
+    term_new_attrs.c_cflag &= ~CREAD;
+
+    if (tcsetattr(0, TCSANOW, &term_new_attrs) == -1) {
+        exec_set_error(exec, "tcsetattr: %s", strerror(errno));
+        return false;
+    }
+
+    printf("\033[6n"); // Device status report
+    fflush(stdout);
+
+    char buf[256];
+    ssize_t buf_size = read(0, buf, 255);
+
+    if (tcsetattr(0, TCSANOW, &term_old_attrs) == -1) {
+        exec_set_error(exec, "tcsetattr: %s", strerror(errno));
+        return false;
+    }
+
+    if (buf_size == -1) {
+        exec_set_error(exec, "read: %s", strerror(errno));
+        return false;
+    }
+    buf[buf_size] = 0;
+    if (buf[0] != '\033') {
+        exec_push_int(exec, -1);
+        return true;
+    }
+
+    char* next_arg;
+    long y_val = strtol(buf + 2, &next_arg, 10);
+    long x_val = strtol(next_arg + 1, NULL, 10);
+
+    cursor_x = x_val - 1;
+    cursor_y = y_val - 1;
+    cursor_dirty = false;
+
+    return true;
+}
 
 bool std_term_print_str(IrExec* exec) {
     IrList* list = exec_pop_list_string(exec);
@@ -422,6 +478,7 @@ bool std_term_print_str(IrExec* exec) {
         default: printf("?"); break;
         }
     }
+    cursor_dirty = true;
     fflush(stdout);
     return true;
 }
@@ -496,11 +553,13 @@ bool std_term_cursor_max_x(IrExec* exec) {
 }
 
 bool std_term_cursor_x(IrExec* exec) {
+    if (!std_refresh_cursor_pos(exec)) return false;
     exec_push_int(exec, cursor_x);
     return true;
 }
 
 bool std_term_cursor_y(IrExec* exec) {
+    if (!std_refresh_cursor_pos(exec)) return false;
     exec_push_int(exec, cursor_y);
     return true;
 }
@@ -512,6 +571,9 @@ bool std_term_clear(IrExec* exec) {
     printf("\033[2J");
     // ESC[48;2;⟨r⟩;⟨g⟩;⟨b⟩m Select RGB background color
     printf("\033[48;2;%d;%d;%dm", bg_color.r, bg_color.g, bg_color.b);
+    cursor_x = 0;
+    cursor_y = 0;
+    cursor_dirty = false;
     fflush(stdout);
     return true;
 }
@@ -524,6 +586,7 @@ bool std_term_set_cursor(IrExec* exec) {
 
     cursor_x = x;
     cursor_y = y;
+    cursor_dirty = false;
     printf("\033[%ld;%ldH", y + 1, x + 1);
     fflush(stdout);
     return true;
@@ -539,6 +602,7 @@ bool std_term_get_char(IrExec* exec) {
     for (int i = 1; i < mb_size && i < 10; i++) input[i] = (char)getchar();
     input[mb_size] = 0;
 
+    cursor_dirty = true;
     exec_push_int(exec, get_codepoint(input, &mb_size));
     return true;
 }
@@ -590,6 +654,7 @@ bool std_term_get_input(IrExec* exec) {
 
     vector_free(string_buf);
 
+    cursor_dirty = true;
     return true;
 }
 

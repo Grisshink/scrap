@@ -276,6 +276,11 @@ void exec_escape(char command) {
                 term.buffer[pos].bg_color = term.clear_color;
             }
             break;
+        case 'n':
+            char buf[32];
+            int buf_size = snprintf(buf, 32, "\033[%d;%dR", term.cursor_pos / term.char_w + 1, term.cursor_pos % term.char_w + 1);
+            pty_write_input(term.pty, buf, buf_size);
+            break;
         case 'm': handle_graphic_mode(); break;
         case '?':
             term.print_state.mode = TERM_ESCAPE_PRIVATE;
