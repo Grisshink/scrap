@@ -354,10 +354,16 @@ int start_runtime(char* bc_path) {
 }
 
 void usage(char* exe_name) {
+    init_console();
+
     printf("Usage %s [-h] [-run BYTECODE_PATH]\n", exe_name);
     printf("Flags:\n");
     printf("    -h                 -- Show help\n");
     printf("    -run BYTECODE_PATH -- Run .scrb file at path\n");
+#ifdef _WIN32
+    printf("Press enter to close");
+    getchar();
+#endif
     exit(1);
 }
 
@@ -372,7 +378,12 @@ int main(int argc, char** argv) {
     } else if (!strcmp(argv[1], "-run")) {
         if (argc < 3) usage(argv[0]);
 
-        return start_runtime(argv[2]);
+        int ret = start_runtime(argv[2]);
+#ifdef _WIN32
+        printf("Press enter to close");
+        getchar();
+#endif
+        return ret;
     } else {
         usage(argv[0]);
     }

@@ -557,4 +557,6 @@ bool spawn_process(char* command, char* error, size_t error_len);
 pid_t spawn_process_pty(char* command, char* error, size_t error_len);
 bool wait_for_process_pty(pid_t pid, char* error, size_t error_len);
 
+void init_console(void);
+
 #endif // SCRAP_H

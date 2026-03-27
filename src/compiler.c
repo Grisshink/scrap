@@ -48,21 +48,6 @@ void compiler_free(Compiler* compiler) {
     (void) compiler;
 }
 
-bool print_str(IrExec* exec) {
-    IrList* list = exec_pop_list(exec);
-    if (!list) return false;
-    for (size_t i = 0; i < list->size; i++) {
-        IrValue c = list->items[i];
-        switch (c.type) {
-        case IR_TYPE_INT: printf("%lc", (wint_t)c.as.int_val); break;
-        case IR_TYPE_BYTE: printf("%c", c.as.byte_val); break;
-        default: printf("?"); break;
-        }
-    }
-    printf("\n");
-    return true;
-}
-
 static const char* format_byte_count(Compiler* compiler, size_t size) {
     if (size < KiB(1)) {
         return ir_arena_sprintf(compiler->arena, 32, "%zu", size);
@@ -91,9 +76,6 @@ bool compiler_run(void* e) {
     compiler->chains_to_compile = vector_create();
 
     compiler->bytecode = bytecode_new("main", compiler->bc_pool);
-    compiler->exec_running = false;
-    compiler->pid = -1;
-    compiler->pid_terminate_attempted = false;
 
     for (size_t i = 0; i < vector_size(compiler->code); i++) {
         assert(!CHAIN_EMPTY(compiler->code[i].chain));
@@ -162,37 +144,24 @@ bool compiler_run(void* e) {
 
     char error_buf[512];
 
+#ifdef _WIN32
+    char* cmd = ir_arena_sprintf(compiler->arena, 2048, "scrap.exe -run bytecode.scrb");
+#else
     char* cmd = ir_arena_sprintf(compiler->arena, 2048, "%sscrap -run bytecode.scrb", GetApplicationDirectory());
+#endif
 
-    compiler->pid = spawn_process_pty(cmd, error_buf, 512);
-    if (compiler->pid == -1) {
-        compiler_set_error(compiler, "%s", error_buf);
-        return false;
-    }
-
-    while (term_wait_for_output());
-
-    if (!wait_for_process_pty(compiler->pid, error_buf, 512)) {
+    if (!term_run_process(cmd, error_buf, 512)) {
         compiler_set_error(compiler, "%s", error_buf);
         return false;
     }
 
     thread_handle_stopping_state(compiler->thread);
 
-    compiler->pid = -1;
-    compiler->pid_terminate_attempted = false;
-
     return true;
 }
 
 void compiler_cleanup(void* e) {
     Compiler* compiler = e;
-    compiler->pid = -1;
-    compiler->pid_terminate_attempted = false;
-    if (compiler->exec_running) {
-        exec_free(&compiler->exec);
-    }
-
     bytecode_pool_free(compiler->bc_pool);
     vector_free(compiler->chains_to_compile);
 }

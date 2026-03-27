@@ -28,8 +28,17 @@
 #include <stdio.h>
 #include <errno.h>
 #include <unistd.h>
-#include <pty.h>
 #include <fcntl.h>
+#include <libintl.h>
+
+#ifdef _WIN32
+#include <windows.h>
+#else
+#include <pty.h>
+#include <utmp.h>
+#include <signal.h>
+#include <sys/wait.h>
+#endif
 
 #define TERM_BLACK (TermColor) { 0x00, 0x00, 0x00, 0xff }
 #define TERM_RED (TermColor) { 230, 41, 55, 255 }
@@ -40,10 +49,25 @@
 #define TERM_CYAN (TermColor) { 0x00, 0xff, 0xff, 0xff }
 #define TERM_WHITE (TermColor) { 0xff, 0xff, 0xff, 0xff }
 
+typedef struct {
+#ifdef _WIN32
+    PROCESS_INFORMATION proc_info;
+#else
+    int master_fd, slave_fd;
+    pid_t pid;
+#endif
+} TermPty;
+
 Terminal term = {0};
 
 static void term_clear_forward(int pos);
 static void term_clear_backward(int pos);
+
+static TermPty* pty_new(void);
+static void pty_write_input(TermPty* pty, void* data, size_t data_size);
+static ssize_t pty_read_output(TermPty* pty, void* buf, size_t buf_size);
+static void pty_resize(TermPty* pty, int new_w, int new_h);
+static void pty_free(TermPty* pty);
 
 int leading_ones(unsigned char byte) {
     int out = 0;
@@ -62,18 +86,11 @@ void term_init(MeasureTextSliceFunc measure_text, void* font, unsigned short fon
     term.font = font;
     term.font_size = font_size;
     term.input_buf_size = 0;
-    term.master_fd = -1;
-    term.slave_fd = -1;
     term.output_buf = vector_create();
     memset(&term.print_state, 0, sizeof(term.print_state));
 
-    if (openpty(&term.master_fd, &term.slave_fd, NULL, NULL, NULL) == -1) {
-        scrap_log(LOG_ERROR, "openpty: %s", strerror(errno));
-    } else {
-        int flags = fcntl(term.master_fd, F_GETFL);
-        flags |= O_NONBLOCK;
-        fcntl(term.master_fd, F_SETFL, flags);
-    }
+    term.pty = pty_new();
+    assert(term.pty != NULL);
 
     term_resize(0, 0);
 }
@@ -89,74 +106,23 @@ void term_restart(void) {
 }
 
 void term_free(void) {
+    pty_free(term.pty);
+
     vector_free(term.output_buf);
     term.output_buf = NULL;
-
-    if (term.master_fd != -1) {
-        if (close(term.master_fd) == -1) scrap_log(LOG_ERROR, "close: %s", strerror(errno));
-        term.master_fd = -1;
-    }
-
-    if (term.slave_fd != -1) {
-        if (close(term.slave_fd) == -1) scrap_log(LOG_ERROR, "close: %s", strerror(errno));
-        term.slave_fd = -1;
-    }
 }
 
 void term_input_put_char(char ch) {
-    if (term.master_fd == -1) {
-        scrap_log(LOG_WARNING, "[TERM] Attempt to write '%c' char to closed fd", ch);
-        return;
-    }
-
     term.input_buf[term.input_buf_size++] = ch;
     if (term.input_buf_size >= TERM_INPUT_BUF_SIZE || ch == '\n') {
-        write(term.master_fd, term.input_buf, term.input_buf_size);
+        pty_write_input(term.pty, term.input_buf, term.input_buf_size);
         term.input_buf_size = 0;
     }
 }
 
 void term_flush_input(void) {
-    write(term.master_fd, term.input_buf, term.input_buf_size);
+    pty_write_input(term.pty, term.input_buf, term.input_buf_size);
     term.input_buf_size = 0;
-}
-
-int term_read_output(void) {
-    if (term.master_fd == -1) return -1;
-
-    char read_buf[1024];
-    int buf_size = read(term.master_fd, read_buf, 1024);
-    if (buf_size == -1) {
-        if (errno == EAGAIN || errno == EWOULDBLOCK) return 1;
-        scrap_log(LOG_ERROR, "[TERM] read: %s", strerror(errno));
-        return -1;
-    }
-
-    if (buf_size == 0) return -1; // EOF
-
-    for (int i = 0; i < buf_size; i++) vector_add(&term.output_buf, read_buf[i]);
-    return 0;
-}
-
-bool term_wait_for_output(void) {
-    fd_set fds;
-    FD_ZERO(&fds);
-    FD_SET(term.master_fd, &fds);
-
-    if (pselect(term.master_fd + 1, &fds, NULL, NULL, NULL, NULL) == -1) {
-        if (errno != EINTR) scrap_log(LOG_ERROR, "[TERM] pselect: %s", strerror(errno));
-        return false;
-    }
-
-    vector_clear(term.output_buf);
-
-    int err = 0;
-    while (!err) err = term_read_output();
-    vector_add(&term.output_buf, 0);
-
-    if (vector_size(term.output_buf) > 1) term_print_str(term.output_buf);
-
-    return err == 1;
 }
 
 void term_scroll_up(void) {
@@ -301,6 +267,15 @@ void exec_escape(char command) {
                 }
             }
             break;
+        case 'X': // Erase char
+            int char_count = term.print_state.args_size ? term.print_state.args[0] : 1;
+            int end_pos = MIN(term.cursor_pos + char_count, term.char_w * term.char_h);
+            for (int pos = term.cursor_pos; pos < end_pos; pos++) {
+                strncpy(term.buffer[pos].ch, " ", ARRLEN(term.buffer[pos].ch));
+                term.buffer[pos].fg_color = TERM_WHITE;
+                term.buffer[pos].bg_color = term.clear_color;
+            }
+            break;
         case 'm': handle_graphic_mode(); break;
         case '?':
             term.print_state.mode = TERM_ESCAPE_PRIVATE;
@@ -311,6 +286,9 @@ void exec_escape(char command) {
         default:
             scrap_log(LOG_WARNING, "Unhandled CSI: %c (0x%02X)", command, (unsigned char)command);
             break;
+        }
+        if (term.cursor_pos >= term.char_w * term.char_h) {
+            term.cursor_pos = term.char_w * term.char_h - 1;
         }
     } else {
         term.print_state.mode = TERM_NONE;
@@ -370,6 +348,9 @@ void term_print_str(const char* str) {
     while (*str) {
         if (term.print_state.mode == TERM_UTF) {
             assert(term.print_state.mb_current < term.print_state.mb_count);
+
+            assert(term.cursor_pos >= 0);
+            assert(term.cursor_pos < term.char_w * term.char_h);
             term.buffer[term.cursor_pos].ch[term.print_state.mb_current++] = *str;
             if (term.print_state.mb_current == term.print_state.mb_count) {
                 term.print_state.mode = TERM_NONE;
@@ -417,6 +398,8 @@ void term_print_str(const char* str) {
 
         if (*str == '\b') {
             int pos = --term.cursor_pos;
+            assert(pos >= 0);
+            assert(pos < term.char_w * term.char_h);
             strncpy(term.buffer[pos].ch, " ", ARRLEN(term.buffer[pos].ch));
             term.buffer[pos].fg_color = TERM_WHITE;
             term.buffer[pos].bg_color = term.clear_color;
@@ -462,6 +445,8 @@ void term_print_str(const char* str) {
             term.print_state.mb_count = mb_size;
             term.print_state.mb_current = 0;
         } else {
+            assert(term.cursor_pos >= 0);
+            assert(term.cursor_pos < term.char_w * term.char_h);
             term.buffer[term.cursor_pos].ch[0] = *str;
             term.buffer[term.cursor_pos].ch[1] = 0;
             term.buffer[term.cursor_pos].fg_color = term.cursor_fg_color;
@@ -478,6 +463,7 @@ void term_print_str(const char* str) {
 }
 
 static void term_clear_forward(int pos) {
+    assert(pos >= 0);
     for (int i = pos; i < term.char_w * term.char_h; i++) {
         strncpy(term.buffer[i].ch, " ", ARRLEN(term.buffer[i].ch));
         term.buffer[i].fg_color = TERM_WHITE;
@@ -486,6 +472,7 @@ static void term_clear_forward(int pos) {
 }
 
 static void term_clear_backward(int pos) {
+    assert(pos < term.char_w * term.char_h);
     for (int i = pos; i >= 0; i--) {
         strncpy(term.buffer[i].ch, " ", ARRLEN(term.buffer[i].ch));
         term.buffer[i].fg_color = TERM_WHITE;
@@ -511,16 +498,7 @@ void term_resize(float screen_w, float screen_h) {
         new_char_h = (int)new_buffer_size.y;
 
     if (term.char_w != new_char_w || term.char_h != new_char_h) {
-        if (term.master_fd != -1) {
-            struct winsize w = {
-                .ws_col = new_char_w,
-                .ws_row = new_char_h,
-            };
-
-            if (ioctl(term.master_fd, TIOCSWINSZ, &w) == -1) {
-                scrap_log(LOG_ERROR, "ioctl: %s", strerror(errno));
-            }
-        }
+        pty_resize(term.pty, new_char_w, new_char_h);
 
         int buf_size = new_char_w * new_char_h * sizeof(*term.buffer);
         TerminalChar* new_buffer = malloc(buf_size);
@@ -559,3 +537,330 @@ void term_resize(float screen_w, float screen_h) {
         }
     }
 }
+
+#ifdef _WIN32
+
+TermPty* pty_new(void) {
+    TermPty pty_val = {0};
+
+    TermPty* pty = malloc(sizeof(TermPty));
+    memcpy(pty, &pty_val, sizeof(TermPty));
+    return pty;
+}
+
+void pty_write_input(TermPty* pty, void* data, size_t data_size) {
+    (void) pty;
+    (void) data;
+    (void) data_size;
+}
+
+ssize_t pty_read_output(TermPty* pty, void* buf, size_t buf_size) {
+    (void) pty;
+    (void) buf;
+    (void) buf_size;
+    return -1;
+}
+
+static void pty_resize(TermPty* pty, int new_w, int new_h) {
+    (void) pty;
+    (void) new_w;
+    (void) new_h;
+}
+
+bool term_run_process(char* command, char* error, size_t error_len) {
+    STARTUPINFO start_info = {0};
+    start_info.cb = sizeof(start_info);
+
+    TermPty* pty = term.pty;
+
+    if(!CreateProcessA(
+        NULL, command,
+        NULL, NULL, // No security attributes
+        FALSE, // Don't inherit handles
+        0, NULL, NULL, // Just give me a process
+        &start_info, // Give STARTUPINFO
+        &pty->proc_info) // Get PROCESS_INFORMATION
+    ) {
+        snprintf(error, error_len, gettext("Failed to create a process. Error code: %ld"), GetLastError());
+        return false;
+    }
+
+    term.process_running = true;
+    WaitForSingleObject(pty->proc_info.hProcess, INFINITE);
+    term.process_running = false;
+
+    unsigned long exit_code;
+    if (!GetExitCodeProcess(pty->proc_info.hProcess, &exit_code)) {
+        snprintf(error, error_len, gettext("Failed to get exit code. Error code: %ld"), GetLastError());
+        CloseHandle(pty->proc_info.hProcess);
+        CloseHandle(pty->proc_info.hThread);
+        return false;
+    }
+
+    if (exit_code && exit_code != -1073741510) {
+        snprintf(error, error_len, gettext("Command exited with exit code: %ld"), exit_code);
+        CloseHandle(pty->proc_info.hProcess);
+        CloseHandle(pty->proc_info.hThread);
+        return false;
+    }
+
+    CloseHandle(pty->proc_info.hProcess);
+    CloseHandle(pty->proc_info.hThread);
+
+    return true;
+}
+
+void term_stop_process(void) {
+    if (!term.process_running) return;
+    TermPty* pty = term.pty;
+    if (!TerminateProcess(pty->proc_info.hProcess, 0)) {
+        scrap_log(LOG_ERROR, "TerminateProcess: Error %d", GetLastError());
+    }
+}
+
+void pty_free(TermPty* pty) {
+    free(pty);
+}
+
+#else
+
+static const char* sig_to_str(int signum) {
+    switch (signum) {
+    case SIGINT: return "SIGINT";
+    case SIGILL: return "SIGILL";
+    case SIGABRT: return "SIGABRT";
+    case SIGFPE: return "SIGFPE";
+    case SIGSEGV: return "SIGSEGV";
+    case SIGTERM: return "SIGTERM";
+    case SIGHUP: return "SIGHUP";
+    case SIGQUIT: return "SIGQUIT";
+    case SIGTRAP: return "SIGTRAP";
+    case SIGKILL: return "SIGKILL";
+    case SIGPIPE: return "SIGPIPE";
+    case SIGALRM: return "SIGALRM";
+    case SIGBUS: return "SIGBUS";
+    case SIGSYS: return "SIGSYS";
+    case SIGURG: return "SIGURG";
+    case SIGSTOP: return "SIGSTOP";
+    case SIGTSTP: return "SIGTSTP";
+    case SIGCONT: return "SIGCONT";
+    case SIGCHLD: return "SIGCHLD";
+    case SIGTTIN: return "SIGTTIN";
+    case SIGTTOU: return "SIGTTOU";
+    case SIGPOLL: return "SIGPOLL";
+    case SIGXFSZ: return "SIGXFSZ";
+    case SIGXCPU: return "SIGXCPU";
+    case SIGVTALRM: return "SIGVTALRM";
+    case SIGPROF: return "SIGPROF";
+    case SIGUSR1: return "SIGUSR1";
+    case SIGUSR2: return "SIGUSR2";
+    }
+    return "SIGidk";
+}
+
+static void child_handler(int sig) {
+    (void) sig;
+    // Noop: This handler is only needed to unblock the pselect call in term_wait_for_output function
+}
+
+static size_t next_arg(char* cmd, size_t i, char** out_arg) {
+    *out_arg = NULL;
+
+    while (cmd[i] == ' ') i++;
+    if (cmd[i] == 0) return i;
+
+    if (cmd[i] == '"') {
+        i++;
+        *out_arg = cmd + i;
+        while (cmd[i] != '"' && cmd[i] != 0) i++;
+    } else {
+        *out_arg = cmd + i;
+        while (cmd[i] != ' ' && cmd[i] != 0) i++;
+    }
+
+    if (cmd[i] == 0) {
+        return i;
+    } else {
+        cmd[i] = 0;
+        return i + 1;
+    }
+}
+
+static TermPty* pty_new(void) {
+    TermPty pty_val = {0};
+
+    if (openpty(&pty_val.master_fd, &pty_val.slave_fd, NULL, NULL, NULL) == -1) {
+        scrap_log(LOG_ERROR, "openpty: %s", strerror(errno));
+        return NULL;
+    } else {
+        int flags = fcntl(pty_val.master_fd, F_GETFL);
+        flags |= O_NONBLOCK;
+        fcntl(pty_val.master_fd, F_SETFL, flags);
+    }
+
+    TermPty* pty = malloc(sizeof(TermPty));
+    memcpy(pty, &pty_val, sizeof(TermPty));
+    return pty;
+}
+
+bool term_wait_for_output(void) {
+    TermPty* pty = term.pty;
+
+    fd_set fds;
+    FD_ZERO(&fds);
+    FD_SET(pty->master_fd, &fds);
+
+    if (pselect(pty->master_fd + 1, &fds, NULL, NULL, NULL, NULL) == -1) {
+        if (errno != EINTR) scrap_log(LOG_ERROR, "[TERM] pselect: %s", strerror(errno));
+        return false;
+    }
+
+    vector_clear(term.output_buf);
+
+    char read_buf[1024];
+    int err = 0;
+    while (!err) {
+        ssize_t buf_size = pty_read_output(pty, read_buf, 1024);
+        if (buf_size == -1) {
+            if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                err = 1;
+                break;
+            }
+            scrap_log(LOG_ERROR, "[TERM] read: %s", strerror(errno));
+            err = -1;
+            break;
+        }
+
+        if (buf_size == 0) return false; // EOF
+
+        for (int i = 0; i < buf_size; i++) vector_add(&term.output_buf, read_buf[i]);
+    }
+
+    vector_add(&term.output_buf, 0);
+
+    if (vector_size(term.output_buf) > 1) term_print_str(term.output_buf);
+
+    return err == 1;
+}
+
+static void pty_write_input(TermPty* pty, void* data, size_t data_size) {
+    write(pty->master_fd, data, data_size);
+}
+
+static ssize_t pty_read_output(TermPty* pty, void* buf, size_t buf_size) {
+    return read(pty->master_fd, buf, buf_size);
+}
+
+static void pty_resize(TermPty* pty, int new_w, int new_h) {
+    struct winsize new_size = {
+        .ws_col = new_w,
+        .ws_row = new_h,
+    };
+
+    if (ioctl(pty->master_fd, TIOCSWINSZ, &new_size) == -1) {
+        scrap_log(LOG_ERROR, "ioctl: %s", strerror(errno));
+    }
+}
+
+bool term_run_process(char* command, char* error, size_t error_len) {
+    pid_t pid = fork();
+    if (pid == -1) {
+        snprintf(error, error_len, gettext("Failed to fork a process: %s"), strerror(errno));
+        return pid;
+    }
+
+    TermPty* pty = term.pty;
+
+    if (pid == 0) {
+        // We are newborn
+
+        login_tty(pty->slave_fd);
+
+        // Parse command line
+        char* name;
+        char* args[256];
+        size_t arg_len = 1;
+
+        size_t i = 0;
+        i = next_arg(command, i, &name);
+        args[0] = name;
+        args[255] = NULL;
+
+        while (args[arg_len - 1] && arg_len < 255) i = next_arg(command, i, &args[arg_len++]);
+
+        // printf("Name: %s\n", name);
+
+        // printf("Args: ");
+        // for (char** arg = args; *arg; arg++) {
+        //     printf("\"%s\", ", *arg);
+        // }
+        // printf("\n");
+
+        // Replace da child
+        if (execvp(name, args) == -1) {
+            perror("execvp");
+            exit(1);
+        }
+
+        // Unreachable
+    } else {
+        struct sigaction act = { .sa_handler = child_handler };
+        if (sigaction(SIGCHLD, &act, NULL) == -1) perror("sigaction");
+
+        pty->pid = pid;
+
+        term.process_running = true;
+        while (term_wait_for_output());
+        term.process_running = false;
+
+        // Wait for child to terminate
+        int status;
+        waitpid(pid, &status, 0);
+        
+        if (WIFEXITED(status)) {
+            int exit_code = WEXITSTATUS(status);
+            if (exit_code == 0) {
+                return true;
+            } else {
+                snprintf(error, error_len, gettext("Command exited with exit code: %d"), exit_code);
+                return false;
+            }
+        } else if (WIFSIGNALED(status)) {
+            int signum = WTERMSIG(status);
+            if (signum == SIGTERM) {
+                return true;
+            } else {
+                snprintf(error, error_len, gettext("Command signaled with signal %s"), sig_to_str(signum));
+                return false;
+            }
+        } else {
+            snprintf(error, error_len, gettext("Received unknown child status :/"));
+            return false;
+        }
+    }
+
+    return true;
+}
+
+void term_stop_process(void) {
+    TermPty* pty = term.pty;
+    if (kill(pty->pid, SIGTERM) == -1) {
+        scrap_log(LOG_ERROR, "kill: %s", strerror(errno));
+    }
+}
+
+static void pty_free(TermPty* pty) {
+    if (pty->master_fd != -1) {
+        if (close(pty->master_fd) == -1) scrap_log(LOG_ERROR, "close: %s", strerror(errno));
+        pty->master_fd = -1;
+    }
+
+    if (pty->slave_fd != -1) {
+        if (close(pty->slave_fd) == -1) scrap_log(LOG_ERROR, "close: %s", strerror(errno));
+        pty->slave_fd = -1;
+    }
+
+    free(pty);
+}
+
+#endif

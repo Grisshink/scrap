@@ -155,12 +155,9 @@ Vm vm_new(void) {
 
 void vm_free(Vm* vm) {
     if (thread_is_running(&vm->thread)) {
-        if (vm->compiler.pid != -1) {
-            scrap_log(LOG_WARNING, "[VM] Killing pid %zu", vm->compiler.pid);
-
-            if (kill(vm->compiler.pid, SIGKILL) == -1) {
-                scrap_log(LOG_ERROR, "kill: %s", strerror(errno));
-            }
+        if (term.process_running) {
+            scrap_log(LOG_WARNING, "[VM] Stopping runner");
+            term_stop_process();
         }
 
         thread_stop(&vm->thread);
@@ -201,31 +198,26 @@ bool vm_start(void) {
             }
             editor.current_tab = i;
             ui.render_surface_needs_redraw = true;
-            break;
+            return true;
         }
     }
-    return true;
+#ifdef USE_LLVM
+    vm.start_mode = mode;
+#endif
+    vm.start_timeout = 1;
+    ui.render_surface_needs_redraw = true;
+    return false;
 }
 
 bool vm_stop(void) {
     if (!thread_is_running(&vm.thread)) return false;
-    if (vm.compiler.pid != -1) {
-        if (vm.compiler.pid_terminate_attempted) {
-            scrap_log(LOG_WARNING, "[VM] Killing pid %zu", vm.compiler.pid);
-        } else {
-            scrap_log(LOG_INFO, "[VM] Terminating pid %zu", vm.compiler.pid);
-        }
-
-        if (kill(vm.compiler.pid, vm.compiler.pid_terminate_attempted ? SIGKILL : SIGTERM) == -1) {
-            scrap_log(LOG_ERROR, "kill: %s", strerror(errno));
-        }
-        vm.compiler.pid_terminate_attempted = true;
-
-        thread_stop(&vm.thread);
-    } else {
-        scrap_log(LOG_INFO, "STOP");
-        thread_stop(&vm.thread);
+    if (term.process_running) {
+        scrap_log(LOG_WARNING, "[VM] Stopping runner");
+        term_stop_process();
     }
+
+    scrap_log(LOG_INFO, "STOP");
+    thread_stop(&vm.thread);
     ui.render_surface_needs_redraw = true;
     return true;
 }

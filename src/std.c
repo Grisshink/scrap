@@ -24,6 +24,7 @@
 #include <time.h>
 #include <math.h>
 #include <errno.h>
+#include <libintl.h>
 
 #include "vec.h"
 #include "std.h"
@@ -231,6 +232,28 @@ STD_MATH_FUNC(atan)
 #undef STD_MATH_FUNC
 
 void std_init(void) {
+#ifdef _WIN32
+    // Windows is trash
+    AllocConsole();
+    freopen("CON", "w", stdout);
+    freopen("CON", "w", stderr);
+    freopen("CON", "r", stdin);
+    SetConsoleTitle(gettext("Scrap console"));
+
+    DWORD term_mode;
+
+    HANDLE stdout_handle = GetStdHandle(STD_OUTPUT_HANDLE);
+    GetConsoleMode(stdout_handle, &term_mode);
+    term_mode |= ENABLE_PROCESSED_OUTPUT | ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+    SetConsoleMode(stdout_handle, term_mode);
+
+    HANDLE stdin_handle = GetStdHandle(STD_INPUT_HANDLE);
+    GetConsoleMode(stdin_handle, &term_mode);
+    term_mode |= ENABLE_VIRTUAL_TERMINAL_INPUT | ENABLE_ECHO_INPUT;
+    SetConsoleMode(stdin_handle, term_mode);
+
+    SetConsoleOutputCP(65001);
+#endif
     rprand_set_seed(time(NULL));
 }
 
@@ -437,11 +460,17 @@ bool std_term_set_clear_color(IrExec* exec) {
 bool std_term_cursor_max_y(IrExec* exec) {
 #ifdef _WIN32
     CONSOLE_SCREEN_BUFFER_INFO csbi;
-    if (!GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi)) return false;
+    if (!GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi)) {
+        exec_set_error(exec, "GetConsoleScreenBufferInfo: Error %d", GetLastError());
+        return false;
+    }
     exec_push_int(exec, csbi.srWindow.Bottom - csbi.srWindow.Top + 1);
 #else
     struct winsize w;
-    if (ioctl(0, TIOCGWINSZ, &w)) return false;
+    if (ioctl(0, TIOCGWINSZ, &w)) {
+        exec_set_error(exec, "ioctl: %s", strerror(errno));
+        return false;
+    }
     exec_push_int(exec, w.ws_row);
 #endif
     return true;
@@ -450,11 +479,17 @@ bool std_term_cursor_max_y(IrExec* exec) {
 bool std_term_cursor_max_x(IrExec* exec) {
 #ifdef _WIN32
     CONSOLE_SCREEN_BUFFER_INFO csbi;
-    if (!GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi)) return false;
+    if (!GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi)) {
+        exec_set_error(exec, "GetConsoleScreenBufferInfo: Error %d", GetLastError());
+        return false;
+    }
     exec_push_int(exec, csbi.srWindow.Right - csbi.srWindow.Left + 1);
 #else
     struct winsize w;
-    if (ioctl(0, TIOCGWINSZ, &w)) return false;
+    if (ioctl(0, TIOCGWINSZ, &w)) {
+        exec_set_error(exec, "ioctl: %s", strerror(errno));
+        return false;
+    }
     exec_push_int(exec, w.ws_col);
 #endif
     return true;

@@ -168,7 +168,10 @@ void init_panels(void) {
     panel_split(code_panel, SPLIT_SIDE_LEFT, PANEL_BLOCK_PALETTE, 0.3);
     panel_split(code_panel->left, SPLIT_SIDE_TOP, PANEL_BLOCK_CATEGORIES, 0.35);
     tab_new("Code", code_panel);
+#ifndef _WIN32
+    // Windows opens a new console in new window instead of using builtin terminal
     tab_new("Output", panel_new(PANEL_TERM));
+#endif
 }
 
 int search_glyph(Font font, int codepoint) {
@@ -1633,9 +1636,12 @@ static void handle_key_press(void) {
     if (ui.hover.panels.panel) {
         if (ui.hover.panels.panel->type == PANEL_TERM) {
             if (!thread_is_running(&vm.thread)) return;
-            if (vm.compiler.pid == -1) return;
+            if (!term.process_running) return;
 
             if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_KP_ENTER)) {
+#ifdef _WIN32
+                term_input_put_char('\r');
+#endif
                 term_input_put_char('\n');
                 term_flush_input();
                 ui.render_surface_needs_redraw = true;

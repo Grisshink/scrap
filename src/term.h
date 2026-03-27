@@ -85,15 +85,17 @@ typedef struct {
 
     TermColor clear_color;
 
-    int master_fd;
-    int slave_fd;
+    TermPrintState print_state;
+
+    // Opaque: Corresponds to TermPty type in term.c
+    void* pty;
+    bool process_running;
 
     char* output_buf;
 
     char input_buf[TERM_INPUT_BUF_SIZE];
     int input_buf_size;
 
-    TermPrintState print_state;
 } Terminal;
 
 extern Terminal term;
@@ -116,5 +118,7 @@ void term_resize(float screen_w, float screen_h);
 void term_free(void);
 void term_restart(void);
 void term_flush_input(void);
+bool term_run_process(char* command, char* error, size_t error_len);
+void term_stop_process(void);
 
 #endif // TERM_H

@@ -1618,7 +1618,9 @@ void exec_collect(IrExec* exec) {
     exec->heap = exec->second_heap;
     exec->second_heap = temp_heap;
 
+#ifdef DEBUG
     printf("exec_collect: %zu bytes freed, %zu chunks deleted\n", memory_freed, chunks_deleted);
+#endif
 }
 
 void* exec_malloc(IrExec* exec, size_t size) {
@@ -1634,7 +1636,9 @@ void* exec_malloc(IrExec* exec, size_t size) {
             while (exec->heap.mem->pos + chunk_size > exec->heap.mem_max && exec->heap.mem_max < exec->heap.mem->reserve_size) {
                 exec->heap.mem_max = MIN(exec->heap.mem_max * 2, exec->heap.mem->reserve_size);
             }
+#ifdef DEBUG
             printf("exec_malloc: raising memory limit to %zu bytes\n", exec->heap.mem_max);
+#endif
             chunk = exec_heap_malloc(&exec->heap, chunk_size);
 
             if (chunk == NULL) {
@@ -1670,7 +1674,9 @@ void* exec_realloc(IrExec* exec, void* ptr, size_t new_size) {
             while (exec->heap.mem->pos + new_chunk_size > exec->heap.mem_max && exec->heap.mem_max < exec->heap.mem->reserve_size) {
                 exec->heap.mem_max = MIN(exec->heap.mem_max * 2, exec->heap.mem->reserve_size);
             }
+#ifdef DEBUG
             printf("exec_realloc: raising memory limit to %zu bytes\n", exec->heap.mem_max);
+#endif
             new_chunk = exec_heap_malloc(&exec->heap, new_chunk_size);
 
             if (new_chunk == NULL) {
@@ -1726,7 +1732,9 @@ void exec_free(IrExec* exec) {
     }
     ir_list_free(exec->variables);
 
+#ifdef DEBUG
     printf("exec_free: %zu bytes allocated, %zu chunks created\n", exec->heap.mem->pos, exec->heap.chunks_count);
+#endif
     exec_heap_free(&exec->heap);
     exec_heap_free(&exec->second_heap);
 }
@@ -2589,7 +2597,16 @@ bool exec_run_bytecode(IrExec* exec, IrBytecode* bc, size_t pos) {
                     IR_EXEC_FAIL;
                 }
             }
-            if (!func->ptr(exec)) IR_EXEC_FAIL;
+            if (!func->ptr(exec)) {
+                if (exec->last_error[0] == 0) {
+                    if (func->hint) {
+                        exec_set_error(exec, "Unknown error from function \"%s\"", func->hint);
+                    } else {
+                        exec_set_error(exec, "Unknown error from function %p", func->ptr);
+                    }
+                }
+                IR_EXEC_FAIL;
+            }
             i += 3;
             break;
         case IR_DYNJMP:

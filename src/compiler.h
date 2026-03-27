@@ -90,9 +90,6 @@ struct Compiler {
 
     BlockChain* current_chain;
 
-    IrExec exec;
-    bool exec_running;
-
     char current_error[MAX_ERROR_LEN];
     Block* current_error_block;
     BlockChain* current_error_blockchain;
@@ -101,9 +98,6 @@ struct Compiler {
     size_t label_counter;
 
     Thread* thread;
-
-    bool pid_terminate_attempted;
-    pid_t pid;
 };
 
 #define _DATA(_t, ...) (CompilerValue) { \
