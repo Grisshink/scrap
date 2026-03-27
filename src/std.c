@@ -35,11 +35,11 @@
 #include <windows.h>
 #else
 #include <sys/ioctl.h>
+#include <termios.h>
+#include <unistd.h>
 #endif
 
 #include <wchar.h>
-#include <termios.h>
-#include <unistd.h>
 
 #define RPRAND_IMPLEMENTATION
 #define RPRANDAPI static __attribute__ ((unused))
@@ -417,6 +417,17 @@ void test_cancel(void) {}
 bool std_refresh_cursor_pos(IrExec* exec) {
     if (!cursor_dirty) return true;
 
+#ifdef _WIN32
+    POINT pos;
+    if (!GetCursorPos(&pos)) {
+        exec_set_error(exec, "GetCursorPos: Error %d", GetLastError());
+        return false;
+    }
+
+    cursor_x = pos.x;
+    cursor_y = pos.y;
+    cursor_dirty = false;
+#else
     struct termios term_old_attrs;
     struct termios term_new_attrs;
 
@@ -463,6 +474,7 @@ bool std_refresh_cursor_pos(IrExec* exec) {
     cursor_x = x_val - 1;
     cursor_y = y_val - 1;
     cursor_dirty = false;
+#endif // _WIN32
 
     return true;
 }
