@@ -914,22 +914,22 @@ bool bytecode_load_value(IrSave* save, IrBytecodePool* pool, IrValue* value) {
 
     switch (type) {
     case IR_TYPE_NOTHING: break;
-    case IR_TYPE_BYTE:
+    case IR_TYPE_BYTE: ;
         uint64_t byte_val;
         if (!bytecode_load_varint(save, &byte_val)) return false;
         value->as.byte_val = byte_val;
         break;
-    case IR_TYPE_INT:
+    case IR_TYPE_INT: ;
         uint64_t int_val;
         if (!bytecode_load_varint(save, &int_val)) return false;
         value->as.int_val = *(int64_t*)&int_val;
         break;
-    case IR_TYPE_FLOAT:
+    case IR_TYPE_FLOAT: ;
         double* float_val = bytecode_load_raw(save, sizeof(double));
         if (!float_val) return false;
         value->as.float_val = *float_val;
         break;
-    case IR_TYPE_BOOL:
+    case IR_TYPE_BOOL: ;
         uint64_t bool_val;
         if (!bytecode_load_varint(save, &bool_val)) return false;
         value->as.bool_val = bool_val;
@@ -980,22 +980,22 @@ bool bytecode_load_const_value(IrSave* save, IrBytecodePool* pool, IrConstValue*
 
     switch (type) {
     case IR_TYPE_NOTHING: break;
-    case IR_TYPE_BYTE:
+    case IR_TYPE_BYTE: ;
         uint64_t byte_val;
         if (!bytecode_load_varint(save, &byte_val)) return false;
         value->as.byte_val = byte_val;
         break;
-    case IR_TYPE_INT:
+    case IR_TYPE_INT: ;
         uint64_t int_val;
         if (!bytecode_load_varint(save, &int_val)) return false;
         value->as.int_val = *(int64_t*)&int_val;
         break;
-    case IR_TYPE_FLOAT:
+    case IR_TYPE_FLOAT: ;
         double* float_val = bytecode_load_raw(save, sizeof(double));
         if (!float_val) return false;
         value->as.float_val = *float_val;
         break;
-    case IR_TYPE_BOOL:
+    case IR_TYPE_BOOL: ;
         uint64_t bool_val;
         if (!bytecode_load_varint(save, &bool_val)) return false;
         value->as.bool_val = bool_val;
@@ -1030,7 +1030,7 @@ bool bytecode_load_const_value(IrSave* save, IrBytecodePool* pool, IrConstValue*
         }
         value->as.list_val = list;
         break;
-    case IR_TYPE_FUNC:
+    case IR_TYPE_FUNC: ;
         size_t hint_size;
         char* hint;
 
@@ -1042,7 +1042,7 @@ bool bytecode_load_const_value(IrSave* save, IrBytecodePool* pool, IrConstValue*
         value->as.func_val.hint = hint_str;
         value->as.func_val.ptr = NULL;
         break;
-    case IR_TYPE_LABEL:
+    case IR_TYPE_LABEL: ;
         size_t label_size;
         char* label;
 
@@ -2624,7 +2624,7 @@ bool exec_run_bytecode(IrExec* exec, IrBytecode* bc, size_t pos) {
             label_pos = exec_pop_label(exec);
             if (!exec_run_bytecode(exec, bc, label_pos)) IR_EXEC_FAIL;
             break;
-        case IR_DYNRUN:
+        case IR_DYNRUN: ;
             IrRunFunction func = exec_pop_func(exec);
             if (!func) {
                 exec_set_error(exec, "Resolving funcs in dynrun instruction is not allowed");

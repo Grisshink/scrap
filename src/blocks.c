@@ -577,7 +577,7 @@ CompilerValue cast_to_const_color(Compiler* compiler, CompilerValue value) {
     switch (value.type) {
     case DATA_TYPE_INTEGER: return DATA_COLOR(*(Color*)&value.data.integer_val);
     case DATA_TYPE_FLOAT: return DATA_COLOR(*(Color*)&value.data.float_val);
-    case DATA_TYPE_STRING:
+    case DATA_TYPE_STRING: ;
         char* str = value.data.str_val;
         if (*str == '#') str++;
         unsigned char r = 0x00, g = 0x00, b = 0x00, a = 0xff;

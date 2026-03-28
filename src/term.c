@@ -222,7 +222,7 @@ void exec_escape(char command) {
             term.cursor_pos += term.print_state.args_size ? term.print_state.args[0] - 1 : 0; break;
             break;
         case 'f':
-        case 'H': // Cursor set pos
+        case 'H': ; // Cursor set pos
             int pos_y = term.print_state.args_size > 0 ? term.print_state.args[0] - 1 : 0;
             int pos_x = term.print_state.args_size > 1 ? term.print_state.args[1] - 1 : 0;
 
@@ -267,7 +267,7 @@ void exec_escape(char command) {
                 }
             }
             break;
-        case 'X': // Erase char
+        case 'X': ; // Erase char
             int char_count = term.print_state.args_size ? term.print_state.args[0] : 1;
             int end_pos = MIN(term.cursor_pos + char_count, term.char_w * term.char_h);
             for (int pos = term.cursor_pos; pos < end_pos; pos++) {
@@ -276,7 +276,7 @@ void exec_escape(char command) {
                 term.buffer[pos].bg_color = term.clear_color;
             }
             break;
-        case 'n':
+        case 'n': ;
             char buf[32];
             int buf_size = snprintf(buf, 32, "\033[%d;%dR", term.cursor_pos / term.char_w + 1, term.cursor_pos % term.char_w + 1);
             pty_write_input(term.pty, buf, buf_size);
