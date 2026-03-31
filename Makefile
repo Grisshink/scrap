@@ -50,18 +50,13 @@ ifeq ($(BUILD_MODE), DEBUG)
 	CFLAGS += -fsanitize=address -fsanitize=undefined -fno-omit-frame-pointer
 endif
 
-OBJFILES := $(addprefix $(BUILD_FOLDER),filedialogs.o render.o save.o term.o blocks.o scrap.o vec.o util.o ui.o scrap_gui.o window.o cfgpath.o platform.o ast.o std.o thread.o vm.o)
+OBJFILES := $(addprefix $(BUILD_FOLDER),filedialogs.o render.o save.o term.o blocks.o scrap.o vec.o util.o ui.o scrap_gui.o window.o cfgpath.o platform.o ast.o std.o thread.o vm.o compiler.o)
 BUNDLE_FILES := data examples extras locale LICENSE README.md CHANGELOG.md
-SCRAP_HEADERS := src/scrap.h src/ast.h src/config.h src/scrap_gui.h src/scrap_ir.h
+SCRAP_HEADERS := src/scrap.h src/ast.h src/config.h src/scrap_gui.h src/scrap_ir.h src/compiler.h
 EXE_NAME := scrap
 
-ifeq ($(USE_LLVM), FALSE)
-	OBJFILES += $(addprefix $(BUILD_FOLDER),compiler.o)
-	SCRAP_HEADERS += src/compiler.h
-else
+ifeq ($(USE_LLVM), TRUE)
 	LLVM_CONFIG ?= llvm-config
-	OBJFILES += $(addprefix $(BUILD_FOLDER),old_compiler.o)
-	SCRAP_HEADERS += src/old_compiler.h
 
 	LLVM_LDFLAGS := --ldflags --system-libs --libs core executionengine mcjit analysis native
 	ifeq ($(TARGET), WINDOWS)
@@ -159,8 +154,6 @@ $(BUILD_FOLDER)platform.o: src/platform.c src/scrap_ir.h
 $(BUILD_FOLDER)ast.o: src/ast.c src/ast.h
 	$(CC) $(CFLAGS) -c -o $@ $<
 $(BUILD_FOLDER)compiler.o: src/compiler.c $(SCRAP_HEADERS)
-	$(CC) $(CFLAGS) -c -o $@ $<
-$(BUILD_FOLDER)old_compiler.o: src/old_compiler.c src/old_compiler.h src/ast.h $(SCRAP_HEADERS)
 	$(CC) $(CFLAGS) -c -o $@ $<
 $(BUILD_FOLDER)std.o: src/std.c src/std.h src/term.h
 	$(CC) $(CFLAGS) -c -o $@ $<

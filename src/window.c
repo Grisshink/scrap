@@ -144,11 +144,7 @@ static bool settings_on_toggle_button_click(void) {
 }
 
 static bool project_settings_on_build_button_click(void) {
-#ifdef USE_LLVM
-    vm_start(COMPILER_MODE_BUILD);
-#else
     vm_start();
-#endif
     gui_window_hide();
     return true;
 }

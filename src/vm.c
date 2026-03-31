@@ -146,9 +146,6 @@ Vm vm_new(void) {
         .compile_error_blockchain = NULL,
         .compile_error_root_blockchain = NULL,
         .start_timeout = -1,
-#ifdef USE_LLVM
-        .start_mode = COMPILER_MODE_JIT,
-#endif
     };
     return vm;
 }
@@ -175,18 +172,11 @@ void vm_free(Vm* vm) {
     vector_free(vm->blockdefs);
 }
 
-#ifdef USE_LLVM
-bool vm_start(CompilerMode mode) {
-#else
 bool vm_start(void) {
-#endif
     if (thread_is_running(&vm.thread)) return false;
 
     for (size_t i = 0; i < vector_size(editor.tabs); i++) {
         if (find_panel(editor.tabs[i].root_panel, PANEL_TERM)) {
-#ifdef USE_LLVM
-            vm.start_mode = mode;
-#endif
             if (editor.current_tab != (int)i) {
                 ui.shader_time = 0.0;
                 // Delay vm startup until next frame. Because this handler only runs after the layout is computed and
@@ -201,9 +191,6 @@ bool vm_start(void) {
             return true;
         }
     }
-#ifdef USE_LLVM
-    vm.start_mode = mode;
-#endif
     vm.start_timeout = 1;
     ui.render_surface_needs_redraw = true;
     return false;

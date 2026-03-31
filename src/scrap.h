@@ -33,11 +33,7 @@
 
 typedef struct Vm Vm;
 
-#ifdef USE_LLVM
-#include "old_compiler.h"
-#else
 #include "compiler.h"
-#endif
 
 typedef struct PanelTree PanelTree;
 typedef struct BlockCategory BlockCategory;
@@ -391,9 +387,6 @@ struct Vm {
     RootBlockChain* compile_error_root_blockchain;
 
     int start_timeout; // = -1;
-#ifdef USE_LLVM
-    CompilerMode start_mode; // = COMPILER_MODE_JIT;
-#endif
 };
 
 extern Config config;
@@ -516,12 +509,7 @@ void draw_save_confirmation_window(void);
 // blocks.c
 void register_blocks(Vm* vm);
 
-#ifdef USE_LLVM
-bool block_custom_arg(Compiler* compiler, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state);
-bool block_exec_custom(Compiler* compiler, Block* block, int argc, FuncArg* argv, FuncArg* return_val, ControlState control_state);
-#else
 BlockFunc block_custom_arg, block_exec_custom;
-#endif
 
 // vm.c
 BlockCategory block_category_new(const char* name, Color color);
@@ -536,11 +524,7 @@ void unregister_categories(void);
 
 Vm vm_new(void);
 void vm_free(Vm* vm);
-#ifdef USE_LLVM
-bool vm_start(CompilerMode mode);
-#else
 bool vm_start(void);
-#endif
 bool vm_stop(void);
 void vm_handle_running_thread(void);
 
@@ -549,14 +533,6 @@ Block* block_new_ms(Blockdef* blockdef);
 
 // platform.c
 void scrap_set_env(const char* name, const char* value);
-
-#ifdef USE_LLVM
-bool spawn_process(char* command, char* error, size_t error_len);
-#endif
-
-pid_t spawn_process_pty(char* command, char* error, size_t error_len);
-bool wait_for_process_pty(pid_t pid, char* error, size_t error_len);
-
 void init_console(void);
 
 #endif // SCRAP_H

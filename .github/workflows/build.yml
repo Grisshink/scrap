@@ -43,10 +43,10 @@ jobs:
             - name: Setup windres
               run: ln -sf "${MSYSTEM_PREFIX}/bin/windres.exe" "${MSYSTEM_PREFIX}/bin/x86_64-w64-mingw32-windres"
 
-            # - name: Build project (With compiler)
-            #   run: |
-            #     make clean
-            #     make USE_LLVM=TRUE TARGET=WINDOWS
+            - name: Build project (With compiler)
+              run: |
+                make clean
+                make USE_LLVM=TRUE TARGET=WINDOWS
 
             - name: Build project (With interpreter)
               run: |
@@ -76,10 +76,10 @@ jobs:
                 sudo apt-get update -y
                 sudo apt-get install -y --no-install-recommends llvm-19-dev
 
-            # - name: Build project (With compiler)
-            #   run: |
-            #     make clean
-            #     make USE_LLVM=TRUE LLVM_CONFIG=llvm-config-19
+            - name: Build project (With compiler)
+              run: |
+                make clean
+                make USE_LLVM=TRUE LLVM_CONFIG=llvm-config-19
 
             - name: Build project (With interpreter)
               run: |
