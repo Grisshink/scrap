@@ -2122,6 +2122,27 @@ CompilerValue block_list_add(Compiler* compiler, Block* block, Block** next_bloc
     return DATA_CHUNK(DATA_TYPE_NULL, bc);
 }
 
+CompilerValue block_list_delete(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
+    (void) next_block;
+    (void) prev_block;
+
+    CompilerValue list = compiler_evaluate_argument(compiler, &block->arguments[0]);
+    if (list.type == DATA_TYPE_ERROR) return DATA_ERROR;
+    list = cast_to_bc_list(compiler, list);
+    if (list.type == DATA_TYPE_ERROR) return DATA_ERROR;
+
+    CompilerValue ind = compiler_evaluate_argument(compiler, &block->arguments[1]);
+    if (ind.type == DATA_TYPE_ERROR) return DATA_ERROR;
+    ind = cast_to_bc_int(compiler, ind);
+    if (ind.type == DATA_TYPE_ERROR) return DATA_ERROR;
+
+    IrBytecode bc = list.data.chunk_val.bc;
+    bytecode_join(&bc, &ind.data.chunk_val.bc);
+    bytecode_push_op(&bc, IR_DELL);
+
+    return DATA_CHUNK(DATA_TYPE_NULL, bc);
+}
+
 CompilerValue block_list_get(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) next_block;
     (void) prev_block;
@@ -2168,6 +2189,35 @@ CompilerValue block_list_set(Compiler* compiler, Block* block, Block** next_bloc
     bytecode_join(&bc, &ind.data.chunk_val.bc);
     bytecode_join(&bc, &value.data.chunk_val.bc);
     bytecode_push_op(&bc, IR_SETL);
+
+    return DATA_CHUNK(DATA_TYPE_NULL, bc);
+}
+
+CompilerValue block_list_insert(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
+    (void) next_block;
+    (void) prev_block;
+
+    CompilerValue list = compiler_evaluate_argument(compiler, &block->arguments[0]);
+    if (list.type == DATA_TYPE_ERROR) return DATA_ERROR;
+    list = cast_to_bc_list(compiler, list);
+    if (list.type == DATA_TYPE_ERROR) return DATA_ERROR;
+
+    CompilerValue ind = compiler_evaluate_argument(compiler, &block->arguments[1]);
+    if (ind.type == DATA_TYPE_ERROR) return DATA_ERROR;
+    ind = cast_to_bc_int(compiler, ind);
+    if (ind.type == DATA_TYPE_ERROR) return DATA_ERROR;
+
+    CompilerValue value = compiler_evaluate_argument(compiler, &block->arguments[2]);
+    if (value.type == DATA_TYPE_ERROR) return DATA_ERROR;
+    if (value.type != DATA_TYPE_CHUNK) {
+        value = cast_to_bc(compiler, value, value.type);
+        if (value.type == DATA_TYPE_ERROR) return DATA_ERROR;
+    }
+
+    IrBytecode bc = list.data.chunk_val.bc;
+    bytecode_join(&bc, &ind.data.chunk_val.bc);
+    bytecode_join(&bc, &value.data.chunk_val.bc);
+    bytecode_push_op(&bc, IR_INSERTL);
 
     return DATA_CHUNK(DATA_TYPE_NULL, bc);
 }
@@ -2917,6 +2967,15 @@ void register_blocks(Vm* vm) {
     blockdef_register(vm, sc_list_add);
     block_category_add_blockdef(cat_data, sc_list_add);
 
+    Blockdef* sc_list_delete = blockdef_new("list_delete", BLOCKTYPE_NORMAL, (BlockdefColor) { 0xff, 0x44, 0x00, 0xff }, block_list_delete);
+    blockdef_add_image(sc_list_delete, list_img);
+    blockdef_add_text(sc_list_delete, gettext("Remove"));
+    blockdef_add_argument(sc_list_delete, "", gettext("list"), BLOCKCONSTR_UNLIMITED);
+    blockdef_add_text(sc_list_delete, gettext("at"));
+    blockdef_add_argument(sc_list_delete, "1", "0", BLOCKCONSTR_UNLIMITED);
+    blockdef_register(vm, sc_list_delete);
+    block_category_add_blockdef(cat_data, sc_list_delete);
+
     Blockdef* sc_list_get = blockdef_new("list_get", BLOCKTYPE_NORMAL, (BlockdefColor) { 0xff, 0x44, 0x00, 0xff }, block_list_get);
     blockdef_add_image(sc_list_get, list_img);
     blockdef_add_argument(sc_list_get, "", gettext("list"), BLOCKCONSTR_UNLIMITED);
@@ -2930,11 +2989,22 @@ void register_blocks(Vm* vm) {
     blockdef_add_text(sc_list_set, gettext("Set"));
     blockdef_add_argument(sc_list_set, "", gettext("list"), BLOCKCONSTR_UNLIMITED);
     blockdef_add_text(sc_list_set, gettext("at"));
-    blockdef_add_argument(sc_list_set, "1", "1", BLOCKCONSTR_UNLIMITED);
+    blockdef_add_argument(sc_list_set, "1", "0", BLOCKCONSTR_UNLIMITED);
     blockdef_add_text(sc_list_set, "=");
     blockdef_add_argument(sc_list_set, "", gettext("any"), BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_list_set);
     block_category_add_blockdef(cat_data, sc_list_set);
+
+    Blockdef* sc_list_insert = blockdef_new("list_insert", BLOCKTYPE_NORMAL, (BlockdefColor) { 0xff, 0x44, 0x00, 0xff }, block_list_insert);
+    blockdef_add_image(sc_list_insert, list_img);
+    blockdef_add_text(sc_list_insert, gettext("Insert"));
+    blockdef_add_argument(sc_list_insert, "", gettext("list"), BLOCKCONSTR_UNLIMITED);
+    blockdef_add_text(sc_list_insert, gettext("at"));
+    blockdef_add_argument(sc_list_insert, "1", "0", BLOCKCONSTR_UNLIMITED);
+    blockdef_add_text(sc_list_insert, "=");
+    blockdef_add_argument(sc_list_insert, "", gettext("any"), BLOCKCONSTR_UNLIMITED);
+    blockdef_register(vm, sc_list_insert);
+    block_category_add_blockdef(cat_data, sc_list_insert);
 
     Blockdef* sc_list_len = blockdef_new("list_length", BLOCKTYPE_NORMAL, (BlockdefColor) { 0xff, 0x44, 0x00, 0xff }, block_list_length);
     blockdef_add_image(sc_list_len, list_img);

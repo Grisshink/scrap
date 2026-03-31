@@ -2523,7 +2523,10 @@ bool exec_run_bytecode(IrExec* exec, IrBytecode* bc, size_t pos) {
                 IR_EXEC_FAIL;
             }
 
-            if (left_int < 1 || (size_t)left_int > list->size + 1) break;
+            if (left_int < 1 || (size_t)left_int > list->size + 1) {
+                exec_set_error(exec, "Out of bounds list access. Tried to insert value at index %ld with list of size %zu", left_int, list->size);
+                IR_EXEC_FAIL;
+            }
 
             if (list->size >= list->capacity) {
                 if (list->capacity == 0) list->capacity = 4;
@@ -2534,9 +2537,9 @@ bool exec_run_bytecode(IrExec* exec, IrBytecode* bc, size_t pos) {
                 list = right_value.as.list_val;
                 list->items = items;
             }
-            memmove(list->items + left_int, list->items + left_int - 1, (list->size - left_int - 1) * sizeof(IrValue));
+            memmove(list->items + left_int, list->items + left_int - 1, (list->size - (left_int - 1)) * sizeof(IrValue));
             list->size++;
-            list->items[left_int] = left_value;
+            list->items[left_int - 1] = left_value;
             exec_pop_value(exec);
             break;
         case IR_DELL:
@@ -2551,8 +2554,11 @@ bool exec_run_bytecode(IrExec* exec, IrBytecode* bc, size_t pos) {
                 exec_set_error(exec, "Attemt to modify constant list %p", list);
                 IR_EXEC_FAIL;
             }
-            if (left_int < 1 || (size_t)left_int > list->size) break;
-            memmove(list->items + left_int - 1, list->items + left_int, (list->size - left_int - 2) * sizeof(IrValue));
+            if (left_int < 1 || (size_t)left_int > list->size) {
+                exec_set_error(exec, "Out of bounds list access. Tried to delete value at index %ld with list of size %zu", left_int, list->size);
+                IR_EXEC_FAIL;
+            }
+            memmove(list->items + left_int - 1, list->items + left_int, (list->size - (left_int - 1) - 1) * sizeof(IrValue));
             list->size--;
             break;
         case IR_LENL:
