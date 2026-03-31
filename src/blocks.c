@@ -2515,7 +2515,7 @@ void register_blocks(Vm* vm) {
     blockdef_register(vm, sc_while);
     block_category_add_blockdef(cat_control, sc_while);
 
-    Blockdef* sc_block = blockdef_new("block", BLOCKTYPE_CONTROL, (BlockdefColor) CATEGORY_CONTROL_COLOR, block_block);
+    Blockdef* sc_block = blockdef_new("do_nothing", BLOCKTYPE_CONTROL, (BlockdefColor) CATEGORY_CONTROL_COLOR, block_block);
     blockdef_add_text(sc_block, gettext("Block"));
     blockdef_register(vm, sc_block);
     block_category_add_blockdef(cat_control, sc_block);
@@ -2859,7 +2859,7 @@ void register_blocks(Vm* vm) {
     blockdef_register(vm, sc_nothing);
     block_category_add_blockdef(cat_misc, sc_nothing);
 
-    Blockdef* sc_do_nothing = blockdef_new("do_nothing", BLOCKTYPE_CONTROL, (BlockdefColor) { 0x77, 0x77, 0x77, 0xff }, block_do_nothing);
+    Blockdef* sc_do_nothing = blockdef_new("block_comment", BLOCKTYPE_CONTROL, (BlockdefColor) { 0x77, 0x77, 0x77, 0xff }, block_do_nothing);
     blockdef_add_text(sc_do_nothing, "//    "); // Spaces make the block longer
     blockdef_register(vm, sc_do_nothing);
     block_category_add_blockdef(cat_misc, sc_do_nothing);
