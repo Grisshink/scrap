@@ -2503,7 +2503,10 @@ bool exec_run_bytecode(IrExec* exec, IrBytecode* bc, size_t pos) {
                 exec_set_error(exec, "Attemt to modify constant list %p", list);
                 IR_EXEC_FAIL;
             }
-            if (left_int < 1 || (size_t)left_int > list->size) break;
+            if (left_int < 1 || (size_t)left_int > list->size) {
+                exec_set_error(exec, "Out of bounds list access. Tried to set value at index %ld with list of size %zu", left_int, list->size);
+                IR_EXEC_FAIL;
+            }
             list->items[left_int - 1] = left_value;
             break;
         case IR_INSERTL:

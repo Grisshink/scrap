@@ -2930,7 +2930,7 @@ void register_blocks(Vm* vm) {
     blockdef_add_text(sc_list_set, gettext("Set"));
     blockdef_add_argument(sc_list_set, "", gettext("list"), BLOCKCONSTR_UNLIMITED);
     blockdef_add_text(sc_list_set, gettext("at"));
-    blockdef_add_argument(sc_list_set, "0", "0", BLOCKCONSTR_UNLIMITED);
+    blockdef_add_argument(sc_list_set, "1", "1", BLOCKCONSTR_UNLIMITED);
     blockdef_add_text(sc_list_set, "=");
     blockdef_add_argument(sc_list_set, "", gettext("any"), BLOCKCONSTR_UNLIMITED);
     blockdef_register(vm, sc_list_set);
