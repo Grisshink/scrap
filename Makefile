@@ -116,15 +116,21 @@ install: translations target std
 	mkdir -p $(PREFIX)/share/doc/scrap
 	mkdir -p $(PREFIX)/bin
 	mkdir -p $(PREFIX)/lib
+	mkdir -p $(PREFIX)/share/applications
+	mkdir -p $(PREFIX)/share/icons/hicolor/128x128/apps
 	cp -r data $(PREFIX)/share/scrap
 	cp -r locale $(PREFIX)/share
 	cp -r examples $(PREFIX)/share/doc/scrap
 	cp $(EXE_NAME) $(PREFIX)/bin
 	cp $(STD_NAME) $(PREFIX)/lib
+	sed 's/^Exec=.*$$/Exec=$(EXE_NAME)/' scrap.desktop > $(PREFIX)/share/applications/$(EXE_NAME).desktop
+	cp extras/scrap.png $(PREFIX)/share/icons/hicolor/128x128/apps/$(EXE_NAME).png
 
 uninstall:
 	rm -rf $(PREFIX)/share/scrap
 	rm -rf $(PREFIX)/share/doc/scrap
+	rm -f $(PREFIX)/share/applications/$(EXE_NAME).desktop
+	rm -f $(PREFIX)/share/icons/hicolor/128x128/apps/$(EXE_NAME).png
 	rm -f $(PREFIX)/bin/$(EXE_NAME)
 	rm -f $(PREFIX)/lib/$(STD_NAME)
 
