@@ -28,28 +28,7 @@
 #include "scrap_ir.h"
 
 typedef struct Compiler Compiler;
-typedef struct CompilerValue CompilerValue;
-typedef CompilerValue BlockFunc(Compiler* compiler, Block* block, Block** next_block, Block* prev_block);
-
-typedef struct {
-    DataType return_type;
-    IrBytecode bc;
-} BytecodeChunk;
-
-typedef union {
-    char* str_val;
-    int integer_val;
-    double float_val;
-    bool bool_val;
-    IrList* list_val;
-    Color color_val;
-    BytecodeChunk chunk_val;
-} CompilerValueData;
-
-struct CompilerValue {
-    DataType type;
-    CompilerValueData data;
-};
+typedef Value BlockFunc(Compiler* compiler, Block* block, Block** next_block, Block* prev_block);
 
 typedef struct {
     void* object;
@@ -100,9 +79,9 @@ struct Compiler {
     Thread* thread;
 };
 
-#define _DATA(_t, ...) (CompilerValue) { \
+#define _DATA(_t, ...) (Value) { \
     .type = (_t), \
-    .data = (CompilerValueData) { __VA_ARGS__ }, \
+    .data = (ValueData) { __VA_ARGS__ }, \
 }
 
 #define DATA_UNKNOWN _DATA(DATA_TYPE_UNKNOWN, 0)
@@ -131,14 +110,16 @@ Compiler compiler_new(Thread* thread);
 bool compiler_run(void* e);
 void compiler_cleanup(void* e);
 void compiler_free(Compiler* compiler);
-CompilerValue compiler_evaluate_chain(Compiler* compiler, BlockChain* chain);
-CompilerValue compiler_evaluate_block(Compiler* compiler, Block* block, Block** next_block, Block* prev_block);
-CompilerValue compiler_evaluate_argument(Compiler* compiler, Argument* arg);
+Value compiler_evaluate_chain(Compiler* compiler, BlockChain* chain);
+Value compiler_evaluate_block(Compiler* compiler, Block* block, Block** next_block, Block* prev_block);
+Value compiler_evaluate_argument(Compiler* compiler, Argument* arg);
 void compiler_set_skip_block(Compiler* compiler);
 void compiler_set_error(Compiler* compiler, const char* fmt, ...);
 ssize_t compiler_find_variable(Compiler* compiler, const char* name, bool* global);
 
 void* compiler_object_info_get(Compiler* compiler, void* object);
 size_t compiler_object_info_insert(Compiler* compiler, void* object, void* data);
+
+Value cast_to_const(Compiler* compiler, Value value, DataType dst_type);
 
 #endif // INTERPRETER_H

@@ -120,6 +120,7 @@ typedef struct {
     RootBlockChain* select_root_blockchain;
     Vector2 select_block_pos;
     bool select_valid;
+    DataType select_argument_type;
 
     EditorHoverPart part;
     Blockdef* edit_blockdef;

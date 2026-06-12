@@ -62,11 +62,11 @@ char* language_list[5] = {
 };
 
 char scrap_ident[] = "SCRAP";
-const char** save_block_ids = NULL;
+Value* save_block_ids = NULL;
 Blockdef** save_blockdefs = NULL;
 static unsigned int ver = 0;
 
-int save_find_id(const char* id);
+int save_find_id(const Value id);
 void save_code(const char* file_path, ProjectConfig* config, RootBlockChain* code);
 RootBlockChain* load_code(const char* file_path, ProjectConfig* out_config);
 void save_block(SaveData* save, Block* block);
@@ -586,16 +586,55 @@ void save_blockdef(SaveData* save, Blockdef* blockdef) {
     for (int i = 0; i < input_count; i++) save_blockdef_input(save, &blockdef->inputs[i]);
 }
 
+void save_value(SaveData* save, Value* value) {
+    save_add_varint(save, value->type);
+
+    static_assert(DATA_TYPE_LAST == 12, "Exhaustive data type in save_value");
+    switch (value->type) {
+    case DATA_TYPE_NOTHING:
+        break;
+    case DATA_TYPE_INTEGER:
+        save_add_varint(save, value->data.integer_val);
+        break;
+    case DATA_TYPE_FLOAT:
+        save_add_item(save, &value->data.float_val, sizeof(value->data.float_val));
+        break;
+    case DATA_TYPE_BOOL:
+        save_add_varint(save, value->data.bool_val);
+        break;
+    case DATA_TYPE_COLOR:
+        save_add_varint(save, *(int*)&value->data.color_val);
+        break;
+    case DATA_TYPE_ANY:
+    case DATA_TYPE_STRING:
+        save_add_array(save, value->data.str_val, strlen(value->data.str_val) + 1, sizeof(value->data.str_val[0]));
+        break;
+    case DATA_TYPE_LIST:
+        assert(false && "TODO");
+        break;
+    case DATA_TYPE_BLOCKDEF:
+    case DATA_TYPE_UNKNOWN:
+    case DATA_TYPE_CHUNK:
+    case DATA_TYPE_NULL:
+        assert(false && "Invalid save type");
+    default:
+        assert(false && "Unhandled data type in save_value");
+    }
+}
+
 void save_block_arguments(SaveData* save, Argument* arg) {
     save_add_varint(save, arg->input_id);
     save_add_varint(save, arg->type);
 
     int string_id;
-    static_assert(ARGUMENT_LAST == 5, "Exhaustive argument type in save_block_arguments");
+    static_assert(ARGUMENT_LAST == 6, "Exhaustive argument type in save_block_arguments");
     switch (arg->type) {
     case ARGUMENT_TEXT:
     case ARGUMENT_CONST_STRING:
-        string_id = save_find_id(arg->data.text);
+        string_id = save_find_id((Value) {
+            .type = DATA_TYPE_STRING,
+            .data.str_val = arg->data.text,
+        });
         assert(string_id != -1);
         save_add_varint(save, string_id);
         break;
@@ -603,12 +642,20 @@ void save_block_arguments(SaveData* save, Argument* arg) {
         save_block(save, arg->data.block);
         break;
     case ARGUMENT_BLOCKDEF:
-        string_id = save_find_id(arg->data.blockdef->id);
+        string_id = save_find_id((Value) {
+            .type = DATA_TYPE_STRING,
+            .data.str_val = (char*)arg->data.blockdef->id,
+        });
         assert(string_id != -1);
         save_add_varint(save, string_id);
         break;
     case ARGUMENT_COLOR:
         save_add_varint(save, *(int*)&arg->data.color);
+        break;
+    case ARGUMENT_VALUE:
+        string_id = save_find_id(arg->data.value);
+        assert(string_id != -1);
+        save_add_varint(save, string_id);
         break;
     default:
         assert(false && "Unimplemented argument save");
@@ -621,7 +668,10 @@ void save_block(SaveData* save, Block* block) {
 
     int arg_count = vector_size(block->arguments);
 
-    int string_id = save_find_id(block->blockdef->id);
+    int string_id = save_find_id((Value) {
+        .type = DATA_TYPE_STRING,
+        .data.str_val = (char*)block->blockdef->id,
+    });
     assert(string_id != -1);
     save_add_varint(save, string_id);
     save_add_varint(save, arg_count);
@@ -654,34 +704,78 @@ void rename_blockdef(Blockdef* blockdef, int id) {
     }
 }
 
-int save_find_id(const char* id) {
+int save_find_id(const Value id) {
+    // TODO: Replace linear search with hash tables
     for (size_t i = 0; i < vector_size(save_block_ids); i++) {
-        if (!strcmp(save_block_ids[i], id)) return i;
+        if (save_block_ids[i].type != id.type) continue;
+
+        static_assert(DATA_TYPE_LAST == 12, "Exhaustive data type in save_find_id");
+        switch (save_block_ids[i].type) {
+        case DATA_TYPE_NOTHING: return i;
+        case DATA_TYPE_INTEGER:
+            if (save_block_ids[i].data.integer_val == id.data.integer_val) return i;
+            break;
+        case DATA_TYPE_FLOAT:
+            if (save_block_ids[i].data.float_val == id.data.float_val) return i;
+            break;
+        case DATA_TYPE_BOOL:
+            if (save_block_ids[i].data.bool_val == id.data.bool_val) return i;
+            break;
+        case DATA_TYPE_COLOR:
+            if (!memcmp(&save_block_ids[i].data.color_val, &id.data.color_val, sizeof(id.data.color_val))) return i;
+            break;
+        case DATA_TYPE_ANY:
+        case DATA_TYPE_STRING:
+            if (!strcmp(save_block_ids[i].data.str_val, id.data.str_val)) return i;
+            break;
+        case DATA_TYPE_LIST:
+            assert(false && "TODO");
+            break;
+        case DATA_TYPE_BLOCKDEF:
+        case DATA_TYPE_UNKNOWN:
+        case DATA_TYPE_CHUNK:
+        case DATA_TYPE_NULL:
+            assert(false && "Invalid save type");
+        default:
+            assert(false && "Unhandled data type in save_find_id");
+        }
     }
     return -1;
 }
 
-void save_add_id(const char* id) {
+void save_add_id(Value id) {
     if (save_find_id(id) != -1) return;
     vector_add(&save_block_ids, id);
 }
 
 void block_collect_ids(Block* block) {
-    save_add_id(block->blockdef->id);
+    save_add_id((Value) {
+        .type = DATA_TYPE_STRING, 
+        .data.str_val = (char*)block->blockdef->id,
+    });
     for (size_t i = 0; i < vector_size(block->arguments); i++) {
-        static_assert(ARGUMENT_LAST == 5, "Exhaustive argument type in block_collect_ids");
+        static_assert(ARGUMENT_LAST == 6, "Exhaustive argument type in block_collect_ids");
         switch (block->arguments[i].type) {
         case ARGUMENT_TEXT:
         case ARGUMENT_CONST_STRING:
-            save_add_id(block->arguments[i].data.text);
+            save_add_id((Value) {
+                .type = DATA_TYPE_STRING,
+                .data.str_val = block->arguments[i].data.text,
+            });
             break;
         case ARGUMENT_BLOCK:
             block_collect_ids(block->arguments[i].data.block);
             break;
         case ARGUMENT_BLOCKDEF:
-            save_add_id(block->arguments[i].data.blockdef->id);
+            save_add_id((Value) {
+                .type = DATA_TYPE_STRING,
+                .data.str_val = (char*)block->arguments[i].data.blockdef->id,
+            });
             break;
         case ARGUMENT_COLOR:
+            break;
+        case ARGUMENT_VALUE:
+            save_add_id(block->arguments[i].data.value);
             break;
         default:
             assert(false && "Unimplemented argument save id");
@@ -727,7 +821,7 @@ void save_code(const char* file_path, ProjectConfig* config, RootBlockChain* cod
 
     save_add_varint(&save, vector_size(save_block_ids));
     for (size_t i = 0; i < vector_size(save_block_ids); i++) {
-        save_add_array(&save, save_block_ids[i], strlen(save_block_ids[i]) + 1, sizeof(save_block_ids[i][0]));
+        save_value(&save, &save_block_ids[i]);
     }
 
     save_add_varint(&save, id);
@@ -749,6 +843,55 @@ Blockdef* find_blockdef(Blockdef** blockdefs, const char* id) {
         if (!strcmp(id, blockdefs[i]->id)) return blockdefs[i];
     }
     return NULL;
+}
+
+bool load_value(SaveData* save, Value* value) {
+    DataType type;
+    if (!save_read_varint(save, (unsigned int*)&type)) return false;
+    value->type = type;
+
+    static_assert(DATA_TYPE_LAST == 12, "Exhaustive data type in load_value");
+    switch (type) {
+    case DATA_TYPE_NOTHING:
+        break;
+    case DATA_TYPE_INTEGER:
+        if (!save_read_varint(save, (unsigned int*)&value->data.integer_val)) return false;
+        break;
+    case DATA_TYPE_FLOAT: ;
+        float* float_val = save_read_item(save, sizeof(value->data.float_val));
+        if (!float_val) return false;
+        value->data.float_val = *float_val;
+        break;
+    case DATA_TYPE_BOOL:
+        unsigned int bool_val;
+        if (!save_read_varint(save, &bool_val)) return false;
+        value->data.bool_val = bool_val;
+        break;
+    case DATA_TYPE_COLOR:
+        if (!save_read_varint(save, (unsigned int*)&value->data.color_val)) return false;
+        break;
+    case DATA_TYPE_ANY:
+    case DATA_TYPE_STRING: ;
+        unsigned int text_len;
+        char* text = save_read_array(save, sizeof(char), &text_len);
+        if (!text) return false;
+
+        value->data.str_val = vector_create();
+        for (char* ch = text; *ch; ch++) vector_add(&value->data.str_val, *ch);
+        vector_add(&value->data.str_val, 0);
+        break;
+    case DATA_TYPE_LIST:
+        assert(false && "TODO");
+        break;
+    case DATA_TYPE_BLOCKDEF:
+    case DATA_TYPE_UNKNOWN:
+    case DATA_TYPE_CHUNK:
+    case DATA_TYPE_NULL:
+        assert(false && "Invalid save type");
+    default:
+        assert(false && "Unhandled data type in load_value");
+    }
+    return true;
 }
 
 bool load_blockdef_input(SaveData* save, Input* input) {
@@ -849,14 +992,31 @@ bool load_block_argument(SaveData* save, Argument* arg) {
     unsigned int blockdef_id;
     unsigned int color_int;
 
-    static_assert(ARGUMENT_LAST == 5, "Exhaustive argument type in load_block_argument");
+    Value value_id;
+
+    static_assert(ARGUMENT_LAST == 6, "Exhaustive argument type in load_block_argument");
     switch (arg_type) {
     case ARGUMENT_TEXT:
+        if (!save_read_varint(save, &text_id)) return false;
+        value_id = save_block_ids[text_id];
+        if (value_id.type != DATA_TYPE_STRING) {
+            scrap_log(LOG_ERROR, "[LOAD] Invalid contant type %s when loading text argument", type_to_str(value_id.type));
+            return false;
+        }
+
+        arg->type = ARGUMENT_VALUE;
+        arg->data.value = value_copy(&value_id);
+        break;
     case ARGUMENT_CONST_STRING:
         if (!save_read_varint(save, &text_id)) return false;
+        value_id = save_block_ids[text_id];
+        if (value_id.type != DATA_TYPE_STRING) {
+            scrap_log(LOG_ERROR, "[LOAD] Invalid contant type %s when loading text argument", type_to_str(value_id.type));
+            return false;
+        }
 
         arg->data.text = vector_create();
-        for (char* str = (char*)save_block_ids[text_id]; *str; str++) vector_add(&arg->data.text, *str);
+        for (char* str = value_id.data.str_val; *str; str++) vector_add(&arg->data.text, *str);
         vector_add(&arg->data.text, 0);
         break;
     case ARGUMENT_BLOCK: ;
@@ -874,9 +1034,17 @@ bool load_block_argument(SaveData* save, Argument* arg) {
             scrap_log(LOG_ERROR, "[LOAD] Out of bounds read of save_block_id at %u", blockdef_id);
             return false;
         }
+        value_id = save_block_ids[blockdef_id];
+        if (value_id.type != DATA_TYPE_STRING) {
+            scrap_log(LOG_ERROR, "[LOAD] Invalid constant type %s when loading text argument", type_to_str(value_id.type));
+            return false;
+        }
 
-        Blockdef* blockdef = find_blockdef(save_blockdefs, save_block_ids[blockdef_id]);
-        if (!blockdef) return false;
+        Blockdef* blockdef = find_blockdef(save_blockdefs, value_id.data.str_val);
+        if (!blockdef) {
+            scrap_log(LOG_ERROR, "[LOAD] Cannot find blockdef with id %s", value_id.data.str_val);
+            return false;
+        }
 
         arg->data.blockdef = blockdef;
         arg->data.blockdef->ref_count++;
@@ -884,6 +1052,12 @@ bool load_block_argument(SaveData* save, Argument* arg) {
     case ARGUMENT_COLOR:
         if (!save_read_varint(save, &color_int)) return false;
         arg->data.color = INT_TO_COLOR(color_int);
+        break;
+    case ARGUMENT_VALUE:
+        if (!save_read_varint(save, &text_id)) return false;
+        value_id = save_block_ids[text_id];
+
+        arg->data.value = value_copy(&value_id);
         break;
     default:
         scrap_log(LOG_ERROR, "[LOAD] Unimplemented argument load");
@@ -895,18 +1069,23 @@ bool load_block_argument(SaveData* save, Argument* arg) {
 Block* load_block(SaveData* save) {
     unsigned int block_id;
     if (!save_read_varint(save, &block_id)) return NULL;
+    Value value_id = save_block_ids[block_id];
+    if (value_id.type != DATA_TYPE_STRING) {
+        scrap_log(LOG_ERROR, "[LOAD] Invalid constant type %s when loading block", type_to_str(value_id.type));
+        return false;
+    }
 
     bool unknown_blockdef = false;
     Blockdef* blockdef = NULL;
-    blockdef = find_blockdef(save_blockdefs, save_block_ids[block_id]);
+    blockdef = find_blockdef(save_blockdefs, value_id.data.str_val);
     if (!blockdef) {
-        blockdef = find_blockdef(vm.blockdefs, save_block_ids[block_id]);
+        blockdef = find_blockdef(vm.blockdefs, value_id.data.str_val);
         if (!blockdef) {
-            scrap_log(LOG_WARNING, "[LOAD] No blockdef matched id: %s", save_block_ids[block_id]);
+            scrap_log(LOG_WARNING, "[LOAD] No blockdef matched id: %s", value_id.data.str_val);
             unknown_blockdef = true;
 
-            blockdef = blockdef_new(save_block_ids[block_id], BLOCKTYPE_NORMAL, (BlockdefColor) { 0x66, 0x66, 0x66, 0xff }, NULL);
-            blockdef_add_text(blockdef, TextFormat(gettext("UNKNOWN %s"), save_block_ids[block_id]));
+            blockdef = blockdef_new(value_id.data.str_val, BLOCKTYPE_NORMAL, (BlockdefColor) { 0x66, 0x66, 0x66, 0xff }, NULL);
+            blockdef_add_text(blockdef, TextFormat(gettext("UNKNOWN %s"), value_id.data.str_val));
         }
     }
 
@@ -1109,13 +1288,24 @@ RootBlockChain* load_code(const char* file_path, ProjectConfig* out_config) {
     unsigned int block_ids_len;
     if (!save_read_varint(&save, &block_ids_len)) goto load_fail;
     for (unsigned int i = 0; i < block_ids_len; i++) {
-        unsigned int id_len;
-        char* id = save_read_array(&save, sizeof(char), &id_len);
-        if (!id) goto load_fail;
-        if (id_len == 0) goto load_fail;
-        if (id[id_len - 1] != 0) goto load_fail;
+        Value val;
 
-        vector_add(&save_block_ids, id);
+        if (ver < 6) {
+            unsigned int id_len;
+            char* id = save_read_array(&save, sizeof(char), &id_len);
+            if (!id) goto load_fail;
+            if (id_len == 0) goto load_fail;
+            if (id[id_len - 1] != 0) goto load_fail;
+
+            val.type = DATA_TYPE_STRING;
+            val.data.str_val = vector_create();
+            for (char* ch = id; *ch; ch++) vector_add(&val.data.str_val, *ch);
+            vector_add(&val.data.str_val, 0);
+        } else {
+            if (!load_value(&save, &val)) goto load_fail; 
+        }
+
+        vector_add(&save_block_ids, val);
     }
 
     unsigned int custom_block_len;
@@ -1144,8 +1334,12 @@ RootBlockChain* load_code(const char* file_path, ProjectConfig* out_config) {
     *out_config = config;
 
     UnloadFileData(file_data);
-    vector_free(save_block_ids);
     vector_free(save_blockdefs);
+
+    for (size_t i = 0; i < vector_size(save_block_ids); i++) {
+        value_free(&save_block_ids[i]);
+    }
+    vector_free(save_block_ids);
 
     if (ver < 5) convert_old_save_structure(code);
     return code;

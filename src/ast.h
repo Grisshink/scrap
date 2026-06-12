@@ -24,6 +24,8 @@
 #include <stddef.h>
 #include <stdbool.h>
 
+#include "scrap_ir.h"
+
 #define CHAIN_EMPTY(_chain) (!(_chain)->start && !(_chain)->end)
 
 typedef struct BlockdefColor BlockdefColor;
@@ -50,7 +52,13 @@ typedef struct Blockdef Blockdef;
 typedef struct BlockChain BlockChain;
 typedef struct RootBlockChain RootBlockChain;
 
+typedef struct Value Value;
+
 typedef char** (*ListAccessor)(Block* block, size_t* list_len);
+
+struct BlockdefColor {
+    unsigned char r, g, b, a;
+};
 
 typedef enum {
     DATA_TYPE_UNKNOWN = 0,
@@ -69,8 +77,24 @@ typedef enum {
     DATA_TYPE_LAST,
 } DataType;
 
-struct BlockdefColor {
-    unsigned char r, g, b, a;
+typedef struct {
+    DataType return_type;
+    IrBytecode bc;
+} BytecodeChunk;
+
+typedef union {
+    char* str_val;
+    int integer_val;
+    double float_val;
+    bool bool_val;
+    IrList* list_val;
+    BlockdefColor color_val;
+    BytecodeChunk chunk_val;
+} ValueData;
+
+struct Value {
+    DataType type;
+    ValueData data;
 };
 
 struct BlockdefImage {
@@ -170,6 +194,7 @@ union ArgumentData {
     BlockdefColor color;
     Block* block;
     Blockdef* blockdef;
+    Value value;
 };
 
 enum ArgumentType {
@@ -178,6 +203,7 @@ enum ArgumentType {
     ARGUMENT_CONST_STRING,
     ARGUMENT_BLOCKDEF,
     ARGUMENT_COLOR,
+    ARGUMENT_VALUE,
     // Must be last in enum
     ARGUMENT_LAST,
 };
@@ -230,7 +256,11 @@ void argument_set_block(Argument* block_arg, Block* block);
 void argument_set_const_string(Argument* block_arg, char* text);
 void argument_set_text(Argument* block_arg, char* text);
 void argument_set_color(Argument* block_arg, BlockdefColor color);
+void argument_set_value(Argument* arg, Value value);
 
 const char* type_to_str(DataType type);
+DataType value_determine_type(Value* value);
+Value value_copy(Value* value);
+void value_free(Value* value);
 
 #endif // AST_H

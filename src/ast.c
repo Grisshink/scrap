@@ -57,6 +57,84 @@ const char* type_to_str(DataType type) {
     }
 }
 
+Value value_copy(Value* value) {
+    static_assert(DATA_TYPE_LAST == 12, "Exhaustive data type in value_copy");
+    switch (value->type) {
+    case DATA_TYPE_NOTHING:
+    case DATA_TYPE_INTEGER:
+    case DATA_TYPE_FLOAT:
+    case DATA_TYPE_BOOL:
+    case DATA_TYPE_COLOR:
+        return *value;
+    case DATA_TYPE_STRING:
+    case DATA_TYPE_ANY:
+        return (Value) {
+            .type = value->type,
+            .data.str_val = vector_copy(value->data.str_val),
+        };
+    case DATA_TYPE_LIST:
+        assert(false && "TODO");
+    case DATA_TYPE_BLOCKDEF:
+    case DATA_TYPE_UNKNOWN:
+    case DATA_TYPE_CHUNK:
+    case DATA_TYPE_NULL:
+        assert(false && "Invalid copy type");
+    default:
+        assert(false && "Unhandled data type in value_copy");
+    }
+}
+
+void value_free(Value* value) {
+    static_assert(DATA_TYPE_LAST == 12, "Exhaustive data type in value_free");
+    switch (value->type) {
+    case DATA_TYPE_NOTHING:
+    case DATA_TYPE_INTEGER:
+    case DATA_TYPE_FLOAT:
+    case DATA_TYPE_BOOL:
+    case DATA_TYPE_COLOR:
+        return;
+    case DATA_TYPE_ANY:
+    case DATA_TYPE_STRING:
+        vector_free(value->data.str_val);
+        return;
+    case DATA_TYPE_LIST:
+        assert(false && "TODO");
+    case DATA_TYPE_CHUNK:
+        assert(false && "TODO");
+    case DATA_TYPE_BLOCKDEF:
+    case DATA_TYPE_NULL:
+    case DATA_TYPE_UNKNOWN:
+        assert(false && "Invalid free type");
+    default:
+        assert(false && "Unhandled data type in value_free");
+    }
+}
+
+DataType value_determine_type(Value* value) {
+    if (value->type != DATA_TYPE_ANY) return value->type;
+
+    char* value_str = value->data.str_val;
+    // TODO: Try somehow to force cast_to_const_bool treat "false" string as false
+    // if (!strcmp(value_str, "true") || !strcmp(value_str, "false")) return DATA_TYPE_BOOL;
+
+    DataType type = DATA_TYPE_STRING;
+    for (char* ch = value_str; *ch; ch++) {
+        if (*ch >= '0' && *ch <= '9') {
+            if (type != DATA_TYPE_FLOAT) type = DATA_TYPE_INTEGER;
+        } else if (*ch == '.') {
+            if (type == DATA_TYPE_FLOAT) {
+                return DATA_TYPE_STRING;
+            } else {
+                type = DATA_TYPE_FLOAT;
+            }
+        } else {
+            return DATA_TYPE_STRING;
+        }
+    }
+
+    return type;
+}
+
 Block* block_new(Blockdef* blockdef) {
     Block* block = malloc(sizeof(Block));
     block->blockdef = blockdef;
@@ -82,21 +160,30 @@ Block* block_new(Blockdef* blockdef) {
 
             switch (blockdef->inputs[i].data.arg.constr) {
             case BLOCKCONSTR_UNLIMITED:
-                arg->type = ARGUMENT_TEXT;
+                arg->type = ARGUMENT_VALUE;
+                arg->data.value = (Value) {
+                    .type = DATA_TYPE_ANY,
+                    .data.str_val = vector_create(),
+                };
+
+                for (char* pos = blockdef->inputs[i].data.arg.text; *pos; pos++) {
+                    vector_add(&arg->data.value.data.str_val, *pos);
+                }
+                vector_add(&arg->data.value.data.str_val, 0);
                 break;
             case BLOCKCONSTR_STRING:
                 arg->type = ARGUMENT_CONST_STRING;
+
+                arg->data.text = vector_create();
+                for (char* pos = blockdef->inputs[i].data.arg.text; *pos; pos++) {
+                    vector_add(&arg->data.text, *pos);
+                }
+                vector_add(&arg->data.text, 0);
                 break;
             default:
                 assert(false && "Unimplemented argument constraint");
                 break;
             }
-
-            arg->data.text = vector_create();
-            for (char* pos = blockdef->inputs[i].data.arg.text; *pos; pos++) {
-                vector_add(&arg->data.text, *pos);
-            }
-            vector_add(&arg->data.text, 0);
             break;
         case INPUT_DROPDOWN:
             arg = vector_add_dst(&block->arguments);
@@ -165,7 +252,7 @@ Block* block_copy(Block* block, BlockParent parent) {
         arg->block = new;
         arg->type = block->arguments[i].type;
         arg->input_id = block->arguments[i].input_id;
-        static_assert(ARGUMENT_LAST == 5, "Exhaustive argument type in block_copy");
+        static_assert(ARGUMENT_LAST == 6, "Exhaustive argument type in block_copy");
         switch (block->arguments[i].type) {
         case ARGUMENT_CONST_STRING:
         case ARGUMENT_TEXT:
@@ -184,6 +271,9 @@ Block* block_copy(Block* block, BlockParent parent) {
         case ARGUMENT_COLOR:
             arg->data.color = block->arguments[i].data.color;
             break;
+        case ARGUMENT_VALUE:
+            arg->data.value = value_copy(&block->arguments[i].data.value);
+            break;
         default:
             assert(false && "Unimplemented argument copy");
             break;
@@ -198,7 +288,7 @@ void block_free(Block* block) {
 
     if (block->arguments) {
         for (size_t i = 0; i < vector_size(block->arguments); i++) {
-            static_assert(ARGUMENT_LAST == 5, "Exhaustive argument type in block_free");
+            static_assert(ARGUMENT_LAST == 6, "Exhaustive argument type in block_free");
             switch (block->arguments[i].type) {
             case ARGUMENT_CONST_STRING:
             case ARGUMENT_TEXT:
@@ -212,6 +302,9 @@ void block_free(Block* block) {
                 blockdef_free(block->arguments[i].data.blockdef);
                 break;
             case ARGUMENT_COLOR:
+                break;
+            case ARGUMENT_VALUE:
+                value_free(&block->arguments[i].data.value);
                 break;
             default:
                 assert(false && "Unimplemented argument free");
@@ -349,6 +442,7 @@ void blockchain_free(BlockChain* chain) {
 
 void argument_set_block(Argument* arg, Block* block) {
     if (arg->type == ARGUMENT_TEXT || arg->type == ARGUMENT_CONST_STRING) vector_free(arg->data.text);
+    if (arg->type == ARGUMENT_VALUE) value_free(&arg->data.value);
     arg->type = ARGUMENT_BLOCK;
     arg->data.block = block;
 }
@@ -369,6 +463,12 @@ void argument_set_text(Argument* arg, char* text) {
 
     for (char* pos = text; *pos; pos++) vector_add(&arg->data.text, *pos);
     vector_add(&arg->data.text, 0);
+}
+
+void argument_set_value(Argument* arg, Value value) {
+    if (arg->type == ARGUMENT_TEXT || arg->type == ARGUMENT_CONST_STRING) vector_free(arg->data.text);
+    arg->type = ARGUMENT_VALUE;
+    arg->data.value = value;
 }
 
 void argument_set_color(Argument* arg, BlockdefColor color) {

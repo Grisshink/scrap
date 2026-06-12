@@ -84,7 +84,7 @@ bool compiler_run(void* e) {
         if (strcmp(block->blockdef->id, "on_start")) continue;
 
         Block* next = NULL;
-        CompilerValue value = compiler_evaluate_block(compiler, block, &next, (Block*)-1);
+        Value value = compiler_evaluate_block(compiler, block, &next, (Block*)-1);
         if (value.type == DATA_TYPE_UNKNOWN) {
             if (!compiler->current_error_root_blockchain) compiler->current_error_root_blockchain = &compiler->code[i];
             return false;
@@ -98,7 +98,7 @@ bool compiler_run(void* e) {
         if (!strcmp(block->blockdef->id, "on_start")) continue;
 
         Block* next = NULL;
-        CompilerValue value = compiler_evaluate_block(compiler, block, &next, (Block*)-1);
+        Value value = compiler_evaluate_block(compiler, block, &next, (Block*)-1);
         if (value.type == DATA_TYPE_UNKNOWN) {
             if (!compiler->current_error_root_blockchain) compiler->current_error_root_blockchain = &compiler->code[i];
             return false;
@@ -107,7 +107,7 @@ bool compiler_run(void* e) {
 
     for (size_t i = 0; i < vector_size(compiler->chains_to_compile); i++) {
         compiler->variables.size = 0;
-        CompilerValue value = compiler_evaluate_chain(compiler, compiler->chains_to_compile[i]);
+        Value value = compiler_evaluate_chain(compiler, compiler->chains_to_compile[i]);
         if (value.type == DATA_TYPE_UNKNOWN) {
             if (!compiler->current_error_root_blockchain) {
                 compiler->current_error_root_blockchain = find_root_blockchain(compiler, compiler->chains_to_compile[i]);
@@ -174,8 +174,8 @@ void compiler_set_error(Compiler* compiler, const char* fmt, ...) {
     scrap_log(LOG_ERROR, "[COMPILER] %s", compiler->current_error);
 }
 
-CompilerValue compiler_evaluate_argument(Compiler* compiler, Argument* arg) {
-    static_assert(ARGUMENT_LAST == 5, "Exhaustive argument type in compiler_evaluate_argument");
+Value compiler_evaluate_argument(Compiler* compiler, Argument* arg) {
+    static_assert(ARGUMENT_LAST == 6, "Exhaustive argument type in compiler_evaluate_argument");
     Block* next = NULL;
     switch (arg->type) {
     case ARGUMENT_TEXT:
@@ -187,14 +187,22 @@ CompilerValue compiler_evaluate_argument(Compiler* compiler, Argument* arg) {
         compiler_set_error(compiler, gettext("Tried to evaluate blockdef"));
         return DATA_UNKNOWN;
     case ARGUMENT_COLOR:
-        return DATA_COLOR(CONVERT_COLOR(arg->data.color, Color));
+        return DATA_COLOR(arg->data.color);
+    case ARGUMENT_VALUE:
+        if (arg->data.value.type == DATA_TYPE_ANY) {
+            Value value_to_convert = arg->data.value;
+            DataType target_type = value_determine_type(&value_to_convert);
+            value_to_convert.type = DATA_TYPE_STRING;
+            return cast_to_const(compiler, value_to_convert, target_type);
+        }
+        return arg->data.value;
     default:
         assert(false && "Unimplemented argument type in compiler_evaluate_argument");
-        return (CompilerValue) {0};
+        return (Value) {0};
     }
 }
 
-CompilerValue compiler_evaluate_block(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
+Value compiler_evaluate_block(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     if (!block->blockdef) {
         compiler_set_error(compiler, gettext("Tried to execute block without definition"));
         return DATA_UNKNOWN;
@@ -205,7 +213,7 @@ CompilerValue compiler_evaluate_block(Compiler* compiler, Block* block, Block** 
     }
 
     BlockFunc* execute_block = block->blockdef->func;
-    CompilerValue value = execute_block(compiler, block, next_block, prev_block);
+    Value value = execute_block(compiler, block, next_block, prev_block);
     if (value.type == DATA_TYPE_UNKNOWN) {
         scrap_log(LOG_ERROR, "[COMPILER] Error from block id: \"%s\" (at block %p)", block->blockdef->id, &block);
         if (!compiler->current_error_block) compiler->current_error_block = block;
@@ -223,7 +231,7 @@ Block* compiler_get_next_block(Block* block) {
     return NULL;
 }
 
-CompilerValue compiler_evaluate_chain(Compiler* compiler, BlockChain* chain) {
+Value compiler_evaluate_chain(Compiler* compiler, BlockChain* chain) {
     IrBytecode bc = EMPTY_BYTECODE;
     DataType bc_type = DATA_TYPE_NULL;
 
@@ -236,7 +244,7 @@ CompilerValue compiler_evaluate_chain(Compiler* compiler, BlockChain* chain) {
         thread_handle_stopping_state(compiler->thread);
         Block* next = compiler_get_next_block(iter);
 
-        CompilerValue value = compiler_evaluate_block(compiler, iter, &next, prev);
+        Value value = compiler_evaluate_block(compiler, iter, &next, prev);
         if (value.type == DATA_TYPE_UNKNOWN) {
             scrap_log(LOG_ERROR, "[COMPILER] From chain: %p", chain);
             if (!compiler->current_error_blockchain) compiler->current_error_blockchain = chain;

@@ -324,10 +324,14 @@ void draw_input_text(Font* font, char** input, const char* hint, unsigned short 
 static void argument_input_on_hover(GuiElement* el) {
     if (el->custom_data) {
         argument_on_hover(el);
+        Argument* arg = el->custom_data;
+        if (arg->type != ARGUMENT_VALUE || arg->data.value.type == DATA_TYPE_STRING || arg->data.value.type == DATA_TYPE_ANY) {
+            input_on_hover(el);
+        }
     } else {
         blockdef_input_on_hover(el);
+        input_on_hover(el);
     }
-    input_on_hover(el);
 }
 
 static void draw_argument_input(Argument* arg, char** input, const char* hint, bool can_hover, bool editable, GuiColor font_color, GuiColor bg_color) {
@@ -483,11 +487,93 @@ static void argument_on_hover(GuiElement* el) {
     if (gui_window_is_shown()) return;
     ui.hover.editor.argument = el->custom_data;
     ui.hover.editor.blockchain = ui.hover.editor.prev_blockchain;
+
     if (el->draw_type != DRAWTYPE_UNKNOWN) return;
     el->draw_type = DRAWTYPE_BORDER;
     el->draw_subtype = GUI_SUBTYPE_DEFAULT;
     el->color = (GuiColor) { 0xa0, 0xa0, 0xa0, 0xff };
     el->data.border_width = BLOCK_OUTLINE_SIZE;
+}
+
+static void draw_value_argument(Argument* arg, Value* value, bool can_hover, bool editable, GuiColor font_color, GuiColor bg_color) {
+    gui_element_begin(gui);
+        if (editable) {
+            if (arg && ui.hover.editor.select_argument == arg) {
+                gui_set_border(gui, (GuiColor) { 0x30, 0x30, 0x30, 0xff }, BLOCK_OUTLINE_SIZE);
+                if (arg) gui_on_render(gui, argument_on_render);
+            }
+
+            if (value->type == DATA_TYPE_STRING || value->type == DATA_TYPE_ANY) {
+                InputHoverInfo info = (InputHoverInfo) {
+                    .input = &value->data.str_val,
+                    .rel_pos = (Vector2) { BLOCK_STRING_PADDING / 2, 0 },
+                    .font = &assets.fonts.font_cond_shadow,
+                    .font_size = BLOCK_TEXT_SIZE,
+                };
+                gui_set_state(gui, &info, sizeof(info));
+            }
+            gui_set_custom_data(gui, arg);
+            if (can_hover) gui_on_hover(gui, argument_input_on_hover);
+        }
+
+        gui_element_begin(gui);
+            gui_set_rect(gui, bg_color);
+            gui_set_direction(gui, DIRECTION_HORIZONTAL);
+
+            gui_element_begin(gui);
+                gui_set_direction(gui, DIRECTION_HORIZONTAL);
+                gui_set_align(gui, ALIGN_CENTER, ALIGN_CENTER);
+                gui_set_padding(gui, BLOCK_STRING_PADDING / 2, 0);
+                gui_set_min_size(gui, config.ui_size - BLOCK_OUTLINE_SIZE * 4, config.ui_size - BLOCK_OUTLINE_SIZE * 4);
+
+                static_assert(DATA_TYPE_LAST == 12, "Exhaustive data type in draw_value_argument");
+                switch (value->type) {
+                case DATA_TYPE_NOTHING:
+                    gui_text(gui, &assets.fonts.font_cond, "Nothing", BLOCK_TEXT_SIZE, font_color);
+                    break;
+                case DATA_TYPE_ANY:
+                    draw_input_text(&assets.fonts.font_cond, &value->data.str_val, gettext("any"), BLOCK_TEXT_SIZE, font_color);
+                    break;
+                case DATA_TYPE_STRING:
+                    draw_input_text(&assets.fonts.font_cond, &value->data.str_val, gettext("Abc"), BLOCK_TEXT_SIZE, font_color);
+                    break;
+                case DATA_TYPE_INTEGER:
+                case DATA_TYPE_FLOAT:
+                case DATA_TYPE_BOOL:
+                case DATA_TYPE_LIST:
+                case DATA_TYPE_BLOCKDEF:
+                case DATA_TYPE_COLOR:
+                case DATA_TYPE_CHUNK:
+                case DATA_TYPE_NULL:
+                case DATA_TYPE_UNKNOWN:
+                default:
+                    gui_text(gui, &assets.fonts.font_cond, "NODEF Value", BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0x00, 0x00, 0xff });
+                    break;
+                }
+
+            gui_element_end(gui);
+
+            if (arg && ui.hover.editor.select_argument == arg) {
+                gui_element_begin(gui);
+                    gui_set_direction(gui, DIRECTION_HORIZONTAL);
+                    gui_set_align(gui, ALIGN_CENTER, ALIGN_CENTER);
+                    gui_set_padding(gui, BLOCK_STRING_PADDING / 2, 0);
+                    gui_set_min_size(gui, config.ui_size - BLOCK_OUTLINE_SIZE * 4, config.ui_size - BLOCK_OUTLINE_SIZE * 4);
+                    gui_set_rect(gui, (GuiColor) { 0x60, 0x60, 0x60, 0xff });
+
+                    gui_text(gui, &assets.fonts.font_cond_shadow, ": ", BLOCK_TEXT_SIZE, GUI_WHITE);
+                    gui_text(gui, &assets.fonts.font_cond_shadow, type_to_str(value->type), BLOCK_TEXT_SIZE, GUI_WHITE);
+
+                    if (value->type == DATA_TYPE_ANY) {
+                        gui_spacer(gui, BLOCK_STRING_PADDING/2, 0);
+                        gui_text(gui, &assets.fonts.font_cond_shadow, "(", BLOCK_TEXT_SIZE, GUI_WHITE);
+                        gui_text(gui, &assets.fonts.font_cond_shadow, type_to_str(ui.hover.editor.select_argument_type), BLOCK_TEXT_SIZE, GUI_WHITE);
+                        gui_text(gui, &assets.fonts.font_cond_shadow, ")", BLOCK_TEXT_SIZE, GUI_WHITE);
+                    }
+                gui_element_end(gui);
+            }
+        gui_element_end(gui);
+    gui_element_end(gui);
 }
 
 static void draw_block(Block* block, bool highlight, bool select, bool can_hover, bool ghost, bool editable, bool show_previews) {
@@ -612,6 +698,16 @@ static void draw_block(Block* block, bool highlight, bool select, bool can_hover
                         gui_set_gap(gui, BLOCK_PADDING);
                         gui_set_align(gui, ALIGN_LEFT, ALIGN_CENTER);
                 }
+                break;
+            case ARGUMENT_VALUE:
+                draw_value_argument(
+                    arg, 
+                    &arg->data.value,
+                    can_hover,
+                    editable,
+                    (GuiColor) { 0x00, 0x00, 0x00, ghost ? BLOCK_GHOST_OPACITY : 0xff },
+                    (GuiColor) { 0xff, 0xff, 0xff, ghost ? BLOCK_GHOST_OPACITY : BLOCK_ARG_OPACITY }
+                );
                 break;
             default:
                 gui_text(gui, &assets.fonts.font_cond_shadow, "NODEF", BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0x00, 0x00, 0xff });

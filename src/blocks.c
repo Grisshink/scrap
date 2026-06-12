@@ -75,17 +75,17 @@ static MathFunc block_math_func_list[MATH_LIST_LEN] = {
 #include "std.h"
 #include <stdio.h>
 
-CompilerValue cast_to_const_string(Compiler* compiler, CompilerValue value);
-CompilerValue cast_to_const_int(Compiler* compiler, CompilerValue value);
-CompilerValue cast_to_const_float(Compiler* compiler, CompilerValue value);
-CompilerValue cast_to_const_bool(Compiler* compiler, CompilerValue value);
-CompilerValue cast_to_const_color(Compiler* compiler, CompilerValue value);
-CompilerValue cast_to_const_nothing(Compiler* compiler, CompilerValue value);
-CompilerValue cast_to_const_list(Compiler* compiler, CompilerValue value);
+Value cast_to_const_string(Compiler* compiler, Value value);
+Value cast_to_const_int(Compiler* compiler, Value value);
+Value cast_to_const_float(Compiler* compiler, Value value);
+Value cast_to_const_bool(Compiler* compiler, Value value);
+Value cast_to_const_color(Compiler* compiler, Value value);
+Value cast_to_const_nothing(Compiler* compiler, Value value);
+Value cast_to_const_list(Compiler* compiler, Value value);
 
-CompilerValue cast_to_bc(Compiler* compiler, CompilerValue value, DataType dst_type);
+Value cast_to_bc(Compiler* compiler, Value value, DataType dst_type);
 
-CompilerValue string_to_bc(Compiler* compiler, char* str) {
+Value string_to_bc(Compiler* compiler, char* str) {
     IrBytecode bc = EMPTY_BYTECODE;
     IrList* list = bytecode_const_list_new(compiler->bc_pool);
 
@@ -103,7 +103,7 @@ CompilerValue string_to_bc(Compiler* compiler, char* str) {
     return DATA_CHUNK(DATA_TYPE_STRING, bc);
 }
 
-CompilerValue cast_to_bc_string(Compiler* compiler, CompilerValue value) {
+Value cast_to_bc_string(Compiler* compiler, Value value) {
     IrBytecode bc;
     const DataType result_type = DATA_TYPE_STRING;
     char str[32];
@@ -177,12 +177,12 @@ CompilerValue cast_to_bc_string(Compiler* compiler, CompilerValue value) {
     }
 }
 
-CompilerValue cast_to_bc_int(Compiler* compiler, CompilerValue value) {
+Value cast_to_bc_int(Compiler* compiler, Value value) {
     const DataType result_type = DATA_TYPE_INTEGER;
     IrBytecode bc;
 
     if (value.type != DATA_TYPE_CHUNK) {
-        CompilerValue integer_val = cast_to_const_int(compiler, value);
+        Value integer_val = cast_to_const_int(compiler, value);
         if (integer_val.type == DATA_TYPE_ERROR) return DATA_ERROR;
 
         bc = EMPTY_BYTECODE;
@@ -222,12 +222,12 @@ CompilerValue cast_to_bc_int(Compiler* compiler, CompilerValue value) {
     }
 }
 
-CompilerValue cast_to_bc_float(Compiler* compiler, CompilerValue value) {
+Value cast_to_bc_float(Compiler* compiler, Value value) {
     const DataType result_type = DATA_TYPE_FLOAT;
     IrBytecode bc;
 
     if (value.type != DATA_TYPE_CHUNK) {
-        CompilerValue float_val = cast_to_const_float(compiler, value);
+        Value float_val = cast_to_const_float(compiler, value);
         if (float_val.type == DATA_TYPE_ERROR) return DATA_ERROR;
 
         bc = EMPTY_BYTECODE;
@@ -267,12 +267,12 @@ CompilerValue cast_to_bc_float(Compiler* compiler, CompilerValue value) {
     }
 }
 
-CompilerValue cast_to_bc_bool(Compiler* compiler, CompilerValue value) {
+Value cast_to_bc_bool(Compiler* compiler, Value value) {
     const DataType result_type = DATA_TYPE_BOOL;
     IrBytecode bc;
 
     if (value.type != DATA_TYPE_CHUNK) {
-        CompilerValue bool_val = cast_to_const_bool(compiler, value);
+        Value bool_val = cast_to_const_bool(compiler, value);
         if (bool_val.type == DATA_TYPE_ERROR) return DATA_ERROR;
 
         bc = EMPTY_BYTECODE;
@@ -312,12 +312,12 @@ CompilerValue cast_to_bc_bool(Compiler* compiler, CompilerValue value) {
     }
 }
 
-CompilerValue cast_to_bc_color(Compiler* compiler, CompilerValue value) {
+Value cast_to_bc_color(Compiler* compiler, Value value) {
     const DataType result_type = DATA_TYPE_COLOR;
     IrBytecode bc;
 
     if (value.type != DATA_TYPE_CHUNK) {
-        CompilerValue color_val = cast_to_const_color(compiler, value);
+        Value color_val = cast_to_const_color(compiler, value);
         if (color_val.type == DATA_TYPE_ERROR) return DATA_ERROR;
 
         bc = EMPTY_BYTECODE;
@@ -357,11 +357,11 @@ CompilerValue cast_to_bc_color(Compiler* compiler, CompilerValue value) {
     }
 }
 
-CompilerValue cast_to_bc_nothing(Compiler* compiler, CompilerValue value) {
+Value cast_to_bc_nothing(Compiler* compiler, Value value) {
     const DataType result_type = DATA_TYPE_NOTHING;
 
     if (value.type != DATA_TYPE_CHUNK) {
-        CompilerValue nothing_val = cast_to_const_nothing(compiler, value);
+        Value nothing_val = cast_to_const_nothing(compiler, value);
         if (nothing_val.type == DATA_TYPE_ERROR) return DATA_ERROR;
 
         IrBytecode bc = EMPTY_BYTECODE;
@@ -391,12 +391,12 @@ CompilerValue cast_to_bc_nothing(Compiler* compiler, CompilerValue value) {
     }
 }
 
-CompilerValue cast_to_bc_list(Compiler* compiler, CompilerValue value) {
+Value cast_to_bc_list(Compiler* compiler, Value value) {
     const DataType result_type = DATA_TYPE_LIST;
     IrBytecode bc;
 
     if (value.type != DATA_TYPE_CHUNK) {
-        CompilerValue list_val = cast_to_const_list(compiler, value);
+        Value list_val = cast_to_const_list(compiler, value);
         if (list_val.type == DATA_TYPE_ERROR) return DATA_ERROR;
 
         bc = EMPTY_BYTECODE;
@@ -430,7 +430,7 @@ CompilerValue cast_to_bc_list(Compiler* compiler, CompilerValue value) {
     }
 }
 
-CompilerValue cast_to_bc_any(Compiler* compiler, CompilerValue value) {
+Value cast_to_bc_any(Compiler* compiler, Value value) {
     const DataType result_type = DATA_TYPE_ANY;
 
     if (value.type != DATA_TYPE_CHUNK) {
@@ -441,7 +441,7 @@ CompilerValue cast_to_bc_any(Compiler* compiler, CompilerValue value) {
     return DATA_CHUNK(result_type, value.data.chunk_val.bc);
 }
 
-CompilerValue cast_to_bc(Compiler* compiler, CompilerValue value, DataType dst_type) {
+Value cast_to_bc(Compiler* compiler, Value value, DataType dst_type) {
     DataType src_type = value.type;
     if (src_type == DATA_TYPE_CHUNK) {
         src_type = value.data.chunk_val.return_type;
@@ -469,7 +469,7 @@ CompilerValue cast_to_bc(Compiler* compiler, CompilerValue value, DataType dst_t
     }
 }
 
-CompilerValue cast_to_const_string(Compiler* compiler, CompilerValue value) {
+Value cast_to_const_string(Compiler* compiler, Value value) {
     DataType dst_type = DATA_TYPE_STRING;
 
     static_assert(DATA_TYPE_LAST == 12, "Exhaustive data type in cast_to_const_string");
@@ -496,7 +496,7 @@ CompilerValue cast_to_const_string(Compiler* compiler, CompilerValue value) {
     }
 }
 
-CompilerValue cast_to_const_int(Compiler* compiler, CompilerValue value) {
+Value cast_to_const_int(Compiler* compiler, Value value) {
     DataType dst_type = DATA_TYPE_INTEGER;
 
     static_assert(DATA_TYPE_LAST == 12, "Exhaustive data type in cast_to_const_int");
@@ -520,7 +520,7 @@ CompilerValue cast_to_const_int(Compiler* compiler, CompilerValue value) {
     }
 }
 
-CompilerValue cast_to_const_float(Compiler* compiler, CompilerValue value) {
+Value cast_to_const_float(Compiler* compiler, Value value) {
     DataType dst_type = DATA_TYPE_FLOAT;
 
     static_assert(DATA_TYPE_LAST == 12, "Exhaustive data type in cast_to_const_float");
@@ -544,7 +544,7 @@ CompilerValue cast_to_const_float(Compiler* compiler, CompilerValue value) {
     }
 }
 
-CompilerValue cast_to_const_bool(Compiler* compiler, CompilerValue value) {
+Value cast_to_const_bool(Compiler* compiler, Value value) {
     DataType dst_type = DATA_TYPE_BOOL;
 
     static_assert(DATA_TYPE_LAST == 12, "Exhaustive data type in cast_to_const_bool");
@@ -568,22 +568,22 @@ CompilerValue cast_to_const_bool(Compiler* compiler, CompilerValue value) {
     }
 }
 
-CompilerValue cast_to_const_color(Compiler* compiler, CompilerValue value) {
+Value cast_to_const_color(Compiler* compiler, Value value) {
     DataType dst_type = DATA_TYPE_COLOR;
 
     static_assert(DATA_TYPE_LAST == 12, "Exhaustive data type in cast_to_const_color");
     switch (value.type) {
-    case DATA_TYPE_INTEGER: return DATA_COLOR(*(Color*)&value.data.integer_val);
-    case DATA_TYPE_FLOAT: return DATA_COLOR(*(Color*)&value.data.float_val);
+    case DATA_TYPE_INTEGER: return DATA_COLOR(*(BlockdefColor*)&value.data.integer_val);
+    case DATA_TYPE_FLOAT: return DATA_COLOR(*(BlockdefColor*)&value.data.float_val);
     case DATA_TYPE_STRING: ;
         char* str = value.data.str_val;
         if (*str == '#') str++;
         unsigned char r = 0x00, g = 0x00, b = 0x00, a = 0xff;
         sscanf(str, "%02hhx%02hhx%02hhx%02hhx", &r, &g, &b, &a);
-        return DATA_COLOR(((Color) { r, g, b, a }));
-    case DATA_TYPE_BOOL: return DATA_COLOR(value.data.bool_val ? ((Color) { 0xff, 0xff, 0xff, 0xff }) : ((Color) { 0x00, 0x00, 0x00, 0xff }));
+        return DATA_COLOR(((BlockdefColor) { r, g, b, a }));
+    case DATA_TYPE_BOOL: return DATA_COLOR(value.data.bool_val ? ((BlockdefColor) { 0xff, 0xff, 0xff, 0xff }) : ((BlockdefColor) { 0x00, 0x00, 0x00, 0xff }));
     case DATA_TYPE_COLOR: return value;
-    case DATA_TYPE_NOTHING: return DATA_COLOR(((Color) { 0x00, 0x00, 0x00, 0xff }));
+    case DATA_TYPE_NOTHING: return DATA_COLOR(((BlockdefColor) { 0x00, 0x00, 0x00, 0xff }));
     case DATA_TYPE_LIST:
     case DATA_TYPE_ANY:
     case DATA_TYPE_UNKNOWN:
@@ -597,7 +597,7 @@ CompilerValue cast_to_const_color(Compiler* compiler, CompilerValue value) {
     }
 }
 
-CompilerValue cast_to_const_nothing(Compiler* compiler, CompilerValue value) {
+Value cast_to_const_nothing(Compiler* compiler, Value value) {
     DataType dst_type = DATA_TYPE_NOTHING;
 
     static_assert(DATA_TYPE_LAST == 12, "Exhaustive data type in cast_to_const_nothing");
@@ -622,7 +622,7 @@ CompilerValue cast_to_const_nothing(Compiler* compiler, CompilerValue value) {
     }
 }
 
-CompilerValue cast_to_const_list(Compiler* compiler, CompilerValue value) {
+Value cast_to_const_list(Compiler* compiler, Value value) {
     DataType dst_type = DATA_TYPE_LIST;
 
     static_assert(DATA_TYPE_LAST == 12, "Exhaustive data type in cast_to_const_list");
@@ -647,7 +647,7 @@ CompilerValue cast_to_const_list(Compiler* compiler, CompilerValue value) {
     }
 }
 
-CompilerValue cast_to_const(Compiler* compiler, CompilerValue value, DataType dst_type) {
+Value cast_to_const(Compiler* compiler, Value value, DataType dst_type) {
     DataType src_type = value.type;
     if (src_type == dst_type) return value;
 
@@ -672,7 +672,7 @@ CompilerValue cast_to_const(Compiler* compiler, CompilerValue value, DataType ds
     }
 }
 
-CompilerValue cast_to(Compiler* compiler, CompilerValue value, DataType dst_type) {
+Value cast_to(Compiler* compiler, Value value, DataType dst_type) {
     if (value.type == DATA_TYPE_CHUNK) {
         return cast_to_bc(compiler, value, dst_type);
     } else {
@@ -702,7 +702,7 @@ bool is_type_storable(DataType type) {
     }
 }
 
-void cast_binary(Compiler* compiler, CompilerValue* left, CompilerValue* right, DataType type) {
+void cast_binary(Compiler* compiler, Value* left, Value* right, DataType type) {
     if (left->type == DATA_TYPE_CHUNK || right->type == DATA_TYPE_CHUNK) {
         *left = cast_to_bc(compiler, *left, type);
         *right = cast_to_bc(compiler, *right, type);
@@ -798,11 +798,11 @@ DataType get_op_return_type(IrOpcode op) {
     }
 }
 
-CompilerValue evaluate_binary_number(Compiler* compiler, Argument* left, Argument* right, IrOpcode int_op, IrOpcode float_op) {
-    CompilerValue left_val = compiler_evaluate_argument(compiler, left);
+Value evaluate_binary_number(Compiler* compiler, Argument* left, Argument* right, IrOpcode int_op, IrOpcode float_op) {
+    Value left_val = compiler_evaluate_argument(compiler, left);
     if (left_val.type == DATA_TYPE_ERROR) return DATA_ERROR;
 
-    CompilerValue right_val = compiler_evaluate_argument(compiler, right);
+    Value right_val = compiler_evaluate_argument(compiler, right);
     if (right_val.type == DATA_TYPE_ERROR) return DATA_ERROR;
 
     DataType left_type  = left_val.type  == DATA_TYPE_CHUNK ? left_val.data.chunk_val.return_type  : left_val.type;
@@ -823,7 +823,7 @@ CompilerValue evaluate_binary_number(Compiler* compiler, Argument* left, Argumen
         bytecode_push_op(&bc, select_op);
         return DATA_CHUNK(get_op_return_type(select_op), bc);
     } else {
-        CompilerValue val;
+        Value val;
         if (left_val.type == DATA_TYPE_FLOAT) {
             val = DATA_FLOAT(execute_float_binary(left_val.data.float_val, right_val.data.float_val, float_op));
         } else {
@@ -835,11 +835,11 @@ CompilerValue evaluate_binary_number(Compiler* compiler, Argument* left, Argumen
     }
 }
 
-CompilerValue evaluate_binary_int(Compiler* compiler, Argument* left, Argument* right, IrOpcode int_op) {
-    CompilerValue left_val = compiler_evaluate_argument(compiler, left);
+Value evaluate_binary_int(Compiler* compiler, Argument* left, Argument* right, IrOpcode int_op) {
+    Value left_val = compiler_evaluate_argument(compiler, left);
     if (left_val.type == DATA_TYPE_ERROR) return DATA_ERROR;
 
-    CompilerValue right_val = compiler_evaluate_argument(compiler, right);
+    Value right_val = compiler_evaluate_argument(compiler, right);
     if (right_val.type == DATA_TYPE_ERROR) return DATA_ERROR;
 
     cast_binary(compiler, &left_val, &right_val, DATA_TYPE_INTEGER);
@@ -856,11 +856,11 @@ CompilerValue evaluate_binary_int(Compiler* compiler, Argument* left, Argument* 
     }
 }
 
-CompilerValue evaluate_binary_bool(Compiler* compiler, Argument* left, Argument* right, IrOpcode bool_op) {
-    CompilerValue left_val = compiler_evaluate_argument(compiler, left);
+Value evaluate_binary_bool(Compiler* compiler, Argument* left, Argument* right, IrOpcode bool_op) {
+    Value left_val = compiler_evaluate_argument(compiler, left);
     if (left_val.type == DATA_TYPE_ERROR) return DATA_ERROR;
 
-    CompilerValue right_val = compiler_evaluate_argument(compiler, right);
+    Value right_val = compiler_evaluate_argument(compiler, right);
     if (right_val.type == DATA_TYPE_ERROR) return DATA_ERROR;
 
     cast_binary(compiler, &left_val, &right_val, DATA_TYPE_BOOL);
@@ -877,7 +877,7 @@ CompilerValue evaluate_binary_bool(Compiler* compiler, Argument* left, Argument*
     }
 }
 
-CompilerValue block_on_start(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
+Value block_on_start(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) next_block;
 
     assert(block->parent.type == BLOCK_PARENT_BLOCKCHAIN);
@@ -906,7 +906,7 @@ CompilerValue block_on_start(Compiler* compiler, Block* block, Block** next_bloc
     assert(false && "Unreachable");
 }
 
-CompilerValue block_if(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
+Value block_if(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     IrBytecode bc = EMPTY_BYTECODE;
 
     Block* prev = block->prev;
@@ -915,7 +915,7 @@ CompilerValue block_if(Compiler* compiler, Block* block, Block** next_block, Blo
     if (prev_block == prev) {
         size_t var_slot = compiler->variables.size;
 
-        CompilerValue value = compiler_evaluate_argument(compiler, &block->arguments[0]);
+        Value value = compiler_evaluate_argument(compiler, &block->arguments[0]);
         if (value.type == DATA_TYPE_ERROR) return DATA_ERROR;
         value = cast_to_bc_bool(compiler, value);
         if (value.type == DATA_TYPE_ERROR) return DATA_ERROR;
@@ -990,7 +990,7 @@ CompilerValue block_if(Compiler* compiler, Block* block, Block** next_block, Blo
     return DATA_CHUNK(DATA_TYPE_NULL, bc);
 }
 
-CompilerValue block_else_if(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
+Value block_else_if(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     Block* prev = block->prev;
     if (!prev) prev = block->parent.as.chain->parent;
 
@@ -1005,7 +1005,7 @@ CompilerValue block_else_if(Compiler* compiler, Block* block, Block** next_block
     if (prev_block == prev) {
         size_t var_slot = compiler->variables.size;
 
-        CompilerValue value = compiler_evaluate_argument(compiler, &block->arguments[0]);
+        Value value = compiler_evaluate_argument(compiler, &block->arguments[0]);
         if (value.type == DATA_TYPE_ERROR) return DATA_ERROR;
         value = cast_to_bc_bool(compiler, value);
         if (value.type == DATA_TYPE_ERROR) return DATA_ERROR;
@@ -1035,7 +1035,7 @@ CompilerValue block_else_if(Compiler* compiler, Block* block, Block** next_block
     return DATA_CHUNK(DATA_TYPE_NULL, bc);
 }
 
-CompilerValue block_else(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
+Value block_else(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     Block* prev = block->prev;
     if (!prev) prev = block->parent.as.chain->parent;
 
@@ -1060,7 +1060,7 @@ CompilerValue block_else(Compiler* compiler, Block* block, Block** next_block, B
     return DATA_CHUNK(DATA_TYPE_NULL, bc);
 }
 
-CompilerValue block_loop(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
+Value block_loop(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     Block* prev = block->prev;
     if (!prev) prev = block->parent.as.chain->parent;
 
@@ -1092,7 +1092,7 @@ CompilerValue block_loop(Compiler* compiler, Block* block, Block** next_block, B
     return DATA_CHUNK(DATA_TYPE_NULL, bc);
 }
 
-CompilerValue block_repeat(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
+Value block_repeat(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     Block* prev = block->prev;
     if (!prev) prev = block->parent.as.chain->parent;
 
@@ -1100,7 +1100,7 @@ CompilerValue block_repeat(Compiler* compiler, Block* block, Block** next_block,
 
     if (prev_block == prev) {
         // Compute constant, it will be stored on the stack
-        CompilerValue value = compiler_evaluate_argument(compiler, &block->arguments[0]);
+        Value value = compiler_evaluate_argument(compiler, &block->arguments[0]);
         if (value.type == DATA_TYPE_ERROR) return DATA_ERROR;
         value = cast_to_bc_int(compiler, value);
         if (value.type == DATA_TYPE_ERROR) return DATA_ERROR;
@@ -1173,7 +1173,7 @@ CompilerValue block_repeat(Compiler* compiler, Block* block, Block** next_block,
     return DATA_CHUNK(DATA_TYPE_NULL, bc);
 }
 
-CompilerValue block_while(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
+Value block_while(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     Block* prev = block->prev;
     if (!prev) prev = block->parent.as.chain->parent;
 
@@ -1182,7 +1182,7 @@ CompilerValue block_while(Compiler* compiler, Block* block, Block** next_block, 
     if (prev_block == prev) {
         ConstId loop_label = bytecode_push_label(&bc, ir_arena_sprintf(compiler->arena, 32, "while_%zu", compiler->label_counter++));
 
-        CompilerValue value = compiler_evaluate_argument(compiler, &block->arguments[0]);
+        Value value = compiler_evaluate_argument(compiler, &block->arguments[0]);
         if (value.type == DATA_TYPE_ERROR) return DATA_ERROR;
         value = cast_to_bc_bool(compiler, value);
         if (value.type == DATA_TYPE_ERROR) return DATA_ERROR;
@@ -1221,7 +1221,7 @@ CompilerValue block_while(Compiler* compiler, Block* block, Block** next_block, 
     return DATA_CHUNK(DATA_TYPE_NULL, bc);
 }
 
-CompilerValue block_block(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
+Value block_block(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     Block* prev = block->prev;
     if (!prev) prev = block->parent.as.chain->parent;
 
@@ -1243,7 +1243,7 @@ CompilerValue block_block(Compiler* compiler, Block* block, Block** next_block, 
 }
 
 #define print_func_name(...) func_name_size += snprintf(func_name + func_name_size, 1024 - func_name_size, __VA_ARGS__)
-CompilerValue block_define_block(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
+Value block_define_block(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) next_block;
 
     assert(block->parent.type == BLOCK_PARENT_BLOCKCHAIN);
@@ -1338,7 +1338,7 @@ CompilerValue block_define_block(Compiler* compiler, Block* block, Block** next_
     assert(false && "Unreachable");
 }
 
-CompilerValue block_return(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
+Value block_return(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) next_block;
     (void) prev_block;
 
@@ -1348,7 +1348,7 @@ CompilerValue block_return(Compiler* compiler, Block* block, Block** next_block,
         return DATA_ERROR;
     }
 
-    CompilerValue value = compiler_evaluate_argument(compiler, &block->arguments[0]);
+    Value value = compiler_evaluate_argument(compiler, &block->arguments[0]);
     if (value.type == DATA_TYPE_ERROR) return DATA_ERROR;
     if (value.type != DATA_TYPE_CHUNK) {
         value = cast_to_bc(compiler, value, value.type);
@@ -1363,11 +1363,11 @@ CompilerValue block_return(Compiler* compiler, Block* block, Block** next_block,
     return DATA_CHUNK(DATA_TYPE_NULL, bc);
 }
 
-CompilerValue block_print(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
+Value block_print(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) next_block;
     (void) prev_block;
 
-    CompilerValue val = compiler_evaluate_argument(compiler, &block->arguments[0]);
+    Value val = compiler_evaluate_argument(compiler, &block->arguments[0]);
     if (val.type == DATA_TYPE_ERROR) return DATA_ERROR;
 
     val = cast_to_bc_string(compiler, val);
@@ -1380,11 +1380,11 @@ CompilerValue block_print(Compiler* compiler, Block* block, Block** next_block, 
     return val;
 }
 
-CompilerValue block_println(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
+Value block_println(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) next_block;
     (void) prev_block;
 
-    CompilerValue val = compiler_evaluate_argument(compiler, &block->arguments[0]);
+    Value val = compiler_evaluate_argument(compiler, &block->arguments[0]);
     if (val.type == DATA_TYPE_ERROR) return DATA_ERROR;
 
     val = cast_to_bc_string(compiler, val);
@@ -1397,7 +1397,7 @@ CompilerValue block_println(Compiler* compiler, Block* block, Block** next_block
     return val;
 }
 
-CompilerValue block_input(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
+Value block_input(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) block;
     (void) next_block;
     (void) prev_block;
@@ -1407,7 +1407,7 @@ CompilerValue block_input(Compiler* compiler, Block* block, Block** next_block, 
     return DATA_CHUNK(DATA_TYPE_STRING, bc);
 }
 
-CompilerValue block_get_char(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
+Value block_get_char(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) block;
     (void) next_block;
     (void) prev_block;
@@ -1417,16 +1417,16 @@ CompilerValue block_get_char(Compiler* compiler, Block* block, Block** next_bloc
     return DATA_CHUNK(DATA_TYPE_INTEGER, bc);
 }
 
-CompilerValue block_set_cursor(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
+Value block_set_cursor(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) next_block;
     (void) prev_block;
 
-    CompilerValue x = compiler_evaluate_argument(compiler, &block->arguments[0]);
+    Value x = compiler_evaluate_argument(compiler, &block->arguments[0]);
     if (x.type == DATA_TYPE_ERROR) return DATA_ERROR;
     x = cast_to_bc_int(compiler, x);
     if (x.type == DATA_TYPE_ERROR) return DATA_ERROR;
 
-    CompilerValue y = compiler_evaluate_argument(compiler, &block->arguments[1]);
+    Value y = compiler_evaluate_argument(compiler, &block->arguments[1]);
     if (y.type == DATA_TYPE_ERROR) return DATA_ERROR;
     y = cast_to_bc_int(compiler, y);
     if (y.type == DATA_TYPE_ERROR) return DATA_ERROR;
@@ -1437,7 +1437,7 @@ CompilerValue block_set_cursor(Compiler* compiler, Block* block, Block** next_bl
     return DATA_CHUNK(DATA_TYPE_NULL, bc);
 }
 
-CompilerValue block_cursor_x(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
+Value block_cursor_x(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) block;
     (void) next_block;
     (void) prev_block;
@@ -1447,7 +1447,7 @@ CompilerValue block_cursor_x(Compiler* compiler, Block* block, Block** next_bloc
     return DATA_CHUNK(DATA_TYPE_INTEGER, bc);
 }
 
-CompilerValue block_cursor_y(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
+Value block_cursor_y(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) block;
     (void) next_block;
     (void) prev_block;
@@ -1457,7 +1457,7 @@ CompilerValue block_cursor_y(Compiler* compiler, Block* block, Block** next_bloc
     return DATA_CHUNK(DATA_TYPE_INTEGER, bc);
 }
 
-CompilerValue block_cursor_max_x(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
+Value block_cursor_max_x(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) block;
     (void) next_block;
     (void) prev_block;
@@ -1467,7 +1467,7 @@ CompilerValue block_cursor_max_x(Compiler* compiler, Block* block, Block** next_
     return DATA_CHUNK(DATA_TYPE_INTEGER, bc);
 }
 
-CompilerValue block_cursor_max_y(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
+Value block_cursor_max_y(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) block;
     (void) next_block;
     (void) prev_block;
@@ -1477,11 +1477,11 @@ CompilerValue block_cursor_max_y(Compiler* compiler, Block* block, Block** next_
     return DATA_CHUNK(DATA_TYPE_INTEGER, bc);
 }
 
-CompilerValue block_set_fg_color(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
+Value block_set_fg_color(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) next_block;
     (void) prev_block;
 
-    CompilerValue color = compiler_evaluate_argument(compiler, &block->arguments[0]);
+    Value color = compiler_evaluate_argument(compiler, &block->arguments[0]);
     if (color.type == DATA_TYPE_ERROR) return DATA_ERROR;
     color = cast_to_bc_color(compiler, color);
     if (color.type == DATA_TYPE_ERROR) return DATA_ERROR;
@@ -1491,11 +1491,11 @@ CompilerValue block_set_fg_color(Compiler* compiler, Block* block, Block** next_
     return DATA_CHUNK(DATA_TYPE_NULL, bc);
 }
 
-CompilerValue block_set_bg_color(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
+Value block_set_bg_color(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) next_block;
     (void) prev_block;
 
-    CompilerValue color = compiler_evaluate_argument(compiler, &block->arguments[0]);
+    Value color = compiler_evaluate_argument(compiler, &block->arguments[0]);
     if (color.type == DATA_TYPE_ERROR) return DATA_ERROR;
     color = cast_to_bc_color(compiler, color);
     if (color.type == DATA_TYPE_ERROR) return DATA_ERROR;
@@ -1505,7 +1505,7 @@ CompilerValue block_set_bg_color(Compiler* compiler, Block* block, Block** next_
     return DATA_CHUNK(DATA_TYPE_NULL, bc);
 }
 
-CompilerValue block_reset_color(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
+Value block_reset_color(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) block;
     (void) next_block;
     (void) prev_block;
@@ -1519,7 +1519,7 @@ CompilerValue block_reset_color(Compiler* compiler, Block* block, Block** next_b
     return DATA_CHUNK(DATA_TYPE_NULL, bc);
 }
 
-CompilerValue block_term_clear(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
+Value block_term_clear(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) block;
     (void) next_block;
     (void) prev_block;
@@ -1529,11 +1529,11 @@ CompilerValue block_term_clear(Compiler* compiler, Block* block, Block** next_bl
     return DATA_CHUNK(DATA_TYPE_NULL, bc);
 }
 
-CompilerValue block_term_set_clear(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
+Value block_term_set_clear(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) next_block;
     (void) prev_block;
 
-    CompilerValue color = compiler_evaluate_argument(compiler, &block->arguments[0]);
+    Value color = compiler_evaluate_argument(compiler, &block->arguments[0]);
     if (color.type == DATA_TYPE_ERROR) return DATA_ERROR;
     color = cast_to_bc_color(compiler, color);
     if (color.type == DATA_TYPE_ERROR) return DATA_ERROR;
@@ -1543,54 +1543,54 @@ CompilerValue block_term_set_clear(Compiler* compiler, Block* block, Block** nex
     return DATA_CHUNK(DATA_TYPE_NULL, bc);
 }
 
-CompilerValue block_plus(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
+Value block_plus(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) next_block;
     (void) prev_block;
     return evaluate_binary_number(compiler, &block->arguments[0], &block->arguments[1], IR_ADDI, IR_ADDF);
 }
 
-CompilerValue block_minus(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
+Value block_minus(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) next_block;
     (void) prev_block;
     return evaluate_binary_number(compiler, &block->arguments[0], &block->arguments[1], IR_SUBI, IR_SUBF);
 }
 
-CompilerValue block_mult(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
+Value block_mult(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) next_block;
     (void) prev_block;
     return evaluate_binary_number(compiler, &block->arguments[0], &block->arguments[1], IR_MULI, IR_MULF);
 }
 
-CompilerValue block_div(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
+Value block_div(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) next_block;
     (void) prev_block;
     return evaluate_binary_number(compiler, &block->arguments[0], &block->arguments[1], IR_DIVI, IR_DIVF);
 }
 
-CompilerValue block_rem(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
+Value block_rem(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) next_block;
     (void) prev_block;
     return evaluate_binary_number(compiler, &block->arguments[0], &block->arguments[1], IR_MODI, IR_MODF);
 }
 
-CompilerValue block_pow(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
+Value block_pow(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) next_block;
     (void) prev_block;
     return evaluate_binary_number(compiler, &block->arguments[0], &block->arguments[1], IR_POWI, IR_POWF);
 }
 
-CompilerValue block_math(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
+Value block_math(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) next_block;
     (void) prev_block;
 
-    CompilerValue op = compiler_evaluate_argument(compiler, &block->arguments[0]);
+    Value op = compiler_evaluate_argument(compiler, &block->arguments[0]);
     if (op.type == DATA_TYPE_ERROR) return DATA_ERROR;
     op = cast_to_const_string(compiler, op);
     if (op.type == DATA_TYPE_ERROR) return DATA_ERROR;
 
     for (size_t i = 0; i < MATH_LIST_LEN; i++) {
         if (!strcmp(block_math_list[i], op.data.str_val)) {
-            CompilerValue value = compiler_evaluate_argument(compiler, &block->arguments[1]);
+            Value value = compiler_evaluate_argument(compiler, &block->arguments[1]);
             if (value.type == DATA_TYPE_ERROR) return DATA_ERROR;
             value = cast_to(compiler, value, DATA_TYPE_FLOAT);
             if (value.type == DATA_TYPE_ERROR) return DATA_ERROR;
@@ -1608,7 +1608,7 @@ CompilerValue block_math(Compiler* compiler, Block* block, Block** next_block, B
     return DATA_ERROR;
 }
 
-CompilerValue block_pi(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
+Value block_pi(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) compiler;
     (void) block;
     (void) next_block;
@@ -1616,26 +1616,26 @@ CompilerValue block_pi(Compiler* compiler, Block* block, Block** next_block, Blo
     return DATA_FLOAT(M_PI);
 }
 
-CompilerValue block_less(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
+Value block_less(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) next_block;
     (void) prev_block;
     return evaluate_binary_number(compiler, &block->arguments[0], &block->arguments[1], IR_LESSI, IR_LESSF);
 }
 
-CompilerValue block_less_eq(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
+Value block_less_eq(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) next_block;
     (void) prev_block;
     return evaluate_binary_number(compiler, &block->arguments[0], &block->arguments[1], IR_LESSEQI, IR_LESSEQF);
 }
 
-CompilerValue block_eq(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
+Value block_eq(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) next_block;
     (void) prev_block;
 
-    CompilerValue left = compiler_evaluate_argument(compiler, &block->arguments[0]);
+    Value left = compiler_evaluate_argument(compiler, &block->arguments[0]);
     if (left.type == DATA_TYPE_ERROR) return DATA_ERROR;
 
-    CompilerValue right = compiler_evaluate_argument(compiler, &block->arguments[1]);
+    Value right = compiler_evaluate_argument(compiler, &block->arguments[1]);
     if (right.type == DATA_TYPE_ERROR) return DATA_ERROR;
 
     if ((left.type != DATA_TYPE_CHUNK) != (right.type != DATA_TYPE_CHUNK)) {
@@ -1689,14 +1689,14 @@ CompilerValue block_eq(Compiler* compiler, Block* block, Block** next_block, Blo
     return DATA_CHUNK(DATA_TYPE_BOOL, bc);
 }
 
-CompilerValue block_not_eq(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
+Value block_not_eq(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) next_block;
     (void) prev_block;
 
-    CompilerValue left = compiler_evaluate_argument(compiler, &block->arguments[0]);
+    Value left = compiler_evaluate_argument(compiler, &block->arguments[0]);
     if (left.type == DATA_TYPE_ERROR) return DATA_ERROR;
 
-    CompilerValue right = compiler_evaluate_argument(compiler, &block->arguments[1]);
+    Value right = compiler_evaluate_argument(compiler, &block->arguments[1]);
     if (right.type == DATA_TYPE_ERROR) return DATA_ERROR;
 
     if ((left.type != DATA_TYPE_CHUNK) != (right.type != DATA_TYPE_CHUNK)) {
@@ -1750,23 +1750,23 @@ CompilerValue block_not_eq(Compiler* compiler, Block* block, Block** next_block,
     return DATA_CHUNK(DATA_TYPE_BOOL, bc);
 }
 
-CompilerValue block_more_eq(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
+Value block_more_eq(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) next_block;
     (void) prev_block;
     return evaluate_binary_number(compiler, &block->arguments[0], &block->arguments[1], IR_MOREEQI, IR_MOREEQF);
 }
 
-CompilerValue block_more(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
+Value block_more(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) next_block;
     (void) prev_block;
     return evaluate_binary_number(compiler, &block->arguments[0], &block->arguments[1], IR_MOREI, IR_MOREF);
 }
 
-CompilerValue block_not(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
+Value block_not(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) next_block;
     (void) prev_block;
 
-    CompilerValue val = compiler_evaluate_argument(compiler, &block->arguments[0]);
+    Value val = compiler_evaluate_argument(compiler, &block->arguments[0]);
     if (val.type == DATA_TYPE_ERROR) return DATA_ERROR;
 
     val = cast_to(compiler, val, DATA_TYPE_BOOL);
@@ -1780,19 +1780,19 @@ CompilerValue block_not(Compiler* compiler, Block* block, Block** next_block, Bl
     }
 }
 
-CompilerValue block_and(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
+Value block_and(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) next_block;
     (void) prev_block;
     return evaluate_binary_bool(compiler, &block->arguments[0], &block->arguments[1], IR_AND);
 }
 
-CompilerValue block_or(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
+Value block_or(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) next_block;
     (void) prev_block;
     return evaluate_binary_bool(compiler, &block->arguments[0], &block->arguments[1], IR_OR);
 }
 
-CompilerValue block_true(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
+Value block_true(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) compiler;
     (void) block;
     (void) next_block;
@@ -1800,7 +1800,7 @@ CompilerValue block_true(Compiler* compiler, Block* block, Block** next_block, B
     return DATA_BOOL(true);
 }
 
-CompilerValue block_false(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
+Value block_false(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) compiler;
     (void) block;
     (void) next_block;
@@ -1808,11 +1808,11 @@ CompilerValue block_false(Compiler* compiler, Block* block, Block** next_block, 
     return DATA_BOOL(false);
 }
 
-CompilerValue block_bit_not(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
+Value block_bit_not(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) next_block;
     (void) prev_block;
 
-    CompilerValue val = compiler_evaluate_argument(compiler, &block->arguments[0]);
+    Value val = compiler_evaluate_argument(compiler, &block->arguments[0]);
     if (val.type == DATA_TYPE_ERROR) return DATA_ERROR;
 
     val = cast_to(compiler, val, DATA_TYPE_INTEGER);
@@ -1826,34 +1826,34 @@ CompilerValue block_bit_not(Compiler* compiler, Block* block, Block** next_block
     }
 }
 
-CompilerValue block_bit_and(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
+Value block_bit_and(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) next_block;
     (void) prev_block;
     return evaluate_binary_int(compiler, &block->arguments[0], &block->arguments[1], IR_ANDI);
 }
 
-CompilerValue block_bit_or(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
+Value block_bit_or(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) next_block;
     (void) prev_block;
     return evaluate_binary_int(compiler, &block->arguments[0], &block->arguments[1], IR_ORI);
 }
 
-CompilerValue block_bit_xor(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
+Value block_bit_xor(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) next_block;
     (void) prev_block;
     return evaluate_binary_int(compiler, &block->arguments[0], &block->arguments[1], IR_XORI);
 }
 
-CompilerValue block_declare_var(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
+Value block_declare_var(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) next_block;
     (void) prev_block;
 
-    CompilerValue name = compiler_evaluate_argument(compiler, &block->arguments[0]);
+    Value name = compiler_evaluate_argument(compiler, &block->arguments[0]);
     if (name.type == DATA_TYPE_ERROR) return DATA_ERROR;
     name = cast_to_const_string(compiler, name);
     if (name.type == DATA_TYPE_ERROR) return DATA_ERROR;
 
-    CompilerValue value = compiler_evaluate_argument(compiler, &block->arguments[1]);
+    Value value = compiler_evaluate_argument(compiler, &block->arguments[1]);
     if (value.type == DATA_TYPE_ERROR) return DATA_ERROR;
 
     if (value.type != DATA_TYPE_CHUNK) {
@@ -1886,11 +1886,11 @@ CompilerValue block_declare_var(Compiler* compiler, Block* block, Block** next_b
     return DATA_CHUNK(DATA_TYPE_NULL, bc);
 }
 
-CompilerValue block_get_var(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
+Value block_get_var(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) next_block;
     (void) prev_block;
 
-    CompilerValue name = compiler_evaluate_argument(compiler, &block->arguments[0]);
+    Value name = compiler_evaluate_argument(compiler, &block->arguments[0]);
     if (name.type == DATA_TYPE_ERROR) return DATA_ERROR;
     name = cast_to_const_string(compiler, name);
     if (name.type == DATA_TYPE_ERROR) return DATA_ERROR;
@@ -1912,11 +1912,11 @@ CompilerValue block_get_var(Compiler* compiler, Block* block, Block** next_block
     }
 }
 
-CompilerValue block_set_var(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
+Value block_set_var(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) next_block;
     (void) prev_block;
 
-    CompilerValue name = compiler_evaluate_argument(compiler, &block->arguments[0]);
+    Value name = compiler_evaluate_argument(compiler, &block->arguments[0]);
     if (name.type == DATA_TYPE_ERROR) return DATA_ERROR;
     name = cast_to_const_string(compiler, name);
     if (name.type == DATA_TYPE_ERROR) return DATA_ERROR;
@@ -1928,7 +1928,7 @@ CompilerValue block_set_var(Compiler* compiler, Block* block, Block** next_block
         return DATA_ERROR;
     }
 
-    CompilerValue value = compiler_evaluate_argument(compiler, &block->arguments[1]);
+    Value value = compiler_evaluate_argument(compiler, &block->arguments[1]);
     if (value.type == DATA_TYPE_ERROR) return DATA_ERROR;
 
     if (value.type != DATA_TYPE_CHUNK) {
@@ -1955,14 +1955,14 @@ CompilerValue block_set_var(Compiler* compiler, Block* block, Block** next_block
     return DATA_CHUNK(DATA_TYPE_NULL, bc);
 }
 
-CompilerValue block_join(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
+Value block_join(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) next_block;
     (void) prev_block;
 
-    CompilerValue left_val = compiler_evaluate_argument(compiler, &block->arguments[0]);
+    Value left_val = compiler_evaluate_argument(compiler, &block->arguments[0]);
     if (left_val.type == DATA_TYPE_ERROR) return DATA_ERROR;
 
-    CompilerValue right_val = compiler_evaluate_argument(compiler, &block->arguments[1]);
+    Value right_val = compiler_evaluate_argument(compiler, &block->arguments[1]);
     if (right_val.type == DATA_TYPE_ERROR) return DATA_ERROR;
 
     cast_binary(compiler, &left_val, &right_val, DATA_TYPE_STRING);
@@ -1984,16 +1984,16 @@ CompilerValue block_join(Compiler* compiler, Block* block, Block** next_block, B
     }
 }
 
-CompilerValue block_letter_in(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
+Value block_letter_in(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) next_block;
     (void) prev_block;
 
-    CompilerValue ind = compiler_evaluate_argument(compiler, &block->arguments[0]);
+    Value ind = compiler_evaluate_argument(compiler, &block->arguments[0]);
     if (ind.type == DATA_TYPE_ERROR) return DATA_ERROR;
     ind = cast_to_bc_int(compiler, ind);
     if (ind.type == DATA_TYPE_ERROR) return DATA_ERROR;
 
-    CompilerValue str = compiler_evaluate_argument(compiler, &block->arguments[1]);
+    Value str = compiler_evaluate_argument(compiler, &block->arguments[1]);
     if (str.type == DATA_TYPE_ERROR) return DATA_ERROR;
     str = cast_to_bc_string(compiler, str);
     if (str.type == DATA_TYPE_ERROR) return DATA_ERROR;
@@ -2011,21 +2011,21 @@ CompilerValue block_letter_in(Compiler* compiler, Block* block, Block** next_blo
     return DATA_CHUNK(DATA_TYPE_STRING, bc);
 }
 
-CompilerValue block_substring(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
+Value block_substring(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) next_block;
     (void) prev_block;
 
-    CompilerValue start = compiler_evaluate_argument(compiler, &block->arguments[0]);
+    Value start = compiler_evaluate_argument(compiler, &block->arguments[0]);
     if (start.type == DATA_TYPE_ERROR) return DATA_ERROR;
     start = cast_to_bc_int(compiler, start);
     if (start.type == DATA_TYPE_ERROR) return DATA_ERROR;
 
-    CompilerValue end = compiler_evaluate_argument(compiler, &block->arguments[1]);
+    Value end = compiler_evaluate_argument(compiler, &block->arguments[1]);
     if (end.type == DATA_TYPE_ERROR) return DATA_ERROR;
     end = cast_to_bc_int(compiler, end);
     if (end.type == DATA_TYPE_ERROR) return DATA_ERROR;
 
-    CompilerValue str = compiler_evaluate_argument(compiler, &block->arguments[2]);
+    Value str = compiler_evaluate_argument(compiler, &block->arguments[2]);
     if (str.type == DATA_TYPE_ERROR) return DATA_ERROR;
     str = cast_to_bc_string(compiler, str);
     if (str.type == DATA_TYPE_ERROR) return DATA_ERROR;
@@ -2037,11 +2037,11 @@ CompilerValue block_substring(Compiler* compiler, Block* block, Block** next_blo
     return DATA_CHUNK(DATA_TYPE_STRING, bc);
 }
 
-CompilerValue block_length(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
+Value block_length(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) next_block;
     (void) prev_block;
 
-    CompilerValue str = compiler_evaluate_argument(compiler, &block->arguments[0]);
+    Value str = compiler_evaluate_argument(compiler, &block->arguments[0]);
     if (str.type == DATA_TYPE_ERROR) return DATA_ERROR;
     str = cast_to_bc_string(compiler, str);
     if (str.type == DATA_TYPE_ERROR) return DATA_ERROR;
@@ -2050,11 +2050,11 @@ CompilerValue block_length(Compiler* compiler, Block* block, Block** next_block,
     return DATA_CHUNK(DATA_TYPE_INTEGER, str.data.chunk_val.bc);
 }
 
-CompilerValue block_ord(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
+Value block_ord(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) next_block;
     (void) prev_block;
 
-    CompilerValue str = compiler_evaluate_argument(compiler, &block->arguments[0]);
+    Value str = compiler_evaluate_argument(compiler, &block->arguments[0]);
     if (str.type == DATA_TYPE_ERROR) return DATA_ERROR;
     str = cast_to(compiler, str, DATA_TYPE_STRING);
     if (str.type == DATA_TYPE_ERROR) return DATA_ERROR;
@@ -2070,11 +2070,11 @@ CompilerValue block_ord(Compiler* compiler, Block* block, Block** next_block, Bl
     }
 }
 
-CompilerValue block_chr(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
+Value block_chr(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) next_block;
     (void) prev_block;
 
-    CompilerValue int_val = compiler_evaluate_argument(compiler, &block->arguments[0]);
+    Value int_val = compiler_evaluate_argument(compiler, &block->arguments[0]);
     if (int_val.type == DATA_TYPE_ERROR) return DATA_ERROR;
     int_val = cast_to(compiler, int_val, DATA_TYPE_INTEGER);
     if (int_val.type == DATA_TYPE_ERROR) return DATA_ERROR;
@@ -2091,7 +2091,7 @@ CompilerValue block_chr(Compiler* compiler, Block* block, Block** next_block, Bl
     }
 }
 
-CompilerValue block_create_list(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
+Value block_create_list(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) compiler;
     (void) block;
     (void) next_block;
@@ -2099,16 +2099,16 @@ CompilerValue block_create_list(Compiler* compiler, Block* block, Block** next_b
     return DATA_LIST(NULL);
 }
 
-CompilerValue block_list_add(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
+Value block_list_add(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) next_block;
     (void) prev_block;
 
-    CompilerValue list = compiler_evaluate_argument(compiler, &block->arguments[0]);
+    Value list = compiler_evaluate_argument(compiler, &block->arguments[0]);
     if (list.type == DATA_TYPE_ERROR) return DATA_ERROR;
     list = cast_to_bc_list(compiler, list);
     if (list.type == DATA_TYPE_ERROR) return DATA_ERROR;
 
-    CompilerValue value = compiler_evaluate_argument(compiler, &block->arguments[1]);
+    Value value = compiler_evaluate_argument(compiler, &block->arguments[1]);
     if (value.type == DATA_TYPE_ERROR) return DATA_ERROR;
     if (value.type != DATA_TYPE_CHUNK) {
         value = cast_to_bc(compiler, value, value.type);
@@ -2122,16 +2122,16 @@ CompilerValue block_list_add(Compiler* compiler, Block* block, Block** next_bloc
     return DATA_CHUNK(DATA_TYPE_NULL, bc);
 }
 
-CompilerValue block_list_delete(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
+Value block_list_delete(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) next_block;
     (void) prev_block;
 
-    CompilerValue list = compiler_evaluate_argument(compiler, &block->arguments[0]);
+    Value list = compiler_evaluate_argument(compiler, &block->arguments[0]);
     if (list.type == DATA_TYPE_ERROR) return DATA_ERROR;
     list = cast_to_bc_list(compiler, list);
     if (list.type == DATA_TYPE_ERROR) return DATA_ERROR;
 
-    CompilerValue ind = compiler_evaluate_argument(compiler, &block->arguments[1]);
+    Value ind = compiler_evaluate_argument(compiler, &block->arguments[1]);
     if (ind.type == DATA_TYPE_ERROR) return DATA_ERROR;
     ind = cast_to_bc_int(compiler, ind);
     if (ind.type == DATA_TYPE_ERROR) return DATA_ERROR;
@@ -2143,16 +2143,16 @@ CompilerValue block_list_delete(Compiler* compiler, Block* block, Block** next_b
     return DATA_CHUNK(DATA_TYPE_NULL, bc);
 }
 
-CompilerValue block_list_get(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
+Value block_list_get(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) next_block;
     (void) prev_block;
 
-    CompilerValue list = compiler_evaluate_argument(compiler, &block->arguments[0]);
+    Value list = compiler_evaluate_argument(compiler, &block->arguments[0]);
     if (list.type == DATA_TYPE_ERROR) return DATA_ERROR;
     list = cast_to_bc_list(compiler, list);
     if (list.type == DATA_TYPE_ERROR) return DATA_ERROR;
 
-    CompilerValue ind = compiler_evaluate_argument(compiler, &block->arguments[1]);
+    Value ind = compiler_evaluate_argument(compiler, &block->arguments[1]);
     if (ind.type == DATA_TYPE_ERROR) return DATA_ERROR;
     ind = cast_to_bc_int(compiler, ind);
     if (ind.type == DATA_TYPE_ERROR) return DATA_ERROR;
@@ -2164,21 +2164,21 @@ CompilerValue block_list_get(Compiler* compiler, Block* block, Block** next_bloc
     return DATA_CHUNK(DATA_TYPE_ANY, bc);
 }
 
-CompilerValue block_list_set(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
+Value block_list_set(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) next_block;
     (void) prev_block;
 
-    CompilerValue list = compiler_evaluate_argument(compiler, &block->arguments[0]);
+    Value list = compiler_evaluate_argument(compiler, &block->arguments[0]);
     if (list.type == DATA_TYPE_ERROR) return DATA_ERROR;
     list = cast_to_bc_list(compiler, list);
     if (list.type == DATA_TYPE_ERROR) return DATA_ERROR;
 
-    CompilerValue ind = compiler_evaluate_argument(compiler, &block->arguments[1]);
+    Value ind = compiler_evaluate_argument(compiler, &block->arguments[1]);
     if (ind.type == DATA_TYPE_ERROR) return DATA_ERROR;
     ind = cast_to_bc_int(compiler, ind);
     if (ind.type == DATA_TYPE_ERROR) return DATA_ERROR;
 
-    CompilerValue value = compiler_evaluate_argument(compiler, &block->arguments[2]);
+    Value value = compiler_evaluate_argument(compiler, &block->arguments[2]);
     if (value.type == DATA_TYPE_ERROR) return DATA_ERROR;
     if (value.type != DATA_TYPE_CHUNK) {
         value = cast_to_bc(compiler, value, value.type);
@@ -2193,21 +2193,21 @@ CompilerValue block_list_set(Compiler* compiler, Block* block, Block** next_bloc
     return DATA_CHUNK(DATA_TYPE_NULL, bc);
 }
 
-CompilerValue block_list_insert(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
+Value block_list_insert(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) next_block;
     (void) prev_block;
 
-    CompilerValue list = compiler_evaluate_argument(compiler, &block->arguments[0]);
+    Value list = compiler_evaluate_argument(compiler, &block->arguments[0]);
     if (list.type == DATA_TYPE_ERROR) return DATA_ERROR;
     list = cast_to_bc_list(compiler, list);
     if (list.type == DATA_TYPE_ERROR) return DATA_ERROR;
 
-    CompilerValue ind = compiler_evaluate_argument(compiler, &block->arguments[1]);
+    Value ind = compiler_evaluate_argument(compiler, &block->arguments[1]);
     if (ind.type == DATA_TYPE_ERROR) return DATA_ERROR;
     ind = cast_to_bc_int(compiler, ind);
     if (ind.type == DATA_TYPE_ERROR) return DATA_ERROR;
 
-    CompilerValue value = compiler_evaluate_argument(compiler, &block->arguments[2]);
+    Value value = compiler_evaluate_argument(compiler, &block->arguments[2]);
     if (value.type == DATA_TYPE_ERROR) return DATA_ERROR;
     if (value.type != DATA_TYPE_CHUNK) {
         value = cast_to_bc(compiler, value, value.type);
@@ -2222,11 +2222,11 @@ CompilerValue block_list_insert(Compiler* compiler, Block* block, Block** next_b
     return DATA_CHUNK(DATA_TYPE_NULL, bc);
 }
 
-CompilerValue block_list_length(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
+Value block_list_length(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) next_block;
     (void) prev_block;
 
-    CompilerValue list = compiler_evaluate_argument(compiler, &block->arguments[0]);
+    Value list = compiler_evaluate_argument(compiler, &block->arguments[0]);
     if (list.type == DATA_TYPE_ERROR) return DATA_ERROR;
     list = cast_to_bc_list(compiler, list);
     if (list.type == DATA_TYPE_ERROR) return DATA_ERROR;
@@ -2235,11 +2235,11 @@ CompilerValue block_list_length(Compiler* compiler, Block* block, Block** next_b
     return DATA_CHUNK(DATA_TYPE_INTEGER, list.data.chunk_val.bc);
 }
 
-CompilerValue block_sleep(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
+Value block_sleep(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) next_block;
     (void) prev_block;
 
-    CompilerValue value = compiler_evaluate_argument(compiler, &block->arguments[0]);
+    Value value = compiler_evaluate_argument(compiler, &block->arguments[0]);
     if (value.type == DATA_TYPE_ERROR) return DATA_ERROR;
 
     value = cast_to_bc_float(compiler, value);
@@ -2250,14 +2250,14 @@ CompilerValue block_sleep(Compiler* compiler, Block* block, Block** next_block, 
     return DATA_CHUNK(DATA_TYPE_NULL, value.data.chunk_val.bc);
 }
 
-CompilerValue block_random(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
+Value block_random(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) next_block;
     (void) prev_block;
 
-    CompilerValue left = compiler_evaluate_argument(compiler, &block->arguments[0]);
+    Value left = compiler_evaluate_argument(compiler, &block->arguments[0]);
     if (left.type == DATA_TYPE_ERROR) return DATA_ERROR;
 
-    CompilerValue right = compiler_evaluate_argument(compiler, &block->arguments[1]);
+    Value right = compiler_evaluate_argument(compiler, &block->arguments[1]);
     if (right.type == DATA_TYPE_ERROR) return DATA_ERROR;
 
     DataType left_type  = left.type  == DATA_TYPE_CHUNK ? left.data.chunk_val.return_type  : left.type;
@@ -2279,7 +2279,7 @@ CompilerValue block_random(Compiler* compiler, Block* block, Block** next_block,
     return DATA_CHUNK(right.data.chunk_val.return_type, bc);
 }
 
-CompilerValue block_unix_time(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
+Value block_unix_time(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) block;
     (void) next_block;
     (void) prev_block;
@@ -2289,56 +2289,56 @@ CompilerValue block_unix_time(Compiler* compiler, Block* block, Block** next_blo
     return DATA_CHUNK(DATA_TYPE_INTEGER, bc);
 }
 
-CompilerValue block_convert_int(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
+Value block_convert_int(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) next_block;
     (void) prev_block;
-    CompilerValue value = compiler_evaluate_argument(compiler, &block->arguments[0]);
+    Value value = compiler_evaluate_argument(compiler, &block->arguments[0]);
     if (value.type == DATA_TYPE_ERROR) return DATA_ERROR;
 
     return cast_to(compiler, value, DATA_TYPE_INTEGER);
 }
 
-CompilerValue block_convert_float(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
+Value block_convert_float(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) next_block;
     (void) prev_block;
-    CompilerValue value = compiler_evaluate_argument(compiler, &block->arguments[0]);
+    Value value = compiler_evaluate_argument(compiler, &block->arguments[0]);
     if (value.type == DATA_TYPE_ERROR) return DATA_ERROR;
 
     return cast_to(compiler, value, DATA_TYPE_FLOAT);
 }
 
-CompilerValue block_convert_str(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
+Value block_convert_str(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) next_block;
     (void) prev_block;
-    CompilerValue value = compiler_evaluate_argument(compiler, &block->arguments[0]);
+    Value value = compiler_evaluate_argument(compiler, &block->arguments[0]);
     if (value.type == DATA_TYPE_ERROR) return DATA_ERROR;
 
     return cast_to(compiler, value, DATA_TYPE_STRING);
 }
 
-CompilerValue block_convert_bool(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
+Value block_convert_bool(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) next_block;
     (void) prev_block;
-    CompilerValue value = compiler_evaluate_argument(compiler, &block->arguments[0]);
+    Value value = compiler_evaluate_argument(compiler, &block->arguments[0]);
     if (value.type == DATA_TYPE_ERROR) return DATA_ERROR;
 
     return cast_to(compiler, value, DATA_TYPE_BOOL);
 }
 
-CompilerValue block_convert_color(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
+Value block_convert_color(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) next_block;
     (void) prev_block;
-    CompilerValue value = compiler_evaluate_argument(compiler, &block->arguments[0]);
+    Value value = compiler_evaluate_argument(compiler, &block->arguments[0]);
     if (value.type == DATA_TYPE_ERROR) return DATA_ERROR;
 
     return cast_to(compiler, value, DATA_TYPE_COLOR);
 }
 
-CompilerValue block_typeof(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
+Value block_typeof(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) next_block;
     (void) prev_block;
 
-    CompilerValue value = compiler_evaluate_argument(compiler, &block->arguments[0]);
+    Value value = compiler_evaluate_argument(compiler, &block->arguments[0]);
     if (value.type == DATA_TYPE_ERROR) return DATA_ERROR;
 
     DataType type = value.type;
@@ -2352,7 +2352,7 @@ CompilerValue block_typeof(Compiler* compiler, Block* block, Block** next_block,
     }
 }
 
-CompilerValue block_noop(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
+Value block_noop(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) compiler;
     (void) block;
     (void) next_block;
@@ -2360,7 +2360,7 @@ CompilerValue block_noop(Compiler* compiler, Block* block, Block** next_block, B
     return DATA_NOTHING;
 }
 
-CompilerValue block_do_nothing(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
+Value block_do_nothing(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) compiler;
     (void) block;
     (void) next_block;
@@ -2368,7 +2368,7 @@ CompilerValue block_do_nothing(Compiler* compiler, Block* block, Block** next_bl
     return EMPTY_CHUNK;
 }
 
-CompilerValue block_gc_collect(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
+Value block_gc_collect(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) block;
     (void) next_block;
     (void) prev_block;
@@ -2378,13 +2378,13 @@ CompilerValue block_gc_collect(Compiler* compiler, Block* block, Block** next_bl
     return DATA_CHUNK(DATA_TYPE_NULL, bc);
 }
 
-CompilerValue block_exec_custom(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
+Value block_exec_custom(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) next_block;
     (void) prev_block;
 
     IrBytecode bc = EMPTY_BYTECODE;
     for (size_t i = 0; i < vector_size(block->arguments); i++) {
-        CompilerValue value = compiler_evaluate_argument(compiler, &block->arguments[i]);
+        Value value = compiler_evaluate_argument(compiler, &block->arguments[i]);
         if (value.type == DATA_TYPE_ERROR) return DATA_ERROR;
         if (value.type != DATA_TYPE_CHUNK) {
             value = cast_to_bc(compiler, value, value.type);
@@ -2404,7 +2404,7 @@ CompilerValue block_exec_custom(Compiler* compiler, Block* block, Block** next_b
     return DATA_CHUNK(DATA_TYPE_ANY, bc);
 }
 
-CompilerValue block_custom_arg(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
+Value block_custom_arg(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) next_block;
     (void) prev_block;
 

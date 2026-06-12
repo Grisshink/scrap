@@ -841,7 +841,9 @@ static void code_attach_to_argument(void) {
     if (mouse_block->blockdef->type == BLOCKTYPE_CONTROL) return;
     if (mouse_block->blockdef->type == BLOCKTYPE_CONTROLEND) return;
     if (mouse_block->blockdef->type == BLOCKTYPE_HAT) return;
-    if (ui.hover.editor.argument->type != ARGUMENT_TEXT && ui.hover.editor.argument->type != ARGUMENT_COLOR) return;
+    if (ui.hover.editor.argument->type != ARGUMENT_TEXT  && 
+        ui.hover.editor.argument->type != ARGUMENT_COLOR && 
+        ui.hover.editor.argument->type != ARGUMENT_VALUE) return;
 
     mouse_block->parent.type = BLOCK_PARENT_ARGUMENT;
     mouse_block->parent.as.arg = ui.hover.editor.argument;
@@ -918,7 +920,13 @@ static void code_detach_argument(void) {
     if (parent_arg->block->blockdef->inputs[parent_arg->input_id].type == INPUT_COLOR) {
         argument_set_color(parent_arg, (BlockdefColor) { 0xff, 0xff, 0xff, 0xff });
     } else {
-        argument_set_text(parent_arg, "");
+        Value val = (Value) {
+            .type = DATA_TYPE_ANY,
+            .data.str_val = vector_create(),
+        };
+        vector_add(&val.data.str_val, 0);
+
+        argument_set_value(parent_arg, val);
     }
     root.chain->start->parent.type = BLOCK_PARENT_BLOCKCHAIN;
     root.chain->start->parent.as.chain = root.chain;
@@ -1309,8 +1317,12 @@ static bool handle_mouse_click(void) {
         }
 
         if (ui.hover.editor.argument != ui.hover.editor.select_argument) {
-            if (!ui.hover.editor.argument || ui.hover.input_info.input || ui.dropdown.shown) {
+            if (!ui.hover.editor.argument || ui.hover.input_info.input || ui.dropdown.shown || ui.hover.editor.argument->type == ARGUMENT_VALUE) {
                 ui.hover.editor.select_argument = ui.hover.editor.argument;
+
+                if (ui.hover.editor.argument && ui.hover.editor.argument->type == ARGUMENT_VALUE && ui.hover.editor.argument->data.value.type == DATA_TYPE_ANY) {
+                    ui.hover.editor.select_argument_type = value_determine_type(&ui.hover.editor.argument->data.value);
+                }
             }
             if (ui.dropdown.type == DROPDOWN_LIST) ui.dropdown.as.list.scroll = 0;
             return true;
@@ -1673,6 +1685,9 @@ static void handle_key_press(void) {
 
     if (edit_text(ui.hover.select_input)) {
         if (ui.hover.select_input == &editor.search_list_search) update_search();
+        if (ui.hover.editor.select_argument && ui.hover.editor.select_argument->type == ARGUMENT_VALUE && ui.hover.editor.select_argument->data.value.type == DATA_TYPE_ANY) {
+            ui.hover.editor.select_argument_type = value_determine_type(&ui.hover.editor.select_argument->data.value);
+        }
     }
 }
 
