@@ -1354,8 +1354,9 @@ static void block_next_argument() {
         return;
     }
 
-    if (arg->type == ARGUMENT_TEXT || arg->type == ARGUMENT_CONST_STRING) {
+    if (arg->type == ARGUMENT_TEXT || arg->type == ARGUMENT_CONST_STRING || arg->type == ARGUMENT_VALUE) {
         ui.hover.editor.select_argument = arg;
+        if (arg->type == ARGUMENT_VALUE) ui.hover.editor.select_argument_type = value_determine_type(&arg->data.value);
     } else if (arg->type == ARGUMENT_BLOCK) {
         ui.hover.editor.select_argument = NULL;
         ui.hover.editor.select_block = arg->data.block;
@@ -1383,15 +1384,17 @@ static void block_prev_argument() {
         return;
     }
 
-    if (arg->type == ARGUMENT_TEXT || arg->type == ARGUMENT_CONST_STRING) {
+    if (arg->type == ARGUMENT_TEXT || arg->type == ARGUMENT_CONST_STRING || arg->type == ARGUMENT_VALUE) {
         ui.hover.editor.select_argument = arg;
+        if (arg->type == ARGUMENT_VALUE) ui.hover.editor.select_argument_type = value_determine_type(&arg->data.value);
     } else if (arg->type == ARGUMENT_BLOCK) {
         ui.hover.editor.select_argument = NULL;
         ui.hover.editor.select_block = arg->data.block;
         while (vector_size(ui.hover.editor.select_block->arguments) != 0) {
             arg = &ui.hover.editor.select_block->arguments[vector_size(ui.hover.editor.select_block->arguments) - 1];
-            if (arg->type == ARGUMENT_TEXT || arg->type == ARGUMENT_CONST_STRING) {
+            if (arg->type == ARGUMENT_TEXT || arg->type == ARGUMENT_CONST_STRING || arg->type == ARGUMENT_VALUE) {
                 ui.hover.editor.select_argument = arg;
+                if (arg->type == ARGUMENT_VALUE) ui.hover.editor.select_argument_type = value_determine_type(&arg->data.value);
                 break;
             } else if (arg->type == ARGUMENT_BLOCK) {
                 ui.hover.editor.select_block = arg->data.block;
@@ -1463,7 +1466,19 @@ static Block* block_prev_block(Block* block) {
 static bool handle_code_panel_key_press(void) {
     if (ui.hover.editor.select_argument && !ui.hover.select_input) {
         if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_KP_ENTER)) {
-            ui.hover.select_input = &ui.hover.editor.select_argument->data.text;
+            if (ui.hover.editor.select_argument->type == ARGUMENT_VALUE && 
+                ui.hover.editor.select_argument->data.value.type != DATA_TYPE_ANY && 
+                ui.hover.editor.select_argument->data.value.type != DATA_TYPE_STRING)
+            {
+                return true;
+            }
+
+            if (ui.hover.editor.select_argument->type == ARGUMENT_VALUE) {
+                ui.hover.select_input = &ui.hover.editor.select_argument->data.value.data.str_val;
+            } else {
+                ui.hover.select_input = &ui.hover.editor.select_argument->data.text;
+            }
+
             ui.hover.select_input_mark = 0;
             ui.hover.select_input_cursor = strlen(*ui.hover.select_input);
             ui.render_surface_needs_redraw = true;
