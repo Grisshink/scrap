@@ -62,11 +62,11 @@ char* language_list[5] = {
 };
 
 char scrap_ident[] = "SCRAP";
-Value* save_block_ids = NULL;
+Value* save_value_constants = NULL;
 Blockdef** save_blockdefs = NULL;
 static unsigned int ver = 0;
 
-int save_find_id(const Value id);
+int save_find_constant(const Value constant);
 void save_code(const char* file_path, ProjectConfig* config, RootBlockChain* code);
 RootBlockChain* load_code(const char* file_path, ProjectConfig* out_config);
 void save_block(SaveData* save, Block* block);
@@ -75,7 +75,7 @@ void save_blockdef(SaveData* save, Blockdef* blockdef);
 Blockdef* load_blockdef(SaveData* save);
 void save_blockchain(SaveData* save, BlockChain* chain);
 BlockChain* load_blockchain(SaveData* save);
-void collect_blockchain_ids(BlockChain* chain);
+void collect_blockchain_constants(BlockChain* chain);
 
 const char* language_to_code(Language lang) {
     switch (lang) {
@@ -626,36 +626,36 @@ void save_block_arguments(SaveData* save, Argument* arg) {
     save_add_varint(save, arg->input_id);
     save_add_varint(save, arg->type);
 
-    int string_id;
+    int constant_ind;
     static_assert(ARGUMENT_LAST == 6, "Exhaustive argument type in save_block_arguments");
     switch (arg->type) {
     case ARGUMENT_TEXT:
     case ARGUMENT_CONST_STRING:
-        string_id = save_find_id((Value) {
+        constant_ind = save_find_constant((Value) {
             .type = DATA_TYPE_STRING,
             .data.str_val = arg->data.text,
         });
-        assert(string_id != -1);
-        save_add_varint(save, string_id);
+        assert(constant_ind != -1);
+        save_add_varint(save, constant_ind);
         break;
     case ARGUMENT_BLOCK:
         save_block(save, arg->data.block);
         break;
     case ARGUMENT_BLOCKDEF:
-        string_id = save_find_id((Value) {
+        constant_ind = save_find_constant((Value) {
             .type = DATA_TYPE_STRING,
             .data.str_val = (char*)arg->data.blockdef->id,
         });
-        assert(string_id != -1);
-        save_add_varint(save, string_id);
+        assert(constant_ind != -1);
+        save_add_varint(save, constant_ind);
         break;
     case ARGUMENT_COLOR:
         save_add_varint(save, *(int*)&arg->data.color);
         break;
     case ARGUMENT_VALUE:
-        string_id = save_find_id(arg->data.value);
-        assert(string_id != -1);
-        save_add_varint(save, string_id);
+        constant_ind = save_find_constant(arg->data.value);
+        assert(constant_ind != -1);
+        save_add_varint(save, constant_ind);
         break;
     default:
         assert(false && "Unimplemented argument save");
@@ -668,12 +668,12 @@ void save_block(SaveData* save, Block* block) {
 
     int arg_count = vector_size(block->arguments);
 
-    int string_id = save_find_id((Value) {
+    int constant_ind = save_find_constant((Value) {
         .type = DATA_TYPE_STRING,
         .data.str_val = (char*)block->blockdef->id,
     });
-    assert(string_id != -1);
-    save_add_varint(save, string_id);
+    assert(constant_ind != -1);
+    save_add_varint(save, constant_ind);
     save_add_varint(save, arg_count);
     for (int i = 0; i < arg_count; i++) save_block_arguments(save, &block->arguments[i]);
 
@@ -704,29 +704,29 @@ void rename_blockdef(Blockdef* blockdef, int id) {
     }
 }
 
-int save_find_id(const Value id) {
+int save_find_constant(const Value id) {
     // TODO: Replace linear search with hash tables
-    for (size_t i = 0; i < vector_size(save_block_ids); i++) {
-        if (save_block_ids[i].type != id.type) continue;
+    for (size_t i = 0; i < vector_size(save_value_constants); i++) {
+        if (save_value_constants[i].type != id.type) continue;
 
-        static_assert(DATA_TYPE_LAST == 12, "Exhaustive data type in save_find_id");
-        switch (save_block_ids[i].type) {
+        static_assert(DATA_TYPE_LAST == 12, "Exhaustive data type in save_find_constant");
+        switch (save_value_constants[i].type) {
         case DATA_TYPE_NOTHING: return i;
         case DATA_TYPE_INTEGER:
-            if (save_block_ids[i].data.integer_val == id.data.integer_val) return i;
+            if (save_value_constants[i].data.integer_val == id.data.integer_val) return i;
             break;
         case DATA_TYPE_FLOAT:
-            if (save_block_ids[i].data.float_val == id.data.float_val) return i;
+            if (save_value_constants[i].data.float_val == id.data.float_val) return i;
             break;
         case DATA_TYPE_BOOL:
-            if (save_block_ids[i].data.bool_val == id.data.bool_val) return i;
+            if (save_value_constants[i].data.bool_val == id.data.bool_val) return i;
             break;
         case DATA_TYPE_COLOR:
-            if (!memcmp(&save_block_ids[i].data.color_val, &id.data.color_val, sizeof(id.data.color_val))) return i;
+            if (!memcmp(&save_value_constants[i].data.color_val, &id.data.color_val, sizeof(id.data.color_val))) return i;
             break;
         case DATA_TYPE_ANY:
         case DATA_TYPE_STRING:
-            if (!strcmp(save_block_ids[i].data.str_val, id.data.str_val)) return i;
+            if (!strcmp(save_value_constants[i].data.str_val, id.data.str_val)) return i;
             break;
         case DATA_TYPE_LIST:
             assert(false && "TODO");
@@ -737,37 +737,37 @@ int save_find_id(const Value id) {
         case DATA_TYPE_NULL:
             assert(false && "Invalid save type");
         default:
-            assert(false && "Unhandled data type in save_find_id");
+            assert(false && "Unhandled data type in save_find_constant");
         }
     }
     return -1;
 }
 
-void save_add_id(Value id) {
-    if (save_find_id(id) != -1) return;
-    vector_add(&save_block_ids, id);
+void save_add_constant(Value constant) {
+    if (save_find_constant(constant) != -1) return;
+    vector_add(&save_value_constants, constant);
 }
 
-void block_collect_ids(Block* block) {
-    save_add_id((Value) {
+void block_collect_constants(Block* block) {
+    save_add_constant((Value) {
         .type = DATA_TYPE_STRING, 
         .data.str_val = (char*)block->blockdef->id,
     });
     for (size_t i = 0; i < vector_size(block->arguments); i++) {
-        static_assert(ARGUMENT_LAST == 6, "Exhaustive argument type in block_collect_ids");
+        static_assert(ARGUMENT_LAST == 6, "Exhaustive argument type in block_collect_constants");
         switch (block->arguments[i].type) {
         case ARGUMENT_TEXT:
         case ARGUMENT_CONST_STRING:
-            save_add_id((Value) {
+            save_add_constant((Value) {
                 .type = DATA_TYPE_STRING,
                 .data.str_val = block->arguments[i].data.text,
             });
             break;
         case ARGUMENT_BLOCK:
-            block_collect_ids(block->arguments[i].data.block);
+            block_collect_constants(block->arguments[i].data.block);
             break;
         case ARGUMENT_BLOCKDEF:
-            save_add_id((Value) {
+            save_add_constant((Value) {
                 .type = DATA_TYPE_STRING,
                 .data.str_val = (char*)block->arguments[i].data.blockdef->id,
             });
@@ -775,21 +775,21 @@ void block_collect_ids(Block* block) {
         case ARGUMENT_COLOR:
             break;
         case ARGUMENT_VALUE:
-            save_add_id(block->arguments[i].data.value);
+            save_add_constant(block->arguments[i].data.value);
             break;
         default:
-            assert(false && "Unimplemented argument save id");
+            assert(false && "Unimplemented argument save constant");
             break;
         }
     }
 
-    if (block->blockdef->type == BLOCKTYPE_CONTROL || block->blockdef->type == BLOCKTYPE_CONTROLEND) collect_blockchain_ids(block->contents);
-    if (block->blockdef->type == BLOCKTYPE_CONTROL) collect_blockchain_ids(block->controlend_contents);
+    if (block->blockdef->type == BLOCKTYPE_CONTROL || block->blockdef->type == BLOCKTYPE_CONTROLEND) collect_blockchain_constants(block->contents);
+    if (block->blockdef->type == BLOCKTYPE_CONTROL) collect_blockchain_constants(block->controlend_contents);
 }
 
-void collect_blockchain_ids(BlockChain* chain) {
+void collect_blockchain_constants(BlockChain* chain) {
     for (Block* iter = chain->start; iter; iter = iter->next) {
-        block_collect_ids(iter);
+        block_collect_constants(iter);
     }
 }
 
@@ -800,7 +800,7 @@ void save_code(const char* file_path, ProjectConfig* config, RootBlockChain* cod
     int chains_count = vector_size(code);
 
     Blockdef** blockdefs = vector_create();
-    save_block_ids = vector_create();
+    save_value_constants = vector_create();
 
     int id = 0;
     for (int i = 0; i < chains_count; i++) {
@@ -813,15 +813,15 @@ void save_code(const char* file_path, ProjectConfig* config, RootBlockChain* cod
     }
 
     for (size_t i = 0; i < vector_size(code); i++) {
-        collect_blockchain_ids(code[i].chain);
+        collect_blockchain_constants(code[i].chain);
     }
 
     save_add_varint(&save, ver);
     save_add_array(&save, scrap_ident, ARRLEN(scrap_ident), sizeof(scrap_ident[0]));
 
-    save_add_varint(&save, vector_size(save_block_ids));
-    for (size_t i = 0; i < vector_size(save_block_ids); i++) {
-        save_value(&save, &save_block_ids[i]);
+    save_add_varint(&save, vector_size(save_value_constants));
+    for (size_t i = 0; i < vector_size(save_value_constants); i++) {
+        save_value(&save, &save_value_constants[i]);
     }
 
     save_add_varint(&save, id);
@@ -833,7 +833,7 @@ void save_code(const char* file_path, ProjectConfig* config, RootBlockChain* cod
     SaveFileData(file_path, save.ptr, save.size);
     scrap_log(LOG_INFO, "%zu bytes written into %s", save.size, file_path);
 
-    vector_free(save_block_ids);
+    vector_free(save_value_constants);
     vector_free(blockdefs);
     free_save(&save);
 }
@@ -988,35 +988,34 @@ bool load_block_argument(SaveData* save, Argument* arg) {
     arg->type = arg_type;
     arg->input_id = input_id;
 
-    unsigned int text_id;
-    unsigned int blockdef_id;
+    unsigned int constant_ind;
     unsigned int color_int;
 
-    Value value_id;
+    Value constant;
 
     static_assert(ARGUMENT_LAST == 6, "Exhaustive argument type in load_block_argument");
     switch (arg_type) {
     case ARGUMENT_TEXT:
-        if (!save_read_varint(save, &text_id)) return false;
-        value_id = save_block_ids[text_id];
-        if (value_id.type != DATA_TYPE_STRING) {
-            scrap_log(LOG_ERROR, "[LOAD] Invalid contant type %s when loading text argument", type_to_str(value_id.type));
+        if (!save_read_varint(save, &constant_ind)) return false;
+        constant = save_value_constants[constant_ind];
+        if (constant.type != DATA_TYPE_STRING) {
+            scrap_log(LOG_ERROR, "[LOAD] Invalid contant type %s when loading text argument", type_to_str(constant.type));
             return false;
         }
 
         arg->type = ARGUMENT_VALUE;
-        arg->data.value = value_copy(&value_id);
+        arg->data.value = value_copy(&constant);
         break;
     case ARGUMENT_CONST_STRING:
-        if (!save_read_varint(save, &text_id)) return false;
-        value_id = save_block_ids[text_id];
-        if (value_id.type != DATA_TYPE_STRING) {
-            scrap_log(LOG_ERROR, "[LOAD] Invalid contant type %s when loading text argument", type_to_str(value_id.type));
+        if (!save_read_varint(save, &constant_ind)) return false;
+        constant = save_value_constants[constant_ind];
+        if (constant.type != DATA_TYPE_STRING) {
+            scrap_log(LOG_ERROR, "[LOAD] Invalid contant type %s when loading text argument", type_to_str(constant.type));
             return false;
         }
 
         arg->data.text = vector_create();
-        for (char* str = value_id.data.str_val; *str; str++) vector_add(&arg->data.text, *str);
+        for (char* str = constant.data.str_val; *str; str++) vector_add(&arg->data.text, *str);
         vector_add(&arg->data.text, 0);
         break;
     case ARGUMENT_BLOCK: ;
@@ -1029,20 +1028,20 @@ bool load_block_argument(SaveData* save, Argument* arg) {
         arg->data.block = block;
         break;
     case ARGUMENT_BLOCKDEF:
-        if (!save_read_varint(save, &blockdef_id)) return false;
-        if (blockdef_id >= vector_size(save_block_ids)) {
-            scrap_log(LOG_ERROR, "[LOAD] Out of bounds read of save_block_id at %u", blockdef_id);
+        if (!save_read_varint(save, &constant_ind)) return false;
+        if (constant_ind >= vector_size(save_value_constants)) {
+            scrap_log(LOG_ERROR, "[LOAD] Out of bounds read of save_block_id at %u", constant_ind);
             return false;
         }
-        value_id = save_block_ids[blockdef_id];
-        if (value_id.type != DATA_TYPE_STRING) {
-            scrap_log(LOG_ERROR, "[LOAD] Invalid constant type %s when loading text argument", type_to_str(value_id.type));
+        constant = save_value_constants[constant_ind];
+        if (constant.type != DATA_TYPE_STRING) {
+            scrap_log(LOG_ERROR, "[LOAD] Invalid constant type %s when loading text argument", type_to_str(constant.type));
             return false;
         }
 
-        Blockdef* blockdef = find_blockdef(save_blockdefs, value_id.data.str_val);
+        Blockdef* blockdef = find_blockdef(save_blockdefs, constant.data.str_val);
         if (!blockdef) {
-            scrap_log(LOG_ERROR, "[LOAD] Cannot find blockdef with id %s", value_id.data.str_val);
+            scrap_log(LOG_ERROR, "[LOAD] Cannot find blockdef with id %s", constant.data.str_val);
             return false;
         }
 
@@ -1054,10 +1053,10 @@ bool load_block_argument(SaveData* save, Argument* arg) {
         arg->data.color = INT_TO_COLOR(color_int);
         break;
     case ARGUMENT_VALUE:
-        if (!save_read_varint(save, &text_id)) return false;
-        value_id = save_block_ids[text_id];
+        if (!save_read_varint(save, &constant_ind)) return false;
+        constant = save_value_constants[constant_ind];
 
-        arg->data.value = value_copy(&value_id);
+        arg->data.value = value_copy(&constant);
         break;
     default:
         scrap_log(LOG_ERROR, "[LOAD] Unimplemented argument load");
@@ -1067,25 +1066,25 @@ bool load_block_argument(SaveData* save, Argument* arg) {
 }
 
 Block* load_block(SaveData* save) {
-    unsigned int block_id;
-    if (!save_read_varint(save, &block_id)) return NULL;
-    Value value_id = save_block_ids[block_id];
-    if (value_id.type != DATA_TYPE_STRING) {
-        scrap_log(LOG_ERROR, "[LOAD] Invalid constant type %s when loading block", type_to_str(value_id.type));
+    unsigned int block_id_constant_ind;
+    if (!save_read_varint(save, &block_id_constant_ind)) return NULL;
+    Value block_id_constant = save_value_constants[block_id_constant_ind];
+    if (block_id_constant.type != DATA_TYPE_STRING) {
+        scrap_log(LOG_ERROR, "[LOAD] Invalid constant type %s when loading block", type_to_str(block_id_constant.type));
         return false;
     }
 
     bool unknown_blockdef = false;
     Blockdef* blockdef = NULL;
-    blockdef = find_blockdef(save_blockdefs, value_id.data.str_val);
+    blockdef = find_blockdef(save_blockdefs, block_id_constant.data.str_val);
     if (!blockdef) {
-        blockdef = find_blockdef(vm.blockdefs, value_id.data.str_val);
+        blockdef = find_blockdef(vm.blockdefs, block_id_constant.data.str_val);
         if (!blockdef) {
-            scrap_log(LOG_WARNING, "[LOAD] No blockdef matched id: %s", value_id.data.str_val);
+            scrap_log(LOG_WARNING, "[LOAD] No blockdef matched id: %s", block_id_constant.data.str_val);
             unknown_blockdef = true;
 
-            blockdef = blockdef_new(value_id.data.str_val, BLOCKTYPE_NORMAL, (BlockdefColor) { 0x66, 0x66, 0x66, 0xff }, NULL);
-            blockdef_add_text(blockdef, TextFormat(gettext("UNKNOWN %s"), value_id.data.str_val));
+            blockdef = blockdef_new(block_id_constant.data.str_val, BLOCKTYPE_NORMAL, (BlockdefColor) { 0x66, 0x66, 0x66, 0xff }, NULL);
+            blockdef_add_text(blockdef, TextFormat(gettext("UNKNOWN %s"), block_id_constant.data.str_val));
         }
     }
 
@@ -1256,7 +1255,7 @@ RootBlockChain* load_code(const char* file_path, ProjectConfig* out_config) {
 
     RootBlockChain* code = vector_create();
     save_blockdefs = vector_create();
-    save_block_ids = vector_create();
+    save_value_constants = vector_create();
 
     int save_size;
     void* file_data = LoadFileData(file_path, &save_size);
@@ -1285,27 +1284,27 @@ RootBlockChain* load_code(const char* file_path, ProjectConfig* out_config) {
         goto load_fail;
     }
 
-    unsigned int block_ids_len;
-    if (!save_read_varint(&save, &block_ids_len)) goto load_fail;
-    for (unsigned int i = 0; i < block_ids_len; i++) {
-        Value val;
+    unsigned int constants_len;
+    if (!save_read_varint(&save, &constants_len)) goto load_fail;
+    for (unsigned int i = 0; i < constants_len; i++) {
+        Value constant;
 
         if (ver < 6) {
-            unsigned int id_len;
-            char* id = save_read_array(&save, sizeof(char), &id_len);
-            if (!id) goto load_fail;
-            if (id_len == 0) goto load_fail;
-            if (id[id_len - 1] != 0) goto load_fail;
+            unsigned int constant_str_len;
+            char* constant_str = save_read_array(&save, sizeof(char), &constant_str_len);
+            if (!constant_str) goto load_fail;
+            if (constant_str_len == 0) goto load_fail;
+            if (constant_str[constant_str_len - 1] != 0) goto load_fail;
 
-            val.type = DATA_TYPE_STRING;
-            val.data.str_val = vector_create();
-            for (char* ch = id; *ch; ch++) vector_add(&val.data.str_val, *ch);
-            vector_add(&val.data.str_val, 0);
+            constant.type = DATA_TYPE_STRING;
+            constant.data.str_val = vector_create();
+            for (char* ch = constant_str; *ch; ch++) vector_add(&constant.data.str_val, *ch);
+            vector_add(&constant.data.str_val, 0);
         } else {
-            if (!load_value(&save, &val)) goto load_fail; 
+            if (!load_value(&save, &constant)) goto load_fail; 
         }
 
-        vector_add(&save_block_ids, val);
+        vector_add(&save_value_constants, constant);
     }
 
     unsigned int custom_block_len;
@@ -1336,10 +1335,10 @@ RootBlockChain* load_code(const char* file_path, ProjectConfig* out_config) {
     UnloadFileData(file_data);
     vector_free(save_blockdefs);
 
-    for (size_t i = 0; i < vector_size(save_block_ids); i++) {
-        value_free(&save_block_ids[i]);
+    for (size_t i = 0; i < vector_size(save_value_constants); i++) {
+        value_free(&save_value_constants[i]);
     }
-    vector_free(save_block_ids);
+    vector_free(save_value_constants);
 
     if (ver < 5) convert_old_save_structure(code);
     return code;
@@ -1349,7 +1348,7 @@ load_fail:
     for (size_t i = 0; i < vector_size(code); i++) blockchain_free(code[i].chain);
     project_config_free(&config);
     vector_free(code);
-    vector_free(save_block_ids);
+    vector_free(save_value_constants);
     vector_free(save_blockdefs);
     return NULL;
 }
