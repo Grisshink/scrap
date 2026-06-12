@@ -45,6 +45,7 @@ Assets assets;
 
 Vm vm;
 Gui* gui = NULL;
+Gui gui_val;
 
 Editor editor;
 UI ui;
@@ -192,12 +193,11 @@ Image setup(void) {
     };
     SetShapesTexture(texture, (Rectangle){ 0.0f, 0.0f, 1.0f, 1.0f });
 
-    gui = malloc(sizeof(Gui));
-    gui_init(gui);
+    gui_val = gui_new(GiB(1));
+    gui = &gui_val;
     gui_set_measure_text_func(gui, scrap_gui_measure_text);
     gui_set_measure_image_func(gui, scrap_gui_measure_image);
     gui_update_window_size(gui, GetScreenWidth(), GetScreenHeight());
-    scrap_log(LOG_INFO, "Allocated %.2f KiB for gui", (float)sizeof(Gui) / 1024.0f);
     init_gui_window();
 
     editor.blockchain_render_layer_widths = vector_create();
@@ -216,7 +216,7 @@ void cleanup(void) {
     term_free();
 
     vector_free(editor.blockchain_render_layer_widths);
-    free(gui);
+    gui_free(gui);
 
     delete_all_tabs();
     vector_free(editor.tabs);

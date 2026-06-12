@@ -5,9 +5,6 @@ on:
     tags:
       - 'v*.*-*'
 
-permissions:
-  contents: write
-
 env:
   SCRAP_VERSION: ${{ github.ref_name }}
 
@@ -16,7 +13,7 @@ jobs:
     name: Build Linux release
     runs-on: ubuntu-22.04
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v6
         with:
           submodules: recursive
@@ -67,7 +64,7 @@ jobs:
     name: Build Appimage release
     runs-on: ubuntu-22.04
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v6
         with:
           submodules: recursive
@@ -129,7 +126,7 @@ jobs:
       run:
         shell: msys2 {0}
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v6
         with:
           submodules: recursive
@@ -175,6 +172,8 @@ jobs:
   release:
     needs: [build-linux, build-appimage, build-windows]
     runs-on: ubuntu-22.04
+    permissions:
+      contents: write
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -183,17 +182,14 @@ jobs:
         uses: actions/download-artifact@v7
         with:
           path: dist
-          pattern: 'scrap-*'
           merge-multiple: true
-      
-      - name: Generate release notes
-        run: python "$GITHUB_WORKSPACE/.github/generate_notes.py" > release_notes.md
 
       - name: Create a draft release
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$SCRAP_VERSION" --draft --title "$SCRAP_VERSION" --notes-file release_notes.md
-          gh release upload "$SCRAP_VERSION" "$GITHUB_WORKSPACE/dist/*.AppImage"
-          gh release upload "$SCRAP_VERSION" "$GITHUB_WORKSPACE/dist/*.tar.gz"
-          gh release upload "$SCRAP_VERSION" "$GITHUB_WORKSPACE/dist/*.zip"
+          python .github/generate_notes.py > release_notes.md
+          gh release create "$SCRAP_VERSION" --verify-tag --draft --title "$SCRAP_VERSION" --notes-file release_notes.md
+          gh release upload "$SCRAP_VERSION" dist/*.AppImage
+          gh release upload "$SCRAP_VERSION" dist/*.tar.gz
+          gh release upload "$SCRAP_VERSION" dist/*.zip

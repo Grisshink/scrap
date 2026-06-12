@@ -28,7 +28,7 @@ jobs:
             shell: msys2 {0}
 
         steps:
-            - name: Checkout code
+            - name: Checkout
               uses: actions/checkout@v6
               with:
                 submodules: recursive
@@ -58,7 +58,7 @@ jobs:
         runs-on: ubuntu-22.04
 
         steps:
-            - name: Checkout code
+            - name: Checkout
               uses: actions/checkout@v6
               with:
                 submodules: recursive
