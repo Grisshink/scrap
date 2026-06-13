@@ -38,7 +38,6 @@ typedef enum BlockParentType BlockParentType;
 typedef struct BlockParent BlockParent;
 typedef struct Block Block;
 
-typedef enum InputArgumentConstraint InputArgumentConstraint;
 typedef enum InputDropdownSource InputDropdownSource;
 typedef struct InputArgument InputArgument;
 typedef struct InputDropdown InputDropdown;
@@ -84,7 +83,7 @@ typedef struct {
 
 typedef union {
     char* str_val;
-    int integer_val;
+    int64_t integer_val;
     double float_val;
     bool bool_val;
     IrList* list_val;
@@ -102,16 +101,10 @@ struct BlockdefImage {
     BlockdefColor image_color;
 };
 
-enum InputArgumentConstraint {
-    BLOCKCONSTR_UNLIMITED, // Can put anything as argument
-    BLOCKCONSTR_STRING, // Can only put strings as argument
-};
-
 struct InputArgument {
     Blockdef* blockdef;
-    InputArgumentConstraint constr;
-    char* text;
-    const char* hint_text;
+    DataType allowed_type;
+    Value default_value;
 };
 
 enum InputDropdownSource {
@@ -230,7 +223,7 @@ struct RootBlockChain {
 Blockdef* blockdef_new(const char* id, BlockdefType type, BlockdefColor color, void* func);
 Blockdef* blockdef_copy(Blockdef* blockdef);
 void blockdef_add_text(Blockdef* blockdef, const char* text);
-void blockdef_add_argument(Blockdef* blockdef, char* defualt_data, const char* hint_text, InputArgumentConstraint constraint);
+void blockdef_add_argument(Blockdef* blockdef, Value default_value, DataType allowed_type);
 void blockdef_add_dropdown(Blockdef* blockdef, InputDropdownSource dropdown_source, ListAccessor accessor);
 void blockdef_add_color_input(Blockdef* blockdef, BlockdefColor color);
 void blockdef_add_image(Blockdef* blockdef, BlockdefImage image);
@@ -262,5 +255,7 @@ const char* type_to_str(DataType type);
 DataType value_determine_type(Value* value);
 Value value_copy(Value* value);
 void value_free(Value* value);
+Value value_from_string(const char* str);
+Value value_get_default(DataType type);
 
 #endif // AST_H

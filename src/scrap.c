@@ -169,6 +169,10 @@ Image setup(void) {
 
     ui.render_surface_needs_redraw = true;
 
+    ui.scratch_arena = gui_arena_new(GiB(1), MiB(1));
+    ui.hover.editor.select_argument_scratch_input = vector_create();
+    vector_add(&ui.hover.editor.select_argument_scratch_input, 0);
+
     vm = vm_new();
     register_blocks(&vm);
 
@@ -217,6 +221,9 @@ void cleanup(void) {
 
     vector_free(editor.blockchain_render_layer_widths);
     gui_free(gui);
+
+    gui_arena_free(ui.scratch_arena);
+    vector_free(ui.hover.editor.select_argument_scratch_input);
 
     delete_all_tabs();
     vector_free(editor.tabs);

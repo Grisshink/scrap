@@ -43,6 +43,8 @@ char* file_menu_list[] = {
     "Load project",
 };
 
+static void get_input_ind(void);
+
 // Divides the panel into two parts along the specified side with the specified split percentage
 void panel_split(PanelTree* panel, SplitSide side, PanelType new_panel_type, float split_percent) {
     if (panel->type == PANEL_SPLIT) return;
@@ -558,7 +560,7 @@ bool handle_file_menu_click(void) {
 
 bool handle_block_dropdown_click(void) {
     assert(ui.dropdown.type == DROPDOWN_LIST);
-    argument_set_const_string(ui.hover.editor.select_argument, ui.dropdown.as.list.data[ui.dropdown.as.list.select_ind]);
+    argument_set_value(ui.hover.editor.select_argument, value_from_string(ui.dropdown.as.list.data[ui.dropdown.as.list.select_ind]));
     return handle_dropdown_close();
 }
 
@@ -675,7 +677,7 @@ bool handle_editor_add_arg_button(void) {
     blockdef = new_blockdef;
     blockdef->ref_count++;
 
-    blockdef_add_argument(blockdef, "", gettext("any"), BLOCKCONSTR_UNLIMITED);
+    blockdef_add_argument(blockdef, value_from_string(""), DATA_TYPE_ANY);
 
     sprintf(str, "arg%zu", last_input);
     Blockdef* arg_blockdef = blockdef->inputs[last_input].data.arg.blockdef;
@@ -748,6 +750,37 @@ bool handle_editor_color_button(void) {
     assert(ui.hover.editor.edit_blockdef != NULL);
 
     show_color_picker_dropdown((Color*)&ui.hover.editor.edit_blockdef->color, &ui.hover.editor.edit_blockdef->color, NULL);
+    return true;
+}
+
+bool handle_bool_value_input_click(void) {
+    Argument* arg = ui.hover.button.data;
+    ui.hover.editor.select_argument = arg;
+    arg->data.value.data.bool_val = !arg->data.value.data.bool_val;
+    return true;
+}
+
+bool handle_numeric_value_input_click(void) {
+    ui.hover.editor.select_argument = ui.hover.button.data;
+    ui.hover.select_input = &ui.hover.editor.select_argument_scratch_input;
+
+    char buf[32];
+    switch (ui.hover.editor.select_argument->data.value.type) {
+    case DATA_TYPE_INTEGER:
+        snprintf(buf, 32, "%ld", ui.hover.editor.select_argument->data.value.data.integer_val);
+        break;
+    case DATA_TYPE_FLOAT:
+        snprintf(buf, 32, "%.16g", ui.hover.editor.select_argument->data.value.data.float_val);
+        break;
+    default:
+        break;
+    }
+
+    vector_clear(ui.hover.editor.select_argument_scratch_input);
+    for (char* ch = buf; *ch; ch++) vector_add(&ui.hover.editor.select_argument_scratch_input, *ch);
+    vector_add(&ui.hover.editor.select_argument_scratch_input, 0);
+
+    get_input_ind();
     return true;
 }
 
@@ -920,13 +953,7 @@ static void code_detach_argument(void) {
     if (parent_arg->block->blockdef->inputs[parent_arg->input_id].type == INPUT_COLOR) {
         argument_set_color(parent_arg, (BlockdefColor) { 0xff, 0xff, 0xff, 0xff });
     } else {
-        Value val = (Value) {
-            .type = DATA_TYPE_ANY,
-            .data.str_val = vector_create(),
-        };
-        vector_add(&val.data.str_val, 0);
-
-        argument_set_value(parent_arg, val);
+        argument_set_value(parent_arg, value_get_default(parent_arg->block->blockdef->inputs[parent_arg->input_id].data.arg.allowed_type));
     }
     root.chain->start->parent.type = BLOCK_PARENT_BLOCKCHAIN;
     root.chain->start->parent.as.chain = root.chain;
@@ -1700,8 +1727,15 @@ static void handle_key_press(void) {
 
     if (edit_text(ui.hover.select_input)) {
         if (ui.hover.select_input == &editor.search_list_search) update_search();
-        if (ui.hover.editor.select_argument && ui.hover.editor.select_argument->type == ARGUMENT_VALUE && ui.hover.editor.select_argument->data.value.type == DATA_TYPE_ANY) {
-            ui.hover.editor.select_argument_type = value_determine_type(&ui.hover.editor.select_argument->data.value);
+        if (ui.hover.editor.select_argument && ui.hover.editor.select_argument->type == ARGUMENT_VALUE) {
+            DataType select_argument_type = ui.hover.editor.select_argument->data.value.type;
+            if (select_argument_type == DATA_TYPE_ANY) {
+                ui.hover.editor.select_argument_type = value_determine_type(&ui.hover.editor.select_argument->data.value);
+            } else if (select_argument_type == DATA_TYPE_INTEGER) {
+                ui.hover.editor.select_argument->data.value.data.integer_val = atol(*ui.hover.select_input);
+            } else if (select_argument_type == DATA_TYPE_FLOAT) {
+                ui.hover.editor.select_argument->data.value.data.float_val = atof(*ui.hover.select_input);
+            }
         }
     }
 }
@@ -1855,6 +1889,8 @@ void scrap_gui_process_ui(void) {
         if (ui.dropdown.shown && ui.dropdown.type == DROPDOWN_COLOR_PICKER) {
             ui.dropdown.as.color_picker.hover_part = COLOR_PICKER_NONE;
         }
+
+        gui_arena_clear(ui.scratch_arena);
 
 #ifdef DEBUG
         Timer t = start_timer("gui process");

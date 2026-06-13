@@ -121,6 +121,7 @@ typedef struct {
     Vector2 select_block_pos;
     bool select_valid;
     DataType select_argument_type;
+    char* select_argument_scratch_input;
 
     EditorHoverPart part;
     Blockdef* edit_blockdef;
@@ -371,6 +372,8 @@ typedef struct {
 
     Dropdown dropdown;
 
+    GuiMemArena* scratch_arena;
+
 #ifdef DEBUG
     double ui_time;
 #endif
@@ -466,6 +469,8 @@ bool handle_jump_to_block_button_click(void);
 bool handle_error_window_close_button_click(void);
 bool handle_color_picker_click(void);
 bool handle_editor_color_button(void);
+bool handle_bool_value_input_click(void);
+bool handle_numeric_value_input_click(void);
 
 // save.c
 void config_new(Config* config);

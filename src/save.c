@@ -561,7 +561,6 @@ void save_blockdef_input(SaveData* save, Input* input) {
         save_add_array(save, input->data.text, vector_size(input->data.text), sizeof(input->data.text[0]));
         break;
     case INPUT_ARGUMENT:
-        save_add_varint(save, input->data.arg.constr);
         save_blockdef(save, input->data.arg.blockdef);
         break;
     case INPUT_DROPDOWN:
@@ -623,6 +622,7 @@ void save_value(SaveData* save, Value* value) {
 }
 
 void save_block_arguments(SaveData* save, Argument* arg) {
+    // FIXME: Don't store input_id in file because input_ids can shift whenever blockdef input count is changed
     save_add_varint(save, arg->input_id);
     save_add_varint(save, arg->type);
 
@@ -900,7 +900,10 @@ bool load_blockdef_input(SaveData* save, Input* input) {
     input->type = type;
 
     unsigned int text_len;
-    InputArgumentConstraint constr;
+    enum {
+        BLOCKCONSTR_UNLIMITED,
+        BLOCKCONSTR_STRING,
+    } constr = BLOCKCONSTR_UNLIMITED;
     char* text;
 
     static_assert(INPUT_LAST == 6, "Exhaustive input type in load_blockdef_input");
@@ -916,14 +919,16 @@ bool load_blockdef_input(SaveData* save, Input* input) {
         vector_add(&input->data.text, 0);
         break;
     case INPUT_ARGUMENT:
-        if (!save_read_varint(save, (unsigned int*)&constr)) return false;
+        if (ver < 6) {
+            if (!save_read_varint(save, &constr)) return false;
+        }
 
         Blockdef* blockdef = load_blockdef(save);
         if (!blockdef) return false;
 
-        input->data.arg.text = "";
-        input->data.arg.hint_text = gettext("any");
-        input->data.arg.constr = constr;
+        input->data.arg.default_value = value_from_string("");
+        input->data.arg.default_value.type = constr == BLOCKCONSTR_UNLIMITED ? DATA_TYPE_ANY : DATA_TYPE_STRING;
+        input->data.arg.allowed_type = input->data.arg.default_value.type;
         input->data.arg.blockdef = blockdef;
         input->data.arg.blockdef->ref_count++;
         input->data.arg.blockdef->func = block_custom_arg;
@@ -979,6 +984,7 @@ Blockdef* load_blockdef(SaveData* save) {
 }
 
 bool load_block_argument(SaveData* save, Argument* arg) {
+    // FIXME: Don't store input_id in file because input_ids can shift whenever blockdef input count is changed
     unsigned int input_id;
     if (!save_read_varint(save, &input_id)) return false;
 
@@ -996,6 +1002,7 @@ bool load_block_argument(SaveData* save, Argument* arg) {
     static_assert(ARGUMENT_LAST == 6, "Exhaustive argument type in load_block_argument");
     switch (arg_type) {
     case ARGUMENT_TEXT:
+    case ARGUMENT_CONST_STRING:
         if (!save_read_varint(save, &constant_ind)) return false;
         constant = save_value_constants[constant_ind];
         if (constant.type != DATA_TYPE_STRING) {
@@ -1005,18 +1012,7 @@ bool load_block_argument(SaveData* save, Argument* arg) {
 
         arg->type = ARGUMENT_VALUE;
         arg->data.value = value_copy(&constant);
-        break;
-    case ARGUMENT_CONST_STRING:
-        if (!save_read_varint(save, &constant_ind)) return false;
-        constant = save_value_constants[constant_ind];
-        if (constant.type != DATA_TYPE_STRING) {
-            scrap_log(LOG_ERROR, "[LOAD] Invalid contant type %s when loading text argument", type_to_str(constant.type));
-            return false;
-        }
-
-        arg->data.text = vector_create();
-        for (char* str = constant.data.str_val; *str; str++) vector_add(&arg->data.text, *str);
-        vector_add(&arg->data.text, 0);
+        if (arg_type == ARGUMENT_TEXT) arg->data.value.type = DATA_TYPE_ANY;
         break;
     case ARGUMENT_BLOCK: ;
         Block* block = load_block(save);
@@ -1112,7 +1108,7 @@ Block* load_block(SaveData* save) {
         }
         arg->block = block;
         if (unknown_blockdef) {
-            blockdef_add_argument(blockdef, "", "", BLOCKCONSTR_UNLIMITED);
+            blockdef_add_argument(blockdef, value_from_string(""), DATA_TYPE_ANY);
         }
     }
 

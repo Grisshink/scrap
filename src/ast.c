@@ -57,6 +57,45 @@ const char* type_to_str(DataType type) {
     }
 }
 
+Value value_from_string(const char* str) {
+    Value val = (Value) {
+        .type = DATA_TYPE_STRING,
+        .data.str_val = vector_create(),
+    };
+
+    for (char* ch = (char*)str; *ch; ch++) vector_add(&val.data.str_val, *ch);
+    vector_add(&val.data.str_val, 0);
+    return val;
+}
+
+Value value_get_default(DataType type) {
+    Value value = (Value) { .type = type };
+
+    static_assert(DATA_TYPE_LAST == 12, "Exhaustive data type in value_get_default");
+    switch (type) {
+    case DATA_TYPE_NOTHING:
+    case DATA_TYPE_INTEGER:
+    case DATA_TYPE_FLOAT:
+    case DATA_TYPE_BOOL:
+    case DATA_TYPE_COLOR:
+    case DATA_TYPE_LIST:
+    case DATA_TYPE_BLOCKDEF:
+    case DATA_TYPE_UNKNOWN:
+    case DATA_TYPE_CHUNK:
+    case DATA_TYPE_NULL:
+        break;
+    case DATA_TYPE_ANY:
+    case DATA_TYPE_STRING:
+        value.data.str_val = vector_create();
+        vector_add(&value.data.str_val, 0);
+        break;
+    default:
+        assert(false && "Unhandled data type in value_get_default");
+    }
+
+    return value;
+}
+
 Value value_copy(Value* value) {
     static_assert(DATA_TYPE_LAST == 12, "Exhaustive data type in value_copy");
     switch (value->type) {
@@ -73,7 +112,8 @@ Value value_copy(Value* value) {
             .data.str_val = vector_copy(value->data.str_val),
         };
     case DATA_TYPE_LIST:
-        assert(false && "TODO");
+        if (value->data.list_val) assert(false && "TODO");
+        return *value;
     case DATA_TYPE_BLOCKDEF:
     case DATA_TYPE_UNKNOWN:
     case DATA_TYPE_CHUNK:
@@ -98,7 +138,8 @@ void value_free(Value* value) {
         vector_free(value->data.str_val);
         return;
     case DATA_TYPE_LIST:
-        assert(false && "TODO");
+        if (value->data.list_val) assert(false && "TODO");
+        return;
     case DATA_TYPE_CHUNK:
         assert(false && "TODO");
     case DATA_TYPE_BLOCKDEF:
@@ -158,48 +199,20 @@ Block* block_new(Blockdef* blockdef) {
             arg->block = block;
             arg->input_id = i;
 
-            switch (blockdef->inputs[i].data.arg.constr) {
-            case BLOCKCONSTR_UNLIMITED:
-                arg->type = ARGUMENT_VALUE;
-                arg->data.value = (Value) {
-                    .type = DATA_TYPE_ANY,
-                    .data.str_val = vector_create(),
-                };
-
-                for (char* pos = blockdef->inputs[i].data.arg.text; *pos; pos++) {
-                    vector_add(&arg->data.value.data.str_val, *pos);
-                }
-                vector_add(&arg->data.value.data.str_val, 0);
-                break;
-            case BLOCKCONSTR_STRING:
-                arg->type = ARGUMENT_CONST_STRING;
-
-                arg->data.text = vector_create();
-                for (char* pos = blockdef->inputs[i].data.arg.text; *pos; pos++) {
-                    vector_add(&arg->data.text, *pos);
-                }
-                vector_add(&arg->data.text, 0);
-                break;
-            default:
-                assert(false && "Unimplemented argument constraint");
-                break;
-            }
+            arg->type = ARGUMENT_VALUE;
+            arg->data.value = value_copy(&blockdef->inputs[i].data.arg.default_value);
             break;
         case INPUT_DROPDOWN:
             arg = vector_add_dst(&block->arguments);
             arg->block = block;
             arg->input_id = i;
-            arg->type = ARGUMENT_CONST_STRING;
+            arg->type = ARGUMENT_VALUE;
 
             size_t list_len = 0;
             char** list = blockdef->inputs[i].data.drop.list(block, &list_len);
             if (!list || list_len == 0) break;
 
-            arg->data.text = vector_create();
-            for (char* pos = list[0]; *pos; pos++) {
-                vector_add(&arg->data.text, *pos);
-            }
-            vector_add(&arg->data.text, 0);
+            arg->data.value = value_from_string(list[0]);
             break;
         case INPUT_BLOCKDEF_EDITOR:
             arg = vector_add_dst(&block->arguments);
@@ -467,6 +480,7 @@ void argument_set_text(Argument* arg, char* text) {
 
 void argument_set_value(Argument* arg, Value value) {
     if (arg->type == ARGUMENT_TEXT || arg->type == ARGUMENT_CONST_STRING) vector_free(arg->data.text);
+    if (arg->type == ARGUMENT_VALUE) value_free(&arg->data.value);
     arg->type = ARGUMENT_VALUE;
     arg->data.value = value;
 }
@@ -513,9 +527,8 @@ Blockdef* blockdef_copy(Blockdef* blockdef) {
             input->data = (InputData) {
                 .arg = {
                     .blockdef = blockdef_copy(blockdef->inputs[i].data.arg.blockdef),
-                    .text = blockdef->inputs[i].data.arg.text,
-                    .constr = blockdef->inputs[i].data.arg.constr,
-                    .hint_text = blockdef->inputs[i].data.arg.hint_text,
+                    .allowed_type = blockdef->inputs[i].data.arg.allowed_type,
+                    .default_value = value_copy(&blockdef->inputs[i].data.arg.default_value),
                 },
             };
             input->data.arg.blockdef->ref_count++;
@@ -561,15 +574,18 @@ void blockdef_add_text(Blockdef* blockdef, const char* text) {
     vector_add(&input->data.text, 0);
 }
 
-void blockdef_add_argument(Blockdef* blockdef, char* defualt_data, const char* hint_text, InputArgumentConstraint constraint) {
+void blockdef_add_argument(Blockdef* blockdef, Value default_value, DataType allowed_type) {
+    if (allowed_type == DATA_TYPE_ANY && default_value.type == DATA_TYPE_STRING) {
+        default_value.type = DATA_TYPE_ANY;
+    }
+
     Input* input = vector_add_dst(&blockdef->inputs);
     input->type = INPUT_ARGUMENT;
     input->data = (InputData) {
         .arg = {
             .blockdef = blockdef_new("custom_arg", BLOCKTYPE_NORMAL, blockdef->color, NULL),
-            .text = defualt_data,
-            .constr = constraint,
-            .hint_text = hint_text,
+            .default_value = default_value,
+            .allowed_type = allowed_type,
         },
     };
     input->data.arg.blockdef->ref_count++;
@@ -656,6 +672,7 @@ void blockdef_free(Blockdef* blockdef) {
             vector_free(blockdef->inputs[i].data.text);
             break;
         case INPUT_ARGUMENT:
+            value_free(&blockdef->inputs[i].data.arg.default_value);
             blockdef_free(blockdef->inputs[i].data.arg.blockdef);
             break;
         default:
