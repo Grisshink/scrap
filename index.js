@@ -49,9 +49,9 @@
             return w;
         }
 
-        advance() {
+        advance(dt) {
             for (const block of this.blocks) {
-                block.x -= this.speed;
+                block.x -= this.speed * dt;
             }
             if (this.blocks[0].x + this.blocks[0].w < leftBound) {
                 let v = this.blocks.shift();
@@ -124,18 +124,23 @@
     let rows = [];
     let y = topBound;
     while (y + 32 + blockGap < bottomBound) {
-        rows.push(new BlockRow(y, Math.random() * 1.5 + 0.4));
+        rows.push(new BlockRow(y, Math.random() * 120.0 + 40.0));
         y += 32 + blockGap;
     }
 
+    let dt = 0;
+    let last_time = performance.now();
+
     function drawBlocks() {
+        dt = (performance.now() - last_time) / 1000;
+        last_time = performance.now();
         ctx.clearRect(0, 0, canv.width, canv.height);
         ctx.save();
         ctx.translate(canv.width / 2, canv.height / 2);
         ctx.rotate(-15 / 180 * Math.PI);
         ctx.translate(-canv.width / 2, -canv.height / 2);
         for (const row of rows) {
-            row.advance();
+            row.advance(dt);
             row.draw(ctx);
         }
         ctx.restore();
@@ -145,5 +150,5 @@
         requestAnimationFrame(drawBlocks);
     }
 
-    drawBlocks();
+    requestAnimationFrame(drawBlocks);
 })();
