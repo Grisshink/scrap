@@ -1420,7 +1420,7 @@ static void draw_color_picker(void) {
                     gui_set_padding(gui, config.ui_size * 0.2, config.ui_size * 0.2);
 
                     snprintf(ui.dropdown.as.color_picker.color_hex, 10, "#%02x%02x%02x%02x", col.r, col.g, col.b, col.a);
-                    gui_text(gui, &assets.fonts.font_cond, ui.dropdown.as.color_picker.color_hex, BLOCK_TEXT_SIZE, GUI_WHITE);
+                    gui_text(gui, &assets.fonts.font_mono, ui.dropdown.as.color_picker.color_hex, BLOCK_TEXT_SIZE, GUI_WHITE);
                 gui_element_end(gui);
 
                 gui_element_begin(gui);
