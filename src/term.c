@@ -767,6 +767,11 @@ static void pty_resize(TermPty* pty, int new_w, int new_h) {
     }
 }
 
+void* term_thread_entry(void* data) {
+    while (term_wait_for_output());
+    return data;
+}
+
 bool term_run_process(char* command, char* error, size_t error_len) {
     pid_t pid = fork();
     if (pid == -1) {
@@ -793,14 +798,6 @@ bool term_run_process(char* command, char* error, size_t error_len) {
 
         while (args[arg_len - 1] && arg_len < 255) i = next_arg(command, i, &args[arg_len++]);
 
-        // printf("Name: %s\n", name);
-
-        // printf("Args: ");
-        // for (char** arg = args; *arg; arg++) {
-        //     printf("\"%s\", ", *arg);
-        // }
-        // printf("\n");
-
         // Replace da child
         if (execvp(name, args) == -1) {
             perror("execvp");
@@ -814,13 +811,25 @@ bool term_run_process(char* command, char* error, size_t error_len) {
 
         pty->pid = pid;
 
+        pthread_t term_read_thread;
+        if (pthread_create(&term_read_thread, NULL, term_thread_entry, NULL)) {
+            snprintf(error, error_len, gettext("Could not create terminal input thread"));
+            return false;
+        }
+
         term.process_running = true;
-        while (term_wait_for_output());
-        term.process_running = false;
 
         // Wait for child to terminate
         int status;
         waitpid(pid, &status, 0);
+
+        term.process_running = false;
+
+        pthread_cancel(term_read_thread);
+
+        void* val;
+        (void) val;
+        pthread_join(term_read_thread, &val);
         
         if (WIFEXITED(status)) {
             int exit_code = WEXITSTATUS(status);
