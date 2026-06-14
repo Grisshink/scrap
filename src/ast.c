@@ -175,6 +175,12 @@ DataType value_determine_type(Value* value) {
         }
     }
 
+    if (type == DATA_TYPE_FLOAT) {
+        if (value_str[0] == '.' && value_str[1] == 0) {
+            return DATA_TYPE_STRING;
+        }
+    }
+
     return type;
 }
 
