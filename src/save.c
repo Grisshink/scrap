@@ -622,8 +622,6 @@ void save_value(SaveData* save, Value* value) {
 }
 
 void save_block_arguments(SaveData* save, Argument* arg) {
-    // FIXME: Don't store input_id in file because input_ids can shift whenever blockdef input count is changed
-    save_add_varint(save, arg->input_id);
     save_add_varint(save, arg->type);
 
     int constant_ind;
@@ -984,15 +982,16 @@ Blockdef* load_blockdef(SaveData* save) {
 }
 
 bool load_block_argument(SaveData* save, Argument* arg) {
-    // FIXME: Don't store input_id in file because input_ids can shift whenever blockdef input count is changed
-    unsigned int input_id;
-    if (!save_read_varint(save, &input_id)) return false;
+    if (ver < 6) {
+        // Deprecated: input_id is not stored in the arguments because input_ids can shift whenever blockdef input count is changed
+        unsigned int input_id;
+        if (!save_read_varint(save, &input_id)) return false;
+    }
 
     ArgumentType arg_type;
     if (!save_read_varint(save, (unsigned int*)&arg_type)) return false;
 
     arg->type = arg_type;
-    arg->input_id = input_id;
 
     unsigned int constant_ind;
     unsigned int color_int;
@@ -1099,6 +1098,8 @@ Block* load_block(SaveData* save) {
     block->parent = (BlockParent) {0};
     blockdef->ref_count++;
 
+    int input_id = -1;
+
     vector_reserve(&block->arguments, arg_count); // This prevents arguments from moving in memory
     for (unsigned int i = 0; i < arg_count; i++) {
         Argument* arg = vector_add_dst(&block->arguments);
@@ -1106,10 +1107,17 @@ Block* load_block(SaveData* save) {
             block_free(block);
             return NULL;
         }
+
         arg->block = block;
+
         if (unknown_blockdef) {
             blockdef_add_argument(blockdef, value_from_string(""), DATA_TYPE_ANY);
         }
+
+        do {
+            input_id++;
+        } while (block->blockdef->inputs[input_id].type == INPUT_TEXT_DISPLAY || block->blockdef->inputs[input_id].type == INPUT_IMAGE_DISPLAY);
+        arg->input_id = input_id;
     }
 
     if (ver >= 5) {
