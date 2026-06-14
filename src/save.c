@@ -186,6 +186,8 @@ void reload_fonts(void) {
     assets.fonts.font_mono = LoadFontEx(get_font_path(config.font_mono_path), config.ui_size, codepoints, codepoints_count);
     SetTextureFilter(assets.fonts.font_mono.texture, TEXTURE_FILTER_BILINEAR);
 
+    term_resize_font(config.ui_size * 0.6);
+
     vector_free(codepoints);
 
     prerender_font_shadow(&assets.fonts.font_cond_shadow);

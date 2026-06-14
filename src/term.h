@@ -96,6 +96,7 @@ typedef struct {
     char input_buf[TERM_INPUT_BUF_SIZE];
     int input_buf_size;
 
+    bool initialized;
 } Terminal;
 
 extern Terminal term;
@@ -115,6 +116,7 @@ int term_print_bool(bool value);
 int term_print_color(TermColor value);
 void term_clear(void);
 void term_resize(float screen_w, float screen_h);
+void term_resize_font(unsigned short font_size);
 void term_free(void);
 void term_restart(void);
 void term_flush_input(void);

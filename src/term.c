@@ -93,6 +93,7 @@ void term_init(MeasureTextSliceFunc measure_text, void* font, unsigned short fon
     assert(term.pty != NULL);
 
     term_resize(0, 0);
+    term.initialized = true;
 }
 
 void term_restart(void) {
@@ -492,6 +493,12 @@ void term_clear(void) {
         term.buffer[i].bg_color = term.clear_color;
     }
     term.cursor_pos = 0;
+}
+
+void term_resize_font(unsigned short font_size) {
+    if (!term.initialized) return;
+    term.font_size = font_size;
+    term_resize(term.size.x, term.size.y);
 }
 
 void term_resize(float screen_w, float screen_h) {
