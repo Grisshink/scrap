@@ -505,6 +505,12 @@ static void argument_on_hover(GuiElement* el) {
     el->data.border_width = BLOCK_OUTLINE_SIZE;
 }
 
+static void argument_type_switcher_on_hover(GuiElement* el) {
+    el->color = (GuiColor) { 0x50, 0x50, 0x50, 0x40 };
+    ui.hover.button.handler = handle_value_input_type_switcher_click;
+    ui.hover.button.data = el->custom_data;
+}
+
 static const char* get_value_text(Value* value) {
     static_assert(DATA_TYPE_LAST == 12, "Exhaustive data type in get_value_text");
     switch (value->type) {
@@ -592,6 +598,12 @@ static void draw_value_argument(Argument* arg, Value* value, bool can_hover, boo
                 gui_set_padding(gui, BLOCK_STRING_PADDING / 2, 0);
                 gui_set_min_size(gui, config.ui_size - BLOCK_OUTLINE_SIZE * 4, config.ui_size - BLOCK_OUTLINE_SIZE * 4);
                 gui_set_rect(gui, (GuiColor) { 0x00, 0x00, 0x00, 0x40 });
+                gui_set_custom_data(gui, arg);
+                gui_on_hover(gui, argument_type_switcher_on_hover);
+
+                if (ui.dropdown.ref_object == arg) {
+                    ui.dropdown.element = gui_get_element(gui);
+                }
 
                 gui_text(gui, &assets.fonts.font_cond_shadow, ": ", BLOCK_TEXT_SIZE, GUI_WHITE);
                 gui_text(gui, &assets.fonts.font_cond_shadow, gettext(type_to_str(value->type)), BLOCK_TEXT_SIZE, GUI_WHITE);
@@ -602,6 +614,7 @@ static void draw_value_argument(Argument* arg, Value* value, bool can_hover, boo
                     gui_text(gui, &assets.fonts.font_cond_shadow, gettext(type_to_str(ui.hover.editor.select_argument_type)), BLOCK_TEXT_SIZE, GUI_WHITE);
                     gui_text(gui, &assets.fonts.font_cond_shadow, ")", BLOCK_TEXT_SIZE, GUI_WHITE);
                 }
+                gui_image(gui, &assets.textures.dropdown, BLOCK_IMAGE_SIZE, GUI_WHITE);
             gui_element_end(gui);
         }
     gui_element_end(gui);

@@ -43,6 +43,30 @@ char* file_menu_list[] = {
     "Load project",
 };
 
+static char* type_switcher_type_name_list[] = {
+    "Any",
+    "String",
+    "Integer",
+    "Float",
+    "Bool",
+    "Nothing",
+    // "List",
+    // "Color",
+    // "Blockdef",
+};
+
+static DataType type_switcher_type_list[] = {
+    DATA_TYPE_ANY,
+    DATA_TYPE_STRING,
+    DATA_TYPE_INTEGER,
+    DATA_TYPE_FLOAT,
+    DATA_TYPE_BOOL,
+    DATA_TYPE_NOTHING,
+    // DATA_TYPE_LIST,
+    // DATA_TYPE_COLOR,
+    // DATA_TYPE_BLOCKDEF,
+};
+
 static void get_input_ind(void);
 
 // Divides the panel into two parts along the specified side with the specified split percentage
@@ -781,6 +805,34 @@ bool handle_numeric_value_input_click(void) {
     vector_add(&ui.hover.editor.select_argument_scratch_input, 0);
 
     get_input_ind();
+    return true;
+}
+
+static bool handle_value_input_type_switcher_dropdown_click(void) {
+    Argument* arg = ui.hover.editor.select_argument;
+    assert(arg != NULL);
+    assert(arg->type == ARGUMENT_VALUE);
+
+    DataType set_type = arg->data.value.type;
+    char* select_type = ui.dropdown.as.list.data[ui.dropdown.as.list.select_ind];
+
+    for (size_t i = 0; i < ARRLEN(type_switcher_type_name_list); i++) {
+        if (!strcmp(select_type, type_switcher_type_name_list[i])) {
+            set_type = type_switcher_type_list[i];
+            break;
+        }
+    }
+
+    if (set_type != arg->data.value.type) {
+        value_free(&arg->data.value);
+        arg->data.value = value_get_default(set_type);
+    }
+
+    return handle_dropdown_close();
+}
+
+bool handle_value_input_type_switcher_click(void) {
+    show_list_dropdown(type_switcher_type_name_list, ARRLEN(type_switcher_type_name_list), ui.hover.button.data, handle_value_input_type_switcher_dropdown_click);
     return true;
 }
 

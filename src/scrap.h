@@ -471,6 +471,7 @@ bool handle_color_picker_click(void);
 bool handle_editor_color_button(void);
 bool handle_bool_value_input_click(void);
 bool handle_numeric_value_input_click(void);
+bool handle_value_input_type_switcher_click(void);
 
 // save.c
 void config_new(Config* config);
