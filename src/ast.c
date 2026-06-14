@@ -162,6 +162,8 @@ DataType value_determine_type(Value* value) {
     for (char* ch = value_str; *ch; ch++) {
         if (*ch >= '0' && *ch <= '9') {
             if (type != DATA_TYPE_FLOAT) type = DATA_TYPE_INTEGER;
+        } else if (*ch == '-') {
+            if (ch != value_str) return DATA_TYPE_STRING;
         } else if (*ch == '.') {
             if (type == DATA_TYPE_FLOAT) {
                 return DATA_TYPE_STRING;
