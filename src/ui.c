@@ -691,7 +691,8 @@ bool handle_panel_editor_cancel_button(void) {
 }
 
 bool handle_editor_add_arg_button(void) {
-    Blockdef* blockdef = ui.hover.editor.argument->data.blockdef;
+    Argument* arg = ui.hover.editor.argument;
+    Blockdef* blockdef = arg->data.blockdef;
     size_t last_input = vector_size(blockdef->inputs);
     char str[32];
 
@@ -706,9 +707,9 @@ bool handle_editor_add_arg_button(void) {
     sprintf(str, "arg%zu", last_input);
     Blockdef* arg_blockdef = blockdef->inputs[last_input].data.arg.blockdef;
     blockdef_add_text(arg_blockdef, str);
-    arg_blockdef->func = block_custom_arg;
+    arg_blockdef->func = arg->block->blockdef->inputs[arg->input_id].data.editor.arg_func;
 
-    ui.hover.editor.argument->data.blockdef = blockdef;
+    arg->data.blockdef = blockdef;
     ui.hover.editor.edit_blockdef = blockdef;
 
     deselect_all();
@@ -871,11 +872,12 @@ static bool handle_blockdef_editor_click(void) {
     scrap_log(LOG_INFO, "Pickup blockdef");
 
     if (!ui.hover.editor.blockdef) return true;
+    if (!ui.hover.editor.blockdef->func) return true;
     if (ui.hover.editor.edit_blockdef == ui.hover.editor.argument->data.blockdef) return false;
 
     RootBlockChain root = {0};
     root.chain = blockchain_new();
-    root.chain->start = block_new_ms(ui.hover.editor.blockdef);
+    root.chain->start = block_new(ui.hover.editor.blockdef);
     root.chain->end = root.chain->start;
     root.chain->start->parent.type = BLOCK_PARENT_BLOCKCHAIN;
     root.chain->start->parent.as.chain = root.chain;
@@ -1331,7 +1333,7 @@ static bool handle_mouse_click(void) {
         if (ui.hover.editor.blockdef) {
             RootBlockChain root = {0};
             root.chain = blockchain_new();
-            root.chain->start = block_new_ms(ui.hover.editor.blockdef);
+            root.chain->start = block_new(ui.hover.editor.blockdef);
             root.chain->end = root.chain->start;
             root.chain->start->parent.type = BLOCK_PARENT_BLOCKCHAIN;
             root.chain->start->parent.as.chain = root.chain;

@@ -227,7 +227,7 @@ Block* block_new(Blockdef* blockdef) {
             arg->block = block;
             arg->input_id = i;
             arg->type = ARGUMENT_BLOCKDEF;
-            arg->data.blockdef = blockdef_new("custom", BLOCKTYPE_NORMAL, blockdef->color, NULL);
+            arg->data.blockdef = blockdef_new("custom", BLOCKTYPE_NORMAL, blockdef->color, blockdef->inputs[i].data.editor.block_func);
             arg->data.blockdef->ref_count++;
             blockdef_add_text(arg->data.blockdef, gettext("My block"));
             break;
@@ -599,10 +599,15 @@ void blockdef_add_argument(Blockdef* blockdef, Value default_value, DataType all
     input->data.arg.blockdef->ref_count++;
 }
 
-void blockdef_add_blockdef_editor(Blockdef* blockdef) {
+void blockdef_add_blockdef_editor(Blockdef* blockdef, void* block_func, void* arg_func) {
     Input* input = vector_add_dst(&blockdef->inputs);
     input->type = INPUT_BLOCKDEF_EDITOR;
-    input->data = (InputData) {0};
+    input->data = (InputData) {
+        .editor = {
+            .block_func = block_func,
+            .arg_func = arg_func,
+        },
+    };
 }
 
 void blockdef_add_dropdown(Blockdef* blockdef, InputDropdownSource dropdown_source, ListAccessor accessor) {

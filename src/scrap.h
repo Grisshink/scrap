@@ -536,7 +536,6 @@ bool vm_stop(void);
 void vm_handle_running_thread(void);
 
 void clear_compile_error(void);
-Block* block_new_ms(Blockdef* blockdef);
 
 // platform.c
 void scrap_set_env(const char* name, const char* value);

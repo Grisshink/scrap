@@ -205,10 +205,12 @@ Value compiler_evaluate_argument(Compiler* compiler, Argument* arg) {
 Value compiler_evaluate_block(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     if (!block->blockdef) {
         compiler_set_error(compiler, gettext("Tried to execute block without definition"));
+        if (!compiler->current_error_block) compiler->current_error_block = block;
         return DATA_UNKNOWN;
     }
     if (!block->blockdef->func) {
         compiler_set_error(compiler, gettext("Tried to execute block \"%s\" without implementation"), block->blockdef->id);
+        if (!compiler->current_error_block) compiler->current_error_block = block;
         return DATA_UNKNOWN;
     }
 

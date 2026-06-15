@@ -2532,7 +2532,7 @@ void register_blocks(Vm* vm) {
     Blockdef* sc_define_block = blockdef_new("define_block", BLOCKTYPE_HAT, (BlockdefColor) { 0x99, 0x00, 0xff, 0xff }, block_define_block);
     blockdef_add_image(sc_define_block, (BlockdefImage) { .image_ptr = &assets.textures.icon_special, .image_color = (BlockdefColor) { 0xff, 0xff, 0xff, 0xff } });
     blockdef_add_text(sc_define_block, gettext("Define"));
-    blockdef_add_blockdef_editor(sc_define_block);
+    blockdef_add_blockdef_editor(sc_define_block, block_exec_custom, block_custom_arg);
     blockdef_register(vm, sc_define_block);
     block_category_add_blockdef(cat_control, sc_define_block);
 

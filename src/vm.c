@@ -27,15 +27,6 @@
 #include <string.h>
 #include <errno.h>
 
-Block* block_new_ms(Blockdef* blockdef) {
-    Block* block = block_new(blockdef);
-    for (size_t i = 0; i < vector_size(block->arguments); i++) {
-        if (block->arguments[i].type != ARGUMENT_BLOCKDEF) continue;
-        block->arguments[i].data.blockdef->func = block_exec_custom;
-    }
-    return block;
-}
-
 size_t blockdef_register(Vm* vm, Blockdef* blockdef) {
     if (!blockdef->func) scrap_log(LOG_WARNING, "[VM] Block \"%s\" has not defined its implementation!", blockdef->id);
 
@@ -99,7 +90,7 @@ void block_category_unregister(BlockCategory* category) {
 
 void block_category_add_blockdef(BlockCategory* category, Blockdef* blockdef) {
     BlockChain* chain = blockchain_new();
-    chain->start = block_new_ms(blockdef);
+    chain->start = block_new(blockdef);
     chain->end = chain->start;
     chain->start->parent.type = BLOCK_PARENT_BLOCKCHAIN;
     chain->start->parent.as.chain = chain;

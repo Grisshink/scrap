@@ -43,6 +43,7 @@ typedef struct InputArgument InputArgument;
 typedef struct InputDropdown InputDropdown;
 typedef enum InputType InputType;
 typedef union InputData InputData;
+typedef struct InputBlockdefEditorFuncs InputBlockdefEditorFuncs;
 typedef struct Input Input;
 
 typedef enum BlockdefType BlockdefType;
@@ -116,12 +117,18 @@ struct InputDropdown {
     ListAccessor list;
 };
 
+struct InputBlockdefEditorFuncs {
+    void* block_func;
+    void* arg_func;
+};
+
 union InputData {
     char* text;
     BlockdefImage image;
     InputArgument arg;
     InputDropdown drop;
     BlockdefColor color;
+    InputBlockdefEditorFuncs editor;
 };
 
 enum InputType {
@@ -227,7 +234,7 @@ void blockdef_add_argument(Blockdef* blockdef, Value default_value, DataType all
 void blockdef_add_dropdown(Blockdef* blockdef, InputDropdownSource dropdown_source, ListAccessor accessor);
 void blockdef_add_color_input(Blockdef* blockdef, BlockdefColor color);
 void blockdef_add_image(Blockdef* blockdef, BlockdefImage image);
-void blockdef_add_blockdef_editor(Blockdef* blockdef);
+void blockdef_add_blockdef_editor(Blockdef* blockdef, void* block_func, void* arg_func);
 void blockdef_delete_input(Blockdef* blockdef, size_t input);
 void blockdef_set_id(Blockdef* blockdef, const char* new_id);
 // Removes all function pointers from blockdef, rendering it unusable. 
