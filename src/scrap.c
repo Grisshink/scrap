@@ -325,6 +325,10 @@ void start_editor(void) {
 }
 
 int start_runtime(char* bc_path) {
+    // When starting the editor, GLFW internally sets LC_CTYPE locale to make %lc format options work properly, 
+    // so we need to set it here explicitly
+    setlocale(LC_CTYPE, "");
+
     IrMemArena* arena = ir_arena_new(GiB(1), KiB(512));
     IrBytecodePool* pool = bytecode_pool_new(arena);
     IrBytecode bc;
