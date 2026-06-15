@@ -61,9 +61,15 @@ typedef struct {
 } ControlData;
 
 typedef struct {
+    DataType* items;
+    size_t size, capacity;
+} CustomFunctionArgumentTypeList;
+
+typedef struct {
     ConstId label;
     IrBytecode bc;
     size_t arg_count;
+    CustomFunctionArgumentTypeList arg_types;
 } CustomFunctionData;
 
 static MathFunc block_math_func_list[MATH_LIST_LEN] = {
@@ -1300,10 +1306,12 @@ Value block_define_block(Compiler* compiler, Block* block, Block** next_block, B
         CustomFunctionData* block_data = ir_arena_alloc(compiler->arena, sizeof(CustomFunctionData));
         block_data->label = label;
         block_data->bc = bc;
+        block_data->arg_types = (CustomFunctionArgumentTypeList) {0};
 
         size_t arg_id = 0;
         for (size_t i = 0; i < vector_size(blockdef->inputs); i++) {
             if (blockdef->inputs[i].type != INPUT_ARGUMENT) continue;
+            ir_arena_append(compiler->arena, block_data->arg_types, blockdef->inputs[i].data.arg.allowed_type);
             compiler_object_info_insert(compiler, blockdef->inputs[i].data.arg.blockdef, (void*)arg_id);
             arg_id++;
         }
@@ -1324,10 +1332,12 @@ Value block_define_block(Compiler* compiler, Block* block, Block** next_block, B
         IrBytecode bc = block_data->bc;
         for (ssize_t i = block_data->arg_count - 1; i >= 0; i--) {
             bytecode_push_op_int(&bc, IR_STORE, i);
+        }
 
+        for (size_t i = 0; i < block_data->arg_count; i++) {
             Variable var = {
                 .name = "__define_arg",
-                .type = DATA_TYPE_ANY,
+                .type = block_data->arg_types.items[i],
             };
             ir_arena_append(compiler->arena, compiler->variables, var);
         }
@@ -2393,10 +2403,8 @@ Value block_exec_custom(Compiler* compiler, Block* block, Block** next_block, Bl
     for (size_t i = 0; i < vector_size(block->arguments); i++) {
         Value value = compiler_evaluate_argument(compiler, &block->arguments[i]);
         if (value.type == DATA_TYPE_ERROR) return DATA_ERROR;
-        if (value.type != DATA_TYPE_CHUNK) {
-            value = cast_to_bc(compiler, value, value.type);
-            if (value.type == DATA_TYPE_ERROR) return DATA_ERROR;
-        }
+        value = cast_to_bc(compiler, value, block->blockdef->inputs[block->arguments[i].input_id].data.arg.allowed_type);
+        if (value.type == DATA_TYPE_ERROR) return DATA_ERROR;
         bytecode_join(&bc, &value.data.chunk_val.bc);
     }
 

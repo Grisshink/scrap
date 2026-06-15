@@ -651,6 +651,7 @@ void blockdef_delete_input(Blockdef* blockdef, size_t input) {
         vector_free(blockdef->inputs[input].data.text);
         break;
     case INPUT_ARGUMENT:
+        value_free(&blockdef->inputs[input].data.arg.default_value);
         blockdef_free(blockdef->inputs[input].data.arg.blockdef);
         break;
     case INPUT_DROPDOWN:

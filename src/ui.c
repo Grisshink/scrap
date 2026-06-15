@@ -778,6 +778,39 @@ bool handle_editor_color_button(void) {
     return true;
 }
 
+bool handle_editor_type_switcher_dropdown_click(void) {
+    Input* blockdef_input = ui.dropdown.ref_object;
+
+    assert(blockdef_input != NULL);
+    assert(blockdef_input->type == INPUT_ARGUMENT);
+
+    DataType set_type = blockdef_input->data.arg.allowed_type;
+    char* select_type = ui.dropdown.as.list.data[ui.dropdown.as.list.select_ind];
+
+    for (size_t i = 0; i < ARRLEN(type_switcher_type_name_list); i++) {
+        if (!strcmp(select_type, type_switcher_type_name_list[i])) {
+            set_type = type_switcher_type_list[i];
+            break;
+        }
+    }
+
+    if (set_type != blockdef_input->data.arg.allowed_type) {
+        blockdef_input->data.arg.allowed_type = set_type;
+        value_free(&blockdef_input->data.arg.default_value);
+        blockdef_input->data.arg.default_value = value_get_default(set_type);
+    }
+
+    return handle_dropdown_close();
+}
+
+bool handle_editor_type_switcher_button(void) {
+    assert(ui.hover.editor.edit_blockdef != NULL);
+    assert(ui.hover.editor.blockdef_input != (size_t)-1);
+
+    show_list_dropdown(type_switcher_type_name_list, ARRLEN(type_switcher_type_name_list), &ui.hover.editor.edit_blockdef->inputs[ui.hover.editor.blockdef_input], handle_editor_type_switcher_dropdown_click);
+    return true;
+}
+
 bool handle_bool_value_input_click(void) {
     Argument* arg = ui.hover.button.data;
     ui.hover.editor.select_argument = arg;

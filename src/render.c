@@ -229,6 +229,18 @@ static void editor_color_on_hover(GuiElement* el) {
     ui.hover.button.handler = handle_editor_color_button;
 }
 
+static void editor_type_switcher_on_hover(GuiElement* el) {
+    if (ui.hover.is_panel_edit_mode) return;
+    if (gui_window_is_shown()) return;
+    if (ui.hover.button.handler) return;
+
+    el->draw_type = DRAWTYPE_RECT;
+    el->draw_subtype = GUI_SUBTYPE_DEFAULT;
+    el->color = (GuiColor) { 0xff, 0xff, 0xff, 0x80 };
+    ui.hover.button.handler = handle_editor_type_switcher_button;
+    ui.hover.editor.blockdef_input = (size_t)el->custom_data;
+}
+
 static void draw_editor_button(Texture2D* texture, ButtonClickHandler handler) {
     gui_element_begin(gui);
         gui_set_rect(gui, (GuiColor) { 0xff, 0xff, 0xff, 0x40 });
@@ -426,6 +438,24 @@ static void draw_blockdef(Blockdef* blockdef, bool editing, bool in_editor) {
             if (in_editor) {
                 input->data.arg.blockdef->color = blockdef->color;
                 draw_blockdef(input->data.arg.blockdef, editing, in_editor);
+
+                if (ui.hover.editor.edit_blockdef == blockdef) {
+                    gui_element_begin(gui);
+                        gui_set_rect(gui, (GuiColor) { 0xff, 0xff, 0xff, 0x40 });
+                        gui_set_custom_data(gui, (void*)i);
+                        gui_set_direction(gui, DIRECTION_HORIZONTAL);
+                        gui_set_align(gui, ALIGN_CENTER, ALIGN_CENTER);
+                        gui_on_hover(gui, editor_type_switcher_on_hover);
+
+                        if (ui.dropdown.ref_object == input) {
+                            ui.dropdown.element = gui_get_element(gui);
+                        }
+
+                        gui_spacer(gui, BLOCK_STRING_PADDING / 2, 0);
+                        gui_text(gui, &assets.fonts.font_cond_shadow, type_to_str(input->data.arg.allowed_type), BLOCK_TEXT_SIZE, GUI_WHITE);
+                        gui_image(gui, &assets.textures.dropdown, BLOCK_IMAGE_SIZE, GUI_WHITE);
+                    gui_element_end(gui);
+                }
             } else {
                 gui_element_begin(gui);
                     gui_set_fixed(gui, config.ui_size - BLOCK_OUTLINE_SIZE * 4, config.ui_size - BLOCK_OUTLINE_SIZE * 4);
