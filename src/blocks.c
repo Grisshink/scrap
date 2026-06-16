@@ -909,6 +909,32 @@ Value block_on_start(Compiler* compiler, Block* block, Block** next_block, Block
             return DATA_ERROR;
         }
         bytecode_push_label(&bc, "entry");
+        
+        // Value val = string_to_bc(compiler, "InitWindow void int32 int32 str");
+        // bytecode_join(&bc, &val.data.chunk_val.bc);
+
+        // bytecode_push_op_func(&bc, IR_RUN, ir_func_by_hint("std_register_foreign"));
+
+        // val = string_to_bc(compiler, "WindowShouldClose bool");
+        // bytecode_join(&bc, &val.data.chunk_val.bc);
+
+        // bytecode_push_op_func(&bc, IR_RUN, ir_func_by_hint("std_register_foreign"));
+
+        // bytecode_push_op_int(&bc, IR_PUSHI, 800);
+        // bytecode_push_op_int(&bc, IR_PUSHI, 600);
+
+        // val = string_to_bc(compiler, "asd");
+        // bytecode_join(&bc, &val.data.chunk_val.bc);
+
+        // bytecode_push_op_int(&bc, IR_PUSHI, 0);
+        // bytecode_push_op_func(&bc, IR_RUN, ir_func_by_hint("std_run_foreign"));
+
+        // bytecode_push_op_int(&bc, IR_PUSHI, 1);
+        // bytecode_push_op_func(&bc, IR_RUN, ir_func_by_hint("std_run_foreign"));
+
+        // bytecode_push_op(&bc, IR_BTOA);
+        // bytecode_push_op_func(&bc, IR_RUN, ir_func_by_hint("std_term_println_str"));
+
         return DATA_CHUNK(DATA_TYPE_NULL, bc);
     } else if (prev_block == block->parent.as.chain->end) {
         IrBytecode bc = EMPTY_BYTECODE;

@@ -21,13 +21,36 @@
 #ifndef SCRAP_STD_H
 #define SCRAP_STD_H
 
-#include "scrap_ir.h"
 #include <stdbool.h>
+#include <ffi.h>
+
+#include "scrap_ir.h"
 #include "term.h"
 
 typedef struct {
     unsigned char r, g, b, a;
 } StdColor;
+
+typedef struct {
+    IrValueType ir;
+    ffi_type ffi;
+} StdType;
+
+typedef struct {
+    StdType* items;
+    size_t size, capacity;
+} StdTypeList;
+
+typedef struct {
+    void* addr;
+    StdTypeList args;
+    StdType return_type;
+} StdSymbol;
+
+typedef struct {
+    StdSymbol* items;
+    size_t size, capacity;
+} StdSymbolList;
 
 IrRunFunction std_resolve_function(IrExec* exec, const char* hint);
 

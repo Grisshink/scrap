@@ -25,6 +25,8 @@
 #include <math.h>
 #include <errno.h>
 #include <libintl.h>
+#include <wchar.h>
+#include <dlfcn.h>
 
 #include "vec.h"
 #include "std.h"
@@ -39,11 +41,22 @@
 #include <unistd.h>
 #endif
 
-#include <wchar.h>
-
 #define RPRAND_IMPLEMENTATION
 #define RPRANDAPI static __attribute__ ((unused))
 #include "../external/rprand.h"
+
+#define KiB(n) ((size_t)(n) << 10)
+#define MiB(n) ((size_t)(n) << 20)
+#define GiB(n) ((size_t)(n) << 30)
+
+static int cursor_x = 0;
+static int cursor_y = 0;
+static bool cursor_dirty = false;
+static StdColor clear_color = {0};
+static StdColor bg_color = {0};
+static void* scrap_lib;
+static IrMemArena* std_arena;
+static StdSymbolList loaded_symbols;
 
 // NOTE: Shamelessly stolen from raylib codebase ;)
 // Get next codepoint in a UTF-8 encoded text, scanning until '\0' is found
@@ -257,6 +270,165 @@ void std_init(void) {
     SetConsoleOutputCP(65001);
 #endif
     rprand_set_seed(time(NULL));
+
+    std_arena = ir_arena_new(GiB(1), KiB(512));
+
+    scrap_lib = dlopen(NULL, RTLD_NOW);
+    if (!scrap_lib) {
+        printf("dlopen error: %s\n", dlerror());
+        return;
+    }
+}
+
+static bool std_get_data_type(const char* str, StdType* type) {
+    struct {
+        char* type_str;
+        StdType type_val;
+    } type_list[] = {
+        { "void",    { IR_TYPE_NOTHING, ffi_type_void    } },
+        { "int8",    { IR_TYPE_INT,     ffi_type_schar   } },
+        { "int16",   { IR_TYPE_INT,     ffi_type_sint16  } },
+        { "int32",   { IR_TYPE_INT,     ffi_type_sint32  } },
+        { "int64",   { IR_TYPE_INT,     ffi_type_sint64  } },
+        { "float32", { IR_TYPE_FLOAT,   ffi_type_float   } },
+        { "float64", { IR_TYPE_FLOAT,   ffi_type_double  } },
+        { "bool",    { IR_TYPE_BOOL,    ffi_type_sint32  } },
+        { "str",     { IR_TYPE_STRING,  ffi_type_pointer } },
+        { "ptr",     { IR_TYPE_INT,     ffi_type_pointer } }, // TODO: pointer types
+    };
+
+    for (size_t i = 0; i < ARRLEN(type_list); i++) {
+        if (!strcmp(str, type_list[i].type_str)) {
+            *type = type_list[i].type_val;
+            return true;
+        }
+    }
+
+    return false;
+}
+
+bool std_register_foreign(IrExec* exec) {
+    // Example of symbol signature: "InitWindow void int int str"
+    IrList* symbol_list = exec_pop_list_string(exec);
+
+    char symbol_sig[512];
+    exec_get_string(symbol_list, symbol_sig, 512);
+
+    char* saveptr;
+
+    StdSymbol symbol = {0};
+    char* symbol_name = strtok_r(symbol_sig, " ", &saveptr);
+    if (!symbol_name) {
+        exec_set_error(exec, "std_register_foreign: EOF when reading symbol name");
+        return false;
+    }
+
+    symbol.addr = dlsym(scrap_lib, symbol_name);
+    if (!symbol.addr) {
+        exec_set_error(exec, "std_register_foreign: dlsym: %s", dlerror());
+        return false;
+    }
+
+    char* return_type_str = strtok_r(NULL, " ", &saveptr);
+    if (!return_type_str) {
+        exec_set_error(exec, "std_register_foreign: EOF when reading return type");
+        return false;
+    }
+
+    if (!std_get_data_type(return_type_str, &symbol.return_type)) {
+        exec_set_error(exec, "std_register_foreign: invalid return type \"%s\"", return_type_str);
+        return false;
+    }
+
+    while (1) {
+        char* type_str = strtok_r(NULL, " ", &saveptr);
+        if (!type_str) break;
+
+        StdType arg_type;
+        if (!std_get_data_type(type_str, &arg_type)) {
+            exec_set_error(exec, "std_register_foreign: invalid argument type \"%s\"", type_str);
+            return false;
+        }
+
+        if (arg_type.ir == IR_TYPE_NOTHING) {
+            exec_set_error(exec, "std_register_foreign: cannot have void type as argument");
+            return false;
+        }
+
+        if (symbol.args.size > 32) {
+            exec_set_error(exec, "std_register_foreign: too many arguments for foreign function %zu/32", symbol.args.size);
+            return false;
+        }
+
+        ir_arena_append(std_arena, symbol.args, arg_type);
+    }
+
+    ir_arena_append(std_arena, loaded_symbols, symbol);
+
+    return true;
+}
+
+bool std_run_foreign(IrExec* exec) {
+    int64_t symbol_index = exec_pop_int(exec);
+    if (symbol_index < 0 || (size_t)symbol_index >= loaded_symbols.size) {
+        exec_set_error(exec, "std_run_foreign: symbol index %ld out of range", symbol_index);
+        return false;
+    }
+
+    StdSymbol* symbol = &loaded_symbols.items[symbol_index];
+
+    ffi_cif cif;
+
+    ffi_type* type_list[32];
+
+    for (size_t i = 0; i < symbol->args.size; i++) {
+        type_list[i] = &symbol->args.items[i].ffi;
+    }
+
+    ffi_status result = ffi_prep_cif(&cif, FFI_DEFAULT_ABI, symbol->args.size, &symbol->return_type.ffi, type_list);
+    if (result != FFI_OK) {
+        exec_set_error(exec, "std_run_foreign: ffi_prep_cif failed");
+        return false;
+    }
+
+    IrValue value_list[32];
+    void* value_ptr_list[32];
+
+    for (ssize_t i = symbol->args.size - 1; i >= 0; i--) {
+        value_list[i] = exec_pop_value(exec);
+        if (value_list[i].type != symbol->args.items[i].ir) {
+            exec_set_error(exec, "std_run_foreign: Incorrect types passed into function");
+            return false;
+        }
+
+        if (value_list[i].type == IR_TYPE_STRING) {
+            char* buf = malloc(value_list[i].as.list_val->size + 1);
+            exec_get_string(value_list[i].as.list_val, buf, value_list[i].as.list_val->size + 1);
+            value_list[i].as.list_val = (IrList*)buf;
+        }
+
+        // FIXME: big-endian systems probably won't like this trick
+        value_ptr_list[i] = &value_list[i].as;
+    }
+
+    ffi_arg foreign_return;
+    ffi_call(&cif, FFI_FN(symbol->addr), &foreign_return, value_ptr_list);
+
+    if (symbol->return_type.ir != IR_TYPE_NOTHING) {
+        IrValue value = (IrValue) {
+            .type = symbol->return_type.ir,
+            .as = *(__typeof(value.as)*)&foreign_return,
+        };
+        exec_push_value(exec, value);
+    }
+
+    for (size_t i = 0; i < symbol->args.size; i++) {
+        if (value_list[i].type == IR_TYPE_STRING) {
+            free(value_list[i].as.list_val);
+        }
+    }
+
+    return true;
 }
 
 bool std_color_to_string(IrExec* exec) {
@@ -405,12 +577,6 @@ bool std_gc_collect(IrExec* exec) {
     exec_collect(exec);
     return true;
 }
-
-static int cursor_x = 0;
-static int cursor_y = 0;
-static bool cursor_dirty = false;
-static StdColor clear_color = {0};
-static StdColor bg_color = {0};
 
 void test_cancel(void) {}
 
@@ -700,6 +866,8 @@ IrRunFunction std_resolve_function(IrExec* exec, const char* hint) {
         STD_FUNC(std_string_join),
         STD_FUNC(std_string_substring),
         STD_FUNC(std_gc_collect),
+        STD_FUNC(std_register_foreign),
+        STD_FUNC(std_run_foreign),
         { "sqrt",  std_sqrt  },
         { "round", std_round },
         { "floor", std_floor },

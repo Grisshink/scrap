@@ -25,6 +25,8 @@ else
 	LDFLAGS := -static -lole32 -lcomdlg32 -lwinmm -lgdi32 -lintl -liconv -lshlwapi -lpthread -Wl,--subsystem,windows
 endif
 
+LDFLAGS += -lffi -rdynamic
+
 ifeq ($(ARABIC_MODE), TRUE)
 	CFLAGS += -DARABIC_MODE
 endif
