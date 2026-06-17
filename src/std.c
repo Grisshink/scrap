@@ -26,7 +26,6 @@
 #include <errno.h>
 #include <libintl.h>
 #include <wchar.h>
-#include <dlfcn.h>
 
 #include "vec.h"
 #include "std.h"
@@ -39,6 +38,7 @@
 #include <sys/ioctl.h>
 #include <termios.h>
 #include <unistd.h>
+#include <dlfcn.h>
 #endif
 
 #define RPRAND_IMPLEMENTATION
@@ -54,9 +54,14 @@ static int cursor_y = 0;
 static bool cursor_dirty = false;
 static StdColor clear_color = {0};
 static StdColor bg_color = {0};
-static void* scrap_lib;
 static IrMemArena* std_arena;
 static StdSymbolList loaded_symbols;
+
+#ifdef _WIN32
+static HMODULE scrap_lib;
+#else
+static void* scrap_lib;
+#endif
 
 // NOTE: Shamelessly stolen from raylib codebase ;)
 // Get next codepoint in a UTF-8 encoded text, scanning until '\0' is found
@@ -268,16 +273,22 @@ void std_init(void) {
     SetConsoleMode(stdin_handle, term_mode);
 
     SetConsoleOutputCP(65001);
-#endif
-    rprand_set_seed(time(NULL));
 
-    std_arena = ir_arena_new(GiB(1), KiB(512));
-
+    scrap_lib = GetModuleHandleA(NULL);
+    if (!scrap_lib) {
+        printf("Cannot get main module handle. Error: %d\n", GetLastError());
+        return;
+    }
+#else
     scrap_lib = dlopen(NULL, RTLD_NOW);
     if (!scrap_lib) {
         printf("dlopen error: %s\n", dlerror());
         return;
     }
+#endif
+    rprand_set_seed(time(NULL));
+
+    std_arena = ir_arena_new(GiB(1), KiB(512));
 }
 
 static bool std_get_data_type(const char* str, StdType* type) {
@@ -323,11 +334,19 @@ bool std_register_foreign(IrExec* exec) {
         return false;
     }
 
+#ifdef _WIN32
+    symbol.addr = GetProcAddress(scrap_lib, symbol_name);
+    if (!symbol.addr) {
+        exec_set_error(exec, "std_register_foreign: GetProcAddress Error: %d", GetLastError());
+        return false;
+    }
+#else
     symbol.addr = dlsym(scrap_lib, symbol_name);
     if (!symbol.addr) {
         exec_set_error(exec, "std_register_foreign: dlsym: %s", dlerror());
         return false;
     }
+#endif
 
     char* return_type_str = strtok_r(NULL, " ", &saveptr);
     if (!return_type_str) {

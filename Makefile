@@ -15,17 +15,17 @@ CFLAGS := -Wall -Wextra -std=c11 -D_GNU_SOURCE -DSCRAP_VERSION=\"$(SCRAP_VERSION
 
 ifeq ($(TARGET), LINUX)
 	CC := gcc
-	LDFLAGS := -lm -lpthread -lX11 -ldl
+	LDFLAGS := -lm -lpthread -lX11 -ldl -rdynamic
 else ifeq ($(TARGET), OSX)
 	# Thanks to @arducat for MacOS support
 	CC := clang
-	LDFLAGS := -framework CoreVideo -framework IOKit -framework Cocoa -framework GLUT -framework OpenGL -lm -lpthread -lintl
+	LDFLAGS := -framework CoreVideo -framework IOKit -framework Cocoa -framework GLUT -framework OpenGL -lm -lpthread -lintl -rdynamic
 else
 	CC := x86_64-w64-mingw32-gcc
-	LDFLAGS := -static -lole32 -lcomdlg32 -lwinmm -lgdi32 -lintl -liconv -lshlwapi -lpthread -Wl,--subsystem,windows
+	LDFLAGS := -static -lole32 -lcomdlg32 -lwinmm -lgdi32 -lintl -liconv -lshlwapi -lpthread -Wl,--subsystem,windows -Wl,--export-all-symbols
 endif
 
-LDFLAGS += -lffi -rdynamic
+LDFLAGS += -lffi
 
 ifeq ($(ARABIC_MODE), TRUE)
 	CFLAGS += -DARABIC_MODE
