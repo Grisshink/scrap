@@ -1367,24 +1367,20 @@ Value block_define_block(Compiler* compiler, Block* block, Block** next_block, B
 }
 
 static bool check_valid_foreign_types(Compiler* compiler, DataType type, const char* ffi_type) {
+    static char* int_type_list[]     = { "int8", "int16", "int32", "int64", "ptr", NULL };
+    static char* float_type_list[]   = { "float32", "float64", NULL };
+    static char* string_type_list[]  = { "str", NULL };
+    static char* nothing_type_list[] = { "void", NULL };
+    static char* bool_type_list[]    = { "bool", NULL };
+
     char** ffi_type_list;
 
     switch (type) {
-    case DATA_TYPE_INTEGER:
-        ffi_type_list = (static char* []) { "int8", "int16", "int32", "int64", "ptr", NULL };
-        break;
-    case DATA_TYPE_FLOAT:
-        ffi_type_list = (static char* []) { "float32", "float64", NULL };
-        break;
-    case DATA_TYPE_STRING:
-        ffi_type_list = (static char* []) { "str", NULL };
-        break;
-    case DATA_TYPE_NOTHING:
-        ffi_type_list = (static char* []) { "void", NULL };
-        break;
-    case DATA_TYPE_BOOL:
-        ffi_type_list = (static char* []) { "bool", NULL };
-        break;
+    case DATA_TYPE_INTEGER: ffi_type_list = int_type_list; break;
+    case DATA_TYPE_FLOAT: ffi_type_list = float_type_list; break;
+    case DATA_TYPE_STRING: ffi_type_list = string_type_list; break;
+    case DATA_TYPE_NOTHING: ffi_type_list = nothing_type_list; break;
+    case DATA_TYPE_BOOL: ffi_type_list = bool_type_list; break;
     default:
         compiler_set_error(
             compiler, 
