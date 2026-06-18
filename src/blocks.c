@@ -72,6 +72,11 @@ typedef struct {
     CustomFunctionArgumentTypeList arg_types;
 } CustomFunctionData;
 
+typedef struct {
+    IrBytecode register_foreign_funcs;
+    size_t foreign_funcs_count;
+} CompilerData;
+
 static MathFunc block_math_func_list[MATH_LIST_LEN] = {
     sqrt, round, floor, ceil,
     sin, cos, tan,
@@ -909,31 +914,11 @@ Value block_on_start(Compiler* compiler, Block* block, Block** next_block, Block
             return DATA_ERROR;
         }
         bytecode_push_label(&bc, "entry");
-        
-        // Value val = string_to_bc(compiler, "InitWindow void int32 int32 str");
-        // bytecode_join(&bc, &val.data.chunk_val.bc);
 
-        // bytecode_push_op_func(&bc, IR_RUN, ir_func_by_hint("std_register_foreign"));
-
-        // val = string_to_bc(compiler, "WindowShouldClose bool");
-        // bytecode_join(&bc, &val.data.chunk_val.bc);
-
-        // bytecode_push_op_func(&bc, IR_RUN, ir_func_by_hint("std_register_foreign"));
-
-        // bytecode_push_op_int(&bc, IR_PUSHI, 800);
-        // bytecode_push_op_int(&bc, IR_PUSHI, 600);
-
-        // val = string_to_bc(compiler, "asd");
-        // bytecode_join(&bc, &val.data.chunk_val.bc);
-
-        // bytecode_push_op_int(&bc, IR_PUSHI, 0);
-        // bytecode_push_op_func(&bc, IR_RUN, ir_func_by_hint("std_run_foreign"));
-
-        // bytecode_push_op_int(&bc, IR_PUSHI, 1);
-        // bytecode_push_op_func(&bc, IR_RUN, ir_func_by_hint("std_run_foreign"));
-
-        // bytecode_push_op(&bc, IR_BTOA);
-        // bytecode_push_op_func(&bc, IR_RUN, ir_func_by_hint("std_term_println_str"));
+        CompilerData* compiler_data = compiler_object_info_get(compiler, compiler);
+        if (compiler_data != OBJECT_NOT_FOUND) {
+            bytecode_join(&bc, &compiler_data->register_foreign_funcs);
+        }
 
         return DATA_CHUNK(DATA_TYPE_NULL, bc);
     } else if (prev_block == block->parent.as.chain->end) {
@@ -1379,6 +1364,151 @@ Value block_define_block(Compiler* compiler, Block* block, Block** next_block, B
     }
 
     assert(false && "Unreachable");
+}
+
+static bool check_valid_foreign_types(Compiler* compiler, DataType type, const char* ffi_type) {
+    char** ffi_type_list;
+
+    switch (type) {
+    case DATA_TYPE_INTEGER:
+        ffi_type_list = (static char* []) { "int8", "int16", "int32", "int64", "ptr", NULL };
+        break;
+    case DATA_TYPE_FLOAT:
+        ffi_type_list = (static char* []) { "float32", "float64", NULL };
+        break;
+    case DATA_TYPE_STRING:
+        ffi_type_list = (static char* []) { "str", NULL };
+        break;
+    case DATA_TYPE_NOTHING:
+        ffi_type_list = (static char* []) { "void", NULL };
+        break;
+    case DATA_TYPE_BOOL:
+        ffi_type_list = (static char* []) { "bool", NULL };
+        break;
+    default:
+        compiler_set_error(
+            compiler, 
+            gettext("Invalid input type %s, allowed argument input types are: %s, %s, %s, %s, %s"), 
+            type_to_str(type), 
+            type_to_str(DATA_TYPE_INTEGER), 
+            type_to_str(DATA_TYPE_FLOAT), 
+            type_to_str(DATA_TYPE_STRING), 
+            type_to_str(DATA_TYPE_NOTHING), 
+            type_to_str(DATA_TYPE_BOOL)
+        );
+        return false;
+    }
+    
+    for (char** check_type = ffi_type_list; *check_type; check_type++) {
+        if (!strcmp(ffi_type, *check_type)) {
+            return true;
+        }
+    }
+
+    compiler_set_error(compiler, gettext("Invalid input name %s"), ffi_type);
+    return false;
+}
+
+Value block_define_foreign(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
+    (void) next_block;
+    (void) prev_block;
+
+    assert(block->parent.type == BLOCK_PARENT_BLOCKCHAIN);
+
+    CompilerData* compiler_data = compiler_object_info_get(compiler, compiler);
+    if (compiler_data == OBJECT_NOT_FOUND) {
+        compiler_data = ir_arena_alloc(compiler->arena, sizeof(CompilerData));
+        compiler_data->register_foreign_funcs = EMPTY_BYTECODE;
+        compiler_data->foreign_funcs_count = 0;
+        compiler_object_info_insert(compiler, compiler, compiler_data);
+    }
+
+    assert(vector_size(block->arguments) > 0);
+    assert(block->arguments[0].type == ARGUMENT_BLOCKDEF);
+
+    Blockdef* blockdef = block->arguments[0].data.blockdef;
+
+    if (vector_size(blockdef->inputs) == 0) {
+        compiler_set_error(compiler, gettext("Empty foreign blockdef"));
+        return DATA_ERROR;
+    }
+
+    if (blockdef->inputs[0].type != INPUT_TEXT_DISPLAY) {
+        compiler_set_error(compiler, gettext("Text input as first input is required in foreign definition"));
+        return DATA_ERROR;
+    }
+
+    char func_name[1024];
+    size_t func_name_size = 0;
+
+    for (char* ch = blockdef->inputs[0].data.text; *ch; ch++) {
+        if (*ch == ' ') {
+            compiler_set_error(compiler, gettext("Foreign function names cannot have spaces inside them"));
+            return DATA_ERROR;
+        }
+    }
+
+    print_func_name("%s void ", blockdef->inputs[0].data.text);
+
+    for (size_t i = 1; i < vector_size(blockdef->inputs); i++) {
+        Input* input = &blockdef->inputs[i];
+
+        static_assert(INPUT_LAST == 6, "Exhaustive input type in block_define_foreign");
+        switch (blockdef->inputs[i].type) {
+        case INPUT_ARGUMENT:
+            if (!check_valid_foreign_types(compiler, input->data.arg.allowed_type, input->data.arg.blockdef->inputs[0].data.text)) {
+                return DATA_ERROR;
+            }
+            print_func_name("%s ", input->data.arg.blockdef->inputs[0].data.text);
+            break;
+        case INPUT_BLOCKDEF_EDITOR:
+        case INPUT_COLOR:
+        case INPUT_DROPDOWN:
+        case INPUT_IMAGE_DISPLAY:
+        case INPUT_TEXT_DISPLAY:
+            break;
+        default:
+            assert(false && "Unhandled input type in block_define_foreign");
+        }
+
+        if (func_name_size >= 1024) break;
+    }
+    if (func_name_size > 1) func_name[func_name_size - 1] = 0;
+
+    Value func_name_bc = string_to_bc(compiler, func_name);
+    bytecode_push_op_func(&func_name_bc.data.chunk_val.bc, IR_RUN, ir_func_by_hint("std_register_foreign"));
+    bytecode_join(&compiler_data->register_foreign_funcs, &func_name_bc.data.chunk_val.bc);
+
+    compiler_object_info_insert(compiler, blockdef, (void*)compiler_data->foreign_funcs_count++);
+
+    return DATA_NOTHING;
+}
+
+Value block_exec_foreign(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
+    (void) next_block;
+    (void) prev_block;
+
+    IrBytecode bc = EMPTY_BYTECODE;
+    for (size_t i = 0; i < vector_size(block->arguments); i++) {
+        Value value = compiler_evaluate_argument(compiler, &block->arguments[i]);
+        if (value.type == DATA_TYPE_ERROR) return DATA_ERROR;
+        value = cast_to_bc(compiler, value, block->blockdef->inputs[block->arguments[i].input_id].data.arg.allowed_type);
+        if (value.type == DATA_TYPE_ERROR) return DATA_ERROR;
+        bytecode_join(&bc, &value.data.chunk_val.bc);
+    }
+
+    void* foreign_id_ptr = compiler_object_info_get(compiler, block->blockdef);
+    if (foreign_id_ptr == OBJECT_NOT_FOUND) {
+        compiler_set_error(compiler, "Could not find block data in exec_foreign block");
+        return DATA_ERROR;
+    }
+
+    size_t foreign_id = (size_t)foreign_id_ptr;
+
+    bytecode_push_op_int(&bc, IR_PUSHI, foreign_id);
+    bytecode_push_op_func(&bc, IR_RUN, ir_func_by_hint("std_run_foreign"));
+
+    return DATA_CHUNK(DATA_TYPE_NULL, bc);
 }
 
 Value block_return(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
@@ -2910,6 +3040,15 @@ void register_blocks(Vm* vm) {
     blockdef_add_argument(sc_comment, value_from_string(""), DATA_TYPE_ANY);
     blockdef_register(vm, sc_comment);
     block_category_add_blockdef(cat_misc, sc_comment);
+
+    block_category_add_label(cat_misc, gettext("Foreign function interface"), (Color) { 0x55, 0x55, 0x55, 0xff });
+
+    Blockdef* sc_define_foreign = blockdef_new("define_foreign", BLOCKTYPE_HAT, (BlockdefColor) { 0x55, 0x55, 0x55, 0xff }, block_define_foreign);
+    blockdef_add_image(sc_define_foreign, (BlockdefImage) { .image_ptr = &assets.textures.icon_c, .image_color = (BlockdefColor) { 0xff, 0xff, 0xff, 0xff } });
+    blockdef_add_text(sc_define_foreign, gettext("Define foreign"));
+    blockdef_add_blockdef_editor(sc_define_foreign, block_exec_foreign, NULL);
+    blockdef_register(vm, sc_define_foreign);
+    block_category_add_blockdef(cat_misc, sc_define_foreign);
 
 #ifdef DEBUG
     block_category_add_label(cat_misc, gettext("Debug blocks"), (Color) { 0xa0, 0x70, 0x00, 0xff });

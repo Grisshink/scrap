@@ -133,6 +133,7 @@ Image setup(void) {
         &assets.textures.button_run,         "run.svg",
         &assets.textures.button_stop,        "stop.svg",
         &assets.textures.icon_about,         "about.svg",
+        &assets.textures.icon_c,             "c_icon.svg",
         &assets.textures.icon_file,          "file.svg",
         &assets.textures.icon_folder,        "folder.svg",
         &assets.textures.icon_list,          "list.svg",
