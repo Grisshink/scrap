@@ -86,6 +86,7 @@ struct Compiler {
 
 #define DATA_UNKNOWN _DATA(DATA_TYPE_UNKNOWN, 0)
 #define DATA_NOTHING _DATA(DATA_TYPE_NOTHING, 0)
+#define DATA_NULL    _DATA(DATA_TYPE_NULL, 0)
 #define DATA_INTEGER(v) _DATA(DATA_TYPE_INTEGER, .integer_val = (v))
 #define DATA_FLOAT(v) _DATA(DATA_TYPE_FLOAT, .float_val = (v))
 #define DATA_BOOL(v) _DATA(DATA_TYPE_BOOL, .bool_val = (v))

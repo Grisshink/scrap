@@ -219,6 +219,15 @@ Value compiler_evaluate_block(Compiler* compiler, Block* block, Block** next_blo
     if (value.type == DATA_TYPE_UNKNOWN) {
         scrap_log(LOG_ERROR, "[COMPILER] Error from block id: \"%s\" (at block %p)", block->blockdef->id, &block);
         if (!compiler->current_error_block) compiler->current_error_block = block;
+    } else if (block->blockdef->return_type != DATA_TYPE_ANY) {
+        DataType returned_type = value.type;
+        if (returned_type == DATA_TYPE_CHUNK) {
+            returned_type = value.data.chunk_val.return_type;
+        }
+        
+        if (returned_type != block->blockdef->return_type) {
+            scrap_log(LOG_WARNING, "[COMPILER] Block \"%s\" returned type %s, but blockdef expects return type to be %s", block->blockdef->id, type_to_str(returned_type), type_to_str(block->blockdef->return_type));
+        }
     }
 
     return value;

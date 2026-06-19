@@ -227,7 +227,7 @@ Block* block_new(Blockdef* blockdef) {
             arg->block = block;
             arg->input_id = i;
             arg->type = ARGUMENT_BLOCKDEF;
-            arg->data.blockdef = blockdef_new("custom", BLOCKTYPE_NORMAL, blockdef->color, blockdef->inputs[i].data.editor.block_func);
+            arg->data.blockdef = blockdef_new("custom", BLOCKTYPE_NORMAL, blockdef->color, DATA_TYPE_ANY, blockdef->inputs[i].data.editor.block_func);
             arg->data.blockdef->ref_count++;
             blockdef_add_text(arg->data.blockdef, gettext("My block"));
             break;
@@ -498,7 +498,7 @@ void argument_set_color(Argument* arg, BlockdefColor color) {
     arg->data.color = color;
 }
 
-Blockdef* blockdef_new(const char* id, BlockdefType type, BlockdefColor color, void* func) {
+Blockdef* blockdef_new(const char* id, BlockdefType type, BlockdefColor color, DataType return_type, void* func) {
     assert(id != NULL);
     Blockdef* blockdef = malloc(sizeof(Blockdef));
     blockdef->id = strcpy(malloc((strlen(id) + 1) * sizeof(char)), id);
@@ -507,6 +507,7 @@ Blockdef* blockdef_new(const char* id, BlockdefType type, BlockdefColor color, v
     blockdef->ref_count = 0;
     blockdef->inputs = vector_create();
     blockdef->func = func;
+    blockdef->return_type = return_type;
 
     return blockdef;
 }
@@ -519,6 +520,7 @@ Blockdef* blockdef_copy(Blockdef* blockdef) {
     new->ref_count = 0;
     new->inputs = vector_create();
     new->func = blockdef->func;
+    new->return_type = blockdef->return_type;
 
     for (size_t i = 0; i < vector_size(blockdef->inputs); i++) {
         Input* input = vector_add_dst(&new->inputs);
@@ -591,7 +593,7 @@ void blockdef_add_argument(Blockdef* blockdef, Value default_value, DataType all
     input->type = INPUT_ARGUMENT;
     input->data = (InputData) {
         .arg = {
-            .blockdef = blockdef_new("custom_arg", BLOCKTYPE_NORMAL, blockdef->color, NULL),
+            .blockdef = blockdef_new("custom_arg", BLOCKTYPE_NORMAL, blockdef->color, DATA_TYPE_ANY, NULL),
             .default_value = default_value,
             .allowed_type = allowed_type,
         },

@@ -778,6 +778,26 @@ bool handle_editor_color_button(void) {
     return true;
 }
 
+bool handle_editor_return_type_switcher_dropdown_click(void) {
+    DataType* return_type = ui.dropdown.ref_object;
+
+    assert(return_type != NULL);
+
+    DataType set_type = *return_type;
+    char* select_type = ui.dropdown.as.list.data[ui.dropdown.as.list.select_ind];
+
+    for (size_t i = 0; i < ARRLEN(type_switcher_type_name_list); i++) {
+        if (!strcmp(select_type, type_switcher_type_name_list[i])) {
+            set_type = type_switcher_type_list[i];
+            break;
+        }
+    }
+
+    *return_type = set_type;
+
+    return handle_dropdown_close();
+}
+
 bool handle_editor_type_switcher_dropdown_click(void) {
     Input* blockdef_input = ui.dropdown.ref_object;
 
@@ -801,6 +821,13 @@ bool handle_editor_type_switcher_dropdown_click(void) {
     }
 
     return handle_dropdown_close();
+}
+
+bool handle_editor_return_type_switcher_button(void) {
+    assert(ui.hover.editor.edit_blockdef != NULL);
+
+    show_list_dropdown(type_switcher_type_name_list, ARRLEN(type_switcher_type_name_list), &ui.hover.editor.edit_blockdef->return_type, handle_editor_return_type_switcher_dropdown_click);
+    return true;
 }
 
 bool handle_editor_type_switcher_button(void) {

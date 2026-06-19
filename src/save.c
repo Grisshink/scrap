@@ -584,6 +584,7 @@ void save_blockdef(SaveData* save, Blockdef* blockdef) {
     save_add_array(save, blockdef->id, strlen(blockdef->id) + 1, sizeof(blockdef->id[0]));
     save_add(save, blockdef->color);
     save_add_varint(save, blockdef->type);
+    save_add_varint(save, blockdef->return_type);
 
     int input_count = vector_size(blockdef->inputs);
     save_add_varint(save, input_count);
@@ -976,6 +977,11 @@ Blockdef* load_blockdef(SaveData* save) {
         int arg_id;
         if (!save_read_varint(save, (unsigned int*)&arg_id)) return NULL;
     }
+    
+    DataType return_type = DATA_TYPE_ANY;
+    if (ver >= 6) {
+        if (!save_read_varint(save, (unsigned int*)&return_type)) return NULL;
+    }
 
     unsigned int input_count;
     if (!save_read_varint(save, &input_count)) return NULL;
@@ -987,6 +993,7 @@ Blockdef* load_blockdef(SaveData* save) {
     blockdef->ref_count = 0;
     blockdef->inputs = vector_create();
     blockdef->func = block_exec_custom;
+    blockdef->return_type = return_type;
 
     for (unsigned int i = 0; i < input_count; i++) {
         Input input;
@@ -1097,7 +1104,7 @@ Block* load_block(SaveData* save) {
             scrap_log(LOG_WARNING, "[LOAD] No blockdef matched id: %s", block_id_constant.data.str_val);
             unknown_blockdef = true;
 
-            blockdef = blockdef_new(block_id_constant.data.str_val, BLOCKTYPE_NORMAL, (BlockdefColor) { 0x66, 0x66, 0x66, 0xff }, NULL);
+            blockdef = blockdef_new(block_id_constant.data.str_val, BLOCKTYPE_NORMAL, (BlockdefColor) { 0x66, 0x66, 0x66, 0xff }, DATA_TYPE_ANY, NULL);
             blockdef_add_text(blockdef, TextFormat(gettext("UNKNOWN %s"), block_id_constant.data.str_val));
         }
     }

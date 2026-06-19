@@ -229,6 +229,17 @@ static void editor_color_on_hover(GuiElement* el) {
     ui.hover.button.handler = handle_editor_color_button;
 }
 
+static void editor_return_type_switcher_on_hover(GuiElement* el) {
+    if (ui.hover.is_panel_edit_mode) return;
+    if (gui_window_is_shown()) return;
+    if (ui.hover.button.handler) return;
+
+    el->draw_type = DRAWTYPE_RECT;
+    el->draw_subtype = GUI_SUBTYPE_DEFAULT;
+    el->color = (GuiColor) { 0xff, 0xff, 0xff, 0x80 };
+    ui.hover.button.handler = handle_editor_return_type_switcher_button;
+}
+
 static void editor_type_switcher_on_hover(GuiElement* el) {
     if (ui.hover.is_panel_edit_mode) return;
     if (gui_window_is_shown()) return;
@@ -856,6 +867,22 @@ static void draw_block(Block* block, bool highlight, bool select, bool can_hover
                                 gui_set_fixed(gui, BLOCK_IMAGE_SIZE, BLOCK_IMAGE_SIZE);
                                 gui_set_rect(gui, CONVERT_COLOR(arg->data.blockdef->color, GuiColor));
                             gui_element_end(gui);
+                        gui_element_end(gui);
+
+                        gui_element_begin(gui);
+                            gui_set_rect(gui, (GuiColor) { 0xff, 0xff, 0xff, 0x40 });
+                            // gui_set_custom_data(gui, (void*)i);
+                            gui_set_direction(gui, DIRECTION_HORIZONTAL);
+                            gui_set_align(gui, ALIGN_CENTER, ALIGN_CENTER);
+                            gui_on_hover(gui, editor_return_type_switcher_on_hover);
+
+                            if (ui.dropdown.ref_object == &arg->data.blockdef->return_type) {
+                                ui.dropdown.element = gui_get_element(gui);
+                            }
+
+                            gui_spacer(gui, BLOCK_STRING_PADDING / 2, 0);
+                            gui_text(gui, &assets.fonts.font_cond_shadow, type_to_str(arg->data.blockdef->return_type), BLOCK_TEXT_SIZE, GUI_WHITE);
+                            gui_image(gui, &assets.textures.dropdown, BLOCK_IMAGE_SIZE, GUI_WHITE);
                         gui_element_end(gui);
 
                         draw_editor_button(&assets.textures.button_close, handle_editor_close_button);

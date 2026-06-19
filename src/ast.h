@@ -160,6 +160,7 @@ struct Blockdef {
     BlockdefColor color;
     BlockdefType type;
     Input* inputs;
+    DataType return_type;
     void* func;
 };
 
@@ -227,7 +228,7 @@ struct RootBlockChain {
     BlockChain* chain;
 };
 
-Blockdef* blockdef_new(const char* id, BlockdefType type, BlockdefColor color, void* func);
+Blockdef* blockdef_new(const char* id, BlockdefType type, BlockdefColor color, DataType return_type, void* func);
 Blockdef* blockdef_copy(Blockdef* blockdef);
 void blockdef_add_text(Blockdef* blockdef, const char* text);
 void blockdef_add_argument(Blockdef* blockdef, Value default_value, DataType allowed_type);
