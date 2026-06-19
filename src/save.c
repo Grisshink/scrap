@@ -76,6 +76,7 @@ Blockdef* load_blockdef(SaveData* save);
 void save_blockchain(SaveData* save, BlockChain* chain);
 BlockChain* load_blockchain(SaveData* save);
 void collect_blockchain_constants(BlockChain* chain);
+void save_value(SaveData* save, Value* value);
 
 const char* language_to_code(Language lang) {
     switch (lang) {
@@ -564,6 +565,8 @@ void save_blockdef_input(SaveData* save, Input* input) {
         break;
     case INPUT_ARGUMENT:
         save_blockdef(save, input->data.arg.blockdef);
+        save_add_varint(save, input->data.arg.allowed_type);
+        save_value(save, &input->data.arg.default_value);
         break;
     case INPUT_DROPDOWN:
     case INPUT_BLOCKDEF_EDITOR:
@@ -934,9 +937,15 @@ bool load_blockdef_input(SaveData* save, Input* input) {
         Blockdef* blockdef = load_blockdef(save);
         if (!blockdef) return false;
 
-        input->data.arg.default_value = value_from_string("");
-        input->data.arg.default_value.type = constr == BLOCKCONSTR_UNLIMITED ? DATA_TYPE_ANY : DATA_TYPE_STRING;
-        input->data.arg.allowed_type = input->data.arg.default_value.type;
+        if (ver >= 6) {
+            if (!save_read_varint(save, (unsigned int*)&input->data.arg.allowed_type)) return false;
+            if (!load_value(save, &input->data.arg.default_value)) return false;
+        } else {
+            input->data.arg.default_value = value_from_string("");
+            input->data.arg.default_value.type = constr == BLOCKCONSTR_UNLIMITED ? DATA_TYPE_ANY : DATA_TYPE_STRING;
+            input->data.arg.allowed_type = input->data.arg.default_value.type;
+        }
+
         input->data.arg.blockdef = blockdef;
         input->data.arg.blockdef->ref_count++;
         input->data.arg.blockdef->func = block_custom_arg;
