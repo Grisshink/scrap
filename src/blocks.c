@@ -1442,32 +1442,36 @@ Value block_define_foreign(Compiler* compiler, Block* block, Block** next_block,
         compiler_object_info_insert(compiler, compiler, compiler_data);
     }
 
-    assert(vector_size(block->arguments) > 0);
+    assert(vector_size(block->arguments) > 2);
     assert(block->arguments[0].type == ARGUMENT_BLOCKDEF);
 
     Blockdef* blockdef = block->arguments[0].data.blockdef;
 
-    if (vector_size(blockdef->inputs) == 0) {
-        compiler_set_error(compiler, gettext("Empty foreign blockdef"));
-        return DATA_ERROR;
-    }
+    Value binding = compiler_evaluate_argument(compiler, &block->arguments[1]);
+    if (binding.type == DATA_TYPE_ERROR) return DATA_ERROR;
+    binding = cast_to_const_string(compiler, binding);
+    if (binding.type == DATA_TYPE_ERROR) return DATA_ERROR;
 
-    if (blockdef->inputs[0].type != INPUT_TEXT_DISPLAY) {
-        compiler_set_error(compiler, gettext("Text input as first input is required in foreign definition"));
-        return DATA_ERROR;
-    }
+    Value return_ffi_type = compiler_evaluate_argument(compiler, &block->arguments[2]);
+    if (return_ffi_type.type == DATA_TYPE_ERROR) return DATA_ERROR;
+    return_ffi_type = cast_to_const_string(compiler, return_ffi_type);
+    if (return_ffi_type.type == DATA_TYPE_ERROR) return DATA_ERROR;
 
     char func_name[1024];
     size_t func_name_size = 0;
 
-    for (char* ch = blockdef->inputs[0].data.text; *ch; ch++) {
+    for (char* ch = binding.data.str_val; *ch; ch++) {
         if (*ch == ' ') {
-            compiler_set_error(compiler, gettext("Foreign function names cannot have spaces inside them"));
+            compiler_set_error(compiler, gettext("Foreign function binding cannot have spaces inside it"));
             return DATA_ERROR;
         }
     }
 
-    print_func_name("%s void ", blockdef->inputs[0].data.text);
+    if (!check_valid_foreign_types(compiler, blockdef->return_type, return_ffi_type.data.str_val)) {
+        return DATA_ERROR;
+    }
+
+    print_func_name("%s %s ", binding.data.str_val, return_ffi_type.data.str_val);
 
     for (size_t i = 1; i < vector_size(blockdef->inputs); i++) {
         Input* input = &blockdef->inputs[i];
@@ -1500,7 +1504,7 @@ Value block_define_foreign(Compiler* compiler, Block* block, Block** next_block,
 
     compiler_object_info_insert(compiler, blockdef, (void*)compiler_data->foreign_funcs_count++);
 
-    return DATA_NOTHING;
+    return DATA_NULL;
 }
 
 Value block_exec_foreign(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
@@ -1527,7 +1531,11 @@ Value block_exec_foreign(Compiler* compiler, Block* block, Block** next_block, B
     bytecode_push_op_int(&bc, IR_PUSHI, foreign_id);
     bytecode_push_op_func(&bc, IR_RUN, ir_func_by_hint("std_run_foreign"));
 
-    return DATA_CHUNK(DATA_TYPE_NULL, bc);
+    if (block->blockdef->return_type == DATA_TYPE_NOTHING) {
+        return DATA_CHUNK(DATA_TYPE_NULL, bc);
+    } else {
+        return DATA_CHUNK(block->blockdef->return_type, bc);
+    }
 }
 
 Value block_return(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
@@ -3072,6 +3080,10 @@ void register_blocks(Vm* vm) {
     blockdef_add_image(sc_define_foreign, (BlockdefImage) { .image_ptr = &assets.textures.icon_c, .image_color = (BlockdefColor) { 0xff, 0xff, 0xff, 0xff } });
     blockdef_add_text(sc_define_foreign, gettext("Define foreign"));
     blockdef_add_blockdef_editor(sc_define_foreign, block_exec_foreign, NULL);
+    blockdef_add_text(sc_define_foreign, gettext("binding to"));
+    blockdef_add_argument(sc_define_foreign, value_from_string("puts"), DATA_TYPE_STRING);
+    blockdef_add_text(sc_define_foreign, gettext("with return type"));
+    blockdef_add_argument(sc_define_foreign, value_from_string("int32"), DATA_TYPE_STRING);
     blockdef_register(vm, sc_define_foreign);
     block_category_add_blockdef(cat_misc, sc_define_foreign);
 
