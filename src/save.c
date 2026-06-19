@@ -596,6 +596,7 @@ void save_value(SaveData* save, Value* value) {
         break;
     case DATA_TYPE_INTEGER:
         save_add_varint(save, value->data.integer_val);
+        save_add_varint(save, value->data.integer_val >> 32);
         break;
     case DATA_TYPE_FLOAT:
         save_add_item(save, &value->data.float_val, sizeof(value->data.float_val));
@@ -854,8 +855,15 @@ bool load_value(SaveData* save, Value* value) {
     switch (type) {
     case DATA_TYPE_NOTHING:
         break;
-    case DATA_TYPE_INTEGER:
-        if (!save_read_varint(save, (unsigned int*)&value->data.integer_val)) return false;
+    case DATA_TYPE_INTEGER: ;
+        int64_t out_int = 0;
+        unsigned int read_int;
+        if (!save_read_varint(save, &read_int)) return false;
+        out_int = read_int;
+        if (!save_read_varint(save, &read_int)) return false;
+        out_int |= (int64_t)read_int << 32;
+
+        value->data.integer_val = out_int;
         break;
     case DATA_TYPE_FLOAT: ;
         float* float_val = save_read_item(save, sizeof(value->data.float_val));
