@@ -949,7 +949,7 @@ bool load_blockdef_input(SaveData* save, Input* input) {
 
         input->data.arg.blockdef = blockdef;
         input->data.arg.blockdef->ref_count++;
-        input->data.arg.blockdef->func = block_custom_arg;
+        input->data.arg.blockdef->func = NULL;
         vector_add(&save_blockdefs, input->data.arg.blockdef);
         break;
     default:
@@ -992,7 +992,7 @@ Blockdef* load_blockdef(SaveData* save) {
     blockdef->type = type;
     blockdef->ref_count = 0;
     blockdef->inputs = vector_create();
-    blockdef->func = block_exec_custom;
+    blockdef->func = NULL;
     blockdef->return_type = return_type;
 
     for (unsigned int i = 0; i < input_count; i++) {
@@ -1086,6 +1086,21 @@ bool load_block_argument(SaveData* save, Argument* arg) {
     return true;
 }
 
+void assign_blockdef_funcs(Blockdef* blockdef, Argument* arg) {
+    if (arg->type != ARGUMENT_BLOCKDEF) return;
+
+    Input* input = &blockdef->inputs[arg->input_id];
+    assert(input->type == INPUT_BLOCKDEF_EDITOR);
+
+    Blockdef* arg_blockdef = arg->data.blockdef;
+    arg_blockdef->func = input->data.editor.block_func;
+
+    for (size_t i = 0; i < vector_size(arg_blockdef->inputs); i++) {
+        if (arg_blockdef->inputs[i].type != INPUT_ARGUMENT) continue;
+        arg_blockdef->inputs[i].data.arg.blockdef->func = input->data.editor.arg_func;
+    }
+}
+
 Block* load_block(SaveData* save) {
     unsigned int block_id_constant_ind;
     if (!save_read_varint(save, &block_id_constant_ind)) return NULL;
@@ -1144,6 +1159,8 @@ Block* load_block(SaveData* save) {
             input_id++;
         } while (block->blockdef->inputs[input_id].type == INPUT_TEXT_DISPLAY || block->blockdef->inputs[input_id].type == INPUT_IMAGE_DISPLAY);
         arg->input_id = input_id;
+
+        assign_blockdef_funcs(block->blockdef, arg);
     }
 
     if (ver >= 5) {
