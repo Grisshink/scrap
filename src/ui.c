@@ -996,9 +996,7 @@ static void code_attach_to_argument(void) {
     if (mouse_block->blockdef->type == BLOCKTYPE_CONTROL) return;
     if (mouse_block->blockdef->type == BLOCKTYPE_CONTROLEND) return;
     if (mouse_block->blockdef->type == BLOCKTYPE_HAT) return;
-    if (ui.hover.editor.argument->type != ARGUMENT_TEXT  && 
-        ui.hover.editor.argument->type != ARGUMENT_COLOR && 
-        ui.hover.editor.argument->type != ARGUMENT_VALUE) return;
+    if (ui.hover.editor.argument->type != ARGUMENT_VALUE) return;
 
     mouse_block->parent.type = BLOCK_PARENT_ARGUMENT;
     mouse_block->parent.as.arg = ui.hover.editor.argument;
@@ -1072,11 +1070,8 @@ static void code_detach_argument(void) {
 
     Argument* parent_arg = ui.hover.editor.block->parent.as.arg;
 
-    if (parent_arg->block->blockdef->inputs[parent_arg->input_id].type == INPUT_COLOR) {
-        argument_set_color(parent_arg, (BlockdefColor) { 0xff, 0xff, 0xff, 0xff });
-    } else {
-        argument_set_value(parent_arg, value_get_default(parent_arg->block->blockdef->inputs[parent_arg->input_id].data.arg.allowed_type));
-    }
+    argument_set_value(parent_arg, value_get_default(parent_arg->block->blockdef->inputs[parent_arg->input_id].data.arg.allowed_type));
+
     root.chain->start->parent.type = BLOCK_PARENT_BLOCKCHAIN;
     root.chain->start->parent.as.chain = root.chain;
     vector_add(&editor.mouse_blockchains, root);
@@ -1452,8 +1447,6 @@ static bool handle_mouse_click(void) {
                 char** list = block_input.data.drop.list(ui.hover.editor.block, &list_len);
 
                 show_list_dropdown(list, list_len, ui.hover.editor.argument, handle_block_dropdown_click);
-            } else if (block_input.type == INPUT_COLOR) {
-                show_color_picker_dropdown((Color*)&ui.hover.editor.argument->data.color, ui.hover.editor.argument, NULL);
             }
         }
 
@@ -1503,9 +1496,9 @@ static void block_next_argument() {
         return;
     }
 
-    if (arg->type == ARGUMENT_TEXT || arg->type == ARGUMENT_CONST_STRING || arg->type == ARGUMENT_VALUE) {
+    if (arg->type == ARGUMENT_VALUE) {
         ui.hover.editor.select_argument = arg;
-        if (arg->type == ARGUMENT_VALUE) ui.hover.editor.select_argument_type = value_determine_type(&arg->data.value);
+        ui.hover.editor.select_argument_type = value_determine_type(&arg->data.value);
     } else if (arg->type == ARGUMENT_BLOCK) {
         ui.hover.editor.select_argument = NULL;
         ui.hover.editor.select_block = arg->data.block;
@@ -1533,17 +1526,17 @@ static void block_prev_argument() {
         return;
     }
 
-    if (arg->type == ARGUMENT_TEXT || arg->type == ARGUMENT_CONST_STRING || arg->type == ARGUMENT_VALUE) {
+    if (arg->type == ARGUMENT_VALUE) {
         ui.hover.editor.select_argument = arg;
-        if (arg->type == ARGUMENT_VALUE) ui.hover.editor.select_argument_type = value_determine_type(&arg->data.value);
+        ui.hover.editor.select_argument_type = value_determine_type(&arg->data.value);
     } else if (arg->type == ARGUMENT_BLOCK) {
         ui.hover.editor.select_argument = NULL;
         ui.hover.editor.select_block = arg->data.block;
         while (vector_size(ui.hover.editor.select_block->arguments) != 0) {
             arg = &ui.hover.editor.select_block->arguments[vector_size(ui.hover.editor.select_block->arguments) - 1];
-            if (arg->type == ARGUMENT_TEXT || arg->type == ARGUMENT_CONST_STRING || arg->type == ARGUMENT_VALUE) {
+            if (arg->type == ARGUMENT_VALUE) {
                 ui.hover.editor.select_argument = arg;
-                if (arg->type == ARGUMENT_VALUE) ui.hover.editor.select_argument_type = value_determine_type(&arg->data.value);
+                ui.hover.editor.select_argument_type = value_determine_type(&arg->data.value);
                 break;
             } else if (arg->type == ARGUMENT_BLOCK) {
                 ui.hover.editor.select_block = arg->data.block;
@@ -1622,11 +1615,7 @@ static bool handle_code_panel_key_press(void) {
                 return true;
             }
 
-            if (ui.hover.editor.select_argument->type == ARGUMENT_VALUE) {
-                ui.hover.select_input = &ui.hover.editor.select_argument->data.value.data.str_val;
-            } else {
-                ui.hover.select_input = &ui.hover.editor.select_argument->data.text;
-            }
+            ui.hover.select_input = &ui.hover.editor.select_argument->data.value.data.str_val;
 
             ui.hover.select_input_mark = 0;
             ui.hover.select_input_cursor = strlen(*ui.hover.select_input);

@@ -730,8 +730,9 @@ static void draw_block(Block* block, bool highlight, bool select, bool can_hover
 
     Argument default_argument = {
         .input_id = 0,
-        .data = (ArgumentData) {
-            .text = "",
+        .data.value = {
+            .type = DATA_TYPE_STRING,
+            .data.str_val = "",
         },
     };
 
@@ -753,32 +754,10 @@ static void draw_block(Block* block, bool highlight, bool select, bool can_hover
         case INPUT_ARGUMENT:
             if (!arg) {
                 arg = &default_argument;
-                arg->type = ARGUMENT_TEXT;
+                arg->type = ARGUMENT_VALUE;
             }
 
             switch (arg->type) {
-            case ARGUMENT_CONST_STRING:
-                draw_argument_input(
-                    arg,
-                    &arg->data.text,
-                    gettext("Abc"),
-                    can_hover,
-                    editable,
-                    (GuiColor) { 0xff, 0xff, 0xff, ghost ? BLOCK_GHOST_OPACITY : 0xff },
-                    CONVERT_COLOR(dropdown_color, GuiColor)
-                );
-                break;
-            case ARGUMENT_TEXT:
-                draw_argument_input(
-                    arg,
-                    &arg->data.text,
-                    gettext("any"),
-                    can_hover,
-                    editable,
-                    (GuiColor) { 0x00, 0x00, 0x00, ghost ? BLOCK_GHOST_OPACITY : 0xff },
-                    (GuiColor) { 0xff, 0xff, 0xff, ghost ? BLOCK_GHOST_OPACITY : BLOCK_ARG_OPACITY }
-                );
-                break;
             case ARGUMENT_BLOCK:
                 arg_block_element = gui_element_begin(gui);
                     if (can_hover) gui_on_hover(gui, block_argument_on_hover);
@@ -908,90 +887,6 @@ static void draw_block(Block* block, bool highlight, bool select, bool can_hover
                 }
 
             gui_element_end(gui);
-            arg_id++;
-            break;
-        case INPUT_COLOR:
-            if (!arg) {
-                arg_id++;
-                break;
-            }
-
-            if (arg->type == ARGUMENT_TEXT || arg->type == ARGUMENT_CONST_STRING) {
-                const struct {
-                    char* text;
-                    Color color;
-                } color_map[] = {
-                    { "black",  BLACK                              },
-                    { "red",    RED                                },
-                    { "yellow", YELLOW                             },
-                    { "green",  GREEN                              },
-                    { "blue",   BLUE                               },
-                    { "purple", PURPLE                             },
-                    { "cyan",   (Color) { 0x00, 0xff, 0xff, 0xff } },
-                    { "white",  WHITE                              },
-                };
-
-                for (size_t i = 0; i < ARRLEN(color_map); i++) {
-                    if (!strcmp(arg->data.text, color_map[i].text)) {
-                        vector_free(arg->data.text);
-                        argument_set_color(arg, CONVERT_COLOR(color_map[i].color, BlockdefColor));
-                        break;
-                    }
-                }
-
-                if (arg->type != ARGUMENT_COLOR) {
-                    vector_free(arg->data.text);
-                    argument_set_color(arg, (BlockdefColor) { 0x00, 0x00, 0x00, 0xff });
-                }
-            }
-
-            switch (arg->type) {
-            case ARGUMENT_COLOR:
-                gui_element_begin(gui);
-                    if (editable) {
-                        if (ui.hover.editor.select_argument == arg) {
-                            gui_set_border(gui, (GuiColor) { 0x30, 0x30, 0x30, 0xff }, BLOCK_OUTLINE_SIZE);
-                            gui_on_render(gui, argument_on_render);
-                        }
-                        gui_set_custom_data(gui, arg);
-                        if (can_hover) gui_on_hover(gui, argument_on_hover);
-                    }
-
-                    if (ui.dropdown.ref_object == arg) {
-                        ui.dropdown.element = gui_get_element(gui);
-                    }
-
-                    gui_element_begin(gui);
-                        gui_set_fixed(gui, BLOCK_IMAGE_SIZE, BLOCK_IMAGE_SIZE);
-                        gui_set_rect(gui, CONVERT_COLOR(arg->data.color, GuiColor));
-                    gui_element_end(gui);
-                gui_element_end(gui);
-                break;
-            case ARGUMENT_BLOCK:
-                arg_block_element = gui_element_begin(gui);
-                    if (can_hover) gui_on_hover(gui, block_argument_on_hover);
-                    gui_set_custom_data(gui, arg);
-                    if (arg->data.block->blockdef->type == BLOCKTYPE_CONTROL) gui_set_rect(gui, CONVERT_COLOR(dropdown_color, GuiColor));
-
-                    if (arg->data.block->parent.as.arg != arg && editor.show_debug) {
-                        gui_text(gui, &assets.fonts.font_cond_shadow, "Detached parent", BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0x00, 0x00, 0xff });
-                    }
-
-                    draw_block(arg->data.block, highlight, false, can_hover, ghost, editable, show_previews);
-                gui_element_end(gui);
-                if (arg_block_element->w > 500 && i + 1 < inputs_size) {
-                    gui_element_end(gui);
-                    gui_element_begin(gui);
-                        gui_set_direction(gui, DIRECTION_HORIZONTAL);
-                        gui_set_gap(gui, BLOCK_PADDING);
-                        gui_set_align(gui, ALIGN_LEFT, ALIGN_CENTER);
-                }
-                break;
-            default:
-                assert(false && "Invalid argument type in color input");
-                break;
-            }
-
             arg_id++;
             break;
         default:

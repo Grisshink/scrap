@@ -1288,7 +1288,7 @@ Value block_define_block(Compiler* compiler, Block* block, Block** next_block, B
                 print_func_name("%s ", blockdef->inputs[i].data.text);
                 break;
             case INPUT_BLOCKDEF_EDITOR:
-            case INPUT_COLOR:
+            case _INPUT_COLOR:
             case INPUT_DROPDOWN:
                 print_func_name("[] ");
                 break;
@@ -1485,7 +1485,7 @@ Value block_define_foreign(Compiler* compiler, Block* block, Block** next_block,
             print_func_name("%s ", input->data.arg.blockdef->inputs[0].data.text);
             break;
         case INPUT_BLOCKDEF_EDITOR:
-        case INPUT_COLOR:
+        case _INPUT_COLOR:
         case INPUT_DROPDOWN:
         case INPUT_IMAGE_DISPLAY:
         case INPUT_TEXT_DISPLAY:

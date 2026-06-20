@@ -571,8 +571,9 @@ void save_blockdef_input(SaveData* save, Input* input) {
     case INPUT_DROPDOWN:
     case INPUT_BLOCKDEF_EDITOR:
     case INPUT_IMAGE_DISPLAY:
-    case INPUT_COLOR:
         assert(false && "TODO");
+        break;
+    case _INPUT_COLOR:
         break;
     default:
         assert(false && "Unimplemented input save");
@@ -634,15 +635,6 @@ void save_block_arguments(SaveData* save, Argument* arg) {
     int constant_ind;
     static_assert(ARGUMENT_LAST == 6, "Exhaustive argument type in save_block_arguments");
     switch (arg->type) {
-    case ARGUMENT_TEXT:
-    case ARGUMENT_CONST_STRING:
-        constant_ind = save_find_constant((Value) {
-            .type = DATA_TYPE_STRING,
-            .data.str_val = arg->data.text,
-        });
-        assert(constant_ind != -1);
-        save_add_varint(save, constant_ind);
-        break;
     case ARGUMENT_BLOCK:
         save_block(save, arg->data.block);
         break;
@@ -654,13 +646,14 @@ void save_block_arguments(SaveData* save, Argument* arg) {
         assert(constant_ind != -1);
         save_add_varint(save, constant_ind);
         break;
-    case ARGUMENT_COLOR:
-        save_add_varint(save, *(int*)&arg->data.color);
-        break;
     case ARGUMENT_VALUE:
         constant_ind = save_find_constant(arg->data.value);
         assert(constant_ind != -1);
         save_add_varint(save, constant_ind);
+        break;
+    case _ARGUMENT_TEXT:
+    case _ARGUMENT_CONST_STRING:
+    case _ARGUMENT_COLOR:
         break;
     default:
         assert(false && "Unimplemented argument save");
@@ -761,13 +754,6 @@ void block_collect_constants(Block* block) {
     for (size_t i = 0; i < vector_size(block->arguments); i++) {
         static_assert(ARGUMENT_LAST == 6, "Exhaustive argument type in block_collect_constants");
         switch (block->arguments[i].type) {
-        case ARGUMENT_TEXT:
-        case ARGUMENT_CONST_STRING:
-            save_add_constant((Value) {
-                .type = DATA_TYPE_STRING,
-                .data.str_val = block->arguments[i].data.text,
-            });
-            break;
         case ARGUMENT_BLOCK:
             block_collect_constants(block->arguments[i].data.block);
             break;
@@ -777,10 +763,12 @@ void block_collect_constants(Block* block) {
                 .data.str_val = (char*)block->arguments[i].data.blockdef->id,
             });
             break;
-        case ARGUMENT_COLOR:
-            break;
         case ARGUMENT_VALUE:
             save_add_constant(block->arguments[i].data.value);
+            break;
+        case _ARGUMENT_TEXT:
+        case _ARGUMENT_CONST_STRING:
+        case _ARGUMENT_COLOR:
             break;
         default:
             assert(false && "Unimplemented argument save constant");
@@ -1026,19 +1014,6 @@ bool load_block_argument(SaveData* save, Argument* arg) {
 
     static_assert(ARGUMENT_LAST == 6, "Exhaustive argument type in load_block_argument");
     switch (arg_type) {
-    case ARGUMENT_TEXT:
-    case ARGUMENT_CONST_STRING:
-        if (!save_read_varint(save, &constant_ind)) return false;
-        constant = save_value_constants[constant_ind];
-        if (constant.type != DATA_TYPE_STRING) {
-            scrap_log(LOG_ERROR, "[LOAD] Invalid contant type %s when loading text argument", type_to_str(constant.type));
-            return false;
-        }
-
-        arg->type = ARGUMENT_VALUE;
-        arg->data.value = value_copy(&constant);
-        if (arg_type == ARGUMENT_TEXT) arg->data.value.type = DATA_TYPE_ANY;
-        break;
     case ARGUMENT_BLOCK: ;
         Block* block = load_block(save);
         if (!block) return false;
@@ -1069,19 +1044,32 @@ bool load_block_argument(SaveData* save, Argument* arg) {
         arg->data.blockdef = blockdef;
         arg->data.blockdef->ref_count++;
         break;
-    case ARGUMENT_COLOR:
+    case ARGUMENT_VALUE:
+        if (!save_read_varint(save, &constant_ind)) return false;
+        constant = save_value_constants[constant_ind];
+
+        arg->data.value = value_copy(&constant);
+        break;
+    case _ARGUMENT_TEXT:
+    case _ARGUMENT_CONST_STRING:
+        if (!save_read_varint(save, &constant_ind)) return false;
+        constant = save_value_constants[constant_ind];
+        if (constant.type != DATA_TYPE_STRING) {
+            scrap_log(LOG_ERROR, "[LOAD] Invalid contant type %s when loading text argument", type_to_str(constant.type));
+            return false;
+        }
+
+        arg->type = ARGUMENT_VALUE;
+        arg->data.value = value_copy(&constant);
+        if (arg_type == _ARGUMENT_TEXT) arg->data.value.type = DATA_TYPE_ANY;
+        break;
+    case _ARGUMENT_COLOR:
         if (!save_read_varint(save, &color_int)) return false;
         BlockdefColor color = INT_TO_COLOR(color_int);
 
         arg->type = ARGUMENT_VALUE;
         arg->data.value.type = DATA_TYPE_COLOR; 
         arg->data.value.data.color_val = color;
-        break;
-    case ARGUMENT_VALUE:
-        if (!save_read_varint(save, &constant_ind)) return false;
-        constant = save_value_constants[constant_ind];
-
-        arg->data.value = value_copy(&constant);
         break;
     default:
         scrap_log(LOG_ERROR, "[LOAD] Unimplemented argument load");

@@ -127,7 +127,6 @@ union InputData {
     BlockdefImage image;
     InputArgument arg;
     InputDropdown drop;
-    BlockdefColor color;
     InputBlockdefEditorFuncs editor;
 };
 
@@ -137,7 +136,7 @@ enum InputType {
     INPUT_DROPDOWN,
     INPUT_BLOCKDEF_EDITOR,
     INPUT_IMAGE_DISPLAY,
-    INPUT_COLOR,
+    _INPUT_COLOR, // Deprecated: Use INPUT_ARGUMENT instead
     // Must be last in enum
     INPUT_LAST,
 };
@@ -191,19 +190,17 @@ struct Block {
 };
 
 union ArgumentData {
-    char* text;
-    BlockdefColor color;
     Block* block;
     Blockdef* blockdef;
     Value value;
 };
 
 enum ArgumentType {
-    ARGUMENT_TEXT = 0,
+    _ARGUMENT_TEXT = 0,     // Deprecated: Use ARGUMENT_VALUE instead
     ARGUMENT_BLOCK,
-    ARGUMENT_CONST_STRING,
+    _ARGUMENT_CONST_STRING, // Deprecated: Use ARGUMENT_VALUE instead
     ARGUMENT_BLOCKDEF,
-    ARGUMENT_COLOR,
+    _ARGUMENT_COLOR,        // Deprecated: Use ARGUMENT_VALUE instead
     ARGUMENT_VALUE,
     // Must be last in enum
     ARGUMENT_LAST,
@@ -233,7 +230,6 @@ Blockdef* blockdef_copy(Blockdef* blockdef);
 void blockdef_add_text(Blockdef* blockdef, const char* text);
 void blockdef_add_argument(Blockdef* blockdef, Value default_value, DataType allowed_type);
 void blockdef_add_dropdown(Blockdef* blockdef, InputDropdownSource dropdown_source, ListAccessor accessor);
-void blockdef_add_color_input(Blockdef* blockdef, BlockdefColor color);
 void blockdef_add_image(Blockdef* blockdef, BlockdefImage image);
 void blockdef_add_blockdef_editor(Blockdef* blockdef, void* block_func, void* arg_func);
 void blockdef_delete_input(Blockdef* blockdef, size_t input);
@@ -254,9 +250,6 @@ Block* block_copy(Block* block, BlockParent parent);
 void block_free(Block* block);
 
 void argument_set_block(Argument* block_arg, Block* block);
-void argument_set_const_string(Argument* block_arg, char* text);
-void argument_set_text(Argument* block_arg, char* text);
-void argument_set_color(Argument* block_arg, BlockdefColor color);
 void argument_set_value(Argument* arg, Value value);
 
 const char* type_to_str(DataType type);

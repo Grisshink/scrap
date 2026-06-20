@@ -233,15 +233,11 @@ Block* block_new(Blockdef* blockdef) {
             arg->data.blockdef->ref_count++;
             blockdef_add_text(arg->data.blockdef, gettext("My block"));
             break;
-        case INPUT_COLOR:
-            arg = vector_add_dst(&block->arguments);
-            arg->block = block;
-            arg->input_id = i;
-            arg->type = ARGUMENT_COLOR;
-            arg->data.color = blockdef->inputs[i].data.color;
-            break;
         case INPUT_TEXT_DISPLAY:
         case INPUT_IMAGE_DISPLAY:
+            break;
+        case _INPUT_COLOR:
+            assert(false && "Use of deprecated color input in block_new");
             break;
         default:
             assert(false && "Unhandled add input argument");
@@ -277,10 +273,6 @@ Block* block_copy(Block* block, BlockParent parent) {
         arg->input_id = block->arguments[i].input_id;
         static_assert(ARGUMENT_LAST == 6, "Exhaustive argument type in block_copy");
         switch (block->arguments[i].type) {
-        case ARGUMENT_CONST_STRING:
-        case ARGUMENT_TEXT:
-            arg->data.text = vector_copy(block->arguments[i].data.text);
-            break;
         case ARGUMENT_BLOCK: ;
             BlockParent parent_arg;
             parent_arg.type = BLOCK_PARENT_ARGUMENT;
@@ -291,11 +283,12 @@ Block* block_copy(Block* block, BlockParent parent) {
             arg->data.blockdef = blockdef_copy(block->arguments[i].data.blockdef);
             arg->data.blockdef->ref_count++;
             break;
-        case ARGUMENT_COLOR:
-            arg->data.color = block->arguments[i].data.color;
-            break;
         case ARGUMENT_VALUE:
             arg->data.value = value_copy(&block->arguments[i].data.value);
+            break;
+        case _ARGUMENT_CONST_STRING:
+        case _ARGUMENT_TEXT:
+        case _ARGUMENT_COLOR:
             break;
         default:
             assert(false && "Unimplemented argument copy");
@@ -313,10 +306,6 @@ void block_free(Block* block) {
         for (size_t i = 0; i < vector_size(block->arguments); i++) {
             static_assert(ARGUMENT_LAST == 6, "Exhaustive argument type in block_free");
             switch (block->arguments[i].type) {
-            case ARGUMENT_CONST_STRING:
-            case ARGUMENT_TEXT:
-                vector_free(block->arguments[i].data.text);
-                break;
             case ARGUMENT_BLOCK:
                 block_free(block->arguments[i].data.block);
                 break;
@@ -324,10 +313,12 @@ void block_free(Block* block) {
                 blockdef_abandon(block->arguments[i].data.blockdef);
                 blockdef_free(block->arguments[i].data.blockdef);
                 break;
-            case ARGUMENT_COLOR:
-                break;
             case ARGUMENT_VALUE:
                 value_free(&block->arguments[i].data.value);
+                break;
+            case _ARGUMENT_COLOR:
+            case _ARGUMENT_CONST_STRING:
+            case _ARGUMENT_TEXT:
                 break;
             default:
                 assert(false && "Unimplemented argument free");
@@ -464,40 +455,15 @@ void blockchain_free(BlockChain* chain) {
 }
 
 void argument_set_block(Argument* arg, Block* block) {
-    if (arg->type == ARGUMENT_TEXT || arg->type == ARGUMENT_CONST_STRING) vector_free(arg->data.text);
     if (arg->type == ARGUMENT_VALUE) value_free(&arg->data.value);
     arg->type = ARGUMENT_BLOCK;
     arg->data.block = block;
 }
 
-void argument_set_const_string(Argument* arg, char* text) {
-    assert(arg->type == ARGUMENT_CONST_STRING);
-
-    arg->type = ARGUMENT_CONST_STRING;
-    vector_clear(arg->data.text);
-
-    for (char* pos = text; *pos; pos++) vector_add(&arg->data.text, *pos);
-    vector_add(&arg->data.text, 0);
-}
-
-void argument_set_text(Argument* arg, char* text) {
-    arg->type = ARGUMENT_TEXT;
-    arg->data.text = vector_create();
-
-    for (char* pos = text; *pos; pos++) vector_add(&arg->data.text, *pos);
-    vector_add(&arg->data.text, 0);
-}
-
 void argument_set_value(Argument* arg, Value value) {
-    if (arg->type == ARGUMENT_TEXT || arg->type == ARGUMENT_CONST_STRING) vector_free(arg->data.text);
     if (arg->type == ARGUMENT_VALUE) value_free(&arg->data.value);
     arg->type = ARGUMENT_VALUE;
     arg->data.value = value;
-}
-
-void argument_set_color(Argument* arg, BlockdefColor color) {
-    arg->type = ARGUMENT_COLOR;
-    arg->data.color = color;
 }
 
 Blockdef* blockdef_new(const char* id, BlockdefType type, BlockdefColor color, DataType return_type, void* func) {
@@ -561,10 +527,7 @@ Blockdef* blockdef_copy(Blockdef* blockdef) {
         case INPUT_BLOCKDEF_EDITOR:
             input->data = (InputData) {0};
             break;
-        case INPUT_COLOR:
-            input->data = (InputData) {
-                .color = blockdef->inputs[i].data.color,
-            };
+        case _INPUT_COLOR:
             break;
         default:
             assert(false && "Unimplemented input copy");
@@ -625,14 +588,6 @@ void blockdef_add_dropdown(Blockdef* blockdef, InputDropdownSource dropdown_sour
     };
 }
 
-void blockdef_add_color_input(Blockdef* blockdef, BlockdefColor color) {
-    Input* input = vector_add_dst(&blockdef->inputs);
-    input->type = INPUT_COLOR;
-    input->data = (InputData) {
-        .color = color,
-    };
-}
-
 void blockdef_add_image(Blockdef* blockdef, BlockdefImage image) {
     Input* input = vector_add_dst(&blockdef->inputs);
     input->type = INPUT_IMAGE_DISPLAY;
@@ -661,8 +616,9 @@ void blockdef_delete_input(Blockdef* blockdef, size_t input) {
     case INPUT_DROPDOWN:
     case INPUT_BLOCKDEF_EDITOR:
     case INPUT_IMAGE_DISPLAY:
-    case INPUT_COLOR:
         assert(false && "TODO");
+        break;
+    case _INPUT_COLOR:
         break;
     default:
         assert(false && "Unimplemented input delete");

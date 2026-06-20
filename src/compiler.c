@@ -178,16 +178,11 @@ Value compiler_evaluate_argument(Compiler* compiler, Argument* arg) {
     static_assert(ARGUMENT_LAST == 6, "Exhaustive argument type in compiler_evaluate_argument");
     Block* next = NULL;
     switch (arg->type) {
-    case ARGUMENT_TEXT:
-    case ARGUMENT_CONST_STRING:
-        return DATA_STRING(arg->data.text);
     case ARGUMENT_BLOCK:
         return compiler_evaluate_block(compiler, arg->data.block, &next, NULL);
     case ARGUMENT_BLOCKDEF:
         compiler_set_error(compiler, gettext("Tried to evaluate blockdef"));
         return DATA_UNKNOWN;
-    case ARGUMENT_COLOR:
-        return DATA_COLOR(arg->data.color);
     case ARGUMENT_VALUE:
         if (arg->data.value.type == DATA_TYPE_ANY) {
             Value value_to_convert = arg->data.value;
@@ -196,6 +191,13 @@ Value compiler_evaluate_argument(Compiler* compiler, Argument* arg) {
             return cast_to_const(compiler, value_to_convert, target_type);
         }
         return arg->data.value;
+    case _ARGUMENT_TEXT:
+    case _ARGUMENT_CONST_STRING:
+        scrap_log(LOG_WARNING, "Use of deprecated text argument type in block \"%s\"", arg->block->blockdef->id);
+        return DATA_STRING("");
+    case _ARGUMENT_COLOR:
+        scrap_log(LOG_WARNING, "Use of deprecated color argument type in block \"%s\"", arg->block->blockdef->id);
+        return DATA_COLOR(((BlockdefColor) { 0xff, 0x00, 0xff, 0xff }));
     default:
         assert(false && "Unimplemented argument type in compiler_evaluate_argument");
         return (Value) {0};
