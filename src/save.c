@@ -1071,7 +1071,11 @@ bool load_block_argument(SaveData* save, Argument* arg) {
         break;
     case ARGUMENT_COLOR:
         if (!save_read_varint(save, &color_int)) return false;
-        arg->data.color = INT_TO_COLOR(color_int);
+        BlockdefColor color = INT_TO_COLOR(color_int);
+
+        arg->type = ARGUMENT_VALUE;
+        arg->data.value.type = DATA_TYPE_COLOR; 
+        arg->data.value.data.color_val = color;
         break;
     case ARGUMENT_VALUE:
         if (!save_read_varint(save, &constant_ind)) return false;

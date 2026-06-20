@@ -77,12 +77,14 @@ Value value_get_default(DataType type) {
     case DATA_TYPE_INTEGER:
     case DATA_TYPE_FLOAT:
     case DATA_TYPE_BOOL:
-    case DATA_TYPE_COLOR:
     case DATA_TYPE_LIST:
     case DATA_TYPE_BLOCKDEF:
     case DATA_TYPE_UNKNOWN:
     case DATA_TYPE_CHUNK:
     case DATA_TYPE_NULL:
+        break;
+    case DATA_TYPE_COLOR:
+        value.data.color_val = (BlockdefColor) { 0xff, 0xff, 0xff, 0xff };
         break;
     case DATA_TYPE_ANY:
     case DATA_TYPE_STRING:

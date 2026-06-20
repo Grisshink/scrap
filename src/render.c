@@ -353,11 +353,15 @@ static void argument_input_on_hover(GuiElement* el) {
         }
 
         if (arg->type == ARGUMENT_VALUE) {
-            if (arg->data.value.type == DATA_TYPE_INTEGER || arg->data.value.type == DATA_TYPE_FLOAT) {
+            Value* value = &arg->data.value;
+            if (value->type == DATA_TYPE_INTEGER || value->type == DATA_TYPE_FLOAT) {
                 ui.hover.button.handler = handle_numeric_value_input_click;
                 ui.hover.button.data = arg;
-            } else if (arg->data.value.type == DATA_TYPE_BOOL) {
+            } else if (value->type == DATA_TYPE_BOOL) {
                 ui.hover.button.handler = handle_bool_value_input_click;
+                ui.hover.button.data = arg;
+            } else if (value->type == DATA_TYPE_COLOR) {
+                ui.hover.button.handler = handle_color_value_input_click;
                 ui.hover.button.data = arg;
             }
         }
@@ -607,6 +611,17 @@ static void draw_value_argument(Argument* arg, Value* value, bool can_hover, boo
                     gui_set_rect(gui, value->data.bool_val ? (GuiColor) { 0x30, 0xff, 0x30, 0xff } : (GuiColor) { 0xff, 0x30, 0x30, 0xff });
                     gui_set_align(gui, ALIGN_CENTER, ALIGN_CENTER);
                     gui_text(gui, &assets.fonts.font_cond_shadow, gettext(value->data.bool_val ? "True" : "False"), BLOCK_TEXT_SIZE, GUI_WHITE);
+                gui_element_end(gui);
+            gui_element_end(gui);
+        } else if (value->type == DATA_TYPE_COLOR) {
+            gui_element_begin(gui);
+                if (ui.dropdown.ref_object == &value->data.color_val) {
+                    ui.dropdown.element = gui_get_element(gui);
+                }
+
+                gui_element_begin(gui);
+                    gui_set_fixed(gui, BLOCK_IMAGE_SIZE, BLOCK_IMAGE_SIZE);
+                    gui_set_rect(gui, CONVERT_COLOR(value->data.color_val, GuiColor));
                 gui_element_end(gui);
             gui_element_end(gui);
         } else {

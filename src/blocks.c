@@ -2808,14 +2808,14 @@ void register_blocks(Vm* vm) {
     Blockdef* sc_set_fg_color = blockdef_new("set_fg_color", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_TERMINAL_COLOR, DATA_TYPE_NULL, block_set_fg_color);
     blockdef_add_image(sc_set_fg_color, term_img);
     blockdef_add_text(sc_set_fg_color, gettext("Set text color"));
-    blockdef_add_color_input(sc_set_fg_color, (BlockdefColor) { 0xff, 0xff, 0xff, 0xff });
+    blockdef_add_argument(sc_set_fg_color, (Value) { .type = DATA_TYPE_COLOR, .data.color_val = (BlockdefColor) { 0xff, 0xff, 0xff, 0xff } }, DATA_TYPE_COLOR);
     blockdef_register(vm, sc_set_fg_color);
     block_category_add_blockdef(cat_terminal, sc_set_fg_color);
 
     Blockdef* sc_set_bg_color = blockdef_new("set_bg_color", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_TERMINAL_COLOR, DATA_TYPE_NULL, block_set_bg_color);
     blockdef_add_image(sc_set_bg_color, term_img);
     blockdef_add_text(sc_set_bg_color, gettext("Set background color"));
-    blockdef_add_color_input(sc_set_bg_color, (BlockdefColor) { 0x30, 0x30, 0x30, 0xff });
+    blockdef_add_argument(sc_set_bg_color, (Value) { .type = DATA_TYPE_COLOR, .data.color_val = (BlockdefColor) { 0x30, 0x30, 0x30, 0xff } }, DATA_TYPE_COLOR);
     blockdef_register(vm, sc_set_bg_color);
     block_category_add_blockdef(cat_terminal, sc_set_bg_color);
 
@@ -2834,7 +2834,7 @@ void register_blocks(Vm* vm) {
     Blockdef* sc_term_set_clear = blockdef_new("term_set_clear", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_TERMINAL_COLOR, DATA_TYPE_NULL, block_term_set_clear);
     blockdef_add_image(sc_term_set_clear, term_img);
     blockdef_add_text(sc_term_set_clear, gettext("Set clear color"));
-    blockdef_add_color_input(sc_term_set_clear, (BlockdefColor) { 0x00, 0x00, 0x00, 0xff });
+    blockdef_add_argument(sc_term_set_clear, (Value) { .type = DATA_TYPE_COLOR, .data.color_val = (BlockdefColor) { 0x00, 0x00, 0x00, 0xff } }, DATA_TYPE_COLOR);
     blockdef_register(vm, sc_term_set_clear);
     block_category_add_blockdef(cat_terminal, sc_term_set_clear);
 
@@ -3046,7 +3046,7 @@ void register_blocks(Vm* vm) {
 
     Blockdef* sc_color = blockdef_new("convert_color", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_MISC_COLOR, DATA_TYPE_COLOR, block_convert_color);
     blockdef_add_text(sc_color, gettext("Color"));
-    blockdef_add_color_input(sc_color, (BlockdefColor) { 0x00, 0xff, 0x00, 0xff });
+    blockdef_add_argument(sc_color, (Value) { .type = DATA_TYPE_COLOR, .data.color_val = (BlockdefColor) { 0x00, 0xff, 0x00, 0xff } }, DATA_TYPE_ANY);
     blockdef_register(vm, sc_color);
     block_category_add_blockdef(cat_misc, sc_color);
 

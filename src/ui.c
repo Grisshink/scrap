@@ -51,7 +51,7 @@ static char* type_switcher_type_name_list[] = {
     "Bool",
     "List",
     "Nothing",
-    // "Color",
+    "Color",
     // "Blockdef",
 };
 
@@ -63,7 +63,7 @@ static DataType type_switcher_type_list[] = {
     DATA_TYPE_BOOL,
     DATA_TYPE_LIST,
     DATA_TYPE_NOTHING,
-    // DATA_TYPE_COLOR,
+    DATA_TYPE_COLOR,
     // DATA_TYPE_BLOCKDEF,
 };
 
@@ -842,6 +842,14 @@ bool handle_bool_value_input_click(void) {
     Argument* arg = ui.hover.button.data;
     ui.hover.editor.select_argument = arg;
     arg->data.value.data.bool_val = !arg->data.value.data.bool_val;
+    return true;
+}
+
+bool handle_color_value_input_click(void) {
+    Argument* arg = ui.hover.button.data;
+    ui.hover.editor.select_argument = arg;
+
+    show_color_picker_dropdown((Color*)&arg->data.value.data.color_val, &arg->data.value.data.color_val, NULL);
     return true;
 }
 
@@ -1837,7 +1845,13 @@ static void handle_key_press(void) {
         ui.render_surface_needs_redraw = true;
         return;
     }
-    if (ui.hover.editor.select_block && ui.hover.editor.select_argument && ui.hover.editor.select_block->blockdef->inputs[ui.hover.editor.select_argument->input_id].type == INPUT_DROPDOWN) return;
+
+    if (ui.hover.editor.select_block && ui.hover.editor.select_argument) {
+        assert((size_t)ui.hover.editor.select_argument->input_id < vector_size(ui.hover.editor.select_block->blockdef->inputs));
+        if (ui.hover.editor.select_block->blockdef->inputs[ui.hover.editor.select_argument->input_id].type == INPUT_DROPDOWN) {
+            return;
+        }
+    }
 
     if (edit_text(ui.hover.select_input)) {
         if (ui.hover.select_input == &editor.search_list_search) update_search();
