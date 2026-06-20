@@ -49,8 +49,8 @@ static char* type_switcher_type_name_list[] = {
     "Integer",
     "Float",
     "Bool",
+    "List",
     "Nothing",
-    // "List",
     // "Color",
     // "Blockdef",
 };
@@ -61,8 +61,8 @@ static DataType type_switcher_type_list[] = {
     DATA_TYPE_INTEGER,
     DATA_TYPE_FLOAT,
     DATA_TYPE_BOOL,
+    DATA_TYPE_LIST,
     DATA_TYPE_NOTHING,
-    // DATA_TYPE_LIST,
     // DATA_TYPE_COLOR,
     // DATA_TYPE_BLOCKDEF,
 };
