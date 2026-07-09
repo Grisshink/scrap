@@ -752,6 +752,8 @@ void draw_about_window(void) {
             } else {
                 gui_text(gui, &assets.fonts.font_cond, "ERROR", config.ui_size * 0.6, (GuiColor) { 0xff, 0x20, 0x20, 0xff });
             }
+            gui_spacer(gui, 0, config.ui_size * 0.3);
+            gui_text(gui, &assets.fonts.font_cond, "Raylib v" RAYLIB_VERSION, config.ui_size * 0.6, (GuiColor) { 0xff, 0xff, 0xff, 0x80 });
         gui_element_end(gui);
 
         gui_grow(gui, DIRECTION_VERTICAL);
