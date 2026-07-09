@@ -54,6 +54,14 @@ typedef struct {
     size_t size, capacity;
 } VariableList;
 
+typedef struct {
+    char* buf;
+    size_t buf_size;
+    Block* block;
+    BlockChain* blockchain;
+    RootBlockChain* root_blockchain;
+} CompilerError;
+
 struct Compiler {
     RootBlockChain* code;
 
@@ -69,14 +77,9 @@ struct Compiler {
 
     BlockChain* current_chain;
 
-    char current_error[MAX_ERROR_LEN];
-    Block* current_error_block;
-    BlockChain* current_error_blockchain;
-    RootBlockChain* current_error_root_blockchain;
+    CompilerError* last_error;
 
     size_t label_counter;
-
-    Thread* thread;
 };
 
 #define _DATA(_t, ...) (Value) { \
@@ -107,7 +110,7 @@ struct Compiler {
 
 #define OBJECT_NOT_FOUND (void*)-1
 
-Compiler compiler_new(Thread* thread);
+Compiler compiler_new(void);
 bool compiler_run(void* e);
 void compiler_cleanup(void* e);
 void compiler_free(Compiler* compiler);
@@ -117,6 +120,9 @@ Value compiler_evaluate_argument(Compiler* compiler, Argument* arg);
 void compiler_set_skip_block(Compiler* compiler);
 void compiler_set_error(Compiler* compiler, const char* fmt, ...);
 ssize_t compiler_find_variable(Compiler* compiler, const char* name, bool* global);
+
+CompilerError compiler_error_new(size_t msg_size);
+void compiler_error_free(CompilerError* error);
 
 void* compiler_object_info_get(Compiler* compiler, void* object);
 size_t compiler_object_info_insert(Compiler* compiler, void* object, void* data);

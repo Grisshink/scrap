@@ -120,22 +120,20 @@ void unregister_categories(void) {
 }
 
 void clear_compile_error(void) {
-    vm.compile_error_block = NULL;
-    vm.compile_error_blockchain = NULL;
-    for (size_t i = 0; i < vector_size(vm.compile_error); i++) vector_free(vm.compile_error[i]);
-    vector_clear(vm.compile_error);
+    vm.compiler_error.block = NULL;
+    vm.compiler_error.blockchain = NULL;
+    vm.compiler_error.root_blockchain = NULL;
+
+    for (size_t i = 0; i < vector_size(vm.error_lines); i++) vector_free(vm.error_lines[i]);
+    vector_clear(vm.error_lines);
 }
 
 Vm vm_new(void) {
     Vm vm = (Vm) {
         .blockdefs = vector_create(),
         .thread = thread_new(compiler_run, compiler_cleanup),
-        .compiler = (Compiler) {0},
-
-        .compile_error = vector_create(),
-        .compile_error_block = NULL,
-        .compile_error_blockchain = NULL,
-        .compile_error_root_blockchain = NULL,
+        .compiler_error = compiler_error_new(1024),
+        .error_lines = vector_create(),
         .start_timeout = -1,
     };
     return vm;
@@ -149,13 +147,13 @@ void vm_free(Vm* vm) {
         }
 
         thread_stop(&vm->thread);
-
         thread_join(&vm->thread);
-        compiler_free(&vm->compiler);
     }
 
-    for (size_t i = 0; i < vector_size(vm->compile_error); i++) vector_free(vm->compile_error[i]);
-    vector_free(vm->compile_error);
+    compiler_error_free(&vm->compiler_error);
+
+    for (size_t i = 0; i < vector_size(vm->error_lines); i++) vector_free(vm->error_lines[i]);
+    vector_free(vm->error_lines);
 
     for (ssize_t i = (ssize_t)vector_size(vm->blockdefs) - 1; i >= 0 ; i--) {
         blockdef_unregister(vm, i);
@@ -165,6 +163,8 @@ void vm_free(Vm* vm) {
 
 bool vm_start(void) {
     if (thread_is_running(&vm.thread)) return false;
+
+    vm.code = editor.code;
 
     for (size_t i = 0; i < vector_size(editor.tabs); i++) {
         if (find_panel(editor.tabs[i].root_panel, PANEL_TERM)) {
@@ -218,20 +218,16 @@ void vm_handle_running_thread(void) {
         }
 
         size_t i = 0;
-        while (vm.compiler.current_error[i]) {
-            vector_add(&vm.compile_error, vector_create());
+        while (vm.compiler_error.buf[i]) {
+            vector_add(&vm.error_lines, vector_create());
             size_t line_len = 0;
-            while (line_len < 50 && vm.compiler.current_error[i]) {
-                if (((unsigned char)vm.compiler.current_error[i] >> 6) != 2) line_len++;
+            while (line_len < 50 && vm.compiler_error.buf[i]) {
+                if (((unsigned char)vm.compiler_error.buf[i] >> 6) != 2) line_len++;
                 if (line_len >= 50) break;
-                vector_add(&vm.compile_error[vector_size(vm.compile_error) - 1], vm.compiler.current_error[i++]);
+                vector_add(&vm.error_lines[vector_size(vm.error_lines) - 1], vm.compiler_error.buf[i++]);
             }
-            vector_add(&vm.compile_error[vector_size(vm.compile_error) - 1], 0);
+            vector_add(&vm.error_lines[vector_size(vm.error_lines) - 1], 0);
         }
-        vm.compile_error_block = vm.compiler.current_error_block;
-        vm.compile_error_blockchain = vm.compiler.current_error_blockchain;
-        vm.compile_error_root_blockchain = vm.compiler.current_error_root_blockchain;
-        compiler_free(&vm.compiler);
         ui.render_surface_needs_redraw = true;
     } else if (thread_is_running(&vm.thread)) {
         if (find_panel(editor.tabs[editor.current_tab].root_panel, PANEL_TERM) && term.is_buffer_dirty) {
@@ -239,6 +235,6 @@ void vm_handle_running_thread(void) {
             term.is_buffer_dirty = false;
         }
     } else {
-        if (vector_size(vm.compile_error) > 0) ui.render_surface_needs_redraw = true;
+        if (vector_size(vm.error_lines) > 0) ui.render_surface_needs_redraw = true;
     }
 }

@@ -385,11 +385,9 @@ struct Vm {
 
     Thread thread;
 
-    Compiler compiler;
-    char** compile_error;
-    Block* compile_error_block;
-    BlockChain* compile_error_blockchain;
-    RootBlockChain* compile_error_root_blockchain;
+    RootBlockChain* code;
+    CompilerError compiler_error;
+    char** error_lines;
 
     int start_timeout; // = -1;
 };

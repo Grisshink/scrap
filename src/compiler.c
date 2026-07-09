@@ -34,18 +34,30 @@
 #define MiB(n) ((size_t)(n) << 20)
 #define GiB(n) ((size_t)(n) << 30)
 
-Compiler compiler_new(Thread* thread) {
-    Compiler compiler = (Compiler) {
-        .code = NULL,
-        .thread = thread,
-        .current_error_block = NULL,
-    };
-    compiler.current_error[0] = 0;
+Compiler compiler_new(void) {
+    Compiler compiler = {0};
+    compiler.arena = ir_arena_new(GiB(1), MiB(1));
+    compiler.bc_pool = bytecode_pool_new(compiler.arena);
+    compiler.chains_to_compile = vector_create();
     return compiler;
 }
 
 void compiler_free(Compiler* compiler) {
-    (void) compiler;
+    bytecode_pool_free(compiler->bc_pool);
+    vector_free(compiler->chains_to_compile);
+}
+
+CompilerError compiler_error_new(size_t msg_size) {
+    CompilerError error = {
+        .buf = malloc(sizeof(char) * (msg_size + 1)),
+        .buf_size = msg_size,
+    };
+    error.buf[0] = 0;
+    return error;
+}
+
+void compiler_error_free(CompilerError* error) {
+    if (error->buf) free(error->buf);
 }
 
 static const char* format_byte_count(Compiler* compiler, size_t size) {
@@ -67,13 +79,11 @@ static RootBlockChain* find_root_blockchain(Compiler* compiler, BlockChain* chai
     return NULL;
 }
 
-bool compiler_run(void* e) {
-    Compiler* compiler = e;
-
+bool compiler_compile(Compiler* compiler, RootBlockChain* code, IrBytecode* out_bytecode, CompilerError* error) {
     compiler->label_counter = 0;
-    compiler->arena = ir_arena_new(GiB(1), MiB(1));
-    compiler->bc_pool = bytecode_pool_new(compiler->arena);
-    compiler->chains_to_compile = vector_create();
+    vector_clear(compiler->chains_to_compile);
+    compiler->last_error = error;
+    compiler->code = code;
 
     compiler->bytecode = bytecode_new("main", compiler->bc_pool);
 
@@ -86,7 +96,7 @@ bool compiler_run(void* e) {
         Block* next = NULL;
         Value value = compiler_evaluate_block(compiler, block, &next, (Block*)-1);
         if (value.type == DATA_TYPE_UNKNOWN) {
-            if (!compiler->current_error_root_blockchain) compiler->current_error_root_blockchain = &compiler->code[i];
+            if (!compiler->last_error->root_blockchain) compiler->last_error->root_blockchain = &compiler->code[i];
             return false;
         }
     }
@@ -100,7 +110,7 @@ bool compiler_run(void* e) {
         Block* next = NULL;
         Value value = compiler_evaluate_block(compiler, block, &next, (Block*)-1);
         if (value.type == DATA_TYPE_UNKNOWN) {
-            if (!compiler->current_error_root_blockchain) compiler->current_error_root_blockchain = &compiler->code[i];
+            if (!compiler->last_error->root_blockchain) compiler->last_error->root_blockchain = &compiler->code[i];
             return false;
         }
     }
@@ -109,8 +119,8 @@ bool compiler_run(void* e) {
         compiler->variables.size = 0;
         Value value = compiler_evaluate_chain(compiler, compiler->chains_to_compile[i]);
         if (value.type == DATA_TYPE_UNKNOWN) {
-            if (!compiler->current_error_root_blockchain) {
-                compiler->current_error_root_blockchain = find_root_blockchain(compiler, compiler->chains_to_compile[i]);
+            if (!compiler->last_error->root_blockchain) {
+                compiler->last_error->root_blockchain = find_root_blockchain(compiler, compiler->chains_to_compile[i]);
             }
             return false;
         }
@@ -119,14 +129,15 @@ bool compiler_run(void* e) {
         Block* next = NULL;
         value = compiler_evaluate_block(compiler, compiler->chains_to_compile[i]->start, &next, compiler->chains_to_compile[i]->end);
         if (value.type == DATA_TYPE_UNKNOWN) {
-            if (!compiler->current_error_root_blockchain) {
-                compiler->current_error_root_blockchain = find_root_blockchain(compiler, compiler->chains_to_compile[i]);
+            if (!compiler->last_error->root_blockchain) {
+                compiler->last_error->root_blockchain = find_root_blockchain(compiler, compiler->chains_to_compile[i]);
             }
             return false;
         }
         bytecode_join(&compiler->bytecode, &value.data.chunk_val.bc);
     }
 
+#ifdef _DEBUG
     bytecode_print(&compiler->bytecode);
 
     scrap_log(
@@ -137,41 +148,54 @@ bool compiler_run(void* e) {
         (double)compiler->arena->pos / (double)compiler->arena->reserve_size * 100.0,
         format_byte_count(compiler, compiler->arena->commit_pos)
     );
-
-    thread_handle_stopping_state(compiler->thread);
-
-    bytecode_save(&compiler->bytecode, "bytecode.scrb");
-
-    char error_buf[512];
-
-#ifdef _WIN32
-    char* cmd = ir_arena_sprintf(compiler->arena, 2048, "scrap.exe -run bytecode.scrb");
-#else
-    char* cmd = ir_arena_sprintf(compiler->arena, 2048, "%sscrap -run bytecode.scrb", GetApplicationDirectory());
 #endif
 
-    if (!term_run_process(cmd, error_buf, 512)) {
-        compiler_set_error(compiler, "%s", error_buf);
-        return false;
-    }
-
-    thread_handle_stopping_state(compiler->thread);
-
+    *out_bytecode = compiler->bytecode;
     return true;
 }
 
+bool compiler_run(void* e) {
+    bool return_val = false;
+
+    Vm* vm = e;
+    IrBytecode bytecode;
+
+    Compiler compiler = compiler_new();
+    if (!compiler_compile(&compiler, vm->code, &bytecode, &vm->compiler_error)) {
+        scrap_log(LOG_ERROR, "Compilation stage failed. Aborting runtime thread");
+        goto thread_return;
+    }
+
+    bytecode_save(&bytecode, "bytecode.scrb");
+
+#ifdef _WIN32
+    char* cmd = ir_arena_sprintf(compiler.arena, 2048, "scrap.exe -run bytecode.scrb");
+#else
+    char* cmd = ir_arena_sprintf(compiler.arena, 2048, "%sscrap -run bytecode.scrb", GetApplicationDirectory());
+#endif
+
+    if (!term_run_process(cmd, vm->compiler_error.buf, vm->compiler_error.buf_size)) {
+        scrap_log(LOG_ERROR, "[RUNTIME] %s", vm->compiler_error.buf);
+        scrap_log(LOG_ERROR, "Runtime stage failed. Aborting runtime thread");
+        goto thread_return;
+    }
+
+    return_val = true;
+thread_return:
+    compiler_free(&compiler);
+    return return_val;
+}
+
 void compiler_cleanup(void* e) {
-    Compiler* compiler = e;
-    bytecode_pool_free(compiler->bc_pool);
-    vector_free(compiler->chains_to_compile);
+    (void) e;
 }
 
 void compiler_set_error(Compiler* compiler, const char* fmt, ...) {
     va_list va;
     va_start(va, fmt);
-    vsnprintf(compiler->current_error, MAX_ERROR_LEN, fmt, va);
+    vsnprintf(compiler->last_error->buf, compiler->last_error->buf_size, fmt, va);
     va_end(va);
-    scrap_log(LOG_ERROR, "[COMPILER] %s", compiler->current_error);
+    scrap_log(LOG_ERROR, "[COMPILER] %s", compiler->last_error->buf);
 }
 
 Value compiler_evaluate_argument(Compiler* compiler, Argument* arg) {
@@ -207,12 +231,12 @@ Value compiler_evaluate_argument(Compiler* compiler, Argument* arg) {
 Value compiler_evaluate_block(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     if (!block->blockdef) {
         compiler_set_error(compiler, gettext("Tried to execute block without definition"));
-        if (!compiler->current_error_block) compiler->current_error_block = block;
+        if (!compiler->last_error->block) compiler->last_error->block = block;
         return DATA_UNKNOWN;
     }
     if (!block->blockdef->func) {
         compiler_set_error(compiler, gettext("Tried to execute block \"%s\" without implementation"), block->blockdef->id);
-        if (!compiler->current_error_block) compiler->current_error_block = block;
+        if (!compiler->last_error->block) compiler->last_error->block = block;
         return DATA_UNKNOWN;
     }
 
@@ -220,7 +244,7 @@ Value compiler_evaluate_block(Compiler* compiler, Block* block, Block** next_blo
     Value value = execute_block(compiler, block, next_block, prev_block);
     if (value.type == DATA_TYPE_UNKNOWN) {
         scrap_log(LOG_ERROR, "[COMPILER] Error from block id: \"%s\" (at block %p)", block->blockdef->id, &block);
-        if (!compiler->current_error_block) compiler->current_error_block = block;
+        if (!compiler->last_error->block) compiler->last_error->block = block;
     } else if (block->blockdef->return_type != DATA_TYPE_ANY) {
         DataType returned_type = value.type;
         if (returned_type == DATA_TYPE_CHUNK) {
@@ -254,13 +278,12 @@ Value compiler_evaluate_chain(Compiler* compiler, BlockChain* chain) {
     Block* prev = NULL;
     Block* iter = chain->start;
     while (iter) {
-        thread_handle_stopping_state(compiler->thread);
         Block* next = compiler_get_next_block(iter);
 
         Value value = compiler_evaluate_block(compiler, iter, &next, prev);
         if (value.type == DATA_TYPE_UNKNOWN) {
             scrap_log(LOG_ERROR, "[COMPILER] From chain: %p", chain);
-            if (!compiler->current_error_blockchain) compiler->current_error_blockchain = chain;
+            if (!compiler->last_error->blockchain) compiler->last_error->blockchain = chain;
             compiler->current_chain = prev_chain;
             return value;
         }

@@ -680,7 +680,7 @@ static void draw_block(Block* block, bool highlight, bool select, bool can_hover
     bool collision = ui.hover.editor.prev_block == block || highlight;
     Color color = CONVERT_COLOR(block->blockdef->color, Color);
     if (!block->blockdef->func) color = (Color) UNIMPLEMENTED_BLOCK_COLOR;
-    if (!thread_is_running(&vm.thread) && block == vm.compile_error_block) {
+    if (!thread_is_running(&vm.thread) && block == vm.compiler_error.block) {
         double animation = fmod(-GetTime(), 1.0) * 0.5 + 1.0;
         color = (Color) { 0xff * animation, 0x20 * animation, 0x20 * animation, 0xff };
     }
@@ -1431,7 +1431,7 @@ static void draw_code_area(void) {
             gui_spacer(gui, 0, config.ui_size * 0.5);
         gui_element_end(gui);
 
-        if (!thread_is_running(&vm.thread) && vector_size(vm.compile_error) > 0) {
+        if (!thread_is_running(&vm.thread) && vector_size(vm.error_lines) > 0) {
             gui_element_begin(gui);
                 gui_set_direction(gui, DIRECTION_HORIZONTAL);
                 gui_set_align(gui, ALIGN_LEFT, ALIGN_CENTER);
@@ -1453,8 +1453,8 @@ static void draw_code_area(void) {
                     gui_set_direction(gui, DIRECTION_VERTICAL);
 
                     gui_text(gui, &assets.fonts.font_cond, gettext("Got compiler error!"), config.ui_size * 0.6, (GuiColor) { 0xff, 0x33, 0x33, 0xff });
-                    for (size_t i = 0; i < vector_size(vm.compile_error); i++) {
-                        gui_text(gui, &assets.fonts.font_cond, vm.compile_error[i], config.ui_size * 0.6, GUI_WHITE);
+                    for (size_t i = 0; i < vector_size(vm.error_lines); i++) {
+                        gui_text(gui, &assets.fonts.font_cond, vm.error_lines[i], config.ui_size * 0.6, GUI_WHITE);
                     }
 
                     gui_spacer(gui, 0, config.ui_size * 0.5);
@@ -1463,7 +1463,7 @@ static void draw_code_area(void) {
                         gui_set_direction(gui, DIRECTION_HORIZONTAL);   
                         gui_set_gap(gui, config.ui_size * 0.5);
 
-                        if (vm.compile_error_block) {
+                        if (vm.compiler_error.block) {
                             gui_element_begin(gui);
                                 gui_set_border(gui, (GuiColor) { 0x40, 0x40, 0x40, 0xff }, BLOCK_OUTLINE_SIZE);
                                 draw_button(gettext("Jump to block"), NULL, config.ui_size, false, button_on_hover, handle_jump_to_block_button_click);
@@ -2285,9 +2285,8 @@ void scrap_gui_process_render(void) {
     if (vm.start_timeout == 0) {
         term_restart();
         clear_compile_error();
-        vm.compiler = compiler_new(&vm.thread);
-        vm.compiler.code = editor.code;
-        if (!thread_start(vm.compiler.thread, &vm.compiler)) {
+        vm.code = editor.code;
+        if (!thread_start(&vm.thread, &vm)) {
             actionbar_show(gettext("Start failed!"));
         } else {
             actionbar_show(gettext("Started successfully!"));

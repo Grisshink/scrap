@@ -541,8 +541,8 @@ void load_project(void) {
 
     for (size_t i = 0; i < vector_size(editor.code); i++) blockchain_free(editor.code[i].chain);
     vector_free(editor.code);
-    vm.compile_error_block = NULL;
-    vm.compile_error_blockchain = NULL;
+    vm.compiler_error.block = NULL;
+    vm.compiler_error.blockchain = NULL;
     editor.code = chain;
 
     editor.blockchain_select_counter = 0;
@@ -631,9 +631,9 @@ bool handle_category_click(void) {
 }
 
 bool handle_jump_to_block_button_click(void) {
-    ui.hover.editor.select_block = vm.compile_error_block;
-    ui.hover.editor.select_blockchain = vm.compile_error_blockchain;
-    ui.hover.editor.select_root_blockchain = vm.compile_error_root_blockchain;
+    ui.hover.editor.select_block = vm.compiler_error.block;
+    ui.hover.editor.select_blockchain = vm.compiler_error.blockchain;
+    ui.hover.editor.select_root_blockchain = vm.compiler_error.root_blockchain;
     return true;
 }
 
