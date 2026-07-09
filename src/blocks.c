@@ -847,6 +847,10 @@ Value evaluate_binary_number(Compiler* compiler, Argument* left, Argument* right
         if (left_val.type == DATA_TYPE_FLOAT) {
             val = DATA_FLOAT(execute_float_binary(left_val.data.float_val, right_val.data.float_val, float_op));
         } else {
+            if ((int_op == IR_DIVI || int_op == IR_MODI) && right_val.data.integer_val == 0) {
+                compiler_set_error(compiler, "Division by zero");
+                return DATA_ERROR;
+            }
             val = DATA_INTEGER(execute_int_binary(left_val.data.integer_val, right_val.data.integer_val, int_op));
         }
 
