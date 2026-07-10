@@ -790,6 +790,34 @@ bool std_term_set_cursor(IrExec* exec) {
 }
 
 bool std_term_get_char(IrExec* exec) {
+#ifdef _WIN32
+    DWORD old_mode, new_mode;
+
+    HANDLE stdin_handle = GetStdHandle(STD_INPUT_HANDLE);
+    GetConsoleMode(stdin_handle, &old_mode);
+
+    new_mode = old_mode;
+    new_mode &= ~ENABLE_LINE_INPUT;
+    SetConsoleMode(stdin_handle, new_mode);
+#else
+    struct termios term_old_attrs;
+    struct termios term_new_attrs;
+
+    if (tcgetattr(0, &term_old_attrs) == -1) {
+        exec_set_error(exec, "tcgetattr: %s", strerror(errno));
+        return false;
+    }
+
+    term_new_attrs = term_old_attrs;
+    term_new_attrs.c_lflag &= ~ICANON;
+    term_new_attrs.c_lflag &= ~ECHO;
+
+    if (tcsetattr(0, TCSANOW, &term_new_attrs) == -1) {
+        exec_set_error(exec, "tcsetattr: %s", strerror(errno));
+        return false;
+    }
+#endif
+
     char input[10];
     input[0] = (char)getchar();
 
@@ -798,6 +826,15 @@ bool std_term_get_char(IrExec* exec) {
     if (mb_size == 0) mb_size = 1;
     for (int i = 1; i < mb_size && i < 10; i++) input[i] = (char)getchar();
     input[mb_size] = 0;
+
+#ifdef _WIN32
+    SetConsoleMode(stdin_handle, old_mode);
+#else
+    if (tcsetattr(0, TCSANOW, &term_old_attrs) == -1) {
+        exec_set_error(exec, "tcsetattr: %s", strerror(errno));
+        return false;
+    }
+#endif
 
     cursor_dirty = true;
     exec_push_int(exec, get_codepoint(input, &mb_size));
