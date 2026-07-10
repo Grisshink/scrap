@@ -2766,7 +2766,7 @@ void register_blocks(Vm* vm) {
     blockdef_register(vm, sc_input);
     block_category_add_blockdef(cat_terminal, sc_input);
 
-    Blockdef* sc_char = blockdef_new("get_char", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_TERMINAL_COLOR, DATA_TYPE_STRING, block_get_char);
+    Blockdef* sc_char = blockdef_new("get_char", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_TERMINAL_COLOR, DATA_TYPE_INTEGER, block_get_char);
     blockdef_add_image(sc_char, term_img);
     blockdef_add_text(sc_char, gettext("Get char"));
     blockdef_register(vm, sc_char);
