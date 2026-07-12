@@ -137,7 +137,7 @@ bool compiler_compile(Compiler* compiler, RootBlockChain* code, IrBytecode* out_
         bytecode_join(&compiler->bytecode, &value.data.chunk_val.bc);
     }
 
-#ifdef _DEBUG
+#ifdef DEBUG
     bytecode_print(&compiler->bytecode);
 
     scrap_log(
