@@ -52,6 +52,20 @@ typedef struct {
     size_t size, capacity;
 } StdSymbolList;
 
+typedef struct {
+    char* name;
+#ifdef _WIN32
+    HMODULE handle;
+#else
+    void* handle;
+#endif
+} StdLibrary;
+
+typedef struct {
+    StdLibrary* items;
+    size_t size, capacity;
+} StdLibraryList;
+
 IrRunFunction std_resolve_function(IrExec* exec, const char* hint);
 
 void std_init(void);

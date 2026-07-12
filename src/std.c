@@ -56,12 +56,7 @@ static StdColor clear_color = {0};
 static StdColor bg_color = {0};
 static IrMemArena* std_arena;
 static StdSymbolList loaded_symbols;
-
-#ifdef _WIN32
-static HMODULE scrap_lib;
-#else
-static void* scrap_lib;
-#endif
+static StdLibraryList loaded_libs;
 
 // NOTE: Shamelessly stolen from raylib codebase ;)
 // Get next codepoint in a UTF-8 encoded text, scanning until '\0' is found
@@ -251,6 +246,38 @@ STD_MATH_FUNC(atan)
 
 #undef STD_MATH_FUNC
 
+static StdLibrary* std_load_library(const char* name) {
+    for (size_t i = 0; i < loaded_libs.size; i++) {
+        if (!strcmp(loaded_libs.items[i].name, name)) return &loaded_libs.items[i];
+    }
+
+#ifdef _WIN32
+    HMODULE handle = name[0] == 0 ? GetModuleHandleA(NULL) : LoadLibraryA(name);
+    if (!handle) {
+        printf("Cannot open library \"%s\". Error: %d\n", name, GetLastError());
+        return NULL;
+    }
+#else
+    void* handle = dlopen(name[0] == 0 ? NULL : name, RTLD_LAZY);
+    if (!handle) {
+        printf("Cannot open library \"%s\". Error: %s\n", name, dlerror());
+        return NULL;
+    }
+#endif
+
+    size_t lib_name_size = strlen(name) + 1;
+    char* name_alloc = ir_arena_alloc(std_arena, lib_name_size);
+    memcpy(name_alloc, name, lib_name_size);
+
+    StdLibrary lib = {
+        .name = name_alloc,
+        .handle = handle,
+    };
+
+    ir_arena_append(std_arena, loaded_libs, lib);
+    return &loaded_libs.items[loaded_libs.size - 1];
+}
+
 void std_init(void) {
 #ifdef _WIN32
     // Windows is trash
@@ -273,18 +300,6 @@ void std_init(void) {
     SetConsoleMode(stdin_handle, term_mode);
 
     SetConsoleOutputCP(65001);
-
-    scrap_lib = GetModuleHandleA(NULL);
-    if (!scrap_lib) {
-        printf("Cannot get main module handle. Error: %d\n", GetLastError());
-        return;
-    }
-#else
-    scrap_lib = dlopen(NULL, RTLD_NOW);
-    if (!scrap_lib) {
-        printf("dlopen error: %s\n", dlerror());
-        return;
-    }
 #endif
     rprand_set_seed(time(NULL));
 
@@ -321,9 +336,19 @@ static bool std_get_data_type(const char* str, StdType* type) {
 bool std_register_foreign(IrExec* exec) {
     // Example of symbol signature: "InitWindow void int int str"
     IrList* symbol_list = exec_pop_list_string(exec);
+    IrList* lib_name    = exec_pop_list_string(exec);
 
     char symbol_sig[512];
+    char library_name[512];
+
     exec_get_string(symbol_list, symbol_sig, 512);
+    exec_get_string(lib_name, library_name, 512);
+
+    StdLibrary* lib = std_load_library(library_name);
+    if (!lib) {
+        exec_set_error(exec, "std_register_foreign: Error loading library \"%s\"", library_name);
+        return false;
+    }
 
     char* saveptr;
 
@@ -335,13 +360,13 @@ bool std_register_foreign(IrExec* exec) {
     }
 
 #ifdef _WIN32
-    symbol.addr = GetProcAddress(scrap_lib, symbol_name);
+    symbol.addr = GetProcAddress(lib->handle, symbol_name);
     if (!symbol.addr) {
         exec_set_error(exec, "std_register_foreign: GetProcAddress Error: %d", GetLastError());
         return false;
     }
 #else
-    symbol.addr = dlsym(scrap_lib, symbol_name);
+    symbol.addr = dlsym(lib->handle, symbol_name);
     if (!symbol.addr) {
         exec_set_error(exec, "std_register_foreign: dlsym: %s", dlerror());
         return false;

@@ -1451,12 +1451,17 @@ Value block_define_foreign(Compiler* compiler, Block* block, Block** next_block,
 
     Blockdef* blockdef = block->arguments[0].data.blockdef;
 
-    Value binding = compiler_evaluate_argument(compiler, &block->arguments[1]);
+    Value lib_name = compiler_evaluate_argument(compiler, &block->arguments[1]);
+    if (lib_name.type == DATA_TYPE_ERROR) return DATA_ERROR;
+    lib_name = cast_to_const_string(compiler, lib_name);
+    if (lib_name.type == DATA_TYPE_ERROR) return DATA_ERROR;
+
+    Value binding = compiler_evaluate_argument(compiler, &block->arguments[2]);
     if (binding.type == DATA_TYPE_ERROR) return DATA_ERROR;
     binding = cast_to_const_string(compiler, binding);
     if (binding.type == DATA_TYPE_ERROR) return DATA_ERROR;
 
-    Value return_ffi_type = compiler_evaluate_argument(compiler, &block->arguments[2]);
+    Value return_ffi_type = compiler_evaluate_argument(compiler, &block->arguments[3]);
     if (return_ffi_type.type == DATA_TYPE_ERROR) return DATA_ERROR;
     return_ffi_type = cast_to_const_string(compiler, return_ffi_type);
     if (return_ffi_type.type == DATA_TYPE_ERROR) return DATA_ERROR;
@@ -1502,8 +1507,10 @@ Value block_define_foreign(Compiler* compiler, Block* block, Block** next_block,
     }
     if (func_name_size > 1) func_name[func_name_size - 1] = 0;
 
+    Value lib_name_bc = string_to_bc(compiler, lib_name.data.str_val);
     Value func_name_bc = string_to_bc(compiler, func_name);
     bytecode_push_op_func(&func_name_bc.data.chunk_val.bc, IR_RUN, ir_func_by_hint("std_register_foreign"));
+    bytecode_join(&compiler_data->register_foreign_funcs, &lib_name_bc.data.chunk_val.bc);
     bytecode_join(&compiler_data->register_foreign_funcs, &func_name_bc.data.chunk_val.bc);
 
     compiler_object_info_insert(compiler, blockdef, (void*)compiler_data->foreign_funcs_count++);
@@ -3085,6 +3092,8 @@ void register_blocks(Vm* vm) {
     blockdef_add_text(sc_define_foreign, gettext("Define foreign"));
     blockdef_add_blockdef_editor(sc_define_foreign, block_exec_foreign, NULL);
     blockdef_add_text(sc_define_foreign, gettext("binding to"));
+    blockdef_add_argument(sc_define_foreign, value_from_string(""), DATA_TYPE_STRING);
+    blockdef_add_text(sc_define_foreign, ":");
     blockdef_add_argument(sc_define_foreign, value_from_string("puts"), DATA_TYPE_STRING);
     blockdef_add_text(sc_define_foreign, gettext("with return type"));
     blockdef_add_argument(sc_define_foreign, value_from_string("int32"), DATA_TYPE_STRING);
