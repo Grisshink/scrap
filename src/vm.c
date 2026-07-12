@@ -123,6 +123,7 @@ void clear_compile_error(void) {
     vm.compiler_error.block = NULL;
     vm.compiler_error.blockchain = NULL;
     vm.compiler_error.root_blockchain = NULL;
+    vm.compiler_error.buf[0] = 0;
 
     for (size_t i = 0; i < vector_size(vm.error_lines); i++) vector_free(vm.error_lines[i]);
     vector_clear(vm.error_lines);
