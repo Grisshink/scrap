@@ -31,6 +31,7 @@
 #include <libintl.h>
 
 #define MATH_LIST_LEN 10
+#define DATA_TYPE_LIST_LEN 10
 #define TERM_COLOR_LIST_LEN 8
 
 typedef struct {
@@ -47,10 +48,22 @@ char* block_math_list[MATH_LIST_LEN] = {
     "asin", "acos", "atan",
 };
 
+char* data_type_list[DATA_TYPE_LIST_LEN] = {
+    "void", "int8", "int16", "int32",
+    "int64", "float32", "float64",
+    "bool", "str", "ptr",
+};
+
 char** math_list_access(Block* block, size_t* list_len) {
     (void) block;
     *list_len = MATH_LIST_LEN;
     return block_math_list;
+}
+
+char** data_type_list_access(Block* block, size_t* list_len) {
+    (void) block;
+    *list_len = DATA_TYPE_LIST_LEN;
+    return data_type_list;
 }
 
 typedef struct {
@@ -3095,7 +3108,7 @@ void register_blocks(Vm* vm) {
     blockdef_add_text(sc_define_foreign, ":");
     blockdef_add_argument(sc_define_foreign, value_from_string("puts"), DATA_TYPE_STRING);
     blockdef_add_text(sc_define_foreign, gettext("with return type"));
-    blockdef_add_argument(sc_define_foreign, value_from_string("int32"), DATA_TYPE_STRING);
+    blockdef_add_dropdown(sc_define_foreign, DROPDOWN_SOURCE_LISTREF, data_type_list_access);
     blockdef_register(vm, sc_define_foreign);
     block_category_add_blockdef(cat_misc, sc_define_foreign);
 
