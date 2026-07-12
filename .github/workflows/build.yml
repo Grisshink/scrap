@@ -38,15 +38,10 @@ jobs:
               with:
                 msystem: UCRT64
                 update: true
-                install: mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-llvm make gettext
+                install: mingw-w64-ucrt-x86_64-gcc make gettext
 
             - name: Setup windres
               run: ln -sf "${MSYSTEM_PREFIX}/bin/windres.exe" "${MSYSTEM_PREFIX}/bin/x86_64-w64-mingw32-windres"
-
-            - name: Build project (With LLVM)
-              run: |
-                make clean
-                make USE_LLVM=TRUE TARGET=WINDOWS
 
             - name: Build project
               run: |
@@ -67,19 +62,6 @@ jobs:
               run: |
                 sudo apt-get update -y
                 sudo apt-get install -y --no-install-recommends libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev gettext
-
-            - name: Install LLVM
-              run: |
-                wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | gpg --dearmor -o llvm-snapshot.gpg
-                sudo mv llvm-snapshot.gpg /etc/apt/trusted.gpg.d/
-                sudo add-apt-repository "deb http://apt.llvm.org/focal/ llvm-toolchain-focal-19 main"
-                sudo apt-get update -y
-                sudo apt-get install -y --no-install-recommends llvm-19-dev
-
-            - name: Build project (With LLVM)
-              run: |
-                make clean
-                make USE_LLVM=TRUE LLVM_CONFIG=llvm-config-19
 
             - name: Build project
               run: |

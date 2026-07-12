@@ -3,13 +3,8 @@ SCRAP_VERSION ?= dev
 MAKE ?= make
 TARGET ?= LINUX
 BUILD_MODE ?= RELEASE
-USE_LLVM ?= FALSE
 BUILD_FOLDER := build/
 PREFIX ?= /usr/local
-
-ifeq ($(USE_LLVM), TRUE)
-	SCRAP_VERSION := $(SCRAP_VERSION)-llvm
-endif
 
 CFLAGS := -Wall -Wextra -std=c11 -D_GNU_SOURCE -DSCRAP_VERSION=\"$(SCRAP_VERSION)\" -I./raylib/src
 
@@ -44,7 +39,7 @@ endif
 ifeq ($(BUILD_MODE), RELEASE)
 	CFLAGS += -s -O3
 else
-	CFLAGS += -g -O1 -DDEBUG
+	CFLAGS += -g -O0 -DDEBUG
 	LDFLAGS += -fsanitize=address -fsanitize=undefined -fno-omit-frame-pointer
 endif
 
@@ -56,25 +51,6 @@ OBJFILES := $(addprefix $(BUILD_FOLDER),filedialogs.o render.o save.o term.o blo
 BUNDLE_FILES := data examples extras locale LICENSE README.md CHANGELOG.md
 SCRAP_HEADERS := src/scrap.h src/ast.h src/config.h src/scrap_gui.h src/scrap_ir.h src/compiler.h
 EXE_NAME := scrap
-
-ifeq ($(USE_LLVM), TRUE)
-	LLVM_CONFIG ?= llvm-config
-
-	LLVM_LDFLAGS := --ldflags --system-libs --libs core executionengine mcjit analysis native
-	ifeq ($(TARGET), WINDOWS)
-		LDFLAGS += `$(LLVM_CONFIG) $(LLVM_FLAGS) --link-static $(LLVM_LDFLAGS) | sed 's/\.dll//'`
-	else
-		ifeq ($(LLVM_LINK_STATIC), TRUE)
-			LDFLAGS += -Wl,-Bstatic `$(LLVM_CONFIG) $(LLVM_FLAGS) --link-static $(LLVM_LDFLAGS)` -Wl,-Bdynamic
-		else
-			LDFLAGS += `$(LLVM_CONFIG) $(LLVM_FLAGS) $(LLVM_LDFLAGS)`
-		endif
-	endif
-	CFLAGS += `$(LLVM_CONFIG) --cflags`
-	CFLAGS += -DUSE_LLVM
-
-	LDFLAGS += -lstdc++
-endif
 
 .PHONY: all clean target translations
 

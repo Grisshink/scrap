@@ -23,25 +23,6 @@ jobs:
           sudo apt-get update -y
           sudo apt-get upgrade -y
           sudo apt-get install -y libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev gettext zlib1g-dev libzstd-dev libxml2-dev
-
-      - name: Install LLVM
-        run: |
-          wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | gpg --dearmor -o llvm-snapshot.gpg
-          sudo mv llvm-snapshot.gpg /etc/apt/trusted.gpg.d/
-          sudo add-apt-repository "deb http://apt.llvm.org/focal/ llvm-toolchain-focal-19 main"
-          sudo apt-get update -y
-          sudo apt-get install -y --no-install-recommends llvm-19-dev
-
-      - name: Build Scrap (With LLVM)
-        run: |
-          make clean
-          make USE_LLVM=TRUE LLVM_CONFIG=llvm-config-19 LLVM_LINK_STATIC=TRUE
-          mkdir -p build/scrap-${SCRAP_VERSION}-llvm-linux
-          cp -r data examples extras locale build/scrap-${SCRAP_VERSION}-llvm-linux/
-          cp LICENSE README.md CHANGELOG.md scrap build/scrap-${SCRAP_VERSION}-llvm-linux/
-          tar --directory=build -czf build/scrap-${SCRAP_VERSION}-llvm-linux.tar.gz scrap-${SCRAP_VERSION}-llvm-linux
-          mkdir -p dist
-          mv build/*.gz dist/
       
       - name: Build Scrap
         run: |
@@ -74,32 +55,12 @@ jobs:
           sudo apt-get update -y
           sudo apt-get upgrade -y
           sudo apt-get install -y libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev gettext zlib1g-dev libzstd-dev libxml2-dev
-
-      - name: Install LLVM
-        run: |
-          wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | gpg --dearmor -o llvm-snapshot.gpg
-          sudo mv llvm-snapshot.gpg /etc/apt/trusted.gpg.d/
-          sudo add-apt-repository "deb http://apt.llvm.org/focal/ llvm-toolchain-focal-19 main"
-          sudo apt-get update -y
-          sudo apt-get install -y --no-install-recommends llvm-19-dev
       
       - name: Install AppImageTool
         run: |
           wget -O appimagetool https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage
           chmod +x appimagetool
           sudo mv appimagetool /usr/bin/appimagetool
-        
-      - name: Build Scrap (With LLVM)
-        run: |
-          make clean
-          make USE_LLVM=TRUE LLVM_CONFIG=llvm-config-19 LLVM_LINK_STATIC=TRUE
-          mkdir -p build/scrap.AppDir
-          cp scrap build/scrap.AppDir/AppRun
-          cp -r data locale build/scrap.AppDir/
-          cp scrap.desktop extras/scrap.png build/scrap.AppDir/
-          mkdir -p dist
-          appimagetool --appimage-extract-and-run build/scrap.AppDir build/Scrap-${SCRAP_VERSION}-llvm.AppImage
-          mv build/Scrap-${SCRAP_VERSION}-llvm.AppImage dist/
 
       - name: Build Scrap
         run: |
@@ -136,21 +97,10 @@ jobs:
         with:
           msystem: UCRT64
           update: true
-          install: mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-llvm make gettext
+          install: mingw-w64-ucrt-x86_64-gcc make gettext
 
       - name: Setup windres
         run: ln -sf "${MSYSTEM_PREFIX}/bin/windres.exe" "${MSYSTEM_PREFIX}/bin/x86_64-w64-mingw32-windres"
-
-      - name: Build Scrap (With LLVM)
-        run: |
-           make clean
-           make USE_LLVM=TRUE TARGET=WINDOWS
-           mkdir -p build/scrap-${SCRAP_VERSION}-llvm-windows64
-           cp -r locale data examples extras build/scrap-${SCRAP_VERSION}-llvm-windows64/
-           cp CHANGELOG.md LICENSE README.md scrap.exe build/scrap-${SCRAP_VERSION}-llvm-windows64/
-           powershell.exe -Command "Compress-Archive -Path build/scrap-${SCRAP_VERSION}-llvm-windows64 -DestinationPath build/scrap-${SCRAP_VERSION}-llvm-windows64.zip -Force"
-           mkdir -p dist
-           mv build/*.zip dist/
            
       - name: Build Scrap
         run: |

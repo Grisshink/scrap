@@ -16,7 +16,6 @@ its forks such as [Turbowarp](https://turbowarp.org).
 
 ## Notable advantages from scratch
 
-- *(LLVM only)* Faster runtime. The speed is achieved using compilation through LLVM
 - The addition of separate else if, else blocks (C-end blocks as i call them), which eliminates a lot of nested checks with if-else blocks (i.e. more flexible variant of if-else block in Snap!)
 - Variables can have a lifetime, which avoids variable name conflicts and allows to make temporary variables
 - Custom blocks can return values and can be used as an argument for other block
@@ -26,7 +25,6 @@ its forks such as [Turbowarp](https://turbowarp.org).
 - Lists are now a data type instead of a different type of variable, this allows nesting lists inside a list
 - The code runs in a separate thread. This solves some performance issues compared to Scratch
 - Modularized interface. Most of the interface can be rearranged or moved to another tab
-- *(LLVM only)* Standalone builds. Scrap projects can be built and run as native executables without significant runtime overhead
 
 ## Controls
 
@@ -45,12 +43,12 @@ its forks such as [Turbowarp](https://turbowarp.org).
 ### Github releases
 
 See [Releases](https://github.com/Grisshink/scrap/releases) page for all available download options for 
-Windows, Linux as well as their respective LLVM builds
+Windows and Linux
 
 ### AUR
 
 Scrap is now available for download from Arch User Repository (AUR) as [scrap-git](https://aur.archlinux.org/packages/scrap-git) package.
-This package will download and build latest Scrap commit from git (LLVM PKGBUILDs are coming soon)
+This package will download and build latest Scrap commit from git
 
 To install Scrap from AUR you can use your preferred AUR helper, for example with `yay`:
 
@@ -64,7 +62,6 @@ yay -S scrap-git
 
 Scrap requires these dependencies to run:
 - [gettext](https://www.gnu.org/software/gettext/)
-- [LLVM](https://llvm.org/) *(Only required if building with `USE_LLVM=TRUE` flag)*
 
 Currently Scrap can be built for *Windows*, *Linux*, *MacOS* and *FreeBSD*. 
 
@@ -73,14 +70,6 @@ Currently Scrap can be built for *Windows*, *Linux*, *MacOS* and *FreeBSD*.
 ```bash
 pacman -S mingw-w64-ucrt-x86_64-gcc make gettext
 ln -sf "${MSYSTEM_PREFIX}/bin/windres.exe" "${MSYSTEM_PREFIX}/bin/x86_64-w64-mingw32-windres"
-```
-
-#### Download commands for Windows (LLVM) *(Experimental)*
-
-If you are going to compile with `USE_LLVM=TRUE` flag, then you need to install additional dependencies:
-
-```bash
-pacman -S mingw-w64-ucrt-x86_64-llvm
 ```
 
 #### Download commands for Debian
