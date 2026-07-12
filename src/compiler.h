@@ -23,7 +23,6 @@
 
 #include "raylib.h"
 #include "ast.h"
-#include "std.h"
 #include "thread.h"
 #include "scrap_ir.h"
 

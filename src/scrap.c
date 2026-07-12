@@ -24,6 +24,7 @@
 #include "vec.h"
 #include "util.h"
 #include "rlgl.h"
+#include "std.h"
 
 #include <math.h>
 #include <libintl.h>

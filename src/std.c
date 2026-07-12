@@ -49,6 +49,20 @@
 #define MiB(n) ((size_t)(n) << 20)
 #define GiB(n) ((size_t)(n) << 30)
 
+typedef struct {
+    char* name;
+#ifdef _WIN32
+    HMODULE handle;
+#else
+    void* handle;
+#endif
+} StdLibrary;
+
+typedef struct {
+    StdLibrary* items;
+    size_t size, capacity;
+} StdLibraryList;
+
 static int cursor_x = 0;
 static int cursor_y = 0;
 static bool cursor_dirty = false;

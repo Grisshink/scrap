@@ -22,7 +22,6 @@
 #include "scrap.h"
 #include "vec.h"
 #include "util.h"
-#include "std.h"
 
 #include <unistd.h>
 #include <stdlib.h>
