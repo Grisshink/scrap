@@ -38,7 +38,7 @@ jobs:
               with:
                 msystem: UCRT64
                 update: true
-                install: mingw-w64-ucrt-x86_64-gcc libffi-devel make gettext
+                install: mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-libffi make gettext
 
             - name: Setup windres
               run: ln -sf "${MSYSTEM_PREFIX}/bin/windres.exe" "${MSYSTEM_PREFIX}/bin/x86_64-w64-mingw32-windres"
