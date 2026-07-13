@@ -1440,7 +1440,7 @@ static bool check_valid_foreign_types(Compiler* compiler, DataType type, const c
         }
     }
 
-    compiler_set_error(compiler, gettext("Invalid input name %s"), ffi_type);
+    compiler_set_error(compiler, gettext("Invalid or mismatched input type %s and ffi type \"%s\""), type_to_str(type), ffi_type);
     return false;
 }
 
