@@ -1119,6 +1119,15 @@ Block* load_block(SaveData* save) {
     unsigned int arg_count;
     if (!save_read_varint(save, &arg_count)) return false;
 
+    size_t input_arg_count = 0;
+    for (size_t i = 0; i < vector_size(blockdef->inputs); i++) {
+        if (blockdef->inputs[i].type == INPUT_TEXT_DISPLAY || blockdef->inputs[i].type == INPUT_IMAGE_DISPLAY) continue;
+        input_arg_count++;
+    }
+    if (arg_count < input_arg_count) {
+        scrap_log(LOG_WARNING, "[LOAD] Blockdef \"%s\" has less arguments than in the saved block, expect broken behaviour", blockdef->id);
+    }
+
     Block* block = malloc(sizeof(Block));
     block->blockdef = blockdef;
     block->arguments = vector_create();
@@ -1133,12 +1142,20 @@ Block* load_block(SaveData* save) {
 
     int input_id = -1;
 
-    vector_reserve(&block->arguments, arg_count); // This prevents arguments from moving in memory
-    for (unsigned int i = 0; i < arg_count; i++) {
+    size_t arg_count_max = MAX(arg_count, input_arg_count);
+
+    vector_reserve(&block->arguments, arg_count_max); // This prevents arguments from moving in memory
+    for (unsigned int i = 0; i < arg_count_max; i++) {
         Argument* arg = vector_add_dst(&block->arguments);
-        if (!load_block_argument(save, arg)) {
-            block_free(block);
-            return NULL;
+
+        if (i < arg_count) {
+            if (!load_block_argument(save, arg)) {
+                block_free(block);
+                return NULL;
+            }
+        } else {
+            arg->type = ARGUMENT_VALUE;
+            arg->data.value = value_from_string("");
         }
 
         arg->block = block;
