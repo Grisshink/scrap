@@ -409,6 +409,8 @@ extern char* language_list[5];
 extern const int codepoint_regions[CODEPOINT_REGION_COUNT][2];
 extern int codepoint_start_ranges[CODEPOINT_REGION_COUNT];
 
+extern GuiColor color_picker_default_colors[18];
+
 // scrap.c
 // Nothing...
 
@@ -475,6 +477,7 @@ bool handle_value_input_type_switcher_click(void);
 bool handle_editor_type_switcher_button(void);
 bool handle_editor_return_type_switcher_button(void);
 bool handle_color_value_input_click(void);
+bool handle_color_picker_default_color_click(void);
 
 // save.c
 void config_new(Config* config);

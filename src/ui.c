@@ -593,6 +593,15 @@ bool handle_color_picker_click(void) {
     return true;
 }
 
+bool handle_color_picker_default_color_click(void) {
+    size_t default_color_ind = (size_t)ui.hover.button.data;
+    GuiColor default_color = color_picker_default_colors[default_color_ind];
+    Vector3 hsv = ColorToHSV(CONVERT_COLOR(default_color, Color));
+
+    ui.dropdown.as.color_picker.color = *(HSV*)&hsv;
+    return true;
+}
+
 bool handle_file_button_click(void) {
     if (thread_is_running(&vm.thread)) return true;
     show_list_dropdown(file_menu_list, ARRLEN(file_menu_list), NULL, handle_file_menu_click);

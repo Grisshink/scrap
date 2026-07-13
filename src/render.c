@@ -55,6 +55,19 @@ typedef enum {
     IMAGE_STRETCHED,
 } ImageType;
 
+GuiColor color_picker_default_colors[18] = {
+    /* Black  */ { 0x00, 0x00, 0x00, 0xff }, /* Red    */ { 0xff, 0x00, 0x00, 0xff }, 
+    /* Green  */ { 0x00, 0xff, 0x00, 0xff }, /* Yellow */ { 0xff, 0xff, 0x00, 0xff }, 
+    /* Blue   */ { 0x00, 0x00, 0xff, 0xff }, /* Purple */ { 0xff, 0x00, 0xff, 0xff }, 
+    /* Cyan   */ { 0x00, 0xff, 0xff, 0xff }, /* White  */ { 0xff, 0xff, 0xff, 0xff }, 
+    CATEGORY_CONTROL_COLOR, CATEGORY_TERMINAL_COLOR, 
+    CATEGORY_MATH_COLOR,    CATEGORY_LOGIC_COLOR, 
+    CATEGORY_STRING_COLOR,  CATEGORY_MISC_COLOR, 
+    CATEGORY_DATA_COLOR,    CATEGORY_LIST_COLOR, 
+    CATEGORY_META_COLOR,    CATEGORY_NOTHING_COLOR,
+};
+
+
 static void draw_code(void);
 static GuiElement* draw_blockchain(BlockChain* chain, bool ghost, bool show_previews, bool editable_arguments);
 static void argument_on_hover(GuiElement* el);
@@ -1321,6 +1334,12 @@ static void color_picker_sv_on_hover(GuiElement* el) {
     ui.dropdown.as.color_picker.hover_part = COLOR_PICKER_SV;
 }
 
+static void color_picker_default_colors_on_hover(GuiElement* el) {
+    el->color = GUI_WHITE;
+    ui.hover.button.handler = handle_color_picker_default_color_click;
+    ui.hover.button.data = el->custom_data;
+}
+
 static void color_picker_sv_on_render(GuiElement* el) {
     if (IsMouseButtonDown(MOUSE_BUTTON_LEFT) && ui.dropdown.as.color_picker.select_part == COLOR_PICKER_SV) {
         ui.dropdown.as.color_picker.color.saturation = CLAMP((gui->mouse_x - el->parent->abs_x) / el->parent->w, 0.0, 1.0);
@@ -1406,6 +1425,29 @@ static void draw_color_picker(void) {
                         gui_set_rect(gui, CONVERT_COLOR(col, GuiColor));
                     gui_element_end(gui);
                 gui_element_end(gui);
+
+                for (size_t i = 0; i < ARRLEN(color_picker_default_colors) / 4 + 1; i++) {
+                    gui_element_begin(gui);
+                        gui_set_direction(gui, DIRECTION_HORIZONTAL);
+                        gui_set_gap(gui, config.ui_size * 0.25);
+
+                        for (size_t j = 0; j < 4; j++) {
+                            size_t ind = i*4 + j;
+                            if (ind >= ARRLEN(color_picker_default_colors)) break;
+                            
+                            gui_element_begin(gui);
+                                gui_set_border(gui, (GuiColor) { 0x40, 0x40, 0x40, 0xff }, 2);
+                                gui_on_hover(gui, color_picker_default_colors_on_hover);
+                                gui_set_custom_data(gui, (void*)ind);
+
+                                gui_element_begin(gui);
+                                    gui_set_fixed(gui, config.ui_size * 0.8, config.ui_size * 0.8);
+                                    gui_set_rect(gui, color_picker_default_colors[ind]);
+                                gui_element_end(gui);
+                            gui_element_end(gui);
+                        }
+                    gui_element_end(gui);
+                }
             gui_element_end(gui);
 
         gui_element_end(gui);
