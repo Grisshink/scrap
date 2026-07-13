@@ -6,7 +6,7 @@ BUILD_MODE ?= RELEASE
 BUILD_FOLDER := build/
 PREFIX ?= /usr/local
 
-CFLAGS := -Wall -Wextra -std=c11 -D_GNU_SOURCE -DSCRAP_VERSION=\"$(SCRAP_VERSION)\" -I./raylib/src
+CFLAGS := -Wall -Wextra -std=c11 -D_GNU_SOURCE -DSCRAP_VERSION=\"$(SCRAP_VERSION)\" -I./external/raylib/src
 
 ifeq ($(TARGET), LINUX)
 	CC := gcc
@@ -60,7 +60,7 @@ mkbuild:
 	mkdir -p $(BUILD_FOLDER)
 
 clean:
-	$(MAKE) -C raylib/src clean
+	$(MAKE) -C external/raylib/src clean
 	rm -f scrap.res $(EXE_NAME) $(EXE_NAME).exe
 	rm -rf locale $(BUILD_FOLDER)
 
@@ -105,13 +105,13 @@ target: mkbuild $(EXE_NAME)
 endif
 
 $(EXE_NAME).exe: $(OBJFILES)
-	$(MAKE) -C raylib/src CC=$(CC) PLATFORM_OS=$(TARGET)
+	$(MAKE) -C external/raylib/src CC=$(CC) PLATFORM_OS=$(TARGET)
 	x86_64-w64-mingw32-windres scrap.rc -O coff -o scrap.res
-	$(CC) -o $@ $^ raylib/src/libraylib.a scrap.res $(LDFLAGS)
+	$(CC) -o $@ $^ external/raylib/src/libraylib.a scrap.res $(LDFLAGS)
 
 $(EXE_NAME): $(OBJFILES)
-	$(MAKE) -C raylib/src CC=$(CC) PLATFORM_OS=$(TARGET)
-	$(CC) -o $@ $^ raylib/src/libraylib.a $(LDFLAGS)
+	$(MAKE) -C external/raylib/src CC=$(CC) PLATFORM_OS=$(TARGET)
+	$(CC) -o $@ $^ external/raylib/src/libraylib.a $(LDFLAGS)
 
 $(BUILD_FOLDER)scrap.o: src/scrap.c $(SCRAP_HEADERS)
 	$(CC) $(CFLAGS) -c -o $@ $<
