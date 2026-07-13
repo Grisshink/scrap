@@ -284,7 +284,7 @@ static void end_window(void) {
             gui_set_align(gui, ALIGN_CENTER, ALIGN_CENTER);
             gui_on_hover(gui, close_button_on_hover);
 
-            gui_text(gui, &assets.fonts.font_cond, "X", config.ui_size * 0.8, GUI_WHITE);
+            gui_image(gui, &assets.textures.button_close, config.ui_size * 0.8, GUI_WHITE);
         gui_element_end(gui);
     gui_element_end(gui);
 }
