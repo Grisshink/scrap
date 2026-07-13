@@ -7,6 +7,7 @@
 - Custom blocks now allow setting type of its arguments as well as the return type of the block
 - Added support for loading and running foreign functions from dynamic libraries
 - Improved camera snapping for selected blocks
+- Updated Raylib version to 6.0
 
 ## Fixes
 - Fixed terminal font not being resized when changing font size in settings
