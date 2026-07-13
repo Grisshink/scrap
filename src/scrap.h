@@ -278,6 +278,7 @@ typedef struct {
     Texture2D dropdown;
     Texture2D icon_about;
     Texture2D icon_c;
+    Texture2D icon_error;
     Texture2D icon_file;
     Texture2D icon_folder;
     Texture2D icon_list;

@@ -1439,19 +1439,14 @@ static void draw_code_area(void) {
         if (!thread_is_running(&vm.thread) && vector_size(vm.error_lines) > 0) {
             gui_element_begin(gui);
                 gui_set_direction(gui, DIRECTION_HORIZONTAL);
-                gui_set_align(gui, ALIGN_LEFT, ALIGN_CENTER);
                 gui_set_gap(gui, config.ui_size * 0.5);
                 gui_set_padding(gui, config.ui_size * 0.4, config.ui_size * 0.4);
                 gui_set_rect(gui, (GuiColor) { 0x00, 0x00, 0x00, 0x80 });
 
                 double animation = (fmod(-GetTime(), 1.0) * 0.5 + 1.0) * 255.0;
                 gui_element_begin(gui);
-                    gui_set_rect(gui, (GuiColor) { 0xff, 0x20, 0x20, animation });
-                    gui_set_fixed(gui, config.ui_size, config.ui_size);
-                    gui_set_direction(gui, DIRECTION_VERTICAL);
-                    gui_set_align(gui, ALIGN_CENTER, ALIGN_CENTER);
-
-                    gui_text(gui, &assets.fonts.font_eb, "!", config.ui_size, GUI_WHITE);
+                    gui_set_padding(gui, 0, config.ui_size * 0.2);
+                    gui_image(gui, &assets.textures.icon_error, config.ui_size, (GuiColor) { 0xff, 0x20, 0x20, animation });
                 gui_element_end(gui);
 
                 gui_element_begin(gui);
