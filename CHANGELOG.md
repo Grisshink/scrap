@@ -1,3 +1,16 @@
+# v0.7-beta *(Upcoming)*
+
+## What's new?
+- Completely reworked scrap compiler. Now all code gets compiled into intermediate bytecode which then gets interpreted in a separate process
+- Terminal cursor now becomes hollow when terminal panel is not focused
+- Block arguments now allow setting type of the literal values directly inside them
+- Custom blocks now allow setting type of its arguments as well as the return type of the block
+- Added support for loading and running foreign functions from dynamic libraries
+- Improved camera snapping for selected blocks
+
+## Fixes
+- Fixed terminal font not being resized when changing font size in settings
+
 # v0.6.1-beta *(27-02-2026)*
 
 ## What's new?
