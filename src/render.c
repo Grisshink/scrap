@@ -577,7 +577,7 @@ static const char* get_value_text(Value* value) {
     }
 }
 
-static void draw_value_argument(Argument* arg, bool can_hover, bool editable, GuiColor font_color, GuiColor bg_color) {
+static void draw_value_argument(Argument* arg, bool can_hover, bool editable, bool ghost, GuiColor font_color, GuiColor bg_color) {
     if (arg->type != ARGUMENT_VALUE) return;
     Value* value = &arg->data.value;
 
@@ -611,9 +611,9 @@ static void draw_value_argument(Argument* arg, bool can_hover, bool editable, Gu
                 gui_element_begin(gui);
                     gui_set_min_size(gui, value_arg_size, value_arg_size);
                     gui_set_padding(gui, BLOCK_STRING_PADDING / 2, 0);
-                    gui_set_rect(gui, value->data.bool_val ? (GuiColor) { 0x30, 0xff, 0x30, 0xff } : (GuiColor) { 0xff, 0x30, 0x30, 0xff });
+                    gui_set_rect(gui, value->data.bool_val ? (GuiColor) { 0x30, 0xff, 0x30, ghost ? BLOCK_GHOST_OPACITY : 0xff } : (GuiColor) { 0xff, 0x30, 0x30, ghost ? BLOCK_GHOST_OPACITY : 0xff });
                     gui_set_align(gui, ALIGN_CENTER, ALIGN_CENTER);
-                    gui_text(gui, &assets.fonts.font_cond_shadow, gettext(value->data.bool_val ? "True" : "False"), BLOCK_TEXT_SIZE, GUI_WHITE);
+                    gui_text(gui, &assets.fonts.font_cond_shadow, gettext(value->data.bool_val ? "True" : "False"), BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0xff, 0xff, ghost ? BLOCK_GHOST_OPACITY : 0xff });
                 gui_element_end(gui);
             gui_element_end(gui);
         } else if (value->type == DATA_TYPE_COLOR) {
@@ -624,7 +624,10 @@ static void draw_value_argument(Argument* arg, bool can_hover, bool editable, Gu
 
                 gui_element_begin(gui);
                     gui_set_fixed(gui, BLOCK_IMAGE_SIZE, BLOCK_IMAGE_SIZE);
-                    gui_set_rect(gui, CONVERT_COLOR(value->data.color_val, GuiColor));
+
+                    GuiColor color_val_color = CONVERT_COLOR(value->data.color_val, GuiColor);
+                    if (ghost) color_val_color.a = BLOCK_GHOST_OPACITY;
+                    gui_set_rect(gui, color_val_color);
                 gui_element_end(gui);
             gui_element_end(gui);
         } else {
@@ -786,6 +789,7 @@ static void draw_block(Block* block, bool highlight, bool select, bool can_hover
                     arg, 
                     can_hover,
                     editable,
+                    ghost,
                     (GuiColor) { 0x00, 0x00, 0x00, ghost ? BLOCK_GHOST_OPACITY : 0xff },
                     (GuiColor) { 0xff, 0xff, 0xff, ghost ? BLOCK_GHOST_OPACITY : BLOCK_ARG_OPACITY }
                 );
