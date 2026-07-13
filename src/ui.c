@@ -1643,10 +1643,11 @@ static bool handle_code_panel_key_press(void) {
         return true;
     }
 
-    if (!ui.hover.editor.select_blockchain || !ui.hover.editor.select_block || ui.hover.select_input) return false;
+    if (!ui.hover.editor.select_blockchain || !ui.hover.editor.select_block) return false;
 
-    int bounds_x = MIN(200, ui.hover.panels.code_panel_bounds.width / 2);
-    int bounds_y = MIN(200, ui.hover.panels.code_panel_bounds.height / 2);
+    int bounds_x = ui.hover.panels.code_panel_bounds.width  * 0.1;
+    int bounds_y = ui.hover.panels.code_panel_bounds.height * 0.1;
+    Vector2 select_pos = ui.hover.editor.select_block_pos;
 
     if (ui.hover.editor.select_block_pos.x - (ui.hover.panels.code_panel_bounds.x + ui.hover.panels.code_panel_bounds.width) > -bounds_x) {
         editor.camera_pos.x += ui.hover.editor.select_block_pos.x - (ui.hover.panels.code_panel_bounds.x + ui.hover.panels.code_panel_bounds.width) + bounds_x;
@@ -1667,6 +1668,8 @@ static bool handle_code_panel_key_press(void) {
         editor.camera_pos.y += ui.hover.editor.select_block_pos.y - ui.hover.panels.code_panel_bounds.y - bounds_y;
         ui.render_surface_needs_redraw = true;
     }
+
+    if (ui.hover.select_input) return false;
 
     if (IsKeyPressed(KEY_RIGHT) || IsKeyPressedRepeat(KEY_RIGHT)) {
         block_next_argument();

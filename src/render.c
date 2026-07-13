@@ -371,15 +371,15 @@ static void argument_input_on_hover(GuiElement* el) {
     }
 }
 
-static void draw_argument_input(Argument* arg, char** input, const char* hint, bool can_hover, bool editable, GuiColor font_color, GuiColor bg_color) {
+static void draw_blockdef_argument_input(char** input, const char* hint, bool can_hover, bool editable, GuiColor font_color, GuiColor bg_color) {
     gui_element_begin(gui);
         gui_set_rect(gui, bg_color);
 
         gui_element_begin(gui);
             if (editable) {
-                if ((arg && ui.hover.editor.select_argument == arg) || ui.hover.select_input == input) {
+                if (ui.hover.select_input == input) {
                     gui_set_border(gui, (GuiColor) { 0x30, 0x30, 0x30, 0xff }, BLOCK_OUTLINE_SIZE);
-                    if (arg) gui_on_render(gui, argument_on_render);
+                    gui_on_render(gui, argument_on_render);
                 }
                 InputHoverInfo info = (InputHoverInfo) {
                     .input = input,
@@ -388,7 +388,6 @@ static void draw_argument_input(Argument* arg, char** input, const char* hint, b
                     .font_size = BLOCK_TEXT_SIZE,
                 };
                 gui_set_state(gui, &info, sizeof(info));
-                gui_set_custom_data(gui, arg);
                 if (can_hover) gui_on_hover(gui, argument_input_on_hover);
             }
 
@@ -414,6 +413,7 @@ static void draw_blockdef(Blockdef* blockdef, bool editing, bool in_editor) {
         gui_set_rect(gui, CONVERT_COLOR(block_color, GuiColor));
         gui_set_custom_data(gui, blockdef);
         gui_on_hover(gui, blockdef_on_hover);
+        if (ui.hover.editor.edit_blockdef == blockdef) gui_on_render(gui, argument_on_render);
         if (blockdef->type == BLOCKTYPE_HAT) gui_set_draw_subtype(gui, RECT_NOTCHED);
 
     gui_element_begin(gui);
@@ -441,7 +441,7 @@ static void draw_blockdef(Blockdef* blockdef, bool editing, bool in_editor) {
         switch (input->type) {
         case INPUT_TEXT_DISPLAY:
             if (editing && in_editor) {
-                draw_argument_input(NULL, &input->data.text, "", true, true, GUI_BLACK, GUI_WHITE);
+                draw_blockdef_argument_input(&input->data.text, "", true, true, GUI_BLACK, GUI_WHITE);
             } else {
                 gui_text(gui, &assets.fonts.font_cond_shadow, input->data.text, BLOCK_TEXT_SIZE, GUI_WHITE);
             }
@@ -577,13 +577,16 @@ static const char* get_value_text(Value* value) {
     }
 }
 
-static void draw_value_argument(Argument* arg, Value* value, bool can_hover, bool editable, GuiColor font_color, GuiColor bg_color) {
+static void draw_value_argument(Argument* arg, bool can_hover, bool editable, GuiColor font_color, GuiColor bg_color) {
+    if (arg->type != ARGUMENT_VALUE) return;
+    Value* value = &arg->data.value;
+
     gui_element_begin(gui);
         gui_set_direction(gui, DIRECTION_HORIZONTAL);
         if (editable) {
-            if (arg && ui.hover.editor.select_argument == arg) {
+            if (ui.hover.editor.select_argument == arg) {
                 gui_set_border(gui, (GuiColor) { 0x30, 0x30, 0x30, 0xff }, BLOCK_OUTLINE_SIZE);
-                if (arg) gui_on_render(gui, argument_on_render);
+                gui_on_render(gui, argument_on_render);
             }
 
             if (value->type == DATA_TYPE_STRING || value->type == DATA_TYPE_ANY || value->type == DATA_TYPE_INTEGER || value->type == DATA_TYPE_FLOAT) {
@@ -635,7 +638,7 @@ static void draw_value_argument(Argument* arg, Value* value, bool can_hover, boo
                 if (value->type == DATA_TYPE_STRING || value->type == DATA_TYPE_ANY) {
                     draw_input_text(&assets.fonts.font_cond, &value->data.str_val, gettext(value->type == DATA_TYPE_STRING ? "Abc" : "any"), BLOCK_TEXT_SIZE, font_color);
                 } else if (value->type == DATA_TYPE_INTEGER || value->type == DATA_TYPE_FLOAT) {
-                    if (arg && ui.hover.editor.select_argument == arg) {
+                    if (ui.hover.editor.select_argument == arg) {
                         draw_input_text(&assets.fonts.font_cond, &ui.hover.editor.select_argument_scratch_input, "", BLOCK_TEXT_SIZE, font_color);
                     } else {
                         gui_text(gui, &assets.fonts.font_cond, get_value_text(value), BLOCK_TEXT_SIZE, font_color);
@@ -647,7 +650,7 @@ static void draw_value_argument(Argument* arg, Value* value, bool can_hover, boo
             gui_element_end(gui);
         }
 
-        if (arg && ui.hover.editor.select_argument == arg) {
+        if (ui.hover.editor.select_argument == arg) {
             gui_element_begin(gui);
                 gui_set_direction(gui, DIRECTION_HORIZONTAL);
                 gui_set_align(gui, ALIGN_CENTER, ALIGN_CENTER);
@@ -781,7 +784,6 @@ static void draw_block(Block* block, bool highlight, bool select, bool can_hover
             case ARGUMENT_VALUE:
                 draw_value_argument(
                     arg, 
-                    &arg->data.value,
                     can_hover,
                     editable,
                     (GuiColor) { 0x00, 0x00, 0x00, ghost ? BLOCK_GHOST_OPACITY : 0xff },
@@ -814,7 +816,10 @@ static void draw_block(Block* block, bool highlight, bool select, bool can_hover
                     gui_set_padding(gui, BLOCK_STRING_PADDING / 2, 0);
                     gui_set_direction(gui, DIRECTION_HORIZONTAL);
                     if (editable) {
-                        if (ui.hover.editor.select_argument == arg) gui_set_border(gui, (GuiColor) { 0x30, 0x30, 0x30, 0xff }, BLOCK_OUTLINE_SIZE);
+                        if (ui.hover.editor.select_argument == arg) {
+                            gui_set_border(gui, (GuiColor) { 0x30, 0x30, 0x30, 0xff }, BLOCK_OUTLINE_SIZE);
+                            gui_on_render(gui, argument_on_render);
+                        }
                         if (can_hover) gui_on_hover(gui, argument_on_hover);
                         gui_set_custom_data(gui, arg);
                     }
