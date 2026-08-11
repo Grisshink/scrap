@@ -598,6 +598,7 @@ bool handle_color_picker_default_color_click(void) {
     GuiColor default_color = color_picker_default_colors[default_color_ind];
     Vector3 hsv = ColorToHSV(CONVERT_COLOR(default_color, Color));
 
+    ui.dropdown.as.color_picker.select_part = ui.dropdown.as.color_picker.hover_part;
     ui.dropdown.as.color_picker.color = *(HSV*)&hsv;
     return true;
 }
