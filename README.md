@@ -7,7 +7,7 @@
 ![Downloads](https://img.shields.io/github/downloads/Grisshink/scrap/total)
 ![License](https://img.shields.io/github/license/Grisshink/scrap)
 
-Scrap is a new block based programming language with the aim towards advanced users. 
+Scrap is a new block based programming language with the aim towards advanced users.
 It is written in pure C and mostly inspired by other block based languages such as [Scratch](https://scratch.mit.edu/) and
 its forks such as [Turbowarp](https://turbowarp.org).
 
@@ -42,13 +42,13 @@ its forks such as [Turbowarp](https://turbowarp.org).
 
 ### Github releases
 
-See [Releases](https://github.com/Grisshink/scrap/releases) page for all available download options for 
-Windows and Linux
+Currently Scrap only provides binary releases for *Windows* and *Linux*.
+See [Releases](https://github.com/Grisshink/scrap/releases) page for all available download options.
 
 ### AUR
 
 Scrap is now available for download from Arch User Repository (AUR) as [scrap-git](https://aur.archlinux.org/packages/scrap-git) package.
-This package will download and build latest Scrap commit from git
+This package will download and build latest Scrap commit from git.
 
 To install Scrap from AUR you can use your preferred AUR helper, for example with `yay`:
 
@@ -62,36 +62,35 @@ yay -S scrap-git
 
 Scrap requires these dependencies to run:
 - [gettext](https://www.gnu.org/software/gettext/)
+- [libffi](https://sourceware.org/libffi/)
 
-Currently Scrap can be built for *Windows*, *Linux*, *MacOS* and *FreeBSD*. 
+Currently Scrap officially supports *Windows* and *Linux* platforms. Scrap also provides build steps for *NixOS*, *MacOS* and *FreeBSD*, but note that these builds are not actively maintained so they may not work properly.
 
-#### Download commands for Windows (MSYS2 UCRT64)
+#### Windows (MSYS2 UCRT64)
 
 ```bash
-pacman -S mingw-w64-ucrt-x86_64-gcc make gettext
+pacman -S mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-libffi make gettext
 ln -sf "${MSYSTEM_PREFIX}/bin/windres.exe" "${MSYSTEM_PREFIX}/bin/x86_64-w64-mingw32-windres"
 ```
 
-#### Download commands for Debian
+#### Debian linux
 
 ```bash
-sudo apt install libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev gettext
+sudo apt install libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev gettext libffi-dev
 ```
 
-#### Download commands for Arch linux
-
-Download command for arch-based distributions:
+#### Arch linux
 
 ```bash
-sudo pacman -S libx11 libxrandr libxi libxcursor libxinerama gettext
+sudo pacman -S libx11 libxrandr libxi libxcursor libxinerama gettext libffi
 ```
 
-#### Download commands for OpenSUSE
+#### OpenSUSE
 
 Download command for openSUSE:
 
 ```bash
-sudo zypper install libX11-devel libXrandr-devel libXi-devel libXcursor-devel libXinerama-devel gettext
+sudo zypper install libX11-devel libXrandr-devel libXi-devel libXcursor-devel libXinerama-devel gettext libffi-devel
 ```
 
 ### Build
@@ -103,41 +102,42 @@ git clone --recursive https://github.com/Grisshink/scrap.git
 cd scrap
 ```
 
-#### Windows build
+#### Windows
 
-NOTE: This guide will assume that you have [MSYS2](https://www.msys2.org/) installed and running on your system. 
+*NOTE: This guide will assume that you have MSYS2 installed and running on your system.
+See https://www.msys2.org/ for details on installation.*
 
-After that, run the following commands:
+After installation, run the following commands:
 
 ```bash
 make -B TARGET=WINDOWS
 ./scrap.exe
 ```
 
-NOTE: When running `make clean` MSYS2 will occasionally drop you into command prompt. 
-To fix this, just type `exit` in the cmd and the cleanup process will proceed
+*NOTE: When running `make clean` MSYS2 will occasionally drop you into command prompt.
+To fix this, just type `exit` in the cmd and the cleanup process will proceed*
 
-#### Linux build
+#### Linux
 
-To build and run Scrap on linux you need to install `gcc` (10+) and `make`. After install, just run following commands:
+To build and run Scrap on linux you need to install `gcc` (10+) and `make`. After installation, run the following commands:
 
 ```bash
 make -j$(nproc)
 ./scrap
 ```
 
-#### FreeBSD build
+#### FreeBSD
 
-To build and run Scrap on FreeBSD you need to install `gcc` (10+) and `gmake`. After install, just run following commands:
+To build and run Scrap on FreeBSD you need to install `gcc` (10+) and `gmake`. After installation, run the following commands:
 
 ```bash
 gmake MAKE=gmake -j$(nproc)
 ./scrap
 ```
 
-#### NixOS build
+#### NixOS
 
-To build and run Scrap on NixOS, just run the following commands:
+To build and run Scrap on NixOS, run the following commands:
 
 ```bash
 nix-shell
@@ -145,7 +145,7 @@ make -j$(nproc)
 ./scrap
 ```
 
-#### MacOS build
+#### MacOS
 
 > [!WARNING]
 > MacOS build is not being tested right now, so it may not work properly or not at all, you have been warned!
@@ -157,7 +157,7 @@ First, install Homebrew:
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 ```
 
-After that, you need to run the following commands:
+After installation, run the following commands:
 
 ```bash
 brew install gettext
@@ -165,7 +165,7 @@ make -j$(nproc) TARGET=OSX
 ./scrap
 ```
 
-Thanks to [@arducat](https://github.com/arducat) for MacOS support.
+*(MacOS support provided by [@arducat](https://github.com/arducat))*
 
 ## Screenshots
 
@@ -177,9 +177,9 @@ Thanks to [@arducat](https://github.com/arducat) for MacOS support.
 
 In `examples/` folder you can find some example code writen in Scrap that uses most features from Scrap
 
-In `extras/` folder you can find some various artwork made for Scrap. 
-The splash art was made by [@FlaffyTheBest](https://scratch.mit.edu/users/FlaffyTheBest/), 
-the logo was made by [@Grisshink](https://github.com/Grisshink) with some inspiration for logo from [@unixource](https://github.com/unixource), 
+In `extras/` folder you can find some various artwork made for Scrap.
+The splash art was made by [@FlaffyTheBest](https://scratch.mit.edu/users/FlaffyTheBest/),
+the logo was made by [@Grisshink](https://github.com/Grisshink) with some inspiration for logo from [@unixource](https://github.com/unixource),
 the wallpaper was made by [@Grisshink](https://github.com/Grisshink)
 
 ## License
