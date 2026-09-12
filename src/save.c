@@ -67,8 +67,8 @@ Blockdef** save_blockdefs = NULL;
 static unsigned int ver = 0;
 
 int save_find_constant(const Value constant);
-void save_code(const char* file_path, ProjectConfig* config, RootBlockChain* code);
-RootBlockChain* load_code(const char* file_path, ProjectConfig* out_config);
+void save_code(const char* file_path, RootBlockChain* code);
+RootBlockChain* load_code(const char* file_path);
 void save_block(SaveData* save, Block* block);
 Block* load_block(SaveData* save);
 void save_blockdef(SaveData* save, Blockdef* blockdef);
@@ -232,21 +232,6 @@ void set_default_config(Config* config) {
     vector_set_string(&config->font_bold_path, DATA_PATH "nk57-eb.otf");
     vector_set_string(&config->font_mono_path, DATA_PATH "nk57.otf");
     config->show_blockchain_previews = true;
-}
-
-void project_config_new(ProjectConfig* config) {
-    config->executable_name = vector_create();
-    config->linker_name = vector_create();
-}
-
-void project_config_free(ProjectConfig* config) {
-    vector_free(config->executable_name);
-    vector_free(config->linker_name);
-}
-
-void project_config_set_default(ProjectConfig* config) {
-    vector_set_string(&config->executable_name, "project");
-    vector_set_string(&config->linker_name, "ld");
 }
 
 void apply_config(Config* dst, Config* src) {
@@ -786,8 +771,7 @@ void collect_blockchain_constants(BlockChain* chain) {
     }
 }
 
-void save_code(const char* file_path, ProjectConfig* config, RootBlockChain* code) {
-    (void) config;
+void save_code(const char* file_path, RootBlockChain* code) {
     SaveData save = {0};
     ver = SCRAP_MAX_SAVE_VERSION;
     int chains_count = vector_size(code);
@@ -1304,11 +1288,7 @@ void convert_old_save_structure(RootBlockChain* code) {
     vector_free(chain_list);
 }
 
-RootBlockChain* load_code(const char* file_path, ProjectConfig* out_config) {
-    ProjectConfig config;
-    project_config_new(&config);
-    project_config_set_default(&config);
-
+RootBlockChain* load_code(const char* file_path) {
     RootBlockChain* code = vector_create();
     save_blockdefs = vector_create();
     save_value_constants = vector_create();
@@ -1379,15 +1359,6 @@ RootBlockChain* load_code(const char* file_path, ProjectConfig* out_config) {
         if (!load_root_blockchain(&save, chain)) goto load_fail;
     }
 
-    unsigned int len;
-    char* executable_name = save_read_array(&save, sizeof(char), &len);
-    if (executable_name) vector_set_string(&config.executable_name, executable_name);
-
-    char* linker_name = save_read_array(&save, sizeof(char), &len);
-    if (linker_name) vector_set_string(&config.linker_name, linker_name);
-
-    *out_config = config;
-
     UnloadFileData(file_data);
     vector_free(save_blockdefs);
 
@@ -1402,7 +1373,6 @@ RootBlockChain* load_code(const char* file_path, ProjectConfig* out_config) {
 load_fail:
     if (file_data) UnloadFileData(file_data);
     for (size_t i = 0; i < vector_size(code); i++) blockchain_free(code[i].chain);
-    project_config_free(&config);
     vector_free(code);
     vector_free(save_value_constants);
     vector_free(save_blockdefs);

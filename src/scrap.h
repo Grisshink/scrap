@@ -57,11 +57,6 @@ typedef struct {
     bool show_blockchain_previews;
 } Config;
 
-typedef struct {
-    char* executable_name;
-    char* linker_name;
-} ProjectConfig;
-
 typedef bool (*ButtonClickHandler)(void);
 
 typedef enum {
@@ -395,7 +390,6 @@ struct Vm {
 
 extern Config config;
 extern Config window_config;
-extern ProjectConfig project_config;
 
 extern Assets assets;
 
@@ -451,7 +445,6 @@ bool handle_file_button_click(void);
 bool handle_settings_button_click(void);
 bool handle_about_button_click(void);
 bool handle_run_button_click(void);
-bool handle_build_button_click(void);
 bool handle_stop_button_click(void);
 bool handle_code_tab_click(void);
 bool handle_output_tab_click(void);
@@ -488,12 +481,8 @@ void save_config(Config* config);
 void load_config(Config* config);
 void config_copy(Config* dst, Config* src);
 
-void save_code(const char* file_path, ProjectConfig* config, RootBlockChain* code);
-RootBlockChain* load_code(const char* file_path, ProjectConfig* out_config);
-
-void project_config_new(ProjectConfig* config);
-void project_config_free(ProjectConfig* config);
-void project_config_set_default(ProjectConfig* config);
+void save_code(const char* file_path, RootBlockChain* code);
+RootBlockChain* load_code(const char* file_path);
 
 const char* language_to_code(Language lang);
 Language code_to_language(const char* code);
@@ -515,7 +504,6 @@ void handle_window(void);
 void draw_window(void);
 
 void draw_settings_window(void);
-void draw_project_settings_window(void);
 void draw_about_window(void);
 void draw_save_confirmation_window(void);
 

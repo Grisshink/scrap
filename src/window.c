@@ -143,12 +143,6 @@ static bool settings_on_toggle_button_click(void) {
     return true;
 }
 
-static bool project_settings_on_build_button_click(void) {
-    vm_start();
-    gui_window_hide();
-    return true;
-}
-
 static bool save_confirmation_on_yes_button_click(void) {
     if (save_project()) {
         ui.scrap_running = false;
@@ -685,33 +679,6 @@ void draw_settings_window(void) {
     }
 
     settings_tooltip = false;
-}
-
-void draw_project_settings_window(void) {
-    static int executable_name_scroll = 0;
-    static int linker_name_scroll = 0;
-
-    begin_window(gettext("Build settings"), &assets.textures.button_build, MIN(600 * config.ui_size / 32.0, gui->win_w - config.ui_size), 0, window.animation_ease);
-        begin_setting(gettext("Executable name"), false);
-            draw_text_input(&project_config.executable_name, gettext("name"), &executable_name_scroll, true, false);
-        end_setting();
-
-        begin_setting(gettext("Linker name (Linux only)"), false);
-            draw_text_input(&project_config.linker_name, gettext("name"), &linker_name_scroll, true, false);
-        end_setting();
-
-        gui_grow(gui, DIRECTION_VERTICAL);
-
-        gui_element_begin(gui);
-            gui_set_grow(gui, DIRECTION_HORIZONTAL);
-            gui_set_direction(gui, DIRECTION_HORIZONTAL);
-            gui_set_gap(gui, ELEMENT_GAP);
-
-            gui_grow(gui, DIRECTION_HORIZONTAL);
-
-            draw_button(gettext("Build!"), &assets.textures.button_build, project_settings_on_build_button_click, NULL);
-        gui_element_end(gui);
-    end_window();
 }
 
 void draw_about_window(void) {

@@ -512,7 +512,7 @@ bool save_project(void) {
 
     char* path = tinyfd_saveFileDialog(NULL, editor.project_name, ARRLEN(filters), filters, "Scrap project files (.scrp)");
     if (!path) return false;
-    save_code(path, &project_config, editor.code);
+    save_code(path, editor.code);
 
     char* base_path = get_basename(path);
     int i;
@@ -528,16 +528,12 @@ void load_project(void) {
     char* path = tinyfd_openFileDialog(NULL, editor.project_name, ARRLEN(filters), filters, "Scrap project files (.scrp)", 0);
     if (!path) return;
 
-    ProjectConfig new_config;
-    RootBlockChain* chain = load_code(path, &new_config);
+    RootBlockChain* chain = load_code(path);
     switch_tab_to_panel(PANEL_CODE);
     if (!chain) {
         actionbar_show(gettext("File load failed :("));
         return;
     }
-
-    project_config_free(&project_config);
-    project_config = new_config;
 
     for (size_t i = 0; i < vector_size(editor.code); i++) blockchain_free(editor.code[i].chain);
     vector_free(editor.code);
@@ -621,12 +617,6 @@ bool handle_about_button_click(void) {
 
 bool handle_run_button_click(void) {
     vm_start();
-    return true;
-}
-
-bool handle_build_button_click(void) {
-    if (thread_is_running(&vm.thread)) return true;
-    gui_window_show(draw_project_settings_window);
     return true;
 }
 
@@ -1657,7 +1647,6 @@ static bool handle_code_panel_key_press(void) {
 
     int bounds_x = ui.hover.panels.code_panel_bounds.width  * 0.1;
     int bounds_y = ui.hover.panels.code_panel_bounds.height * 0.1;
-    Vector2 select_pos = ui.hover.editor.select_block_pos;
 
     if (ui.hover.editor.select_block_pos.x - (ui.hover.panels.code_panel_bounds.x + ui.hover.panels.code_panel_bounds.width) > -bounds_x) {
         editor.camera_pos.x += ui.hover.editor.select_block_pos.x - (ui.hover.panels.code_panel_bounds.x + ui.hover.panels.code_panel_bounds.width) + bounds_x;

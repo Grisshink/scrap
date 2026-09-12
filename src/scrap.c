@@ -40,7 +40,6 @@
 // Global Variables
 
 Config config;
-ProjectConfig project_config;
 
 Assets assets;
 
@@ -236,7 +235,6 @@ void cleanup(void) {
 
     unregister_categories();
 
-    project_config_free(&project_config);
     config_free(&config);
     config_free(&window_config);
 
@@ -247,8 +245,6 @@ void start_editor(void) {
     SetTraceLogCallback(scrap_log_va);
     config_new(&config);
     config_new(&window_config);
-    project_config_new(&project_config);
-    project_config_set_default(&project_config);
 
     editor.tabs = vector_create();
     set_default_config(&config);
