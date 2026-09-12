@@ -105,7 +105,7 @@ const char* gradient_shader_fragment =
     "    finalColor = mix(left, right, fragCoord.x);\n"
     "}";
 
-Image setup(void) {
+Image setup(void* save_data, size_t save_size) {
     SetExitKey(KEY_NULL);
 
     ui.render_surface = LoadRenderTexture(GetScreenWidth(), GetScreenHeight());
@@ -181,7 +181,12 @@ Image setup(void) {
 
     editor.show_debug = true;
     editor.mouse_blockchains = vector_create();
-    editor.code = vector_create();
+    editor.code = save_data && save_size ? load_code(save_data, save_size, false) : vector_create();
+
+    if (vector_size(editor.code) > 0) {
+        editor.camera_pos.x = editor.code[0].x - 50;
+        editor.camera_pos.y = editor.code[0].y - 50;
+    }
 
     editor.search_list = vector_create();
     editor.search_list_search = vector_create();
@@ -242,7 +247,7 @@ void cleanup(void) {
     CloseWindow();
 }
 
-void start_editor(void) {
+void start_editor(void* save_data, size_t save_size) {
     SetTraceLogCallback(scrap_log_va);
     config_new(&config);
     config_new(&window_config);
@@ -270,7 +275,8 @@ void start_editor(void) {
     //SetWindowState(FLAG_VSYNC_HINT);
     SetTargetFPS(config.fps_limit);
 
-    Image icon = setup();
+    Image icon = setup(save_data, save_size);
+    if (save_data) free(save_data);
     SetWindowIcon(icon);
     // SetWindowIcon() copies the icon so we can safely unload it
     UnloadImage(icon);
@@ -324,7 +330,10 @@ void start_editor(void) {
     cleanup();
 }
 
-int start_runtime(char* bc_path) {
+int start_runtime(void* bc_data, size_t bc_size) {
+    assert(bc_data != NULL);
+    assert(bc_size > 0);
+
     // When starting the editor, GLFW internally sets LC_CTYPE locale to make %lc format options work properly, 
     // so we need to set it here explicitly
     setlocale(LC_CTYPE, "");
@@ -332,20 +341,6 @@ int start_runtime(char* bc_path) {
     IrMemArena* arena = ir_arena_new(GiB(1), KiB(512));
     IrBytecodePool* pool = bytecode_pool_new(arena);
     IrBytecode bc;
-
-    FILE* f = fopen(bc_path, "rb");
-    if (!f) {
-        printf("Cannot load bytecode at path \"%s\": %s\n", bc_path, strerror(errno));
-        return 1;
-    }
-
-    fseek(f, 0, SEEK_END);
-    size_t bc_size = ftell(f);
-    fseek(f, 0, SEEK_SET);
-
-    void* bc_data = malloc(bc_size);
-    bc_size = fread(bc_data, 1, bc_size, f);
-    fclose(f);
 
     bool success = bytecode_load(pool, &bc, bc_data, bc_size);
     free(bc_data);
@@ -389,10 +384,10 @@ int start_runtime(char* bc_path) {
 void usage(char* exe_name) {
     init_console();
 
-    printf("Usage %s [-h] [-run BYTECODE_PATH]\n", exe_name);
+    printf("Usage %s [-h] [PATH]\n", exe_name);
     printf("Flags:\n");
-    printf("    -h                 -- Show help\n");
-    printf("    -run BYTECODE_PATH -- Run .scrb file at path\n");
+    printf("    [PATH] -- Start editor for project files (.scrp) or start interpreter for bytecode files (.scrb)\n");
+    printf("    -h     -- Show help\n");
 #ifdef _WIN32
     printf("Press enter to close");
     getchar();
@@ -402,23 +397,38 @@ void usage(char* exe_name) {
 
 int main(int argc, char** argv) {
     if (argc == 1) {
-        start_editor();
+        start_editor(NULL, 0);
         return 0;
     }
 
     if (!strcmp(argv[1], "-h")) {
         usage(argv[0]);
-    } else if (!strcmp(argv[1], "-run")) {
-        if (argc < 3) usage(argv[0]);
-
-        int ret = start_runtime(argv[2]);
-#ifdef _WIN32
-        printf("Press enter to close");
-        getchar();
-#endif
-        return ret;
     } else {
-        usage(argv[0]);
+        if (argc > 2) usage(argv[0]);
+
+        FILE* f = fopen(argv[1], "rb");
+        if (!f) {
+            printf("Cannot load file at path \"%s\": %s\n", argv[1], strerror(errno));
+            return 1;
+        }
+
+        fseek(f, 0, SEEK_END);
+        size_t file_size = ftell(f);
+        fseek(f, 0, SEEK_SET);
+
+        void* file_data = malloc(file_size);
+        file_size = fread(file_data, 1, file_size, f);
+        fclose(f);
+
+        if (bytecode_load(NULL, NULL, file_data, file_size)) {
+            start_runtime(file_data, file_size);
+        } else if (load_code(file_data, file_size, true)) {
+            start_editor(file_data, file_size);
+        } else {
+            scrap_log(LOG_ERROR, "Specified file at path \"%s\" does not look like a scrap project nor scrap bytecode, aborting", argv[1]);
+            free(file_data);
+            return 1;
+        }
     }
 
     return 0;

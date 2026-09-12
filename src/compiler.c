@@ -171,9 +171,9 @@ bool compiler_run(void* e) {
     bytecode_save(&bytecode, "bytecode.scrb");
 
 #ifdef _WIN32
-    char* cmd = ir_arena_sprintf(compiler.arena, 2048, "scrap.exe -run bytecode.scrb");
+    char* cmd = ir_arena_sprintf(compiler.arena, 2048, "scrap.exe bytecode.scrb");
 #else
-    char* cmd = ir_arena_sprintf(compiler.arena, 2048, "%sscrap -run bytecode.scrb", GetApplicationDirectory());
+    char* cmd = ir_arena_sprintf(compiler.arena, 2048, "%sscrap bytecode.scrb", GetApplicationDirectory());
 #endif
 
     if (!term_run_process(cmd, vm->compiler_error.buf, vm->compiler_error.buf_size)) {

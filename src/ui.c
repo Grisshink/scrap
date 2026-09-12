@@ -536,7 +536,7 @@ void load_project(void) {
     }
     scrap_log(LOG_INFO, "%zu bytes read from %s", file_size, file_path);
 
-    RootBlockChain* chain = load_code(file_data, file_size);
+    RootBlockChain* chain = load_code(file_data, file_size, false);
 
     switch_tab_to_panel(PANEL_CODE);
     UnloadFileData(file_data);

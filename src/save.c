@@ -61,7 +61,7 @@ static unsigned int ver = 0;
 
 int save_find_constant(const Value constant);
 void save_code(const char* file_path, RootBlockChain* code);
-RootBlockChain* load_code(void* file_data, size_t file_size);
+RootBlockChain* load_code(void* file_data, size_t file_size, bool test);
 void save_block(SaveData* save, Block* block);
 Block* load_block(SaveData* save);
 void save_blockdef(SaveData* save, Blockdef* blockdef);
@@ -1285,32 +1285,34 @@ void convert_old_save_structure(RootBlockChain* code) {
     vector_free(chain_list);
 }
 
-RootBlockChain* load_code(void* file_data, size_t file_size) {
-    RootBlockChain* code = vector_create();
-    save_blockdefs = vector_create();
-    save_value_constants = vector_create();
-
+RootBlockChain* load_code(void* file_data, size_t file_size, bool test) {
     SaveData save = {
         .ptr = file_data,
         .capacity = file_size,
     };
 
-    if (!save_read_varint(&save, &ver)) goto load_fail;
+    if (!save_read_varint(&save, &ver)) return NULL;
     if (ver < SCRAP_MIN_SAVE_VERSION || ver > SCRAP_MAX_SAVE_VERSION) {
         scrap_log(LOG_ERROR, "[LOAD] Unsupported version %d. Current scrap build expects save versions from %d to %d", ver, SCRAP_MIN_SAVE_VERSION, SCRAP_MAX_SAVE_VERSION);
-        goto load_fail;
+        return NULL;
     }
     scrap_log(LOG_INFO, "Save version: %d", ver);
 
     unsigned int ident_len;
     char* ident = save_read_array(&save, sizeof(char), &ident_len);
-    if (!ident) goto load_fail;
-    if (ident_len == 0) goto load_fail;
+    if (!ident) return NULL;
+    if (ident_len == 0) return NULL;
 
     if (ident[ident_len - 1] != 0 || ident_len != sizeof(scrap_ident) || strncmp(ident, scrap_ident, sizeof(scrap_ident))) {
         scrap_log(LOG_ERROR, "[LOAD] Not valid scrap save");
-        goto load_fail;
+        return NULL;
     }
+
+    if (test) return (RootBlockChain*)-1;
+
+    RootBlockChain* code = vector_create();
+    save_blockdefs = vector_create();
+    save_value_constants = vector_create();
 
     unsigned int constants_len;
     if (!save_read_varint(&save, &constants_len)) goto load_fail;

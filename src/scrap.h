@@ -482,7 +482,8 @@ void load_config(Config* config);
 void config_copy(Config* dst, Config* src);
 
 void save_code(const char* file_path, RootBlockChain* code);
-RootBlockChain* load_code(void* file_data, size_t file_size);
+// Pass true to test argument to check if save has valid signature and can *theoretitally* be loaded, in that case load_code returns non-NULL value if save has valid signature and NULL otherwise
+RootBlockChain* load_code(void* file_data, size_t file_size, bool test);
 
 const char* language_to_code(Language lang);
 Language code_to_language(const char* code);

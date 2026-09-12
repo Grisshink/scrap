@@ -356,6 +356,7 @@ void bytecode_const_list_append(IrBytecodePool* pool, IrList* list, IrValue val)
 void bytecode_save(IrBytecode* bc, const char* filepath);
 
 // Load bytecode from file data.
+// Pass NULL to pool argument to just check if bytecode has valid signature and can *theoretically* be loaded
 bool bytecode_load(IrBytecodePool* pool, IrBytecode* bc, void* file_data, size_t file_size);
 
 // Create a function value that needs to be resolved at runtime using hint string.
@@ -1068,8 +1069,6 @@ bool bytecode_load_const_value(IrSave* save, IrBytecodePool* pool, IrConstValue*
 }
 
 bool bytecode_load(IrBytecodePool* pool, IrBytecode* bc, void* file_data, size_t file_size) {
-    if (pool->list.size > 0) return false;
-
     IrSave save = {
         .ptr = file_data,
         .pos = 0,
@@ -1093,6 +1092,10 @@ bool bytecode_load(IrBytecodePool* pool, IrBytecode* bc, void* file_data, size_t
         printf("Invalid version: %lu. Supported bytecode versions: %d-%d\n", version, IR_SAVE_MIN_VERSION, IR_SAVE_MAX_VERSION);
         return false;
     }
+
+    if (!pool) return true; // Just test if bytecode can be loaded
+
+    if (pool->list.size > 0) return false;
 
     size_t pool_size;
     if (!bytecode_load_varint(&save, &pool_size)) return false;
