@@ -424,6 +424,11 @@ int main(int argc, char** argv) {
             flags.no_daemonize = true;
 #endif
         } else {
+            if (argv[i][0] == '-') {
+                printf("Error: Unknown flag \"%s\"\n", argv[i]);
+                usage(argv[0]);
+            }
+
             if (flags.file_path) {
                 printf("Error: Multiple file paths provided\n");
                 usage(argv[0]);
