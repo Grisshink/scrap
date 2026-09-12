@@ -32,6 +32,7 @@
 #include <assert.h>
 #include <string.h>
 #include <stdio.h>
+#include <errno.h>
 
 #define KiB(n) ((size_t)(n) << 10)
 #define MiB(n) ((size_t)(n) << 20)
@@ -332,7 +333,23 @@ int start_runtime(char* bc_path) {
     IrBytecodePool* pool = bytecode_pool_new(arena);
     IrBytecode bc;
 
-    if (!bytecode_load(pool, &bc, bc_path)) {
+    FILE* f = fopen(bc_path, "rb");
+    if (!f) {
+        printf("Cannot load bytecode at path \"%s\": %s\n", bc_path, strerror(errno));
+        return 1;
+    }
+
+    fseek(f, 0, SEEK_END);
+    size_t bc_size = ftell(f);
+    fseek(f, 0, SEEK_SET);
+
+    void* bc_data = malloc(bc_size);
+    bc_size = fread(bc_data, 1, bc_size, f);
+    fclose(f);
+
+    bool success = bytecode_load(pool, &bc, bc_data, bc_size);
+    free(bc_data);
+    if (!success) {
         printf("Bytecode load error\n");
         bytecode_pool_free(pool);
         return 1;

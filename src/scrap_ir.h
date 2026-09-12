@@ -355,8 +355,8 @@ void bytecode_const_list_append(IrBytecodePool* pool, IrList* list, IrValue val)
 // Save bytecode into file.
 void bytecode_save(IrBytecode* bc, const char* filepath);
 
-// Load bytecode from file.
-bool bytecode_load(IrBytecodePool* pool, IrBytecode* bc, const char* filepath);
+// Load bytecode from file data.
+bool bytecode_load(IrBytecodePool* pool, IrBytecode* bc, void* file_data, size_t file_size);
 
 // Create a function value that needs to be resolved at runtime using hint string.
 // The exact hint string that needs to be passed depends on current runtime function resolver,
@@ -1067,28 +1067,11 @@ bool bytecode_load_const_value(IrSave* save, IrBytecodePool* pool, IrConstValue*
     return true;
 }
 
-#define IR_LOAD_FAIL do { \
-    return_val = false; \
-    goto load_return; \
-} while (0)
-
-bool bytecode_load(IrBytecodePool* pool, IrBytecode* bc, const char* filepath) {
-    bool return_val = true;
-
+bool bytecode_load(IrBytecodePool* pool, IrBytecode* bc, void* file_data, size_t file_size) {
     if (pool->list.size > 0) return false;
 
-    FILE* f = fopen(filepath, "rb");
-    if (!f) return false;
-
-    fseek(f, 0, SEEK_END);
-    long file_size = ftell(f);
-    fseek(f, 0, SEEK_SET);
-
-    char* data = malloc(file_size);
-    file_size = fread(data, 1, file_size, f);
-
     IrSave save = {
-        .ptr = data,
+        .ptr = file_data,
         .pos = 0,
         .size = file_size,
     };
@@ -1096,40 +1079,40 @@ bool bytecode_load(IrBytecodePool* pool, IrBytecode* bc, const char* filepath) {
     size_t ident_size;
     char* ident;
 
-    if (!bytecode_load_array(&save, (void**)&ident, sizeof(char), &ident_size)) IR_LOAD_FAIL;
+    if (!bytecode_load_array(&save, (void**)&ident, sizeof(char), &ident_size)) return false;
 
     if (strncmp(ident, IR_SAVE_IDENT, ident_size)) {
         printf("Invalid ident: %.*s\n", (int)ident_size, ident);
-        IR_LOAD_FAIL;
+        return false;
     }
 
     uint64_t version;
-    if (!bytecode_load_varint(&save, &version)) IR_LOAD_FAIL;
+    if (!bytecode_load_varint(&save, &version)) return false;
 
     if (version < IR_SAVE_MIN_VERSION || version > IR_SAVE_MAX_VERSION) {
         printf("Invalid version: %lu. Supported bytecode versions: %d-%d\n", version, IR_SAVE_MIN_VERSION, IR_SAVE_MAX_VERSION);
-        IR_LOAD_FAIL;
+        return false;
     }
 
     size_t pool_size;
-    if (!bytecode_load_varint(&save, &pool_size)) IR_LOAD_FAIL;
+    if (!bytecode_load_varint(&save, &pool_size)) return false;
 
     for (size_t i = 0; i < pool_size; i++) {
         IrConstValue value;
-        if (!bytecode_load_const_value(&save, pool, &value)) IR_LOAD_FAIL;
+        if (!bytecode_load_const_value(&save, pool, &value)) return false;
         bytecode_pool_insert(pool, value);
     }
 
     size_t code_size;
     void* code;
-    if (!bytecode_load_array(&save, &code, sizeof(unsigned char), &code_size)) IR_LOAD_FAIL;
+    if (!bytecode_load_array(&save, &code, sizeof(unsigned char), &code_size)) return false;
 
     void* code_ptr = ir_arena_alloc(pool->arena, code_size * sizeof(unsigned char));
     memcpy(code_ptr, code, code_size * sizeof(unsigned char));
 
     size_t labels_size;
     size_t* labels = bytecode_load_varint_array(&save, pool, &labels_size);
-    if (!labels) IR_LOAD_FAIL;
+    if (!labels) return false;
 
     *bc = bytecode_new(NULL, pool);
 
@@ -1143,10 +1126,7 @@ bool bytecode_load(IrBytecodePool* pool, IrBytecode* bc, const char* filepath) {
     bc->labels.capacity = labels_size;
     bc->labels.items = labels;
 
-load_return:
-    free(data);
-    fclose(f);
-    return return_val;
+    return true;
 }
 
 void bytecode_save_varint(IrMemArena* save, uint64_t val) {
