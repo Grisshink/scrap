@@ -66,7 +66,6 @@ typedef struct {
 static int cursor_x = 0;
 static int cursor_y = 0;
 static bool cursor_dirty = false;
-static StdColor clear_color = {0};
 static StdColor bg_color = {0};
 static IrMemArena* std_arena;
 static StdSymbolList loaded_symbols;
@@ -744,12 +743,6 @@ bool std_term_set_bg_color(IrExec* exec) {
     return true;
 }
 
-bool std_term_set_clear_color(IrExec* exec) {
-    int32_t color_val = exec_pop_int(exec);
-    clear_color = *(StdColor*)&color_val;
-    return true;
-}
-
 bool std_term_cursor_max_y(IrExec* exec) {
 #ifdef _WIN32
     CONSOLE_SCREEN_BUFFER_INFO csbi;
@@ -803,10 +796,8 @@ bool std_term_cursor_y(IrExec* exec) {
 bool std_term_clear(IrExec* exec) {
     (void) exec;
     // ESC[48;2;⟨r⟩;⟨g⟩;⟨b⟩m Select RGB background color
-    printf("\033[48;2;%d;%d;%dm", clear_color.r, clear_color.g, clear_color.b);
-    printf("\033[2J");
-    // ESC[48;2;⟨r⟩;⟨g⟩;⟨b⟩m Select RGB background color
     printf("\033[48;2;%d;%d;%dm", bg_color.r, bg_color.g, bg_color.b);
+    printf("\033[1;1H\033[2J");
     cursor_x = 0;
     cursor_y = 0;
     cursor_dirty = false;
@@ -954,7 +945,6 @@ IrRunFunction std_resolve_function(IrExec* exec, const char* hint) {
         STD_FUNC(std_term_cursor_max_y),
         STD_FUNC(std_term_set_fg_color),
         STD_FUNC(std_term_set_bg_color),
-        STD_FUNC(std_term_set_clear_color),
         STD_FUNC(std_term_clear),
         STD_FUNC(std_color_to_string),
         STD_FUNC(std_string_to_color),

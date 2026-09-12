@@ -83,8 +83,6 @@ typedef struct {
     TerminalChar *buffer;
     bool is_buffer_dirty;
 
-    TermColor clear_color;
-
     TermPrintState print_state;
 
     // Opaque: Corresponds to TermPty type in term.c

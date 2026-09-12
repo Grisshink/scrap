@@ -1758,20 +1758,6 @@ Value block_term_clear(Compiler* compiler, Block* block, Block** next_block, Blo
     return DATA_CHUNK(DATA_TYPE_NULL, bc);
 }
 
-Value block_term_set_clear(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
-    (void) next_block;
-    (void) prev_block;
-
-    Value color = compiler_evaluate_argument(compiler, &block->arguments[0]);
-    if (color.type == DATA_TYPE_ERROR) return DATA_ERROR;
-    color = cast_to_bc_color(compiler, color);
-    if (color.type == DATA_TYPE_ERROR) return DATA_ERROR;
-
-    IrBytecode bc = color.data.chunk_val.bc;
-    bytecode_push_op_func(&bc, IR_RUN, ir_func_by_hint("std_term_set_clear_color"));
-    return DATA_CHUNK(DATA_TYPE_NULL, bc);
-}
-
 Value block_plus(Compiler* compiler, Block* block, Block** next_block, Block* prev_block) {
     (void) next_block;
     (void) prev_block;
@@ -2853,13 +2839,6 @@ void register_blocks(Vm* vm) {
     blockdef_add_text(sc_term_clear, gettext("Clear terminal"));
     blockdef_register(vm, sc_term_clear);
     block_category_add_blockdef(cat_terminal, sc_term_clear);
-
-    Blockdef* sc_term_set_clear = blockdef_new("term_set_clear", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_TERMINAL_COLOR, DATA_TYPE_NULL, block_term_set_clear);
-    blockdef_add_image(sc_term_set_clear, term_img);
-    blockdef_add_text(sc_term_set_clear, gettext("Set clear color"));
-    blockdef_add_argument(sc_term_set_clear, (Value) { .type = DATA_TYPE_COLOR, .data.color_val = (BlockdefColor) { 0x00, 0x00, 0x00, 0xff } }, DATA_TYPE_COLOR);
-    blockdef_register(vm, sc_term_set_clear);
-    block_category_add_blockdef(cat_terminal, sc_term_set_clear);
 
     Blockdef* sc_plus = blockdef_new("plus", BLOCKTYPE_NORMAL, (BlockdefColor) CATEGORY_MATH_COLOR, DATA_TYPE_ANY, block_plus);
     blockdef_add_argument(sc_plus, value_from_string("9"), DATA_TYPE_ANY);

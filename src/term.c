@@ -100,7 +100,6 @@ void term_restart(void) {
     term.input_buf_size = 0;
     term.cursor_fg_color = TERM_WHITE;
     term.cursor_bg_color = TERM_BLACK;
-    term.clear_color = TERM_BLACK;
     vector_clear(term.output_buf);
     memset(&term.print_state, 0, sizeof(term.print_state));
     term_clear();
@@ -131,7 +130,7 @@ void term_scroll_up(void) {
     for (int i = 0; i < term.char_w; i++) {
         strncpy(term.buffer[i].ch, " ", ARRLEN(term.buffer[i].ch));
         term.buffer[i].fg_color = TERM_WHITE;
-        term.buffer[i].bg_color = term.clear_color;
+        term.buffer[i].bg_color = term.cursor_bg_color;
     }
 }
 
@@ -140,7 +139,7 @@ void term_scroll_down(void) {
     for (int i = term.char_w * (term.char_h - 1); i < term.char_w * term.char_h; i++) {
         strncpy(term.buffer[i].ch, " ", ARRLEN(term.buffer[i].ch));
         term.buffer[i].fg_color = TERM_WHITE;
-        term.buffer[i].bg_color = term.clear_color;
+        term.buffer[i].bg_color = term.cursor_bg_color;
     }
 }
 
@@ -150,10 +149,6 @@ void term_set_fg_color(TermColor color) {
 
 void term_set_bg_color(TermColor color) {
     term.cursor_bg_color = color;
-}
-
-void term_set_clear_color(TermColor color) {
-    term.clear_color = color;
 }
 
 void handle_graphic_mode(void) {
@@ -249,14 +244,14 @@ void exec_escape(char command) {
                 for (int pos = term.cursor_pos; pos < end_pos; pos++) {
                     strncpy(term.buffer[pos].ch, " ", ARRLEN(term.buffer[pos].ch));
                     term.buffer[pos].fg_color = TERM_WHITE;
-                    term.buffer[pos].bg_color = term.clear_color;
+                    term.buffer[pos].bg_color = term.cursor_bg_color;
                 }
             } else if (clear_mode == 1) {
                 int start_pos = term.cursor_pos - (term.cursor_pos % term.char_w);
                 for (int pos = start_pos; pos <= term.cursor_pos; pos++) {
                     strncpy(term.buffer[pos].ch, " ", ARRLEN(term.buffer[pos].ch));
                     term.buffer[pos].fg_color = TERM_WHITE;
-                    term.buffer[pos].bg_color = term.clear_color;
+                    term.buffer[pos].bg_color = term.cursor_bg_color;
                 }
             } else if (clear_mode == 2) {
                 int start_pos = term.cursor_pos - (term.cursor_pos % term.char_w);
@@ -264,7 +259,7 @@ void exec_escape(char command) {
                 for (int pos = start_pos; pos < end_pos; pos++) {
                     strncpy(term.buffer[pos].ch, " ", ARRLEN(term.buffer[pos].ch));
                     term.buffer[pos].fg_color = TERM_WHITE;
-                    term.buffer[pos].bg_color = term.clear_color;
+                    term.buffer[pos].bg_color = term.cursor_bg_color;
                 }
             }
             break;
@@ -274,7 +269,7 @@ void exec_escape(char command) {
             for (int pos = term.cursor_pos; pos < end_pos; pos++) {
                 strncpy(term.buffer[pos].ch, " ", ARRLEN(term.buffer[pos].ch));
                 term.buffer[pos].fg_color = TERM_WHITE;
-                term.buffer[pos].bg_color = term.clear_color;
+                term.buffer[pos].bg_color = term.cursor_bg_color;
             }
             break;
         case 'n': ;
@@ -408,7 +403,7 @@ void term_print_str(const char* str) {
             assert(pos < term.char_w * term.char_h);
             strncpy(term.buffer[pos].ch, " ", ARRLEN(term.buffer[pos].ch));
             term.buffer[pos].fg_color = TERM_WHITE;
-            term.buffer[pos].bg_color = term.clear_color;
+            term.buffer[pos].bg_color = term.cursor_bg_color;
             ADVANCE_CHAR;
             continue;
         }
@@ -473,7 +468,7 @@ static void term_clear_forward(int pos) {
     for (int i = pos; i < term.char_w * term.char_h; i++) {
         strncpy(term.buffer[i].ch, " ", ARRLEN(term.buffer[i].ch));
         term.buffer[i].fg_color = TERM_WHITE;
-        term.buffer[i].bg_color = term.clear_color;
+        term.buffer[i].bg_color = term.cursor_bg_color;
     }
 }
 
@@ -482,7 +477,7 @@ static void term_clear_backward(int pos) {
     for (int i = pos; i >= 0; i--) {
         strncpy(term.buffer[i].ch, " ", ARRLEN(term.buffer[i].ch));
         term.buffer[i].fg_color = TERM_WHITE;
-        term.buffer[i].bg_color = term.clear_color;
+        term.buffer[i].bg_color = term.cursor_bg_color;
     }
 }
 
@@ -490,7 +485,7 @@ void term_clear(void) {
     for (int i = 0; i < term.char_w * term.char_h; i++) {
         strncpy(term.buffer[i].ch, " ", ARRLEN(term.buffer[i].ch));
         term.buffer[i].fg_color = TERM_WHITE;
-        term.buffer[i].bg_color = term.clear_color;
+        term.buffer[i].bg_color = term.cursor_bg_color;
     }
     term.cursor_pos = 0;
 }
@@ -522,7 +517,7 @@ void term_resize(float screen_w, float screen_h) {
                     if (x >= term.char_w || y >= term.char_h) {
                         strncpy(ch->ch, " ", ARRLEN(ch->ch));
                         ch->fg_color = TERM_WHITE;
-                        ch->bg_color = term.clear_color;
+                        ch->bg_color = term.cursor_bg_color;
                         continue;
                     }
 
