@@ -322,6 +322,10 @@ void bytecode_print(IrBytecode* bc);
 // The returned ConstId can be used to reference the label in other bytecode functions.
 ConstId bytecode_push_label(IrBytecode* bc, const char* name);
 
+// Tries to find label with specified name in provided bytecode.
+// Will return NULL if no such label is found
+IrLabel* bytecode_find_label(IrBytecode* bc, const char* label_name);
+
 // Appends the instruction to the end of bytecode.
 // The returned IrInstructionID can be used to reference the instruction in other bytecode functions.
 IrInstructionID bytecode_push_op(IrBytecode* bc, IrOpcode op);

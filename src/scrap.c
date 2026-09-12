@@ -351,6 +351,12 @@ int start_runtime(char* bc_path) {
     exec_set_run_function_resolver(&exec, std_resolve_function);
     exec_add_bytecode(&exec, bc);
 
+    if (!bytecode_find_label(&bc, "entry")) {
+        bytecode_pool_free(pool);
+        exec_free(&exec);
+        return 0;
+    }
+
     if (!exec_run(&exec, "main", "entry")) {
         printf("Runtime error: %s\n", exec.last_error);
         bytecode_pool_free(pool);
