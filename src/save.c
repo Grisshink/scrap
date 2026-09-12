@@ -492,6 +492,10 @@ bool save_read_varint(SaveData* save, unsigned int* out) {
     do {
         chunk = save_read_item(save, sizeof(unsigned char));
         if (!chunk) return false;
+        if (pos == 28 && (*chunk >= 0x80 + 16 || *chunk < 0x80)) {
+            scrap_log(LOG_ERROR, "[LOAD] save_read_varint number overflow");
+            return false;
+        }
         *out |= (*chunk & 0x7f) << pos;
         pos += 7;
     } while ((*chunk & 0x80) == 0);
