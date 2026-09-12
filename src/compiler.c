@@ -60,6 +60,7 @@ void compiler_error_free(CompilerError* error) {
     if (error->buf) free(error->buf);
 }
 
+#ifdef DEBUG
 static const char* format_byte_count(Compiler* compiler, size_t size) {
     if (size < KiB(1)) {
         return ir_arena_sprintf(compiler->arena, 32, "%zu", size);
@@ -71,6 +72,7 @@ static const char* format_byte_count(Compiler* compiler, size_t size) {
         return ir_arena_sprintf(compiler->arena, 32, "%.2gGiB", (double)size / (1024.0 * 1024.0 * 1024.0));
     }
 }
+#endif
 
 static RootBlockChain* find_root_blockchain(Compiler* compiler, BlockChain* chain) {
     for (size_t i = 0; i < vector_size(compiler->code); i++) {

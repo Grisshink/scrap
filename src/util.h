@@ -46,6 +46,13 @@
 #define LOG_FATAL 6
 #define LOG_NONE 7
 
+#define INT_TO_COLOR(v) { \
+    ((v) >> 0 ) & 255, \
+    ((v) >> 8 ) & 255, \
+    ((v) >> 16) & 255, \
+    ((v) >> 24) & 255, \
+}
+
 typedef struct {
     struct timespec start;
     const char* name;

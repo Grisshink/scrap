@@ -490,7 +490,7 @@ bool std_run_foreign(IrExec* exec) {
 
 bool std_color_to_string(IrExec* exec) {
     int64_t color_int = exec_pop_int(exec);
-    StdColor color = *(StdColor*)&color_int;
+    StdColor color = INT_TO_COLOR(color_int);
 
     char str[32];
     snprintf(str, 32, "#%02x%02x%02x%02x", color.r, color.g, color.b, color.a);
@@ -726,7 +726,7 @@ bool std_term_println_str(IrExec* exec) {
 
 bool std_term_set_fg_color(IrExec* exec) {
     int32_t color_val = exec_pop_int(exec);
-    StdColor color = *(StdColor*)&color_val;
+    StdColor color = INT_TO_COLOR(color_val);
     // ESC[38;2;⟨r⟩;⟨g⟩;⟨b⟩m Select RGB foreground color
     printf("\033[38;2;%d;%d;%dm", color.r, color.g, color.b);
     fflush(stdout);
@@ -735,7 +735,7 @@ bool std_term_set_fg_color(IrExec* exec) {
 
 bool std_term_set_bg_color(IrExec* exec) {
     int32_t color_val = exec_pop_int(exec);
-    StdColor color = *(StdColor*)&color_val;
+    StdColor color = INT_TO_COLOR(color_val);
     // ESC[48;2;⟨r⟩;⟨g⟩;⟨b⟩m Select RGB background color
     printf("\033[48;2;%d;%d;%dm", color.r, color.g, color.b);
     bg_color = color;

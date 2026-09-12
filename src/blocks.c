@@ -604,8 +604,10 @@ Value cast_to_const_color(Compiler* compiler, Value value) {
 
     static_assert(DATA_TYPE_LAST == 12, "Exhaustive data type in cast_to_const_color");
     switch (value.type) {
-    case DATA_TYPE_INTEGER: return DATA_COLOR(*(BlockdefColor*)&value.data.integer_val);
-    case DATA_TYPE_FLOAT: return DATA_COLOR(*(BlockdefColor*)&value.data.float_val);
+    case DATA_TYPE_INTEGER: return DATA_COLOR((BlockdefColor) INT_TO_COLOR(value.data.integer_val));
+    case DATA_TYPE_FLOAT: ;
+        int64_t int_val = value.data.float_val;
+        return DATA_COLOR((BlockdefColor) INT_TO_COLOR(int_val));
     case DATA_TYPE_STRING: ;
         char* str = value.data.str_val;
         if (*str == '#') str++;

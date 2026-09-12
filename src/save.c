@@ -33,13 +33,6 @@
 #define SHARED_DIR_BUF_LEN 512
 #define LOCALE_DIR_BUF_LEN 768
 
-#define INT_TO_COLOR(v) ((BlockdefColor) { \
-    ((v) >> 0 ) & 255, \
-    ((v) >> 8 ) & 255, \
-    ((v) >> 16) & 255, \
-    ((v) >> 24) & 255, \
-})
-
 typedef struct {
     void* ptr;
     size_t size;

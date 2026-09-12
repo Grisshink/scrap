@@ -25,6 +25,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <assert.h>
+#include <wchar.h>
 
 #define IR_LAST_ERROR_SIZE 512
 
@@ -556,7 +557,7 @@ size_t hash_value(IrConstValue value) {
     case IR_TYPE_NOTHING: hash = 0xdeadbeef; break;
     case IR_TYPE_BYTE: hash = value.as.byte_val; break;
     case IR_TYPE_INT: hash = value.as.int_val; break;
-    case IR_TYPE_FLOAT: hash = *(size_t*)&value.as.float_val; break;
+    case IR_TYPE_FLOAT: hash = *(size_t*)&value.as.float_val; break; // FIXME: Figure out a better way to hash float values
     case IR_TYPE_BOOL: hash = value.as.bool_val; break;
     case IR_TYPE_LIST: ;
         IrList* list = value.as.list_val;
@@ -1345,7 +1346,7 @@ void bytecode_print(IrBytecode* bc) {
                     }
                     IrValue c = list->items[j];
                     switch (c.type) {
-                    case IR_TYPE_INT: printf("%lc", c.as.int_val); break;
+                    case IR_TYPE_INT: printf("%lc", (wint_t)c.as.int_val); break;
                     case IR_TYPE_BYTE: printf("%c", c.as.byte_val); break;
                     default: printf("?"); break;
                     }
@@ -1611,8 +1612,10 @@ void exec_collect(IrExec* exec) {
         exec_heap_copy_value(exec, &exec->globals.items[i]);
     }
 
+#ifdef DEBUG
     size_t memory_freed = exec->heap.mem->pos - exec->second_heap.mem->pos;
     size_t chunks_deleted = exec->heap.chunks_count - exec->second_heap.chunks_count;
+#endif
 
     IrHeap temp_heap = exec->heap;
     exec->heap = exec->second_heap;
