@@ -399,7 +399,7 @@ void usage(char* exe_name) {
 #ifndef _WIN32
     printf("    -d, --no-daemon -- Do not run scrap as background process, log everything into console (Linux only)\n");
 #endif
-    printf("    -h              -- Show help\n");
+    printf("    -h, --help      -- Show help\n");
 #ifdef _WIN32
     printf("Press enter to close");
     getchar();
@@ -416,6 +416,8 @@ int main(int argc, char** argv) {
 
     for (int i = 1; i < argc; i++) {
         if (!strcmp(argv[i], "-h")) {
+            flags.help = true;
+        } else if (!strcmp(argv[i], "--help")) {
             flags.help = true;
 #ifndef _WIN32
         } else if (!strcmp(argv[i], "--no-daemon")) {
