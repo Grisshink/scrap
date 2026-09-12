@@ -253,7 +253,7 @@ void start_editor(void* save_data, size_t save_size, bool daemonize) {
     (void) daemonize;
 #else
     if (daemonize) {
-        printf("Opening scrap in background...\n");
+        printf("Opening scrap in background... (Pass -d flag to run in console)\n");
         daemon(1, 0);
     }
 #endif
