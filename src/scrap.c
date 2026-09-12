@@ -33,6 +33,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <errno.h>
+#include <unistd.h>
 
 #define KiB(n) ((size_t)(n) << 10)
 #define MiB(n) ((size_t)(n) << 20)
@@ -247,7 +248,12 @@ void cleanup(void) {
     CloseWindow();
 }
 
-void start_editor(void* save_data, size_t save_size) {
+void start_editor(void* save_data, size_t save_size, bool daemonize) {
+    if (daemonize) {
+        printf("Opening scrap in background...\n");
+        daemon(1, 0);
+    }
+
     SetTraceLogCallback(scrap_log_va);
     config_new(&config);
     config_new(&window_config);
@@ -384,10 +390,10 @@ int start_runtime(void* bc_data, size_t bc_size) {
 void usage(char* exe_name) {
     init_console();
 
-    printf("Usage %s [-h] [PATH]\n", exe_name);
-    printf("Flags:\n");
-    printf("    [PATH] -- Start editor for project files (.scrp) or start interpreter for bytecode files (.scrb)\n");
-    printf("    -h     -- Show help\n");
+    printf("Usage %s [OPTIONS] [FILE]\n\n", exe_name);
+    printf("OPTIONS:\n");
+    printf("    -d, --no-daemon -- Do not run scrap as background process, log everything into console\n");
+    printf("    -h              -- Show help\n");
 #ifdef _WIN32
     printf("Press enter to close");
     getchar();
@@ -396,19 +402,34 @@ void usage(char* exe_name) {
 }
 
 int main(int argc, char** argv) {
-    if (argc == 1) {
-        start_editor(NULL, 0);
-        return 0;
+    struct {
+        bool help;
+        bool no_daemonize;
+        char* file_path;
+    } flags = {0};
+
+    for (int i = 1; i < argc; i++) {
+        if (!strcmp(argv[i], "-h")) {
+            flags.help = true;
+        } else if (!strcmp(argv[i], "--no-daemon")) {
+            flags.no_daemonize = true;
+        } else if (!strcmp(argv[i], "-d")) {
+            flags.no_daemonize = true;
+        } else {
+            if (flags.file_path) {
+                printf("Error: Multiple file paths provided\n");
+                usage(argv[0]);
+            }
+            flags.file_path = argv[i];
+        }
     }
 
-    if (!strcmp(argv[1], "-h")) {
-        usage(argv[0]);
-    } else {
-        if (argc > 2) usage(argv[0]);
+    if (flags.help) usage(argv[0]);
 
-        FILE* f = fopen(argv[1], "rb");
+    if (flags.file_path) {
+        FILE* f = fopen(flags.file_path, "rb");
         if (!f) {
-            printf("Cannot load file at path \"%s\": %s\n", argv[1], strerror(errno));
+            printf("Cannot load file at path \"%s\": %s\n", flags.file_path, strerror(errno));
             return 1;
         }
 
@@ -421,15 +442,17 @@ int main(int argc, char** argv) {
         fclose(f);
 
         if (bytecode_load(NULL, NULL, file_data, file_size)) {
-            start_runtime(file_data, file_size);
+            return start_runtime(file_data, file_size);
         } else if (load_code(file_data, file_size, true)) {
-            start_editor(file_data, file_size);
+            start_editor(file_data, file_size, !flags.no_daemonize);
+            return 0;
         } else {
-            scrap_log(LOG_ERROR, "Specified file at path \"%s\" does not look like a scrap project nor scrap bytecode, aborting", argv[1]);
+            scrap_log(LOG_ERROR, "Specified file at path \"%s\" does not look like a scrap project nor scrap bytecode, aborting", flags.file_path);
             free(file_data);
             return 1;
         }
     }
 
+    start_editor(NULL, 0, !flags.no_daemonize);
     return 0;
 }
