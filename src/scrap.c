@@ -249,10 +249,14 @@ void cleanup(void) {
 }
 
 void start_editor(void* save_data, size_t save_size, bool daemonize) {
+#ifdef _WIN32
+    (void) daemonize;
+#else
     if (daemonize) {
         printf("Opening scrap in background...\n");
         daemon(1, 0);
     }
+#endif
 
     SetTraceLogCallback(scrap_log_va);
     config_new(&config);
@@ -392,7 +396,9 @@ void usage(char* exe_name) {
 
     printf("Usage %s [OPTIONS] [FILE]\n\n", exe_name);
     printf("OPTIONS:\n");
-    printf("    -d, --no-daemon -- Do not run scrap as background process, log everything into console\n");
+#ifndef _WIN32
+    printf("    -d, --no-daemon -- Do not run scrap as background process, log everything into console (Linux only)\n");
+#endif
     printf("    -h              -- Show help\n");
 #ifdef _WIN32
     printf("Press enter to close");
@@ -411,10 +417,12 @@ int main(int argc, char** argv) {
     for (int i = 1; i < argc; i++) {
         if (!strcmp(argv[i], "-h")) {
             flags.help = true;
+#ifndef _WIN32
         } else if (!strcmp(argv[i], "--no-daemon")) {
             flags.no_daemonize = true;
         } else if (!strcmp(argv[i], "-d")) {
             flags.no_daemonize = true;
+#endif
         } else {
             if (flags.file_path) {
                 printf("Error: Multiple file paths provided\n");
