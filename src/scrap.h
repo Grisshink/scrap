@@ -326,13 +326,23 @@ typedef struct {
 typedef void (*WindowGuiRenderFunc)(void);
 
 typedef struct {
+    Vector2 position;
+    Vector2 real_position;
+    Vector2 click_position;
+} ScrapCamera;
+
+typedef enum {
+    CODE_REPOSITION_SNAP,       // Highlighted block snaps back until it becomes visible in code area
+    CODE_REPOSITION_FIXED_SNAP, // Highlighted block snaps back to fixed position in code area
+} CodeRepositionType;
+
+typedef struct {
     char project_name[1024];
     bool project_modified;
 
     Tab* tabs;
 
-    Vector2 camera_pos;
-    Vector2 camera_click_pos;
+    ScrapCamera camera;
 
     RootBlockChain* code;
     BlockPalette palette;
@@ -340,6 +350,10 @@ typedef struct {
     char* search_list_search;
     Blockdef** search_list;
     Vector2 search_list_pos;
+
+    bool code_area_needs_reposition;
+    bool code_area_reposition;
+    CodeRepositionType code_area_reposition_type;
 
     ActionBar actionbar;
     RootBlockChain* mouse_blockchains;

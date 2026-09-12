@@ -264,6 +264,11 @@ static void switch_tab_to_panel(PanelType panel) {
     }
 }
 
+static void code_area_trigger_reposition(CodeRepositionType reposition_type) {
+    editor.code_area_reposition_type = reposition_type;
+    editor.code_area_needs_reposition = true;
+}
+
 static void set_mark(void) {
     if (IsKeyDown(KEY_LEFT_SHIFT) || IsKeyDown(KEY_RIGHT_SHIFT)) {
         if (ui.hover.select_input_mark == -1) ui.hover.select_input_mark = ui.hover.select_input_cursor;
@@ -553,8 +558,8 @@ void load_project(void) {
     editor.code = chain;
 
     editor.blockchain_select_counter = 0;
-    editor.camera_pos.x = editor.code[editor.blockchain_select_counter].x - 50;
-    editor.camera_pos.y = editor.code[editor.blockchain_select_counter].y - 50;
+    editor.camera.position.x = editor.code[editor.blockchain_select_counter].x - 50;
+    editor.camera.position.y = editor.code[editor.blockchain_select_counter].y - 50;
 
     char* base_file_path = get_basename(file_path);
 
@@ -649,6 +654,7 @@ bool handle_jump_to_block_button_click(void) {
     ui.hover.editor.select_block = vm.compiler_error.block;
     ui.hover.editor.select_blockchain = vm.compiler_error.blockchain;
     ui.hover.editor.select_root_blockchain = vm.compiler_error.root_blockchain;
+    code_area_trigger_reposition(CODE_REPOSITION_FIXED_SNAP);
     return true;
 }
 
@@ -975,8 +981,8 @@ static void code_put_blocks(bool single) {
 
     if (single) {
         RootBlockChain root = editor.mouse_blockchains[0]; 
-        root.x += editor.camera_pos.x - ui.hover.panels.panel_size.x;
-        root.y += editor.camera_pos.y - ui.hover.panels.panel_size.y;
+        root.x += editor.camera.position.x - ui.hover.panels.panel_size.x;
+        root.y += editor.camera.position.y - ui.hover.panels.panel_size.y;
         root.x /= config.ui_size / 32.0;
         root.y /= config.ui_size / 32.0;
         vector_add(&editor.code, root);
@@ -984,8 +990,8 @@ static void code_put_blocks(bool single) {
     } else {
         for (size_t i = 0; i < vector_size(editor.mouse_blockchains); i++) {
             RootBlockChain root = editor.mouse_blockchains[i];
-            root.x += editor.camera_pos.x - ui.hover.panels.panel_size.x;
-            root.y += editor.camera_pos.y - ui.hover.panels.panel_size.y;
+            root.x += editor.camera.position.x - ui.hover.panels.panel_size.x;
+            root.y += editor.camera.position.y - ui.hover.panels.panel_size.y;
             root.x /= config.ui_size / 32.0;
             root.y /= config.ui_size / 32.0;
             vector_add(&editor.code, root);
@@ -1404,7 +1410,7 @@ static void get_input_ind(void) {
 // Return value indicates if we should cancel dragging
 static bool handle_mouse_click(void) {
     ui.hover.mouse_click_pos = (Vector2) { gui->mouse_x, gui->mouse_y };
-    editor.camera_click_pos = editor.camera_pos;
+    editor.camera.click_position = editor.camera.position;
     ui.hover.dragged_slider.value = NULL;
 
     if (ui.hover.select_input == &editor.search_list_search) {
@@ -1620,6 +1626,42 @@ static Block* block_prev_block(Block* block) {
     return block;
 }
 
+static void code_reposition(void) {
+    if (!ui.hover.editor.select_blockchain || !ui.hover.editor.select_block) return;
+
+    Vector2 block_pos = ui.hover.editor.select_block_pos;
+    Rectangle code_panel_bounds = ui.hover.panels.code_panel_bounds;
+
+    int edge_width  = code_panel_bounds.width  * 0.1;
+    int edge_height = code_panel_bounds.height * 0.1;
+
+    float left_edge  = code_panel_bounds.x + edge_width;
+    float right_edge = (code_panel_bounds.x + code_panel_bounds.width) - edge_width;
+
+    float top_edge    = code_panel_bounds.y + edge_height;
+    float bottom_edge = (code_panel_bounds.y + code_panel_bounds.height) - edge_height;
+
+    switch (editor.code_area_reposition_type) {
+    case CODE_REPOSITION_SNAP:
+        if (block_pos.x > right_edge)  editor.camera.position.x += block_pos.x - right_edge;
+        if (block_pos.x < left_edge)   editor.camera.position.x += block_pos.x - left_edge;
+        if (block_pos.y > bottom_edge) editor.camera.position.y += block_pos.y - bottom_edge;
+        if (block_pos.y < top_edge)    editor.camera.position.y += block_pos.y - top_edge;
+
+        if (block_pos.x < left_edge  || block_pos.y < top_edge ||
+            block_pos.x > right_edge || block_pos.y > bottom_edge)
+        {
+            ui.render_surface_needs_redraw = true;
+        }
+
+        break;
+    case CODE_REPOSITION_FIXED_SNAP:
+        editor.camera.position.x += block_pos.x - left_edge;
+        editor.camera.position.y += block_pos.y - top_edge;
+        break;
+    }
+}
+
 static bool handle_code_panel_key_press(void) {
     if (ui.hover.editor.select_argument && !ui.hover.select_input) {
         if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_KP_ENTER)) {
@@ -1654,56 +1696,37 @@ static bool handle_code_panel_key_press(void) {
         ui.hover.editor.select_blockchain = editor.code[editor.blockchain_select_counter].chain;
         ui.hover.editor.select_root_blockchain = &editor.code[editor.blockchain_select_counter];
         actionbar_show(TextFormat(gettext("Jump to chain (%d/%d)"), editor.blockchain_select_counter + 1, vector_size(editor.code)));
+        code_area_trigger_reposition(CODE_REPOSITION_FIXED_SNAP);
         ui.render_surface_needs_redraw = true;
         return true;
     }
 
     if (!ui.hover.editor.select_blockchain || !ui.hover.editor.select_block) return false;
-
-    int bounds_x = ui.hover.panels.code_panel_bounds.width  * 0.1;
-    int bounds_y = ui.hover.panels.code_panel_bounds.height * 0.1;
-
-    if (ui.hover.editor.select_block_pos.x - (ui.hover.panels.code_panel_bounds.x + ui.hover.panels.code_panel_bounds.width) > -bounds_x) {
-        editor.camera_pos.x += ui.hover.editor.select_block_pos.x - (ui.hover.panels.code_panel_bounds.x + ui.hover.panels.code_panel_bounds.width) + bounds_x;
-        ui.render_surface_needs_redraw = true;
-    }
-
-    if (ui.hover.editor.select_block_pos.x - ui.hover.panels.code_panel_bounds.x < bounds_x) {
-        editor.camera_pos.x += ui.hover.editor.select_block_pos.x - ui.hover.panels.code_panel_bounds.x - bounds_x;
-        ui.render_surface_needs_redraw = true;
-    }
-
-    if (ui.hover.editor.select_block_pos.y - (ui.hover.panels.code_panel_bounds.y + ui.hover.panels.code_panel_bounds.height) > -bounds_y) {
-        editor.camera_pos.y += ui.hover.editor.select_block_pos.y - (ui.hover.panels.code_panel_bounds.y + ui.hover.panels.code_panel_bounds.height) + bounds_y;
-        ui.render_surface_needs_redraw = true;
-    }
-
-    if (ui.hover.editor.select_block_pos.y - ui.hover.panels.code_panel_bounds.y < bounds_y) {
-        editor.camera_pos.y += ui.hover.editor.select_block_pos.y - ui.hover.panels.code_panel_bounds.y - bounds_y;
-        ui.render_surface_needs_redraw = true;
-    }
-
     if (ui.hover.select_input) return false;
 
     if (IsKeyPressed(KEY_RIGHT) || IsKeyPressedRepeat(KEY_RIGHT)) {
         block_next_argument();
+        code_area_trigger_reposition(CODE_REPOSITION_SNAP);
         ui.render_surface_needs_redraw = true;
         return true;
     }
     if (IsKeyPressed(KEY_LEFT) || IsKeyPressedRepeat(KEY_LEFT)) {
         block_prev_argument();
+        code_area_trigger_reposition(CODE_REPOSITION_SNAP);
         ui.render_surface_needs_redraw = true;
         return true;
     }
     if (IsKeyPressed(KEY_UP) || IsKeyPressedRepeat(KEY_UP)) {
         ui.hover.editor.select_block = block_prev_block(ui.hover.editor.select_block);
         ui.hover.editor.select_argument = NULL;
+        code_area_trigger_reposition(CODE_REPOSITION_SNAP);
         ui.render_surface_needs_redraw = true;
         return true;
     }
     if (IsKeyPressed(KEY_DOWN) || IsKeyPressedRepeat(KEY_DOWN)) {
         ui.hover.editor.select_block = block_next_block(ui.hover.editor.select_block, ui.hover.editor.select_block->prev);
         ui.hover.editor.select_argument = NULL;
+        code_area_trigger_reposition(CODE_REPOSITION_SNAP);
         ui.render_surface_needs_redraw = true;
         return true;
     }
@@ -1883,8 +1906,8 @@ static void handle_mouse_wheel(void) {
     if (gui_window_is_shown()) return;
 
     Vector2 wheel = GetMouseWheelMoveV();
-    editor.camera_pos.x -= wheel.x * config.ui_size * 2;
-    editor.camera_pos.y -= wheel.y * config.ui_size * 2;
+    editor.camera.position.x -= wheel.x * config.ui_size * 2;
+    editor.camera.position.y -= wheel.y * config.ui_size * 2;
 
     if (wheel.x != 0 || wheel.y != 0) {
         ui.hover.editor.select_block = NULL;
@@ -1924,8 +1947,8 @@ static void handle_mouse_drag(void) {
         return;
     }
 
-    editor.camera_pos.x = editor.camera_click_pos.x - (gui->mouse_x - ui.hover.mouse_click_pos.x);
-    editor.camera_pos.y = editor.camera_click_pos.y - (gui->mouse_y - ui.hover.mouse_click_pos.y);
+    editor.camera.position.x = editor.camera.click_position.x - (gui->mouse_x - ui.hover.mouse_click_pos.x);
+    editor.camera.position.y = editor.camera.click_position.y - (gui->mouse_y - ui.hover.mouse_click_pos.y);
 }
 
 void scrap_gui_process_ui(void) {
@@ -1941,6 +1964,19 @@ void scrap_gui_process_ui(void) {
     if (ui.shader_time >= 1.0) {
         ui.shader_time = 1.0;
     } else {
+        ui.render_surface_needs_redraw = true;
+    }
+
+    if (editor.code_area_needs_reposition) {
+        code_reposition();
+        editor.code_area_needs_reposition = false;
+    }
+
+    if (fabsf(editor.camera.position.x - editor.camera.real_position.x) > 1e-3 || 
+        fabsf(editor.camera.position.y - editor.camera.real_position.y) > 1e-3 ) 
+    {
+        editor.camera.real_position.x += (editor.camera.position.x - editor.camera.real_position.x) / 8;
+        editor.camera.real_position.y += (editor.camera.position.y - editor.camera.real_position.y) / 8;
         ui.render_surface_needs_redraw = true;
     }
 
@@ -1976,7 +2012,7 @@ void scrap_gui_process_ui(void) {
         ui.render_surface_needs_redraw = true;
     } else if (IsMouseButtonPressed(MOUSE_BUTTON_MIDDLE)) {
         ui.hover.mouse_click_pos = (Vector2) { gui->mouse_x, gui->mouse_y };
-        editor.camera_click_pos = editor.camera_pos;
+        editor.camera.click_position = editor.camera.position;
         ui.hover.editor.select_block = NULL;
         ui.hover.editor.select_argument = NULL;
         ui.hover.select_input = NULL;

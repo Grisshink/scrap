@@ -95,8 +95,8 @@ static void draw_dots(void) {
     int win_width = GetScreenWidth();
     int win_height = GetScreenHeight();
 
-    for (int y = MOD(-(int)editor.camera_pos.y, config.ui_size * 2); y < win_height; y += config.ui_size * 2) {
-        for (int x = MOD(-(int)editor.camera_pos.x, config.ui_size * 2); x < win_width; x += config.ui_size * 2) {
+    for (int y = MOD(-(int)editor.camera.real_position.y, config.ui_size * 2); y < win_height; y += config.ui_size * 2) {
+        for (int x = MOD(-(int)editor.camera.real_position.x, config.ui_size * 2); x < win_width; x += config.ui_size * 2) {
             DrawRectangle(x, y, 2, 2, (Color) { 0x40, 0x40, 0x40, 0xff });
         }
     }
@@ -105,10 +105,10 @@ static void draw_dots(void) {
     if (!IsShaderValid(assets.line_shader)) return;
 
     BeginShaderMode(assets.line_shader);
-    for (int y = MOD(-(int)editor.camera_pos.y, config.ui_size * 2); y < win_height; y += config.ui_size * 2) {
+    for (int y = MOD(-(int)editor.camera.real_position.y, config.ui_size * 2); y < win_height; y += config.ui_size * 2) {
         DrawRectangle(0, y, win_width, 2, (Color) { 0x40, 0x40, 0x40, 0xff });
     }
-    for (int x = MOD(-(int)editor.camera_pos.x, config.ui_size * 2); x < win_width; x += config.ui_size * 2) {
+    for (int x = MOD(-(int)editor.camera.real_position.x, config.ui_size * 2); x < win_width; x += config.ui_size * 2) {
         DrawRectangle(x, 0, 2, win_height, (Color) { 0x40, 0x40, 0x40, 0xff });
     }
     EndShaderMode();
@@ -534,11 +534,17 @@ static void block_end_on_hover(GuiElement* el) {
 }
 
 static void argument_on_render(GuiElement* el) {
-    ui.hover.editor.select_block_pos = (Vector2) { el->abs_x, el->abs_y };
+    ui.hover.editor.select_block_pos = (Vector2) {
+        el->abs_x + editor.camera.real_position.x - editor.camera.position.x,
+        el->abs_y + editor.camera.real_position.y - editor.camera.position.y,
+    };
 }
 
 static void block_on_render(GuiElement* el) {
-    ui.hover.editor.select_block_pos = (Vector2) { el->abs_x, el->abs_y };
+    ui.hover.editor.select_block_pos = (Vector2) {
+        el->abs_x + editor.camera.real_position.x - editor.camera.position.x,
+        el->abs_y + editor.camera.real_position.y - editor.camera.position.y,
+    };
     ui.hover.editor.select_valid = true;
 }
 
@@ -1718,8 +1724,8 @@ static void draw_panel(PanelTree* panel) {
 static void draw_code(void) {
     for (size_t i = 0; i < vector_size(editor.code); i++) {
         Vector2 chain_pos = (Vector2) {
-            editor.code[i].x * config.ui_size / 32.0 - editor.camera_pos.x,
-            editor.code[i].y * config.ui_size / 32.0 - editor.camera_pos.y,
+            editor.code[i].x * config.ui_size / 32.0 - editor.camera.real_position.x,
+            editor.code[i].y * config.ui_size / 32.0 - editor.camera.real_position.y,
         };
         Rectangle code_size = ui.hover.panels.code_panel_bounds;
         if (&editor.code[i] != ui.hover.editor.select_root_blockchain) {
@@ -2306,7 +2312,7 @@ static void write_debug_buffer(void) {
     print_debug(&i, "Select block bounds Pos: (%.3f, %.3f), Size: (%.3f, %.3f)", ui.hover.panels.code_panel_bounds.x, ui.hover.panels.code_panel_bounds.y, ui.hover.panels.code_panel_bounds.width, ui.hover.panels.code_panel_bounds.height);
     print_debug(&i, "Category: %p", ui.hover.category);
     print_debug(&i, "Mouse chains: %zu, Time: %.3f, Pos: (%d, %d), Click: (%d, %d)", vector_size(editor.mouse_blockchains), ui.hover.time_at_last_pos, GetMouseX(), GetMouseY(), (int)ui.hover.mouse_click_pos.x, (int)ui.hover.mouse_click_pos.y);
-    print_debug(&i, "Camera: (%.3f, %.3f), Click: (%.3f, %.3f)", editor.camera_pos.x, editor.camera_pos.y, editor.camera_click_pos.x, editor.camera_click_pos.y);
+    print_debug(&i, "Camera: (%.3f, %.3f), Click: (%.3f, %.3f)", editor.camera.position.x, editor.camera.position.y, editor.camera.click_position.x, editor.camera.click_position.y);
     print_debug(&i, "Drag cancelled: %d", ui.hover.drag_cancelled);
     print_debug(&i, "Editor: %d, Editing: %p, Blockdef: %p, input: %zu", ui.hover.editor.part, ui.hover.editor.edit_blockdef, ui.hover.editor.blockdef, ui.hover.editor.blockdef_input);
     print_debug(&i, "Slider: %p, min: %d, max: %d", ui.hover.hover_slider.value, ui.hover.hover_slider.min, ui.hover.hover_slider.max);

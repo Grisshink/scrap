@@ -185,8 +185,8 @@ Image setup(void* save_data, size_t save_size) {
     editor.code = save_data && save_size ? load_code(save_data, save_size, false) : vector_create();
 
     if (vector_size(editor.code) > 0) {
-        editor.camera_pos.x = editor.code[0].x - 50;
-        editor.camera_pos.y = editor.code[0].y - 50;
+        editor.camera.position.x = editor.code[0].x - 50;
+        editor.camera.position.y = editor.code[0].y - 50;
     }
 
     editor.search_list = vector_create();

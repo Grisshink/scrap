@@ -231,8 +231,8 @@ void apply_config(Config* dst, Config* src) {
     dst->fps_limit = src->fps_limit; SetTargetFPS(dst->fps_limit);
     dst->block_size_threshold = src->block_size_threshold;
 
-    editor.camera_pos.x *= (float)src->ui_size / dst->ui_size;
-    editor.camera_pos.y *= (float)src->ui_size / dst->ui_size;
+    editor.camera.position.x *= (float)src->ui_size / dst->ui_size;
+    editor.camera.position.y *= (float)src->ui_size / dst->ui_size;
 
     dst->ui_size = src->ui_size;
 
