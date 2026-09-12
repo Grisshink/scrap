@@ -482,7 +482,7 @@ void load_config(Config* config);
 void config_copy(Config* dst, Config* src);
 
 void save_code(const char* file_path, RootBlockChain* code);
-RootBlockChain* load_code(const char* file_path);
+RootBlockChain* load_code(void* file_data, size_t file_size);
 
 const char* language_to_code(Language lang);
 Language code_to_language(const char* code);

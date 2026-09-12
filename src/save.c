@@ -61,7 +61,7 @@ static unsigned int ver = 0;
 
 int save_find_constant(const Value constant);
 void save_code(const char* file_path, RootBlockChain* code);
-RootBlockChain* load_code(const char* file_path);
+RootBlockChain* load_code(void* file_data, size_t file_size);
 void save_block(SaveData* save, Block* block);
 Block* load_block(SaveData* save);
 void save_blockdef(SaveData* save, Blockdef* blockdef);
@@ -1281,20 +1281,15 @@ void convert_old_save_structure(RootBlockChain* code) {
     vector_free(chain_list);
 }
 
-RootBlockChain* load_code(const char* file_path) {
+RootBlockChain* load_code(void* file_data, size_t file_size) {
     RootBlockChain* code = vector_create();
     save_blockdefs = vector_create();
     save_value_constants = vector_create();
 
-    int save_size;
-    void* file_data = LoadFileData(file_path, &save_size);
-    if (!file_data) goto load_fail;
-    scrap_log(LOG_INFO, "%zu bytes read from %s", save_size, file_path);
-
-    SaveData save;
-    save.ptr = file_data;
-    save.size = 0;
-    save.capacity = save_size;
+    SaveData save = {
+        .ptr = file_data,
+        .capacity = file_size,
+    };
 
     if (!save_read_varint(&save, &ver)) goto load_fail;
     if (ver < SCRAP_MIN_SAVE_VERSION || ver > SCRAP_MAX_SAVE_VERSION) {
@@ -1352,7 +1347,6 @@ RootBlockChain* load_code(const char* file_path) {
         if (!load_root_blockchain(&save, chain)) goto load_fail;
     }
 
-    UnloadFileData(file_data);
     vector_free(save_blockdefs);
 
     for (size_t i = 0; i < vector_size(save_value_constants); i++) {
@@ -1364,7 +1358,6 @@ RootBlockChain* load_code(const char* file_path) {
     return code;
 
 load_fail:
-    if (file_data) UnloadFileData(file_data);
     for (size_t i = 0; i < vector_size(code); i++) blockchain_free(code[i].chain);
     vector_free(code);
     vector_free(save_value_constants);

@@ -525,11 +525,22 @@ bool save_project(void) {
 void load_project(void) {
     char const* filters[] = {"*.scrp"};
 
-    char* path = tinyfd_openFileDialog(NULL, editor.project_name, ARRLEN(filters), filters, "Scrap project files (.scrp)", 0);
-    if (!path) return;
+    char* file_path = tinyfd_openFileDialog(NULL, editor.project_name, ARRLEN(filters), filters, "Scrap project files (.scrp)", 0);
+    if (!file_path) return;
 
-    RootBlockChain* chain = load_code(path);
+    int file_size;
+    void* file_data = LoadFileData(file_path, &file_size);
+    if (!file_data) {
+        actionbar_show(gettext("File load failed :("));
+        return;
+    }
+    scrap_log(LOG_INFO, "%zu bytes read from %s", file_size, file_path);
+
+    RootBlockChain* chain = load_code(file_data, file_size);
+
     switch_tab_to_panel(PANEL_CODE);
+    UnloadFileData(file_data);
+
     if (!chain) {
         actionbar_show(gettext("File load failed :("));
         return;
@@ -545,10 +556,10 @@ void load_project(void) {
     editor.camera_pos.x = editor.code[editor.blockchain_select_counter].x - 50;
     editor.camera_pos.y = editor.code[editor.blockchain_select_counter].y - 50;
 
-    char* base_path = get_basename(path);
+    char* base_file_path = get_basename(file_path);
 
     int i;
-    for (i = 0; base_path[i]; i++) editor.project_name[i] = base_path[i];
+    for (i = 0; base_file_path[i]; i++) editor.project_name[i] = base_file_path[i];
     editor.project_name[i] = 0;
 
     actionbar_show(gettext("File load succeeded!"));
