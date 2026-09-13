@@ -229,9 +229,8 @@ Block* block_new(Blockdef* blockdef) {
             arg->block = block;
             arg->input_id = i;
             arg->type = ARGUMENT_BLOCKDEF;
-            arg->data.blockdef = blockdef_new("custom", BLOCKTYPE_NORMAL, blockdef->color, DATA_TYPE_ANY, blockdef->inputs[i].data.editor.block_func);
+            arg->data.blockdef = blockdef_copy(blockdef->inputs[i].data.editor.default_blockdef);
             arg->data.blockdef->ref_count++;
-            blockdef_add_text(arg->data.blockdef, gettext("My block"));
             break;
         case INPUT_TEXT_DISPLAY:
         case INPUT_IMAGE_DISPLAY:
@@ -549,30 +548,37 @@ void blockdef_add_text(Blockdef* blockdef, const char* text) {
     vector_add(&input->data.text, 0);
 }
 
-void blockdef_add_argument(Blockdef* blockdef, Value default_value, DataType allowed_type) {
+void blockdef_add_argument(Blockdef* blockdef, Value default_value, DataType allowed_type, Blockdef* argument_blockdef) {
     if (allowed_type == DATA_TYPE_ANY && default_value.type == DATA_TYPE_STRING) {
         default_value.type = DATA_TYPE_ANY;
+    }
+
+    if (argument_blockdef) {
+        argument_blockdef->ref_count++;
+        argument_blockdef->return_type = allowed_type;
     }
 
     Input* input = vector_add_dst(&blockdef->inputs);
     input->type = INPUT_ARGUMENT;
     input->data = (InputData) {
         .arg = {
-            .blockdef = blockdef_new("custom_arg", BLOCKTYPE_NORMAL, blockdef->color, DATA_TYPE_ANY, NULL),
+            .blockdef = argument_blockdef,
             .default_value = default_value,
             .allowed_type = allowed_type,
         },
     };
-    input->data.arg.blockdef->ref_count++;
 }
 
-void blockdef_add_blockdef_editor(Blockdef* blockdef, void* block_func, void* arg_func) {
+void blockdef_add_blockdef_editor(Blockdef* blockdef, void* block_func, void* arg_func, Blockdef* default_blockdef) {
+    default_blockdef->ref_count++;
+
     Input* input = vector_add_dst(&blockdef->inputs);
     input->type = INPUT_BLOCKDEF_EDITOR;
     input->data = (InputData) {
         .editor = {
             .block_func = block_func,
             .arg_func = arg_func,
+            .default_blockdef = default_blockdef,
         },
     };
 }
@@ -637,17 +643,24 @@ void blockdef_abandon(Blockdef* blockdef) {
 }
 
 void blockdef_free(Blockdef* blockdef) {
+    assert(blockdef != NULL);
+
     blockdef->ref_count--;
     if (blockdef->ref_count > 0) return;
     for (vec_size_t i = 0; i < vector_size(blockdef->inputs); i++) {
+        Input* input = &blockdef->inputs[i];
+
         static_assert(INPUT_LAST == 6, "Exhaustive input type in blockdef_free");
-        switch (blockdef->inputs[i].type) {
+        switch (input->type) {
         case INPUT_TEXT_DISPLAY:
-            vector_free(blockdef->inputs[i].data.text);
+            vector_free(input->data.text);
             break;
         case INPUT_ARGUMENT:
-            value_free(&blockdef->inputs[i].data.arg.default_value);
-            blockdef_free(blockdef->inputs[i].data.arg.blockdef);
+            value_free(&input->data.arg.default_value);
+            if (input->data.arg.blockdef) blockdef_free(input->data.arg.blockdef);
+            break;
+        case INPUT_BLOCKDEF_EDITOR:
+            blockdef_free(input->data.editor.default_blockdef);
             break;
         default:
             break;

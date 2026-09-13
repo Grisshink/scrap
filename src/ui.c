@@ -723,12 +723,12 @@ bool handle_editor_add_arg_button(void) {
     blockdef = new_blockdef;
     blockdef->ref_count++;
 
-    blockdef_add_argument(blockdef, value_from_string(""), DATA_TYPE_ANY);
-
     sprintf(str, "arg%zu", last_input);
-    Blockdef* arg_blockdef = blockdef->inputs[last_input].data.arg.blockdef;
+
+    Blockdef* arg_blockdef = blockdef_new("custom_arg", BLOCKTYPE_NORMAL, blockdef->color, DATA_TYPE_ANY, arg->block->blockdef->inputs[arg->input_id].data.editor.arg_func);
     blockdef_add_text(arg_blockdef, str);
-    arg_blockdef->func = arg->block->blockdef->inputs[arg->input_id].data.editor.arg_func;
+
+    blockdef_add_argument(blockdef, value_from_string(""), DATA_TYPE_ANY, arg_blockdef);
 
     arg->data.blockdef = blockdef;
     ui.hover.editor.edit_blockdef = blockdef;
@@ -1757,6 +1757,7 @@ static bool search_string(const char* str, const char* substr) {
 }
 
 static void update_search_blockdef(Blockdef* blockdef) {
+    if (!blockdef) return;
     if (!blockdef->func) return;
 
     bool added = false;

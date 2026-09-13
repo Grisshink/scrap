@@ -120,6 +120,7 @@ struct InputDropdown {
 struct InputBlockdefEditorFuncs {
     void* block_func;
     void* arg_func;
+    Blockdef* default_blockdef;
 };
 
 union InputData {
@@ -228,10 +229,10 @@ struct RootBlockChain {
 Blockdef* blockdef_new(const char* id, BlockdefType type, BlockdefColor color, DataType return_type, void* func);
 Blockdef* blockdef_copy(Blockdef* blockdef);
 void blockdef_add_text(Blockdef* blockdef, const char* text);
-void blockdef_add_argument(Blockdef* blockdef, Value default_value, DataType allowed_type);
+void blockdef_add_argument(Blockdef* blockdef, Value default_value, DataType allowed_type, Blockdef* argument_blockdef);
 void blockdef_add_dropdown(Blockdef* blockdef, InputDropdownSource dropdown_source, ListAccessor accessor);
 void blockdef_add_image(Blockdef* blockdef, BlockdefImage image);
-void blockdef_add_blockdef_editor(Blockdef* blockdef, void* block_func, void* arg_func);
+void blockdef_add_blockdef_editor(Blockdef* blockdef, void* block_func, void* arg_func, Blockdef* default_blockdef);
 void blockdef_delete_input(Blockdef* blockdef, size_t input);
 void blockdef_set_id(Blockdef* blockdef, const char* new_id);
 // Removes all function pointers from blockdef, rendering it unusable. 

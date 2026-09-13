@@ -1151,7 +1151,7 @@ Block* load_block(SaveData* save) {
         arg->block = block;
 
         if (unknown_blockdef) {
-            blockdef_add_argument(blockdef, value_from_string(""), DATA_TYPE_ANY);
+            blockdef_add_argument(blockdef, value_from_string(""), DATA_TYPE_ANY, NULL);
         }
 
         do {
