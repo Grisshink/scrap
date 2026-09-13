@@ -604,6 +604,10 @@ void draw_settings_window(void) {
             draw_slider(0, 32, &window_config.code_area_smoothness);
         end_setting();
 
+        begin_setting(gettext("Categories column count"), false);
+            draw_slider(1, 8, &window_config.categories_column_count);
+        end_setting();
+
         begin_setting(gettext("Font path"), false);
             draw_text_input(&window_config.font_path, gettext("path"), &font_path_scroll, true, true);
         end_setting();

@@ -1264,13 +1264,13 @@ static void draw_block_categories(void) {
                 gui_set_grow(gui, DIRECTION_HORIZONTAL);
                 gui_set_gap(gui, ELEMENT_GAP);
 
-                draw_category(cat);
-                cat = cat->next;
-                if (cat) {
+                for (int i = 0; i < config.categories_column_count; i++) {
+                    if (!cat) {
+                        gui_grow(gui, DIRECTION_HORIZONTAL);
+                        continue;
+                    }
                     draw_category(cat);
                     cat = cat->next;
-                } else {
-                    gui_grow(gui, DIRECTION_HORIZONTAL);
                 }
             gui_element_end(gui);
         }

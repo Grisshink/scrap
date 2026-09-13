@@ -51,6 +51,7 @@ typedef struct {
     int fps_limit;
     int block_size_threshold;
     int code_area_smoothness;
+    int categories_column_count;
     Language language;
     char* font_path;
     char* font_bold_path;

@@ -211,6 +211,7 @@ void config_copy(Config* dst, Config* src) {
     dst->language = src->language;
     dst->block_size_threshold = src->block_size_threshold;
     dst->code_area_smoothness = src->code_area_smoothness;
+    dst->categories_column_count = src->categories_column_count;
     dst->font_path = vector_copy(src->font_path);
     dst->font_bold_path = vector_copy(src->font_bold_path);
     dst->font_mono_path = vector_copy(src->font_mono_path);
@@ -222,6 +223,7 @@ void set_default_config(Config* config) {
     config->fps_limit = 60;
     config->block_size_threshold = 1000;
     config->code_area_smoothness = 5;
+    config->categories_column_count = 2;
     config->language = LANG_SYSTEM;
     vector_set_string(&config->font_path, DATA_PATH "nk57-cond.otf");
     vector_set_string(&config->font_bold_path, DATA_PATH "nk57-eb.otf");
@@ -235,6 +237,7 @@ void apply_config(Config* dst, Config* src) {
 
     dst->block_size_threshold = src->block_size_threshold;
     dst->code_area_smoothness = src->code_area_smoothness;
+    dst->categories_column_count = src->categories_column_count;
 
     editor.camera.position.x *= (float)src->ui_size / dst->ui_size;
     editor.camera.position.y *= (float)src->ui_size / dst->ui_size;
@@ -370,6 +373,7 @@ void save_config(Config* config) {
     cursor += sprintf(file_str + cursor, "FPS_LIMIT=%u\n", config->fps_limit);
     cursor += sprintf(file_str + cursor, "BLOCK_SIZE_THRESHOLD=%u\n", config->block_size_threshold);
     cursor += sprintf(file_str + cursor, "CODE_AREA_SMOOTHNESS=%u\n", config->code_area_smoothness);
+    cursor += sprintf(file_str + cursor, "CATEGORIES_COLUMN_COUNT=%u\n", config->categories_column_count);
     cursor += sprintf(file_str + cursor, "FONT_PATH=%s\n", config->font_path);
     cursor += sprintf(file_str + cursor, "FONT_BOLD_PATH=%s\n", config->font_bold_path);
     cursor += sprintf(file_str + cursor, "FONT_MONO_PATH=%s\n", config->font_mono_path);
@@ -456,6 +460,9 @@ void load_config(Config* config) {
         } else if (!strcmp(field, "CODE_AREA_SMOOTHNESS")) {
             int val = atoi(value);
             config->code_area_smoothness = val ? val : config->code_area_smoothness;
+        } else if (!strcmp(field, "CATEGORIES_COLUMN_COUNT")) {
+            int val = atoi(value);
+            config->categories_column_count = val ? val : config->categories_column_count;
         } else if (!strcmp(field, "FONT_PATH")) {
             vector_set_string(&config->font_path, value);
         } else if (!strcmp(field, "FONT_BOLD_PATH")) {
