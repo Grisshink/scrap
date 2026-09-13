@@ -744,10 +744,11 @@ static void draw_block(Block* block, bool highlight, bool select, bool can_hover
             gui_set_draw_subtype(gui, BORDER_NOTCHED);
         }
 
-    gui_element_begin(gui);
+    GuiElement* block_element_inner = gui_element_begin(gui);
         gui_set_direction(gui, DIRECTION_HORIZONTAL);
         gui_set_gap(gui, BLOCK_PADDING);
         gui_set_align(gui, ALIGN_LEFT, ALIGN_CENTER);
+        gui_set_grow(gui, DIRECTION_VERTICAL);
 
     size_t arg_id = 0;
     Input* inputs = block->blockdef->inputs;
@@ -761,14 +762,21 @@ static void draw_block(Block* block, bool highlight, bool select, bool can_hover
         },
     };
 
-    GuiElement* arg_block_element;
-
     for (size_t i = 0; i < inputs_size; i++) {
         Input* input = &inputs[i];
         Argument* arg = block->arguments ? &block->arguments[arg_id] : NULL;
 
         switch (input->type) {
         case INPUT_TEXT_DISPLAY:
+            if (block_element_inner->w > 500) {
+                gui_element_end(gui);
+                block_element_inner = gui_element_begin(gui);
+                    gui_set_direction(gui, DIRECTION_HORIZONTAL);
+                    gui_set_gap(gui, BLOCK_PADDING);
+                    gui_set_align(gui, ALIGN_RIGHT, ALIGN_CENTER);
+                    gui_set_grow(gui, DIRECTION_HORIZONTAL);
+            }
+
             gui_text(gui, &assets.fonts.font_cond_shadow, input->data.text, BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0xff, 0xff, ghost ? BLOCK_GHOST_OPACITY : 0xff });
             break;
         case INPUT_IMAGE_DISPLAY: ;
@@ -784,7 +792,7 @@ static void draw_block(Block* block, bool highlight, bool select, bool can_hover
 
             switch (arg->type) {
             case ARGUMENT_BLOCK:
-                arg_block_element = gui_element_begin(gui);
+                gui_element_begin(gui);
                     if (can_hover) gui_on_hover(gui, block_argument_on_hover);
                     gui_set_custom_data(gui, arg);
                     if (arg->data.block->blockdef->type == BLOCKTYPE_CONTROL) gui_set_rect(gui, CONVERT_COLOR(dropdown_color, GuiColor));
@@ -795,13 +803,6 @@ static void draw_block(Block* block, bool highlight, bool select, bool can_hover
 
                     draw_block(arg->data.block, highlight, false, can_hover, ghost, editable, show_previews);
                 gui_element_end(gui);
-                if (arg_block_element->w > 500 && i + 1 < inputs_size) {
-                    gui_element_end(gui);
-                    gui_element_begin(gui);
-                        gui_set_direction(gui, DIRECTION_HORIZONTAL);
-                        gui_set_gap(gui, BLOCK_PADDING);
-                        gui_set_align(gui, ALIGN_LEFT, ALIGN_CENTER);
-                }
                 break;
             case ARGUMENT_VALUE:
                 draw_value_argument(

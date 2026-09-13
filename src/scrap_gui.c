@@ -391,7 +391,7 @@ static void gui_element_realign(GuiElement* el) {
             if (DIRECTION(el) == DIRECTION_VERTICAL) {
                 iter->x = (el->w - iter->w) / align_div;
             } else {
-                iter->x += MAX(0, (el->w - el->pad_w + el->gap - el->cursor_x) / align_div);
+                iter->x += MAX(0, (el->w - el->pad_w - el->cursor_x) / align_div);
             }
         }
     }
@@ -401,7 +401,7 @@ static void gui_element_realign(GuiElement* el) {
         for (GuiElement* iter = el->child_elements_begin; iter; iter = iter->next) {
             if (FLOATING(iter)) continue;
             if (DIRECTION(el) == DIRECTION_VERTICAL) {
-                iter->y += MAX(0, (el->h - el->pad_h + el->gap - el->cursor_y) / align_div);
+                iter->y += MAX(0, (el->h - el->pad_h - el->cursor_y) / align_div);
             } else {
                 iter->y = (el->h - iter->h) / align_div;
             }
