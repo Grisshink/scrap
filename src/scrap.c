@@ -140,6 +140,8 @@ Image setup(void* save_data, size_t save_size) {
         &assets.textures.icon_file,          "file.svg",
         &assets.textures.icon_folder,        "folder.svg",
         &assets.textures.icon_list,          "list.svg",
+        &assets.textures.icon_logic,         "logic.svg",
+        &assets.textures.icon_loop,          "loop.svg",
         &assets.textures.icon_pi,            "pi_symbol.svg",
         &assets.textures.icon_settings,      "settings.svg",
         &assets.textures.icon_special,       "special.svg",

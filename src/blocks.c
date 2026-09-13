@@ -2659,17 +2659,17 @@ Value block_custom_arg(Compiler* compiler, Block* block, Block** next_block, Blo
 // Creates and registers blocks (commands) for the Vm/Compiler virtual machine
 void register_blocks(Vm* vm) {
     BlockCategory cat;
-    cat = block_category_new(gettext("Control"),  (Color) CATEGORY_CONTROL_COLOR);
+    cat = block_category_new(gettext("Control"),  (Color) CATEGORY_CONTROL_COLOR, &assets.textures.icon_loop);
     BlockCategory* cat_control = block_category_register(cat);
-    cat = block_category_new(gettext("Terminal"), (Color) CATEGORY_TERMINAL_COLOR);
+    cat = block_category_new(gettext("Terminal"), (Color) CATEGORY_TERMINAL_COLOR, &assets.textures.icon_term);
     BlockCategory* cat_terminal = block_category_register(cat);
-    cat = block_category_new(gettext("Math"),     (Color) CATEGORY_MATH_COLOR);
+    cat = block_category_new(gettext("Math"),     (Color) CATEGORY_MATH_COLOR, &assets.textures.icon_pi);
     BlockCategory* cat_math = block_category_register(cat);
-    cat = block_category_new(gettext("Logic"),    (Color) CATEGORY_LOGIC_COLOR);
+    cat = block_category_new(gettext("Logic"),    (Color) CATEGORY_LOGIC_COLOR, &assets.textures.icon_logic);
     BlockCategory* cat_logic = block_category_register(cat);
-    cat = block_category_new(gettext("Data"),     (Color) CATEGORY_DATA_COLOR);
+    cat = block_category_new(gettext("Data"),     (Color) CATEGORY_DATA_COLOR, &assets.textures.icon_variable);
     BlockCategory* cat_data = block_category_register(cat);
-    cat = block_category_new(gettext("Misc."),    (Color) CATEGORY_MISC_COLOR);
+    cat = block_category_new(gettext("Misc."),    (Color) CATEGORY_MISC_COLOR, &assets.textures.icon_c);
     BlockCategory* cat_misc = block_category_register(cat);
 
     BlockdefImage term_img = (BlockdefImage) {

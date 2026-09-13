@@ -210,6 +210,7 @@ typedef struct {
 struct BlockCategory {
     const char* name;
     Color color;
+    Texture2D* image;
     BlockCategoryItem* items;
 
     BlockCategory* next;
@@ -279,7 +280,9 @@ typedef struct {
     Texture2D icon_file;
     Texture2D icon_folder;
     Texture2D icon_list;
+    Texture2D icon_logic;
     Texture2D icon_logo;
+    Texture2D icon_loop;
     Texture2D icon_pi;
     Texture2D icon_settings;
     Texture2D icon_special;
@@ -530,7 +533,7 @@ void register_blocks(Vm* vm);
 BlockFunc block_custom_arg, block_exec_custom;
 
 // vm.c
-BlockCategory block_category_new(const char* name, Color color);
+BlockCategory block_category_new(const char* name, Color color, Texture2D* image);
 BlockCategory* block_category_register(BlockCategory category);
 void block_category_add_blockdef(BlockCategory* category, Blockdef* blockdef);
 void block_category_add_label(BlockCategory* category, const char* label, Color color);

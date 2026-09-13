@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   version="1.1"
+   height="32"
+   width="32"
+   id="svg1"
+   sodipodi:docname="loop_fill.svg"
+   inkscape:version="1.4.4 (dcaf3e7d9e, 2026-05-05)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs1" />
+  <sodipodi:namedview
+     id="namedview1"
+     pagecolor="#202020"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#000000"
+     showgrid="false"
+     inkscape:zoom="32"
+     inkscape:cx="10.734375"
+     inkscape:cy="13.859375"
+     inkscape:window-width="2560"
+     inkscape:window-height="1344"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="rect1" />
+  <g
+     inkscape:groupmode="layer"
+     id="layer1"
+     inkscape:label="Layer 1">
+    <g
+       id="rect1"
+       style="opacity:1">
+      <path
+         style="baseline-shift:baseline;display:inline;overflow:visible;vector-effect:none;fill:#ffffff;enable-background:accumulate;stop-color:#000000;stop-opacity:1"
+         d="m 10.279297,7.3222656 c -1.6077874,0 -2.9375001,1.3346865 -2.9375001,2.9414064 v 11.472656 c 0,1.60672 1.3297128,2.941406 2.9375001,2.941406 h 1.994141 v -2.5 h -1.994141 c -0.262494,0 -0.4375001,-0.172915 -0.4375001,-0.441406 V 10.263672 c 0,-0.2684925 0.1750071,-0.4414064 0.4375001,-0.4414064 h 3.857422 v -2.5 z"
+         id="path13" />
+      <g
+         id="g12">
+        <path
+           style="baseline-shift:baseline;display:inline;overflow:visible;vector-effect:none;fill:#ffffff;fill-rule:evenodd;enable-background:accumulate;stop-color:#000000;stop-opacity:1"
+           d="m 14.136877,8.5721179 -1.25,3.7500001 4.375,-3.7500001 -4.375,-3.75 z"
+           id="path12" />
+      </g>
+    </g>
+    <g
+       id="path8"
+       style="opacity:1">
+      <path
+         style="baseline-shift:baseline;display:inline;overflow:visible;vector-effect:none;fill:#ffffff;enable-background:accumulate;stop-color:#000000;stop-opacity:1"
+         d="m 19.726562,7.3222656 v 2.5 h 1.994141 c 0.262491,0 0.4375,0.1729138 0.4375,0.4414064 v 11.472656 c 0,0.268491 -0.175009,0.441406 -0.4375,0.441406 h -3.857422 v 2.5 h 3.857422 c 1.607787,0 2.9375,-1.334686 2.9375,-2.941406 V 10.263672 c 0,-1.6067198 -1.329713,-2.9414064 -2.9375,-2.9414064 z"
+         id="path11" />
+      <g
+         id="g10">
+        <path
+           style="baseline-shift:baseline;display:inline;overflow:visible;vector-effect:none;fill:#ffffff;fill-rule:evenodd;enable-background:accumulate;stop-color:#000000;stop-opacity:1"
+           d="m 17.863123,23.427882 1.25,-3.75 -4.375,3.75 4.375,3.75 z"
+           id="path10" />
+      </g>
+    </g>
+  </g>
+</svg>

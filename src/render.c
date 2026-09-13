@@ -1232,15 +1232,19 @@ static void draw_category(BlockCategory* category) {
             gui_set_grow(gui, DIRECTION_HORIZONTAL);
             if (category == editor.palette.current_category) gui_set_border(gui, color, BLOCK_OUTLINE_SIZE);
             gui_set_direction(gui, DIRECTION_HORIZONTAL);
-            gui_set_padding(gui, ELEMENT_GAP, 0);
+             gui_set_padding(gui, category->image ? ELEMENT_GAP / 2 : ELEMENT_GAP, 0);
             gui_set_min_size(gui, 0, config.ui_size);
             gui_set_align(gui, ALIGN_LEFT, ALIGN_CENTER);
-            gui_set_gap(gui, ELEMENT_GAP);
+            gui_set_gap(gui, category->image ? ELEMENT_GAP / 2 : ELEMENT_GAP);
 
-            gui_element_begin(gui);
-                gui_set_min_size(gui, ELEMENT_GAP * 2, ELEMENT_GAP * 2);
-                gui_set_rect(gui, color);
-            gui_element_end(gui);
+            if (category->image) {
+                gui_image(gui, category->image, BLOCK_IMAGE_SIZE, color);
+            } else {
+                gui_element_begin(gui);
+                    gui_set_min_size(gui, ELEMENT_GAP * 2, ELEMENT_GAP * 2);
+                    gui_set_rect(gui, color);
+                gui_element_end(gui);
+            }
 
             gui_text(gui, &assets.fonts.font_cond_shadow, category->name, BLOCK_TEXT_SIZE, GUI_WHITE);
         gui_element_end(gui);

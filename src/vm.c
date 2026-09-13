@@ -41,13 +41,12 @@ void blockdef_unregister(Vm* vm, size_t block_id) {
     vector_remove(vm->blockdefs, block_id);
 }
 
-BlockCategory block_category_new(const char* name, Color color) {
+BlockCategory block_category_new(const char* name, Color color, Texture2D* image) {
     return (BlockCategory) {
         .name = name,
         .color = color,
         .items = vector_create(),
-        .next = NULL,
-        .prev = NULL,
+        .image = image,
     };
 }
 
