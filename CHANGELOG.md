@@ -7,10 +7,13 @@
 - Custom blocks now allow setting type of its arguments as well as the return type of the block
 - Added support for loading and running foreign functions from dynamic libraries
 - Improved camera snapping for selected blocks
+- All code area movement actions now have smooth animation. Animantion smoothness can be configured in settings
+- *(Linux only)* Scrap now launches in background when invoked from terminal. This functionality can be disabled by passing -d or --no-daemon flags
 - Updated Raylib version to 6.0
 
 ## Fixes
 - Fixed terminal font not being resized when changing font size in settings
+- Fixed unnesesary camera movement when putting blocks near the edge of visible code area
 
 # v0.6.1-beta *(27-02-2026)*
 
