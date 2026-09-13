@@ -50,6 +50,7 @@ typedef struct {
     int ui_size;
     int fps_limit;
     int block_size_threshold;
+    int code_area_smoothness;
     Language language;
     char* font_path;
     char* font_bold_path;

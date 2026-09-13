@@ -1975,8 +1975,8 @@ void scrap_gui_process_ui(void) {
     if (fabsf(editor.camera.position.x - editor.camera.real_position.x) > 1e-3 || 
         fabsf(editor.camera.position.y - editor.camera.real_position.y) > 1e-3 ) 
     {
-        editor.camera.real_position.x += (editor.camera.position.x - editor.camera.real_position.x) / 8;
-        editor.camera.real_position.y += (editor.camera.position.y - editor.camera.real_position.y) / 8;
+        editor.camera.real_position.x += (editor.camera.position.x - editor.camera.real_position.x) / (config.code_area_smoothness + 1);
+        editor.camera.real_position.y += (editor.camera.position.y - editor.camera.real_position.y) / (config.code_area_smoothness + 1);
         ui.render_surface_needs_redraw = true;
     }
 

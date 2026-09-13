@@ -600,6 +600,10 @@ void draw_settings_window(void) {
             draw_slider(0, 240, &window_config.fps_limit);
         end_setting();
 
+        begin_setting(gettext("Code panel smoothness"), false);
+            draw_slider(0, 32, &window_config.code_area_smoothness);
+        end_setting();
+
         begin_setting(gettext("Font path"), false);
             draw_text_input(&window_config.font_path, gettext("path"), &font_path_scroll, true, true);
         end_setting();
