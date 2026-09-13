@@ -99,6 +99,7 @@ bool compiler_compile(Compiler* compiler, RootBlockChain* code, IrBytecode* out_
         Value value = compiler_evaluate_block(compiler, block, &next, (Block*)-1);
         if (value.type == DATA_TYPE_UNKNOWN) {
             if (!compiler->last_error->root_blockchain) compiler->last_error->root_blockchain = &compiler->code[i];
+            if (!compiler->last_error->blockchain) compiler->last_error->blockchain = compiler->code[i].chain;
             return false;
         }
     }
@@ -113,6 +114,7 @@ bool compiler_compile(Compiler* compiler, RootBlockChain* code, IrBytecode* out_
         Value value = compiler_evaluate_block(compiler, block, &next, (Block*)-1);
         if (value.type == DATA_TYPE_UNKNOWN) {
             if (!compiler->last_error->root_blockchain) compiler->last_error->root_blockchain = &compiler->code[i];
+            if (!compiler->last_error->blockchain) compiler->last_error->blockchain = compiler->code[i].chain;
             return false;
         }
     }
@@ -123,6 +125,7 @@ bool compiler_compile(Compiler* compiler, RootBlockChain* code, IrBytecode* out_
         if (value.type == DATA_TYPE_UNKNOWN) {
             if (!compiler->last_error->root_blockchain) {
                 compiler->last_error->root_blockchain = find_root_blockchain(compiler, compiler->chains_to_compile[i]);
+                if (!compiler->last_error->blockchain) compiler->last_error->blockchain = compiler->last_error->root_blockchain->chain;
             }
             return false;
         }
@@ -133,6 +136,7 @@ bool compiler_compile(Compiler* compiler, RootBlockChain* code, IrBytecode* out_
         if (value.type == DATA_TYPE_UNKNOWN) {
             if (!compiler->last_error->root_blockchain) {
                 compiler->last_error->root_blockchain = find_root_blockchain(compiler, compiler->chains_to_compile[i]);
+                if (!compiler->last_error->blockchain) compiler->last_error->blockchain = compiler->last_error->root_blockchain->chain;
             }
             return false;
         }
