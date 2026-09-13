@@ -7,7 +7,7 @@
    viewBox="0 0 8.4666665 8.4666666"
    version="1.1"
    id="svg1"
-   inkscape:version="1.4 (e7c3feb100, 2024-10-09)"
+   inkscape:version="1.4.4 (dcaf3e7d9e, 2026-05-05)"
    sodipodi:docname="list.svg"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
@@ -25,13 +25,13 @@
      inkscape:document-units="px"
      showborder="true"
      inkscape:antialias-rendering="true"
-     inkscape:zoom="1"
-     inkscape:cx="3.5"
-     inkscape:cy="22.5"
-     inkscape:window-width="1896"
-     inkscape:window-height="1006"
-     inkscape:window-x="10"
-     inkscape:window-y="10"
+     inkscape:zoom="16"
+     inkscape:cx="32.46875"
+     inkscape:cy="26.03125"
+     inkscape:window-width="2544"
+     inkscape:window-height="1328"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
      inkscape:window-maximized="0"
      inkscape:current-layer="layer2"
      showgrid="false" />
@@ -43,23 +43,24 @@
      inkscape:label="Layer 1">
     <g
        id="g1"
-       transform="translate(0.04134117,0.2645833)">
+       transform="matrix(0.88220552,0,0,0.87999999,0.53513471,0.74083333)"
+       style="stroke-width:1.13495">
       <rect
-         style="fill:#ffffff;stroke-width:0.529167;stroke-linecap:square"
+         style="fill:#ffffff;stroke-width:0.600574;stroke-linecap:square"
          id="rect1"
          width="6.5980468"
          height="1.3229166"
          x="0.89296871"
          y="0.66145831" />
       <rect
-         style="fill:#ffffff;stroke-width:0.529167;stroke-linecap:square"
+         style="fill:#ffffff;stroke-width:0.600574;stroke-linecap:square"
          id="rect1-5"
          width="6.5980468"
          height="1.3229166"
          x="0.89296871"
          y="3.3072915" />
       <rect
-         style="fill:#ffffff;stroke-width:0.529167;stroke-linecap:square"
+         style="fill:#ffffff;stroke-width:0.600574;stroke-linecap:square"
          id="rect1-2"
          width="6.5980468"
          height="1.3229166"

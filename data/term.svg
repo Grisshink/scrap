@@ -7,7 +7,7 @@
    viewBox="0 0 8.4666665 8.4666666"
    version="1.1"
    id="svg1"
-   inkscape:version="1.4 (e7c3feb100, 2024-10-09)"
+   inkscape:version="1.4.4 (dcaf3e7d9e, 2026-05-05)"
    sodipodi:docname="term.svg"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
@@ -23,13 +23,13 @@
      inkscape:pagecheckerboard="0"
      inkscape:deskcolor="#000000"
      inkscape:document-units="px"
-     inkscape:zoom="5.6568542"
-     inkscape:cx="-10.253048"
-     inkscape:cy="41.454135"
-     inkscape:window-width="1896"
-     inkscape:window-height="1006"
-     inkscape:window-x="10"
-     inkscape:window-y="10"
+     inkscape:zoom="1"
+     inkscape:cx="46.5"
+     inkscape:cy="1.5"
+     inkscape:window-width="2544"
+     inkscape:window-height="1328"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
      inkscape:window-maximized="0"
      inkscape:current-layer="layer1" />
   <defs
@@ -41,20 +41,20 @@
     <rect
        style="fill:none;stroke:#ffffff;stroke-width:0.529167;stroke-linecap:square;stroke-dasharray:none;stroke-opacity:1"
        id="rect1"
-       width="6.8791661"
-       height="6.8791661"
-       x="0.79375023"
-       y="0.79375023" />
+       width="5.8208327"
+       height="5.8208327"
+       x="1.3229169"
+       y="1.3229169" />
     <rect
        style="fill:#ffffff;fill-opacity:1;stroke:none;stroke-width:0.529167;stroke-linecap:square;stroke-dasharray:none;stroke-opacity:1"
        id="rect2"
-       width="2.6458333"
-       height="0.52916664"
+       width="2.2387819"
+       height="0.44775638"
        x="4.2333331"
-       y="6.0854168" />
+       y="5.8208332" />
     <path
        style="fill:none;fill-opacity:1;stroke:#ffffff;stroke-width:0.529167;stroke-linecap:square;stroke-dasharray:none;stroke-opacity:1"
-       d="M 1.8520833,2.7139262 3.470709,4.2333332 1.8520833,5.7527403"
+       d="M 2.2885878,2.9476811 3.6581941,4.2333331 2.2885878,5.5189853"
        id="path2"
        sodipodi:nodetypes="ccc" />
   </g>
