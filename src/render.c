@@ -701,7 +701,7 @@ static void draw_value_argument(Argument* arg, bool can_hover, bool editable, bo
     gui_element_end(gui);
 }
 
-static void draw_block(Block* block, bool highlight, bool select, bool can_hover, bool ghost, bool editable, bool show_previews) {
+static void draw_block(Block* block, bool highlight, bool select, bool can_hover, bool ghost, bool editable, bool show_previews, bool darken) {
     bool collision = ui.hover.editor.prev_block == block || highlight;
     Color color = CONVERT_COLOR(block->blockdef->color, Color);
     if (!block->blockdef->func) color = (Color) UNIMPLEMENTED_BLOCK_COLOR;
@@ -710,6 +710,8 @@ static void draw_block(Block* block, bool highlight, bool select, bool can_hover
         color = (Color) { 0xff * animation, 0x20 * animation, 0x20 * animation, 0xff };
     }
     if (ghost) color.a = BLOCK_GHOST_OPACITY;
+
+    if (darken) color = ColorBrightness(color, -0.15);
 
     Color block_color = collision ? ColorBrightness(color, 0.3) : color;
     Color dropdown_color = collision ? color : ColorBrightness(color, -0.3);
@@ -801,7 +803,7 @@ static void draw_block(Block* block, bool highlight, bool select, bool can_hover
                         gui_text(gui, &assets.fonts.font_cond_shadow, "Detached parent", BLOCK_TEXT_SIZE, (GuiColor) { 0xff, 0x00, 0x00, 0xff });
                     }
 
-                    draw_block(arg->data.block, highlight, false, can_hover, ghost, editable, show_previews);
+                    draw_block(arg->data.block, highlight, false, can_hover, ghost, editable, show_previews, !memcmp(&arg->data.block->blockdef->color, &block->blockdef->color, sizeof(BlockdefColor)) ? !darken : false);
                 gui_element_end(gui);
                 break;
             case ARGUMENT_VALUE:
@@ -1198,7 +1200,7 @@ static GuiElement* draw_blockchain(BlockChain* chain, bool ghost, bool show_prev
         }
         
         for (Block* iter = chain->start; iter; iter = iter->next) {
-            draw_block(iter, false, false, true, ghost, editable_arguments, show_previews);
+            draw_block(iter, false, false, true, ghost, editable_arguments, show_previews, false);
         }
     gui_element_end(gui);
     return el;
