@@ -1200,6 +1200,7 @@ static GuiElement* draw_blockchain(BlockChain* chain, bool ghost, bool show_prev
         }
         
         for (Block* iter = chain->start; iter; iter = iter->next) {
+            if (!thread_is_running(&vm.thread) && iter == vm.compiler_error.block) vm.compiler_error.blockchain = chain;
             draw_block(iter, false, false, true, ghost, editable_arguments, show_previews, false);
         }
     gui_element_end(gui);
@@ -1735,7 +1736,7 @@ static void draw_code(void) {
             editor.code[i].y * config.ui_size / 32.0 - editor.camera.real_position.y,
         };
         Rectangle code_size = ui.hover.panels.code_panel_bounds;
-        if (&editor.code[i] != ui.hover.editor.select_root_blockchain) {
+        if (editor.code[i].chain != ui.hover.editor.select_blockchain) {
             if (chain_pos.x > code_size.width || chain_pos.y > code_size.height) continue;
             if (editor.code[i].width > 0 && editor.code[i].height > 0 &&
                 (chain_pos.x + editor.code[i].width < 0 || chain_pos.y + editor.code[i].height < 0)) continue;
@@ -2327,6 +2328,7 @@ static void write_debug_buffer(void) {
     print_debug(&i, "Panel: %p, side: %d", ui.hover.panels.panel, ui.hover.panels.panel_side);
     print_debug(&i, "Part: %d, Select: %d", ui.dropdown.as.color_picker.hover_part, ui.dropdown.as.color_picker.select_part);
     print_debug(&i, "Anchor: %p, Ref: %p", ui.dropdown.element, ui.dropdown.ref_object);
+    print_debug(&i, "Error root: %p, chain: %p, block: %p", vm.compiler_error.root_blockchain, vm.compiler_error.blockchain, vm.compiler_error.block);
 #endif
 }
 
