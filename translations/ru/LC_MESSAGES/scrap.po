@@ -896,3 +896,6 @@ msgstr "неизвестно"
 
 msgid "null"
 msgstr "никакой"
+
+msgid "from library"
+msgstr "из библиотеки"

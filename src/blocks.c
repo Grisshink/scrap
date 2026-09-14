@@ -1469,15 +1469,15 @@ Value block_define_foreign(Compiler* compiler, Block* block, Block** next_block,
 
     Blockdef* blockdef = block->arguments[0].data.blockdef;
 
-    Value lib_name = compiler_evaluate_argument(compiler, &block->arguments[1]);
-    if (lib_name.type == DATA_TYPE_ERROR) return DATA_ERROR;
-    lib_name = cast_to_const_string(compiler, lib_name);
-    if (lib_name.type == DATA_TYPE_ERROR) return DATA_ERROR;
-
-    Value binding = compiler_evaluate_argument(compiler, &block->arguments[2]);
+    Value binding = compiler_evaluate_argument(compiler, &block->arguments[1]);
     if (binding.type == DATA_TYPE_ERROR) return DATA_ERROR;
     binding = cast_to_const_string(compiler, binding);
     if (binding.type == DATA_TYPE_ERROR) return DATA_ERROR;
+
+    Value lib_name = compiler_evaluate_argument(compiler, &block->arguments[2]);
+    if (lib_name.type == DATA_TYPE_ERROR) return DATA_ERROR;
+    lib_name = cast_to_const_string(compiler, lib_name);
+    if (lib_name.type == DATA_TYPE_ERROR) return DATA_ERROR;
 
     Value return_ffi_type = compiler_evaluate_argument(compiler, &block->arguments[3]);
     if (return_ffi_type.type == DATA_TYPE_ERROR) return DATA_ERROR;
@@ -3099,9 +3099,9 @@ void register_blocks(Vm* vm) {
     blockdef_add_text(sc_define_foreign, gettext("Define foreign"));
     blockdef_add_blockdef_editor(sc_define_foreign, block_exec_foreign, NULL, sc_define_foreign_template);
     blockdef_add_text(sc_define_foreign, gettext("binding to"));
-    blockdef_add_argument(sc_define_foreign, value_from_string(""), DATA_TYPE_STRING, NULL);
-    blockdef_add_text(sc_define_foreign, ":");
     blockdef_add_argument(sc_define_foreign, value_from_string("puts"), DATA_TYPE_STRING, NULL);
+    blockdef_add_text(sc_define_foreign, gettext("from library"));
+    blockdef_add_argument(sc_define_foreign, value_from_string(""), DATA_TYPE_STRING, NULL);
     blockdef_add_text(sc_define_foreign, gettext("with return type"));
     blockdef_add_dropdown(sc_define_foreign, DROPDOWN_SOURCE_LISTREF, data_type_list_access);
     blockdef_register(vm, sc_define_foreign);
