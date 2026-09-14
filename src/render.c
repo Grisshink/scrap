@@ -480,7 +480,7 @@ static void draw_blockdef(Blockdef* blockdef, bool editing, bool in_editor) {
                         }
 
                         gui_spacer(gui, BLOCK_STRING_PADDING / 2, 0);
-                        gui_text(gui, &assets.fonts.font_cond_shadow, type_to_str(input->data.arg.allowed_type), BLOCK_TEXT_SIZE, GUI_WHITE);
+                        gui_text(gui, &assets.fonts.font_cond_shadow, gettext(type_to_str(input->data.arg.allowed_type)), BLOCK_TEXT_SIZE, GUI_WHITE);
                         gui_image(gui, &assets.textures.dropdown, BLOCK_IMAGE_SIZE, GUI_WHITE);
                     gui_element_end(gui);
                 }
@@ -906,7 +906,7 @@ static void draw_block(Block* block, bool highlight, bool select, bool can_hover
                             }
 
                             gui_spacer(gui, BLOCK_STRING_PADDING / 2, 0);
-                            gui_text(gui, &assets.fonts.font_cond_shadow, type_to_str(arg->data.blockdef->return_type), BLOCK_TEXT_SIZE, GUI_WHITE);
+                            gui_text(gui, &assets.fonts.font_cond_shadow, gettext(type_to_str(arg->data.blockdef->return_type)), BLOCK_TEXT_SIZE, GUI_WHITE);
                             gui_image(gui, &assets.textures.dropdown, BLOCK_IMAGE_SIZE, GUI_WHITE);
                         gui_element_end(gui);
 

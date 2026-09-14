@@ -1,774 +1,898 @@
+# Copyright (C) 2024-2026 Grisshink
+# This file is distributed under the same license as the Scrap package.
+#
+#, fuzzy
 msgid ""
 msgstr ""
+"POT-Creation-Date: 2026-09-14 18:24+0300\n"
+"PO-Revision-Date: 2026-09-14 20:17+0300\n"
+"Last-Translator: Grisshink\n"
 "Language: ru\n"
+"MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
 
-#: blocks.c
+#: src/blocks.c:2762 src/blocks.c:2769
 msgid "Hello, scrap!"
 msgstr "Привет, мусороид!"
 
-#: blocks.c
+#: src/blocks.c:2662
 msgid "Control"
 msgstr "Управление"
 
-#: blocks.c
+#: src/blocks.c:2664
 msgid "Terminal"
 msgstr "Терминал"
 
-#: blocks.c
+#: src/blocks.c:2666
 msgid "Math"
 msgstr "Математика"
 
-#: blocks.c
+#: src/blocks.c:2668
 msgid "Logic"
 msgstr "Логика"
 
-#: blocks.c
+#: src/blocks.c:3141
 msgid "Strings"
 msgstr "Строки"
 
-#: blocks.c
+#: src/blocks.c:2672
 msgid "Misc."
 msgstr "Другое"
 
-#: blocks.c
+#: src/blocks.c:2670
 msgid "Data"
 msgstr "Данные"
 
-#: blocks.c
+#: src/blocks.c:2686
 msgid "When"
 msgstr "Когда"
 
-#: blocks.c
+#: src/blocks.c:2688
 msgid "clicked"
 msgstr "нажат"
 
-#: blocks.c
+#: src/blocks.c:2716
 msgid "Loop"
 msgstr "Цикл"
 
-#: blocks.c
+#: src/blocks.c:2721
 msgid "Repeat"
 msgstr "Повторить"
 
-#: blocks.c
+#: src/blocks.c:2723
 msgid "times"
 msgstr "раз"
 
-#: blocks.c
+#: src/blocks.c:2728
 msgid "While"
 msgstr "Пока"
 
-#: blocks.c
+#: src/blocks.c:2695
 msgid "If"
 msgstr "Если"
 
-#: blocks.c
+#: src/blocks.c:2697 src/blocks.c:2704
 msgid ", then"
 msgstr ", то"
 
-#: blocks.c
+#: src/blocks.c:2702
 msgid "Else if"
 msgstr "Иначе если"
 
-#: blocks.c
+#: src/blocks.c:2709
 msgid "Else"
 msgstr "Иначе"
 
-#: blocks.c
 msgid "Do nothing"
 msgstr "Делать ничего"
 
-#: blocks.c
+#: src/blocks.c:3009
 msgid "Sleep"
 msgstr "Ждать"
 
-#: blocks.c
-msgid "μs"
-msgstr "мкс"
-
-#: blocks.c
+#: src/blocks.c:2745
 msgid "Define"
 msgstr "Определить"
 
-#: blocks.c
+#: src/blocks.c:2752
 msgid "Return"
 msgstr "Вернуть"
 
-#: blocks.c
+#: src/blocks.c:2775
 msgid "Get input"
 msgstr "Получить ввод"
 
-#: blocks.c
+#: src/blocks.c:2781
 msgid "Get char"
 msgstr "Получить символ"
 
-#: blocks.c
+#: src/blocks.c:2761
 msgid "Print"
 msgstr "Напечатать"
 
-#: blocks.c
+#: src/blocks.c:2768
 msgid "Print line"
 msgstr "Напечатать линию"
 
-#: blocks.c
+#: src/blocks.c:2798
 msgid "Cursor X"
 msgstr "X курсора"
 
-#: blocks.c
+#: src/blocks.c:2804
 msgid "Cursor Y"
 msgstr "Y курсора"
 
-#: blocks.c
+#: src/blocks.c:2810
 msgid "Terminal width"
 msgstr "Ширина терминала"
 
-#: blocks.c
+#: src/blocks.c:2816
 msgid "Terminal height"
 msgstr "Высота терминала"
 
-#: blocks.c
+#: src/blocks.c:2789
 msgid "Set cursor X:"
 msgstr "Задать позицию курсора X:"
 
-#: blocks.c
+#: src/blocks.c:2791
 msgid "Y:"
 msgstr "Y:"
 
-#: blocks.c
+#: src/blocks.c:2824
 msgid "Set text color"
 msgstr "Задать цвет текста"
 
-#: blocks.c
+#: src/blocks.c:2831
 msgid "Set background color"
 msgstr "Задать цвет фона"
 
-#: blocks.c
+#: src/blocks.c:2838
 msgid "Reset color"
 msgstr "Сбросить цвет"
 
-#: blocks.c
+#: src/blocks.c:2844
 msgid "Clear terminal"
 msgstr "Очистить терминал"
 
-#: blocks.c
 msgid "Set clear color"
 msgstr "Задать цвет очистки"
 
-#: blocks.c
+#: src/blocks.c:2884
 msgid "Pow"
 msgstr "Степень"
 
-#: blocks.c
+#: src/blocks.c:2948
 msgid "Not"
 msgstr "Не"
 
-#: blocks.c
+#: src/blocks.c:2955
 msgid "and"
 msgstr "и"
 
-#: blocks.c
+#: src/blocks.c:2962
 msgid "or"
 msgstr "или"
 
-#: blocks.c
+#: src/blocks.c:2968 src/render.c:635
 msgid "True"
 msgstr "Истина"
 
-#: blocks.c
+#: src/blocks.c:2973
 msgid "False"
 msgstr "Ложь"
 
-#: blocks.c
+#: src/blocks.c:3016
 msgid "Random from"
 msgstr "Случайное целое от"
 
-#: blocks.c
+#: src/blocks.c:3018 src/blocks.c:3161
 msgid "to"
 msgstr "до"
 
-#: blocks.c
+#: src/blocks.c:3144
 msgid "Join"
 msgstr "Склеить"
 
-#: blocks.c
+#: src/blocks.c:3145
 msgid "left and "
 msgstr "левое и "
 
-#: blocks.c
+#: src/blocks.c:3146
 msgid "right"
 msgstr "правое"
 
-#: blocks.c
+#: src/blocks.c:3175
 msgid "Ord"
 msgstr "Ord"
 
-#: blocks.c
+#: src/blocks.c:3181
 msgid "Chr"
 msgstr "Chr"
 
-#: blocks.c
+#: src/blocks.c:3151
 msgid "Letter"
 msgstr "Буква"
 
-#: blocks.c
+#: src/blocks.c:3153 src/blocks.c:3163
 msgid "in"
 msgstr "в"
 
-#: blocks.c
+#: src/blocks.c:3159
 msgid "Substring"
 msgstr "Подстрока"
 
-#: blocks.c
+#: src/blocks.c:3169 src/blocks.c:3244
 msgid "Length"
 msgstr "Длина"
 
-#: blocks.c
+#: src/blocks.c:3154 src/blocks.c:3164 src/blocks.c:3170
 msgid "string"
 msgstr "строка"
 
-#: blocks.c
+#: src/blocks.c:3024
 msgid "Time since 1970"
 msgstr "Время с 1970"
 
-#: blocks.c
+#: src/blocks.c:3031
 msgid "Int"
 msgstr "Целое"
 
-#: blocks.c
+#: src/blocks.c:3037
 msgid "Float"
 msgstr "Вещ-ое"
 
-#: blocks.c
+#: src/blocks.c:3043
 msgid "Str"
 msgstr "Строчное"
 
-#: blocks.c
+#: src/blocks.c:3049
 msgid "Bool"
 msgstr "Булевое"
 
-#: blocks.c
+#: src/blocks.c:3055
 msgid "Color"
 msgstr "Цвет"
 
-#: blocks.c
+#: src/blocks.c:3069
 msgid "Nothing"
 msgstr "Ничего"
 
-#: blocks.c
+#: src/blocks.c:3119
 msgid "Declare"
 msgstr "Объявить"
 
-#: blocks.c
+#: src/blocks.c:3120 src/blocks.c:3128 src/blocks.c:3135
 msgid "my variable"
 msgstr "моя переменная"
 
-#: blocks.c
+#: src/render.c:588
 msgid "list"
 msgstr "список"
 
-#: blocks.c
+#: src/blocks.c:3110
 msgid "Collect garbage"
 msgstr "Собрать мусор"
 
-#: blocks.c
-msgid "Get"
-msgstr "Получить"
-
-#: blocks.c
+#: src/blocks.c:3134 src/blocks.c:3222
 msgid "Set"
 msgstr "Задать"
 
-#: blocks.c
+#: src/blocks.c:3190
 msgid "Empty list"
 msgstr "Пустой список"
 
-#: blocks.c
+#: src/blocks.c:3196
 msgid "Add"
 msgstr "Добавить"
 
-#: blocks.c
+#: src/blocks.c:3198
 msgid "value"
 msgstr "значение"
 
-#: blocks.c
-msgid "get at"
-msgstr "получить по индексу"
-
-#: blocks.c
-msgid "set at"
-msgstr "задать по индексу"
-
-#: blocks.c
+#: src/blocks.c:2741
 msgid "My block"
 msgstr "Мой блок"
 
-#: blocks.c
+#: src/blocks.c:3061
 msgid "Type of"
 msgstr "Тип от"
 
-#: blocks.c
-msgid "Invalid data type %s, expected %s"
-msgstr "Неверный тип данных %s, ожидался %s"
-
-#: blocks.c
+#: src/blocks.c:2118 src/blocks.c:2144
+#, c-format
 msgid "Variable with name \"%s\" does not exist in the current scope"
 msgstr "Переменная с именем \"%s\" не существует в данном окружении"
 
-#: blocks.c
+#: src/blocks.c:2161
+#, c-format
 msgid "Assign to variable \"%s\" of type %s with incompatible type %s"
-msgstr "Присвоение в переменную \"%s\" с типом %s значением несовместимого типа %s"
+msgstr ""
+"Присвоение в переменную \"%s\" с типом %s значением несовместимого типа %s"
 
-#: blocks.c
-msgid "Variable declarations are not allowed inside an argument"
-msgstr "Объявления переменных запрещены внутри аргументов"
-
-#: blocks.c
 msgid "Cannot declare variable with empty name"
 msgstr "Нельзя объявлять переменную с пустым именем"
 
-#: blocks.c
 msgid "Tried to access index %d for list of length %d"
 msgstr "Попытка получить элемент по индексу %d для списка размером %d"
 
-#: blocks.c
+#: src/blocks.c:865
 msgid "Division by zero"
 msgstr "Деление на ноль"
 
-#: blocks.c
-msgid "Invalid argument %s"
-msgstr "Неверный аргумент %s"
-
-#: blocks.c
-msgid "Unknown function id \"%s\""
-msgstr "Неизвестный id функции\"%s\""
-
-#: blocks.c
-msgid "Unknown argument id \"%s\""
-msgstr "Неизвестный id аргумента\"%s\""
-
-#: blocks.c
-msgid "Cannot represent %s as LLVM value"
-msgstr "Невозможно представить %s как значение LLVM"
-
-#: blocks.c
+#: src/blocks.c:140 src/blocks.c:169 src/blocks.c:226 src/blocks.c:272
+#: src/blocks.c:318 src/blocks.c:364 src/blocks.c:415 src/blocks.c:451
+#: src/blocks.c:496 src/blocks.c:523 src/blocks.c:547 src/blocks.c:571
+#: src/blocks.c:595 src/blocks.c:626 src/blocks.c:652 src/blocks.c:677
+#: src/blocks.c:702
+#, c-format
 msgid "Cannot cast type %s into %s"
 msgstr "Невозможно преобразовать тип %s в %s"
 
-#: blocks.c
 msgid "Cannot cast type %s into any string"
 msgstr "Невозможно преобразовать тип %s в any string"
 
-#: blocks.c
 msgid "Could not find function definition for argument"
 msgstr "Не удалось найти определение функции для аргумента"
 
-#: blocks.c
 msgid "Function argument block used outside of function"
 msgstr "Использование блока аргумента функции вне функции"
 
-#: blocks.c
 msgid "Too many parameters passed into function. Got %d/32"
 msgstr "Слишком много аргументов передано в функцию. Передано %d/32"
 
-#: blocks.c
 msgid "Invalid type %s in print function"
 msgstr "Неверный тип %s в функции печати"
 
-#: blocks.c
 msgid "Unhandled type %s in print function"
 msgstr "Необработанный тип %s в функции печати"
 
-#: blocks.c
 msgid "Cannot declare a variable with zero sized type (i.e. Nothing)"
 msgstr "Невозможно объявить переменную с типом нулевого размера (т.е. Ничего)"
 
-#: blocks.c
+#: src/blocks.c:3207 src/blocks.c:3215 src/blocks.c:3224 src/blocks.c:3235
 msgid "at"
 msgstr "в"
 
-#: save.c
+#: src/blocks.c:3006
 msgid "System"
 msgstr "Система"
 
-#: input.c
 msgid "Code"
 msgstr "Код"
 
-#: input.c
 msgid "Output"
 msgstr "Вывод"
 
-#: input.c
 msgid "Block categories"
 msgstr "Категории блоков"
 
-#: input.c
 msgid "Block palette"
 msgstr "Палитра блоков"
 
-#: render.c
+#: src/render.c:1087
 msgid "Scrap"
 msgstr "Scrap"
 
-#: render.c
+#: src/render.c:1090
 msgid "File"
 msgstr "Файл"
 
-#: render.c
+#: src/render.c:1092 src/window.c:590
 msgid "Settings"
 msgstr "Настройки"
 
-#: render.c
+#: src/render.c:1093 src/window.c:712
 msgid "About"
 msgstr "О программе"
 
-#: render.c
+#: src/render.c:1528
 msgid "Jump to block"
 msgstr "Перейти к блоку"
 
-#: render.c
+#: src/render.c:1534
 msgid "Close"
 msgstr "Закрыть"
 
-#: scrap.c
+#: src/vm.c:208
 msgid "Vm executed successfully"
 msgstr "Код выполнен успешно"
 
-#: scrap.c
+#: src/vm.c:214
 msgid "Vm stopped >:("
 msgstr "Код остановлен >:("
 
-#: scrap.c
+#: src/vm.c:211
 msgid "Vm shitted and died :("
 msgstr "Код высрал и сдох :("
 
-#: input.c
+#: src/ui.c:539 src/ui.c:550
 msgid "File load failed :("
 msgstr "Загрузка файла не удалась :("
 
-#: input.c
+#: src/ui.c:570
 msgid "File load succeeded!"
 msgstr "Загрузка файла удалась!"
 
-#: input.c
+#: src/ui.c:1698
+#, c-format
 msgid "Jump to chain (%d/%d)"
 msgstr "Переход на цепочку (%d/%d)"
 
-#: render.c
+#: src/render.c:2349
 msgid "Start failed!"
 msgstr "Запуск кода провалился!"
 
-#: render.c
+#: src/render.c:2351
 msgid "Started successfully!"
 msgstr "Код успешно запущен!"
 
-#: render.c
 msgid "New project"
 msgstr "Новый проект"
 
-#: render.c
 msgid "Save project"
 msgstr "Сохранить проект"
 
-#: render.c
 msgid "Load project"
 msgstr "Загрузить проект"
 
-#: window.c
+#: src/window.c:595
 msgid "UI size"
 msgstr "Размер интерфейса"
 
-#: window.c
+#: src/window.c:599
 msgid "FPS limit"
 msgstr "Ограничение FPS"
 
-#: window.c
+#: src/window.c:611
 msgid "Font path"
 msgstr "Путь шрифта"
 
-#: window.c
+#: src/window.c:615
 msgid "Bold font path"
 msgstr "Путь жирного шрифта"
 
-#: window.c
+#: src/window.c:619
 msgid "Monospaced font path"
 msgstr "Путь моноширинного шрифта"
 
-#: window.c
+#: src/window.c:623
 msgid "Panel layout"
 msgstr "Расположение панелей"
 
-#: window.c
 msgid "Open"
 msgstr "Открыть"
 
-#: window.c
+#: src/window.c:672
 msgid "Reset panels"
 msgstr "Сбросить панели"
 
-#: window.c
+#: src/window.c:673
 msgid "Reset"
 msgstr "Сбросить"
 
-#: window.c
+#: src/window.c:674
 msgid "Apply"
 msgstr "Применить"
 
-#: window.c
+#: src/window.c:685
 msgid "Needs restart for changes to take effect"
 msgstr "Требуется перезагрузка, чтобы изменения вступили в силу"
 
-#: window.c
-msgid "Scrap is a project that allows anyone to build\n"
-      "software using simple, block based interface."
-msgstr "Scrap - это проект, который позволяет любому\n"
-       "создавать софт, используя простой, блочный интерфейс"
+#: src/window.c:696
+msgid ""
+"Scrap is a project that allows anyone to build\n"
+"software using simple, block based interface."
+msgstr ""
+"Scrap - это проект, который позволяет любому\n"
+"создавать софт, используя простой, блочный интерфейс"
 
-#: window.c
+#: src/window.c:742
 msgid "License"
 msgstr "Лицензия"
 
-#: window.c
 msgid "Build settings"
 msgstr "Настройки сборки"
 
-#: window.c
 msgid "Executable name"
 msgstr "Имя приложения"
 
-#: window.c
 msgid "Linker name (Linux only)"
 msgstr "Имя линковщика (только для Linux)"
 
-#: window.c
 msgid "Build!"
 msgstr "Собрать!"
 
-#: window.c
+#: src/window.c:629
 msgid "Edit"
 msgstr "Изменить"
 
-#: render.c
+#: src/render.c:1977
 msgid "Panel edit mode"
 msgstr "Режим редактирования панелей"
 
-#: render.c
+#: src/render.c:1981
 msgid "Click on panels to reposition them"
 msgstr "Нажимайте на панели чтобы их передвигать"
 
-#: render.c
+#: src/render.c:1982
 msgid "Drag panel edges to resize them"
 msgstr "Перетягивайте края панелей, чтобы изменить размер"
 
-#: render.c
+#: src/render.c:1991
 msgid "Done"
 msgstr "Готово"
 
-#: render.c
+#: src/render.c:1990
 msgid "Save"
 msgstr "Сохранить"
 
-#: render.c
+#: src/render.c:1514
 msgid "Got compiler error!"
 msgstr "Ошибка компиляции!"
 
-#: blocks.c
 msgid "any"
 msgstr "любое"
 
-#: blocks.c
 msgid "cond."
 msgstr "усл."
 
-#: blocks.c
+#: src/render.c:661
 msgid "Abc"
 msgstr "Абв"
 
-#: blocks.c
+#: src/blocks.c:2692
 msgid "Conditionals"
 msgstr "Условия"
 
-#: blocks.c
+#: src/blocks.c:2713
 msgid "Loops"
 msgstr "Циклы"
 
-#: blocks.c
+#: src/blocks.c:2738
 msgid "Functions"
 msgstr "Функции"
 
-#: blocks.c
+#: src/blocks.c:2757
 msgid "Input/Output"
 msgstr "Ввод/Вывод"
 
-#: blocks.c
+#: src/blocks.c:2785
 msgid "Cursor"
 msgstr "Курсор"
 
-#: blocks.c
+#: src/blocks.c:2820
 msgid "Colors"
 msgstr "Цвета"
 
-#: blocks.c
+#: src/blocks.c:2901
 msgid "Comparisons"
 msgstr "Сравнения"
 
-#: blocks.c
+#: src/blocks.c:2945
 msgid "Boolean math"
 msgstr "Булевая математика"
 
-#: blocks.c
+#: src/blocks.c:2977
 msgid "Bitwise math"
 msgstr "Побитовые операторы"
 
-#: blocks.c
+#: src/blocks.c:3115
 msgid "Variables"
 msgstr "Переменные"
 
-#: blocks.c
+#: src/blocks.c:3186
 msgid "Lists"
 msgstr "Списки"
 
-#: blocks.c
+#: src/blocks.c:3028
 msgid "Type casting"
 msgstr "Преобразование типов"
 
-#: blocks.c
+#: src/blocks.c:3066
 msgid "Doing nothing"
 msgstr "Уголок бездельничества"
 
-#: blocks.c
+#: src/blocks.c:3107
 msgid "Debug blocks"
 msgstr "Дебаг-блоки"
 
-#: window.c
+#: src/window.c:612 src/window.c:616 src/window.c:620
 msgid "path"
 msgstr "путь"
 
-#: window.c
+#: src/window.c:591
 msgid "Language"
 msgstr "Язык"
 
-#: window.c
+#: src/window.c:633
 msgid "Show block previews"
 msgstr "Показывать предпросмотр блоков"
 
-#: window.c
+#: src/window.c:644
 msgid "Show debug info"
 msgstr "Показывать отладочную информацию"
 
-#: window.c
+#: src/window.c:663
 msgid "Settings applied"
 msgstr "Настройки применены"
 
-#: window.c
+#: src/window.c:748
 msgid "Confirm save"
 msgstr "Подтвердите сохранение"
 
-#: window.c
+#: src/window.c:749
 msgid "Project is modified. Save the changes before quitting?"
 msgstr "Проект изменён. Сохранить изменения перед выходом?"
 
-#: window.c
+#: src/window.c:760
 msgid "Yes"
 msgstr "Да"
 
-#: window.c
+#: src/window.c:761
 msgid "No"
 msgstr "Нет"
 
-#: window.c
+#: src/window.c:762
 msgid "Cancel"
 msgstr "Отмена"
 
-#: save.c
 msgid "LanguageList|System"
 msgstr "Системный"
 
-#: save.c
 msgid "English [en]"
 msgstr "Английский [en]"
 
-#: save.c
 msgid "Russian [ru]"
 msgstr "Русский [ru]"
 
-#: save.c
 msgid "Kazakh [kk]"
 msgstr "Казахский [kk]"
 
-#: save.c
 msgid "Ukrainian [uk]"
 msgstr "Украинский [uk]"
 
-#: save.c
+#: src/save.c:1112
+#, c-format
 msgid "UNKNOWN %s"
 msgstr "НЕИЗВЕСТНЫЙ %s"
 
-#: compiler.c
 msgid "Control stack overflow"
 msgstr "Переполнение стека контроля"
 
-#: compiler.c
 msgid "Variable stack overflow"
 msgstr "Переполнение стека переменных"
 
-#: compiler.c
 msgid "Tried to compile block without definition"
 msgstr "Попытка скомпилировать блок без определения"
 
-#: compiler.c
 msgid "Tried to compile block \"%s\" without implementation"
 msgstr "Попытка скомпилировать блок \"%s\" без реализации"
 
-#: compiler.c
 msgid "Function with name \"%s\" does not exist"
 msgstr "Функции с именем \"%s\" не существует"
 
-#: compiler.c
 msgid "Failed to build module: %s"
 msgstr "Не удалось собрать модуль: %s"
 
-#: interpreter.c
+#: src/compiler.c:239
 msgid "Tried to execute block without definition"
 msgstr "Попытка выполнить блок без определения"
 
-#: interpreter.c
+#: src/compiler.c:244
+#, c-format
 msgid "Tried to execute block \"%s\" without implementation"
 msgstr "Попытка выполнить блок \"%s\" без реализации"
 
-#: platform.c
 msgid "Failed to create a pipe. Error code: %ld"
 msgstr "Не удалось создать канал. Код ошибки: %ld"
 
-#: platform.c
+#: src/term.c:591
+#, c-format
 msgid "Failed to create a process. Error code: %ld"
 msgstr "Не удалось создать процесс. Код ошибки: %ld"
 
-#: platform.c
 msgid "Failed to read from pipe. Error code: %ld"
 msgstr "Не удалось прочитать данные из канала. Код ошибки: %ld"
 
-#: platform.c
+#: src/term.c:601
+#, c-format
 msgid "Failed to get exit code. Error code: %ld"
 msgstr "Не удалось получить код выхода. Код ошибки: %ld"
 
-#: platform.c
 msgid "Linker exited with exit code: %ld"
 msgstr "Линковщик завершился с кодом ошибки: %ld"
 
-#: platform.c
+#: src/term.c:780
+#, c-format
 msgid "Failed to fork a process: %s"
 msgstr "Не удалось форкнуть процесс: %s"
 
-#: platform.c
 msgid "Linker signaled with signal number: %d"
 msgstr "Линковщик завершился с кодом сигнала: %d"
 
-#: platform.c
+#: src/term.c:853
+#, c-format
 msgid "Received unknown child status :/"
 msgstr "Получен неизвестный статус от дочернего процесса :/"
 
-#: platform.c
-msgid " is not installed on your system or not installed correctly. Please install it and add it to your PATH environment variable to be able to build executables"
-msgstr " не установлен в системе или установлен неправильно. Пожалуйста, установите его и убедитесь что путь до него добавлен в переменную среды PATH, чтобы можно было собирать проекты"
+msgid ""
+" is not installed on your system or not installed correctly. Please install "
+"it and add it to your PATH environment variable to be able to build "
+"executables"
+msgstr ""
+" не установлен в системе или установлен неправильно. Пожалуйста, установите "
+"его и убедитесь что путь до него добавлен в переменную среды PATH, чтобы "
+"можно было собирать проекты"
+
+#: src/blocks.c:933
+msgid "Duplicate on_start block"
+msgstr "Невозможно запустить код с несколькими точками входа"
+
+#: src/blocks.c:1330
+#, c-format
+msgid "Duplicate function name \"%s\""
+msgstr "Функция \"%s\" уже существует"
+
+#: src/blocks.c:1399
+#, c-format
+msgid "Invalid return type in custom block %s"
+msgstr "Невозможно вернуть значение типа %s из функции"
+
+#: src/blocks.c:1428
+#, c-format
+msgid ""
+"Invalid input type %s, allowed argument input types are: %s, %s, %s, %s, %s"
+msgstr "Неверный входной тип %s, разрешены только типы: %s, %s, %s, %s, %s"
+
+#: src/blocks.c:1445
+#, c-format
+msgid "Invalid or mismatched input type %s and ffi type \"%s\""
+msgstr "Входной тип %s и тип внешней функции \"%s\" несовместимы или неверны"
+
+#: src/blocks.c:1488
+msgid "Foreign function binding cannot have spaces inside it"
+msgstr "Название внешней функции не должно содержать пробелов"
+
+#: src/blocks.c:1572
+msgid "Return block used outside of function"
+msgstr "Невозможно использовать блок возврата вне функции"
+
+#: src/blocks.c:1824
+#, c-format
+msgid "Invalid operation \"%s\" in math block"
+msgstr "Неверная операция \"%s\" в блоке математики"
+
+#: src/blocks.c:1868 src/blocks.c:1898
+#, c-format
+msgid "Incompatible types %s and %s in eq block"
+msgstr "Несовместимые типы %s и %s в блоке равенства"
+
+#: src/blocks.c:1886 src/blocks.c:1947
+#, c-format
+msgid "Type %s cannot be compared"
+msgstr "Тип %s невозможно сравнить"
+
+#: src/blocks.c:1929 src/blocks.c:1959
+#, c-format
+msgid "Incompatible types %s and %s in not_eq block"
+msgstr "Несовместимые типы %s и %s в блоке неравенства"
+
+#: src/blocks.c:2082
+#, c-format
+msgid "Cannot declare variable with type %s"
+msgstr "Невозможно объявить переменную с типом %s"
+
+#: src/blocks.c:2628 src/blocks.c:2643
+msgid "Argument block used outside of function"
+msgstr "Невозможно использовать блок аргумента вне функции"
+
+#: src/blocks.c:2734
+msgid "Block"
+msgstr "Блок"
+
+#: src/blocks.c:3011
+msgid "s"
+msgstr "с"
+
+#: src/blocks.c:3084
+msgid "Foreign function interface"
+msgstr "Интерфейс внешних функций"
+
+#: src/blocks.c:3095
+msgid "Define foreign"
+msgstr "Определить внешнюю"
+
+#: src/blocks.c:3097
+msgid "binding to"
+msgstr "соответствующая"
+
+#: src/blocks.c:3101
+msgid "with return type"
+msgstr "и возвращающая"
+
+#: src/blocks.c:3205
+msgid "Remove"
+msgstr "Удалить"
+
+#: src/blocks.c:3233
+msgid "Insert"
+msgstr "Вставить"
+
+#: src/compiler.c:214
+msgid "Tried to evaluate blockdef"
+msgstr "Попытка выполнить определение блока"
+
+#: src/platform.c:56 src/std.c:301
+msgid "Scrap console"
+msgstr "Консоль Scrap"
+
+#: src/render.c:581
+msgid "nothing"
+msgstr "ничего"
+
+#: src/term.c:608
+#, c-format
+msgid "Command exited with exit code: %ld"
+msgstr "Команда выполнена с кодом возврата: %ld"
+
+#: src/term.c:818
+#, c-format
+msgid "Could not create terminal input thread"
+msgstr "Не удалось создать поток ввода терминала"
+
+#: src/term.c:841
+#, c-format
+msgid "Command exited with exit code: %d"
+msgstr "Команда выполнена с кодом возврата: %d"
+
+#: src/term.c:849
+#, c-format
+msgid "Command signaled with signal %s"
+msgstr "Команда вышла и выдала сигнал %s"
+
+#: src/window.c:603
+msgid "Code panel smoothness"
+msgstr "Плавность панели кода"
+
+#: src/window.c:607
+msgid "Categories column count"
+msgstr "Кол-во колонок категорий"
+
+msgid "Any"
+msgstr "Любое"
+
+msgid "String"
+msgstr "Строковое"
+
+msgid "Integer"
+msgstr "Целое"
+
+msgid "List"
+msgstr "Список"
+
+msgid "str"
+msgstr "строка"
+
+msgid "integer"
+msgstr "целое"
+
+msgid "float"
+msgstr "вещ-ое"
+
+msgid "bool"
+msgstr "булевое"
+
+msgid "color"
+msgstr "цвет"
+
+msgid "chunk"
+msgstr "часть кода"
+
+msgid "blockdef"
+msgstr "определение блока"
+
+msgid "unknown"
+msgstr "неизвестно"
+
+msgid "null"
+msgstr "никакой"

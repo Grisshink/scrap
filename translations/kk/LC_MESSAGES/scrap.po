@@ -1,77 +1,86 @@
+# Copyright (C) 2024-2026 Grisshink
+# This file is distributed under the same license as the Scrap package.
+#
+#, fuzzy
 msgid ""
 msgstr ""
-"Language: kz\n"
+"POT-Creation-Date: 2026-09-14 20:14+0300\n"
+"PO-Revision-Date: 2026-09-14 20:24+ZONE\n"
+"Last-Translator: unkexlibre\n"
+"Language: kk\n"
+"MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
 
-#: blocks.c
+#: blocks.c src/blocks.c:2766 src/blocks.c:2773
 msgid "Hello, scrap!"
 msgstr "Сәлем, scrap!"
 
-#: blocks.c
+#: blocks.c src/blocks.c:2666
 msgid "Control"
 msgstr "Бақылау"
 
-#: blocks.c
+#: blocks.c src/blocks.c:2668
 msgid "Terminal"
 msgstr "Терминал"
 
-#: blocks.c
+#: blocks.c src/blocks.c:2670
 msgid "Math"
 msgstr "Математика"
 
-#: blocks.c
+#: blocks.c src/blocks.c:2672
 msgid "Logic"
 msgstr "Логика"
 
-#: blocks.c
+#: blocks.c src/blocks.c:3145
 msgid "Strings"
 msgstr "Жолдар"
 
-#: blocks.c
+#: blocks.c src/blocks.c:2676
 msgid "Misc."
 msgstr "Әртүрлі."
 
-#: blocks.c
+#: blocks.c src/blocks.c:2674
 msgid "Data"
 msgstr "Данные"
 
-#: blocks.c
+#: blocks.c src/blocks.c:2690
 msgid "When"
 msgstr "Қашан"
 
-#: blocks.c
+#: blocks.c src/blocks.c:2692
 msgid "clicked"
 msgstr "басылды"
 
-#: blocks.c
+#: blocks.c src/blocks.c:2720
 msgid "Loop"
 msgstr "Цикл"
 
-#: blocks.c
+#: blocks.c src/blocks.c:2725
 msgid "Repeat"
 msgstr "Қайталау"
 
-#: blocks.c
+#: blocks.c src/blocks.c:2727
 msgid "times"
 msgstr "рет"
 
-#: blocks.c
+#: blocks.c src/blocks.c:2732
 msgid "While"
 msgstr "Әзірге"
 
-#: blocks.c
+#: blocks.c src/blocks.c:2699
 msgid "If"
 msgstr "Егер"
 
-#: blocks.c
+#: blocks.c src/blocks.c:2701 src/blocks.c:2708
 msgid ", then"
 msgstr ", содан кейін"
 
-#: blocks.c
+#: blocks.c src/blocks.c:2706
 msgid "Else if"
 msgstr "Әйтпесе, егер"
 
-#: blocks.c
+#: blocks.c src/blocks.c:2713
 msgid "Else"
 msgstr "Басқа"
 
@@ -79,7 +88,7 @@ msgstr "Басқа"
 msgid "Do nothing"
 msgstr "Ештеңе жасама"
 
-#: blocks.c
+#: blocks.c src/blocks.c:3013
 msgid "Sleep"
 msgstr "Ұйқы"
 
@@ -87,67 +96,67 @@ msgstr "Ұйқы"
 msgid "μs"
 msgstr "мкс"
 
-#: blocks.c
+#: blocks.c src/blocks.c:2749
 msgid "Define"
 msgstr "Анықтаңыз"
 
-#: blocks.c
+#: blocks.c src/blocks.c:2756
 msgid "Return"
 msgstr "Қайту"
 
-#: blocks.c
+#: blocks.c src/blocks.c:2779
 msgid "Get input"
 msgstr "Кіріс алыңыз"
 
-#: blocks.c
+#: blocks.c src/blocks.c:2785
 msgid "Get char"
 msgstr "Шарды алыңыз"
 
-#: blocks.c
+#: blocks.c src/blocks.c:2765
 msgid "Print"
 msgstr "Басып шығару"
 
-#: blocks.c
+#: blocks.c src/blocks.c:2772
 msgid "Print line"
 msgstr "Басып шығару сызығы"
 
-#: blocks.c
+#: blocks.c src/blocks.c:2802
 msgid "Cursor X"
 msgstr "Меңзер X"
 
-#: blocks.c
+#: blocks.c src/blocks.c:2808
 msgid "Cursor Y"
 msgstr "Меңзер Y"
 
-#: blocks.c
+#: blocks.c src/blocks.c:2814
 msgid "Terminal width"
 msgstr "Терминал ені"
 
-#: blocks.c
+#: blocks.c src/blocks.c:2820
 msgid "Terminal height"
 msgstr "Терминал биіктігі"
 
-#: blocks.c
+#: blocks.c src/blocks.c:2793
 msgid "Set cursor X:"
 msgstr "курсорын орнату X:"
 
-#: blocks.c
+#: blocks.c src/blocks.c:2795
 msgid "Y:"
 msgstr "Y:"
 
-#: blocks.c
+#: blocks.c src/blocks.c:2828
 msgid "Set text color"
 msgstr "Мәтін түсін орнату"
 
-#: blocks.c
+#: blocks.c src/blocks.c:2835
 msgid "Set background color"
 msgstr "Фон түсін орнату"
 
-#: blocks.c
+#: blocks.c src/blocks.c:2842
 msgid "Reset color"
 msgstr "Түсті қалпына келтіру"
 
-#: blocks.c
+#: blocks.c src/blocks.c:2848
 msgid "Clear terminal"
 msgstr "Терминалды тазалау"
 
@@ -155,7 +164,7 @@ msgstr "Терминалды тазалау"
 msgid "Set clear color"
 msgstr "Ашық түсті орнатыңыз"
 
-#: blocks.c
+#: blocks.c src/blocks.c:2888
 msgid "Pow"
 msgstr "Дәреже"
 
@@ -163,23 +172,23 @@ msgstr "Дәреже"
 msgid "Pi"
 msgstr "Пи"
 
-#: blocks.c
+#: blocks.c src/blocks.c:2952
 msgid "Not"
 msgstr "Жоқ"
 
-#: blocks.c
+#: blocks.c src/blocks.c:2959
 msgid "and"
 msgstr "және"
 
-#: blocks.c
+#: blocks.c src/blocks.c:2966
 msgid "or"
 msgstr "немесе"
 
-#: blocks.c
+#: blocks.c src/blocks.c:2972 src/render.c:635
 msgid "True"
 msgstr "Рас"
 
-#: blocks.c
+#: blocks.c src/blocks.c:2977
 msgid "False"
 msgstr "Жалған"
 
@@ -187,79 +196,79 @@ msgstr "Жалған"
 msgid "Random"
 msgstr "Кездейсоқ"
 
-#: blocks.c
+#: blocks.c src/blocks.c:3022 src/blocks.c:3165
 msgid "to"
 msgstr "дейін"
 
-#: blocks.c
+#: blocks.c src/blocks.c:3148
 msgid "Join"
 msgstr "Қосылыңыз"
 
-#: blocks.c
+#: blocks.c src/blocks.c:3149
 msgid "left and "
 msgstr "солға және "
 
-#: blocks.c
+#: blocks.c src/blocks.c:3150
 msgid "right"
 msgstr "дұрыс"
 
-#: blocks.c
+#: blocks.c src/blocks.c:3179
 msgid "Ord"
 msgstr "Оrd"
 
-#: blocks.c
+#: blocks.c src/blocks.c:3185
 msgid "Chr"
 msgstr "Chr"
 
-#: blocks.c
+#: blocks.c src/blocks.c:3155
 msgid "Letter"
 msgstr "Хат"
 
-#: blocks.c
+#: blocks.c src/blocks.c:3157 src/blocks.c:3167
 msgid "in"
 msgstr "жылы"
 
-#: blocks.c
+#: blocks.c src/blocks.c:3163
 msgid "Substring"
 msgstr "Ішкі жол"
 
-#: blocks.c
+#: blocks.c src/blocks.c:3173 src/blocks.c:3248
 msgid "Length"
 msgstr "Ұзындығы"
 
-#: blocks.c
+#: blocks.c src/blocks.c:3158 src/blocks.c:3168 src/blocks.c:3174
 msgid "string"
 msgstr "жол"
 
-#: blocks.c
+#: blocks.c src/blocks.c:3028
 msgid "Time since 1970"
 msgstr "1970 жылдан бері уақыт"
 
-#: blocks.c
+#: blocks.c src/blocks.c:3035
 msgid "Int"
 msgstr "Бүтін сан"
 
-#: blocks.c
+#: blocks.c src/blocks.c:3041
 msgid "Float"
 msgstr "Қалқымалы"
 
-#: blocks.c
+#: blocks.c src/blocks.c:3047
 msgid "Str"
 msgstr "Кіші әріп"
 
-#: blocks.c
+#: blocks.c src/blocks.c:3053
 msgid "Bool"
 msgstr "Булевое"
 
-#: blocks.c
+#: blocks.c src/blocks.c:3073
 msgid "Nothing"
 msgstr "Ештеңе"
 
-#: blocks.c
+#: blocks.c src/blocks.c:3123
 msgid "Declare"
 msgstr "Мәлімдеу"
 
-#: blocks.c
+#: blocks.c src/blocks.c:3124 src/blocks.c:3132 src/blocks.c:3139
 msgid "my variable"
 msgstr "менің айнымалым"
 
@@ -267,19 +276,19 @@ msgstr "менің айнымалым"
 msgid "Get"
 msgstr "Алу"
 
-#: blocks.c
+#: blocks.c src/blocks.c:3138 src/blocks.c:3226
 msgid "Set"
 msgstr "Орнату"
 
-#: blocks.c
+#: blocks.c src/blocks.c:3194
 msgid "Empty list"
 msgstr "Бос тізім"
 
-#: blocks.c
+#: blocks.c src/blocks.c:3200
 msgid "Add"
 msgstr "Қосу"
 
-#: blocks.c
+#: blocks.c src/blocks.c:3202
 msgid "value"
 msgstr "мән"
 
@@ -291,11 +300,11 @@ msgstr "жету"
 msgid "set at"
 msgstr "орнатыңыз"
 
-#: blocks.c
+#: blocks.c src/blocks.c:2745
 msgid "My block"
 msgstr "Менің блогым"
 
-#: render.c
+#: render.c src/render.c:1087
 msgid "Scrap"
 msgstr "Scrap"
 
@@ -315,47 +324,48 @@ msgstr "Код сәтті орындалды"
 msgid "Block palette"
 msgstr "Блок палитрасы"
 
-#: render.c
+#: render.c src/render.c:1090
 msgid "File"
 msgstr "Файл"
 
-#: render.c
+#: render.c src/render.c:1092 src/window.c:590
 msgid "Settings"
 msgstr "Параметрлер"
 
-#: render.c
+#: render.c src/render.c:1093 src/window.c:712
 msgid "About"
 msgstr "Туралы"
 
-#: scrap.c
+#: scrap.c src/vm.c:208
 msgid "Vm executed successfully"
 msgstr "Код сәтті орындалды"
 
-#: scrap.c
+#: scrap.c src/vm.c:214
 msgid "Vm stopped >:("
 msgstr "Код тоқтатылды >:("
 
-#: scrap.c
+#: scrap.c src/vm.c:211
 msgid "Vm shitted and died :("
 msgstr "Код бұзылды және өлді :("
 
-#: input.c
+#: input.c src/ui.c:539 src/ui.c:550
 msgid "File load failed :("
 msgstr "Файл жүктелмеді :("
 
-#: input.c
+#: input.c src/ui.c:570
 msgid "File load succeeded!"
 msgstr "Файл жүктелді!"
 
-#: input.c
+#: input.c src/ui.c:1698
+#, c-format
 msgid "Jump to chain (%d/%d)"
 msgstr "Переход на цепочку (%d/%d)"
 
-#: render.c
+#: render.c src/render.c:2349
 msgid "Start failed!"
 msgstr "Кодты бастау сәтсіз аяқталды!"
 
-#: render.c
+#: render.c src/render.c:2351
 msgid "Started successfully!"
 msgstr "Код сәтті басталды!"
 
@@ -371,23 +381,23 @@ msgstr "Жобаны сақтау"
 msgid "Load project"
 msgstr "Жобаны жүктеңіз"
 
-#: window.c
+#: window.c src/window.c:595
 msgid "UI size"
 msgstr "Пайдаланушы интерфейсінің өлшемі"
 
-#: window.c
+#: window.c src/window.c:599
 msgid "FPS limit"
 msgstr "FPS шегі"
 
-#: window.c
+#: window.c src/window.c:611
 msgid "Font path"
 msgstr "Қаріп жолы"
 
-#: window.c
+#: window.c src/window.c:615
 msgid "Bold font path"
 msgstr "Қалың шрифт жолы"
 
-#: window.c
+#: window.c src/window.c:619
 msgid "Monospaced font path"
 msgstr "Бір кеңістікті қаріп жолы"
 
@@ -399,49 +409,386 @@ msgstr "Панель редакторы"
 msgid "Open"
 msgstr "Ашық"
 
-#: window.c
+#: window.c src/window.c:672
 msgid "Reset panels"
 msgstr "Панельдерді қалпына келтіру"
 
-#: window.c
+#: window.c src/window.c:673
 msgid "Reset"
 msgstr "Қалпына келтіру"
 
-#: window.c
+#: window.c src/window.c:674
 msgid "Apply"
 msgstr "Қолдану"
 
-#: window.c
+#: window.c src/window.c:685
 msgid "Needs restart for changes to take effect"
 msgstr "Өзгерістер күшіне енуі үшін қайта іске қосу қажет"
 
-#: window.c
-msgid "Scrap is a project that allows anyone to build\n"
-      "software using simple, block based interface."
-msgstr "Scrap - бұл кез келген адамға салуға мүмкіндік беретін\n"
-       "жоба қарапайым, блок негізіндегі интерфейсті\n"
-       "пайдаланатын бағдарламалық қамтамасыз ету."
+#: window.c src/window.c:696
+msgid ""
+"Scrap is a project that allows anyone to build\n"
+"software using simple, block based interface."
+msgstr ""
+"Scrap - бұл кез келген адамға салуға мүмкіндік беретін\n"
+"жоба қарапайым, блок негізіндегі интерфейсті\n"
+"пайдаланатын бағдарламалық қамтамасыз ету."
 
-#: window.c
+#: window.c src/window.c:742
 msgid "License"
 msgstr "Лицензия"
 
-#: render.c
+#: render.c src/render.c:1977
 msgid "Panel edit mode"
 msgstr "Панельді өңдеу режимі"
 
-#: render.c
+#: render.c src/render.c:1981
 msgid "Click on panels to reposition them"
 msgstr "Олардың орнын өзгерту үшін панельдерді басыңыз"
 
-#: render.c
+#: render.c src/render.c:1982
 msgid "Drag panel edges to resize them"
 msgstr "Өлшемдерін өзгерту үшін панель жиектерін сүйреңіз"
 
-#: render.c
+#: render.c src/render.c:1991
 msgid "Done"
 msgstr "Дайын"
 
-#: render.c
+#: render.c src/render.c:1990
 msgid "Save"
 msgstr "Сақтау"
+
+#: src/blocks.c:102
+#, c-format
+msgid "Cannot cast type %s into %s"
+msgstr ""
+
+#: src/blocks.c:869
+msgid "Division by zero"
+msgstr ""
+
+#: src/blocks.c:937
+msgid "Duplicate on_start block"
+msgstr ""
+
+#: src/blocks.c:1334
+#, c-format
+msgid "Duplicate function name \"%s\""
+msgstr ""
+
+#: src/blocks.c:1403
+#, c-format
+msgid "Invalid return type in custom block %s"
+msgstr ""
+
+#: src/blocks.c:1432
+#, c-format
+msgid ""
+"Invalid input type %s, allowed argument input types are: %s, %s, %s, %s, %s"
+msgstr ""
+
+#: src/blocks.c:1449
+#, c-format
+msgid "Invalid or mismatched input type %s and ffi type \"%s\""
+msgstr ""
+
+#: src/blocks.c:1492
+msgid "Foreign function binding cannot have spaces inside it"
+msgstr ""
+
+#: src/blocks.c:1576
+msgid "Return block used outside of function"
+msgstr ""
+
+#: src/blocks.c:1828
+#, c-format
+msgid "Invalid operation \"%s\" in math block"
+msgstr ""
+
+#: src/blocks.c:1872 src/blocks.c:1902
+#, c-format
+msgid "Incompatible types %s and %s in eq block"
+msgstr ""
+
+#: src/blocks.c:1890 src/blocks.c:1951
+#, c-format
+msgid "Type %s cannot be compared"
+msgstr ""
+
+#: src/blocks.c:1933 src/blocks.c:1963
+#, c-format
+msgid "Incompatible types %s and %s in not_eq block"
+msgstr ""
+
+#: src/blocks.c:2086
+#, c-format
+msgid "Cannot declare variable with type %s"
+msgstr ""
+
+#: src/blocks.c:2122 src/blocks.c:2148
+#, c-format
+msgid "Variable with name \"%s\" does not exist in the current scope"
+msgstr ""
+
+#: src/blocks.c:2165
+#, c-format
+msgid "Assign to variable \"%s\" of type %s with incompatible type %s"
+msgstr ""
+
+#: src/blocks.c:2632 src/blocks.c:2647
+msgid "Argument block used outside of function"
+msgstr ""
+
+#: src/blocks.c:2696
+msgid "Conditionals"
+msgstr ""
+
+#: src/blocks.c:2717
+msgid "Loops"
+msgstr ""
+
+#: src/blocks.c:2738
+msgid "Block"
+msgstr ""
+
+#: src/blocks.c:2742
+msgid "Functions"
+msgstr ""
+
+#: src/blocks.c:2761
+msgid "Input/Output"
+msgstr ""
+
+#: src/blocks.c:2789
+msgid "Cursor"
+msgstr ""
+
+#: src/blocks.c:2824
+msgid "Colors"
+msgstr ""
+
+#: src/blocks.c:2905
+msgid "Comparisons"
+msgstr ""
+
+#: src/blocks.c:2949
+msgid "Boolean math"
+msgstr ""
+
+#: src/blocks.c:2981
+msgid "Bitwise math"
+msgstr ""
+
+#: src/blocks.c:3010
+msgid "System"
+msgstr ""
+
+#: src/blocks.c:3015
+msgid "s"
+msgstr ""
+
+#: src/blocks.c:3020
+msgid "Random from"
+msgstr ""
+
+#: src/blocks.c:3032
+msgid "Type casting"
+msgstr ""
+
+#: src/blocks.c:3059
+msgid "Color"
+msgstr ""
+
+#: src/blocks.c:3065
+msgid "Type of"
+msgstr ""
+
+#: src/blocks.c:3070
+msgid "Doing nothing"
+msgstr ""
+
+#: src/blocks.c:3088
+msgid "Foreign function interface"
+msgstr ""
+
+#: src/blocks.c:3099
+msgid "Define foreign"
+msgstr ""
+
+#: src/blocks.c:3101
+msgid "binding to"
+msgstr ""
+
+#: src/blocks.c:3105
+msgid "with return type"
+msgstr ""
+
+#: src/blocks.c:3111
+msgid "Debug blocks"
+msgstr ""
+
+#: src/blocks.c:3114
+msgid "Collect garbage"
+msgstr ""
+
+#: src/blocks.c:3119
+msgid "Variables"
+msgstr ""
+
+#: src/blocks.c:3190
+msgid "Lists"
+msgstr ""
+
+#: src/blocks.c:3209
+msgid "Remove"
+msgstr ""
+
+#: src/blocks.c:3211 src/blocks.c:3219 src/blocks.c:3228 src/blocks.c:3239
+msgid "at"
+msgstr ""
+
+#: src/blocks.c:3237
+msgid "Insert"
+msgstr ""
+
+#: src/compiler.c:214
+msgid "Tried to evaluate blockdef"
+msgstr ""
+
+#: src/compiler.c:239
+msgid "Tried to execute block without definition"
+msgstr ""
+
+#: src/compiler.c:244
+#, c-format
+msgid "Tried to execute block \"%s\" without implementation"
+msgstr ""
+
+#: src/platform.c:56 src/std.c:301
+msgid "Scrap console"
+msgstr ""
+
+#: src/render.c:581
+msgid "nothing"
+msgstr ""
+
+#: src/render.c:588
+msgid "list"
+msgstr ""
+
+#: src/render.c:661
+msgid "Abc"
+msgstr ""
+
+#: src/render.c:1514
+msgid "Got compiler error!"
+msgstr ""
+
+#: src/render.c:1528
+msgid "Jump to block"
+msgstr ""
+
+#: src/render.c:1534
+msgid "Close"
+msgstr ""
+
+#: src/save.c:1112
+#, c-format
+msgid "UNKNOWN %s"
+msgstr ""
+
+#: src/term.c:591
+#, c-format
+msgid "Failed to create a process. Error code: %ld"
+msgstr ""
+
+#: src/term.c:601
+#, c-format
+msgid "Failed to get exit code. Error code: %ld"
+msgstr ""
+
+#: src/term.c:608
+#, c-format
+msgid "Command exited with exit code: %ld"
+msgstr ""
+
+#: src/term.c:780
+#, c-format
+msgid "Failed to fork a process: %s"
+msgstr ""
+
+#: src/term.c:818
+#, c-format
+msgid "Could not create terminal input thread"
+msgstr ""
+
+#: src/term.c:841
+#, c-format
+msgid "Command exited with exit code: %d"
+msgstr ""
+
+#: src/term.c:849
+#, c-format
+msgid "Command signaled with signal %s"
+msgstr ""
+
+#: src/term.c:853
+#, c-format
+msgid "Received unknown child status :/"
+msgstr ""
+
+#: src/window.c:591
+msgid "Language"
+msgstr ""
+
+#: src/window.c:603
+msgid "Code panel smoothness"
+msgstr ""
+
+#: src/window.c:607
+msgid "Categories column count"
+msgstr ""
+
+#: src/window.c:612 src/window.c:616 src/window.c:620
+msgid "path"
+msgstr ""
+
+#: src/window.c:623
+msgid "Panel layout"
+msgstr ""
+
+#: src/window.c:629
+msgid "Edit"
+msgstr ""
+
+#: src/window.c:633
+msgid "Show block previews"
+msgstr ""
+
+#: src/window.c:644
+msgid "Show debug info"
+msgstr ""
+
+#: src/window.c:663
+msgid "Settings applied"
+msgstr ""
+
+#: src/window.c:748
+msgid "Confirm save"
+msgstr ""
+
+#: src/window.c:749
+msgid "Project is modified. Save the changes before quitting?"
+msgstr ""
+
+#: src/window.c:760
+msgid "Yes"
+msgstr ""
+
+#: src/window.c:761
+msgid "No"
+msgstr ""
+
+#: src/window.c:762
+msgid "Cancel"
+msgstr ""

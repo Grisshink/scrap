@@ -98,6 +98,10 @@ static MathFunc block_math_func_list[MATH_LIST_LEN] = {
 #include "std.h"
 #include <stdio.h>
 
+void compiler_set_cast_error(Compiler* compiler, DataType from, DataType to) {
+    compiler_set_error(compiler, gettext("Cannot cast type %s into %s"), gettext(type_to_str(from)), gettext(type_to_str(to)));
+}
+
 Value cast_to_const_string(Compiler* compiler, Value value);
 Value cast_to_const_int(Compiler* compiler, Value value);
 Value cast_to_const_float(Compiler* compiler, Value value);
@@ -137,7 +141,7 @@ Value cast_to_bc_string(Compiler* compiler, Value value) {
     case DATA_TYPE_UNKNOWN:
     case DATA_TYPE_NULL:
     case DATA_TYPE_BLOCKDEF:
-        compiler_set_error(compiler, gettext("Cannot cast type %s into %s"), type_to_str(value.type), type_to_str(result_type));
+        compiler_set_cast_error(compiler, value.type, result_type);
         return DATA_ERROR;
     case DATA_TYPE_LIST:
         snprintf(str, 32, "[List: Empty]");
@@ -166,7 +170,7 @@ Value cast_to_bc_string(Compiler* compiler, Value value) {
         case DATA_TYPE_NULL:
         case DATA_TYPE_BLOCKDEF:
         case DATA_TYPE_CHUNK:
-            compiler_set_error(compiler, gettext("Cannot cast type %s into %s"), type_to_str(value.data.chunk_val.return_type), type_to_str(result_type));
+            compiler_set_cast_error(compiler, value.data.chunk_val.return_type, result_type);
             return DATA_ERROR;
         case DATA_TYPE_LIST:
             bytecode_push_op(&bc, IR_LTOA);
@@ -223,7 +227,7 @@ Value cast_to_bc_int(Compiler* compiler, Value value) {
     case DATA_TYPE_BLOCKDEF:
     case DATA_TYPE_LIST:
     case DATA_TYPE_CHUNK:
-        compiler_set_error(compiler, gettext("Cannot cast type %s into %s"), type_to_str(value.data.chunk_val.return_type), type_to_str(result_type));
+        compiler_set_cast_error(compiler, value.data.chunk_val.return_type, result_type);
         return DATA_ERROR;
     case DATA_TYPE_NOTHING:
     case DATA_TYPE_ANY:
@@ -269,7 +273,7 @@ Value cast_to_bc_float(Compiler* compiler, Value value) {
     case DATA_TYPE_BLOCKDEF:
     case DATA_TYPE_LIST:
     case DATA_TYPE_CHUNK:
-        compiler_set_error(compiler, gettext("Cannot cast type %s into %s"), type_to_str(value.data.chunk_val.return_type), type_to_str(result_type));
+        compiler_set_cast_error(compiler, value.data.chunk_val.return_type, result_type);
         return DATA_ERROR;
     case DATA_TYPE_NOTHING:
     case DATA_TYPE_ANY:
@@ -315,7 +319,7 @@ Value cast_to_bc_bool(Compiler* compiler, Value value) {
     case DATA_TYPE_BLOCKDEF:
     case DATA_TYPE_LIST:
     case DATA_TYPE_CHUNK:
-        compiler_set_error(compiler, gettext("Cannot cast type %s into %s"), type_to_str(value.data.chunk_val.return_type), type_to_str(result_type));
+        compiler_set_cast_error(compiler, value.data.chunk_val.return_type, result_type);
         return DATA_ERROR;
     case DATA_TYPE_NOTHING:
     case DATA_TYPE_ANY:
@@ -361,7 +365,7 @@ Value cast_to_bc_color(Compiler* compiler, Value value) {
     case DATA_TYPE_BLOCKDEF:
     case DATA_TYPE_LIST:
     case DATA_TYPE_CHUNK:
-        compiler_set_error(compiler, gettext("Cannot cast type %s into %s"), type_to_str(value.data.chunk_val.return_type), type_to_str(result_type));
+        compiler_set_cast_error(compiler, value.data.chunk_val.return_type, result_type);
         return DATA_ERROR;
     case DATA_TYPE_NOTHING:
     case DATA_TYPE_ANY:
@@ -412,7 +416,7 @@ Value cast_to_bc_nothing(Compiler* compiler, Value value) {
     case DATA_TYPE_FLOAT:
     case DATA_TYPE_STRING:
     case DATA_TYPE_BOOL:
-        compiler_set_error(compiler, gettext("Cannot cast type %s into %s"), type_to_str(value.data.chunk_val.return_type), type_to_str(result_type));
+        compiler_set_cast_error(compiler, value.data.chunk_val.return_type, result_type);
         return DATA_ERROR;
     case DATA_TYPE_NOTHING:
         return value;
@@ -448,7 +452,7 @@ Value cast_to_bc_list(Compiler* compiler, Value value) {
     case DATA_TYPE_FLOAT:
     case DATA_TYPE_STRING:
     case DATA_TYPE_BOOL:
-        compiler_set_error(compiler, gettext("Cannot cast type %s into %s"), type_to_str(value.data.chunk_val.return_type), type_to_str(result_type));
+        compiler_set_cast_error(compiler, value.data.chunk_val.return_type, result_type);
         return DATA_ERROR;
     case DATA_TYPE_ANY:
         bytecode_push_op(&bc, IR_TOL);
@@ -493,7 +497,7 @@ Value cast_to_bc(Compiler* compiler, Value value, DataType dst_type) {
     case DATA_TYPE_CHUNK:
     case DATA_TYPE_BLOCKDEF:
     case DATA_TYPE_NULL:
-        compiler_set_error(compiler, gettext("Cannot cast type %s into %s"), type_to_str(src_type), type_to_str(dst_type));
+        compiler_set_cast_error(compiler, src_type, dst_type);
         return DATA_ERROR;
     default:
         assert(false && "Unhandled data type in cast_to_bc");
@@ -520,7 +524,7 @@ Value cast_to_const_string(Compiler* compiler, Value value) {
     case DATA_TYPE_CHUNK:
     case DATA_TYPE_BLOCKDEF:
     case DATA_TYPE_NULL:
-        compiler_set_error(compiler, gettext("Cannot cast type %s into %s"), type_to_str(value.type), type_to_str(dst_type));
+        compiler_set_cast_error(compiler, value.type, dst_type);
         return DATA_ERROR;
     default:
         assert(false && "Unhandled data type in cast_to_const_string");
@@ -544,7 +548,7 @@ Value cast_to_const_int(Compiler* compiler, Value value) {
     case DATA_TYPE_CHUNK:
     case DATA_TYPE_BLOCKDEF:
     case DATA_TYPE_NULL:
-        compiler_set_error(compiler, gettext("Cannot cast type %s into %s"), type_to_str(value.type), type_to_str(dst_type));
+        compiler_set_cast_error(compiler, value.type, dst_type);
         return DATA_ERROR;
     default:
         assert(false && "Unhandled data type in cast_to_const_int");
@@ -568,7 +572,7 @@ Value cast_to_const_float(Compiler* compiler, Value value) {
     case DATA_TYPE_CHUNK:
     case DATA_TYPE_BLOCKDEF:
     case DATA_TYPE_NULL:
-        compiler_set_error(compiler, gettext("Cannot cast type %s into %s"), type_to_str(value.type), type_to_str(dst_type));
+        compiler_set_cast_error(compiler, value.type, dst_type);
         return DATA_ERROR;
     default:
         assert(false && "Unhandled data type in cast_to_const_float");
@@ -592,7 +596,7 @@ Value cast_to_const_bool(Compiler* compiler, Value value) {
     case DATA_TYPE_CHUNK:
     case DATA_TYPE_BLOCKDEF:
     case DATA_TYPE_NULL:
-        compiler_set_error(compiler, gettext("Cannot cast type %s into %s"), type_to_str(value.type), type_to_str(dst_type));
+        compiler_set_cast_error(compiler, value.type, dst_type);
         return DATA_ERROR;
     default:
         assert(false && "Unhandled data type in cast_to_const_bool");
@@ -623,7 +627,7 @@ Value cast_to_const_color(Compiler* compiler, Value value) {
     case DATA_TYPE_CHUNK:
     case DATA_TYPE_BLOCKDEF:
     case DATA_TYPE_NULL:
-        compiler_set_error(compiler, gettext("Cannot cast type %s into %s"), type_to_str(value.type), type_to_str(dst_type));
+        compiler_set_cast_error(compiler, value.type, dst_type);
         return DATA_ERROR;
     default:
         assert(false && "Unhandled data type in cast_to_const_color");
@@ -649,7 +653,7 @@ Value cast_to_const_nothing(Compiler* compiler, Value value) {
     case DATA_TYPE_CHUNK:
     case DATA_TYPE_BLOCKDEF:
     case DATA_TYPE_NULL:
-        compiler_set_error(compiler, gettext("Cannot cast type %s into %s"), type_to_str(value.type), type_to_str(dst_type));
+        compiler_set_cast_error(compiler, value.type, dst_type);
         return DATA_ERROR;
     default:
         assert(false && "Unhandled data type in cast_to_const_nothing");
@@ -674,7 +678,7 @@ Value cast_to_const_list(Compiler* compiler, Value value) {
     case DATA_TYPE_CHUNK:
     case DATA_TYPE_BLOCKDEF:
     case DATA_TYPE_NULL:
-        compiler_set_error(compiler, gettext("Cannot cast type %s into %s"), type_to_str(value.type), type_to_str(dst_type));
+        compiler_set_cast_error(compiler, value.type, dst_type);
         return DATA_ERROR;
     default:
         assert(false && "Unhandled data type in cast_to_const_list");
@@ -699,7 +703,7 @@ Value cast_to_const(Compiler* compiler, Value value, DataType dst_type) {
     case DATA_TYPE_UNKNOWN:
     case DATA_TYPE_BLOCKDEF:
     case DATA_TYPE_NULL:
-        compiler_set_error(compiler, gettext("Cannot cast type %s into %s"), type_to_str(src_type), type_to_str(dst_type));
+        compiler_set_cast_error(compiler, src_type, dst_type);
         return DATA_ERROR;
     default:
         assert(false && "Unhandled data type in cast_to_const");
@@ -862,7 +866,7 @@ Value evaluate_binary_number(Compiler* compiler, Argument* left, Argument* right
             val = DATA_FLOAT(execute_float_binary(left_val.data.float_val, right_val.data.float_val, float_op));
         } else {
             if ((int_op == IR_DIVI || int_op == IR_MODI) && right_val.data.integer_val == 0) {
-                compiler_set_error(compiler, "Division by zero");
+                compiler_set_error(compiler, gettext("Division by zero"));
                 return DATA_ERROR;
             }
             val = DATA_INTEGER(execute_int_binary(left_val.data.integer_val, right_val.data.integer_val, int_op));
@@ -1396,7 +1400,7 @@ Value block_define_block(Compiler* compiler, Block* block, Block** next_block, B
                 bytecode_push_op(&bc, IR_PUSHN);
                 break;
             default:
-                compiler_set_error(compiler, "Invalid return type in custom block %s", type_to_str(blockdef->return_type));
+                compiler_set_error(compiler, gettext("Invalid return type in custom block %s"), gettext(type_to_str(blockdef->return_type)));
                 return DATA_ERROR;
             }
             bytecode_push_op(&bc, IR_RET);
@@ -1426,12 +1430,12 @@ static bool check_valid_foreign_types(Compiler* compiler, DataType type, const c
         compiler_set_error(
             compiler, 
             gettext("Invalid input type %s, allowed argument input types are: %s, %s, %s, %s, %s"), 
-            type_to_str(type), 
-            type_to_str(DATA_TYPE_INTEGER), 
-            type_to_str(DATA_TYPE_FLOAT), 
-            type_to_str(DATA_TYPE_STRING), 
-            type_to_str(DATA_TYPE_NOTHING), 
-            type_to_str(DATA_TYPE_BOOL)
+            gettext(type_to_str(type)), 
+            gettext(type_to_str(DATA_TYPE_INTEGER)), 
+            gettext(type_to_str(DATA_TYPE_FLOAT)), 
+            gettext(type_to_str(DATA_TYPE_STRING)), 
+            gettext(type_to_str(DATA_TYPE_NOTHING)), 
+            gettext(type_to_str(DATA_TYPE_BOOL))
         );
         return false;
     }
@@ -1442,7 +1446,7 @@ static bool check_valid_foreign_types(Compiler* compiler, DataType type, const c
         }
     }
 
-    compiler_set_error(compiler, gettext("Invalid or mismatched input type %s and ffi type \"%s\""), type_to_str(type), ffi_type);
+    compiler_set_error(compiler, gettext("Invalid or mismatched input type %s and ffi type \"%s\""), gettext(type_to_str(type)), ffi_type);
     return false;
 }
 
@@ -1865,7 +1869,7 @@ Value block_eq(Compiler* compiler, Block* block, Block** next_block, Block* prev
         }
     } else if (left.type != DATA_TYPE_CHUNK && right.type != DATA_TYPE_CHUNK) {
         if (left.type != right.type) {
-            compiler_set_error(compiler, gettext("Incompatible types %s and %s in eq block"), type_to_str(left.type), type_to_str(right.type));
+            compiler_set_error(compiler, gettext("Incompatible types %s and %s in eq block"), gettext(type_to_str(left.type)), gettext(type_to_str(right.type)));
             return DATA_ERROR;
         }
 
@@ -1883,7 +1887,7 @@ Value block_eq(Compiler* compiler, Block* block, Block** next_block, Block* prev
         case DATA_TYPE_UNKNOWN:
         case DATA_TYPE_CHUNK:
         case DATA_TYPE_NULL:
-            compiler_set_error(compiler, gettext("Type %s cannot be compared"), type_to_str(left.type));
+            compiler_set_error(compiler, gettext("Type %s cannot be compared"), gettext(type_to_str(left.type)));
             return DATA_ERROR;
         default:
             assert(false && "Unhandled data type in block_eq");
@@ -1895,7 +1899,7 @@ Value block_eq(Compiler* compiler, Block* block, Block** next_block, Block* prev
              right_type = right.data.chunk_val.return_type;
 
     if (left_type != right_type && left_type != DATA_TYPE_ANY && right_type != DATA_TYPE_ANY) {
-        compiler_set_error(compiler, gettext("Incompatible types %s and %s in eq block"), type_to_str(left_type), type_to_str(right_type));
+        compiler_set_error(compiler, gettext("Incompatible types %s and %s in eq block"), gettext(type_to_str(left_type)), gettext(type_to_str(right_type)));
         return DATA_ERROR;
     }
 
@@ -1926,7 +1930,7 @@ Value block_not_eq(Compiler* compiler, Block* block, Block** next_block, Block* 
         }
     } else if (left.type != DATA_TYPE_CHUNK && right.type != DATA_TYPE_CHUNK) {
         if (left.type != right.type) {
-            compiler_set_error(compiler, gettext("Incompatible types %s and %s in not_eq block"), type_to_str(left.type), type_to_str(right.type));
+            compiler_set_error(compiler, gettext("Incompatible types %s and %s in not_eq block"), gettext(type_to_str(left.type)), gettext(type_to_str(right.type)));
             return DATA_ERROR;
         }
 
@@ -1944,7 +1948,7 @@ Value block_not_eq(Compiler* compiler, Block* block, Block** next_block, Block* 
         case DATA_TYPE_UNKNOWN:
         case DATA_TYPE_CHUNK:
         case DATA_TYPE_NULL:
-            compiler_set_error(compiler, gettext("Type %s cannot be compared"), type_to_str(left.type));
+            compiler_set_error(compiler, gettext("Type %s cannot be compared"), gettext(type_to_str(left.type)));
             return DATA_ERROR;
         default:
             assert(false && "Unhandled data type in block_eq");
@@ -1956,7 +1960,7 @@ Value block_not_eq(Compiler* compiler, Block* block, Block** next_block, Block* 
              right_type = right.data.chunk_val.return_type;
 
     if (left_type != right_type && left_type != DATA_TYPE_ANY && right_type != DATA_TYPE_ANY) {
-        compiler_set_error(compiler, gettext("Incompatible types %s and %s in not_eq block"), type_to_str(left_type), type_to_str(right_type));
+        compiler_set_error(compiler, gettext("Incompatible types %s and %s in not_eq block"), gettext(type_to_str(left_type)), gettext(type_to_str(right_type)));
         return DATA_ERROR;
     }
 
@@ -2079,7 +2083,7 @@ Value block_declare_var(Compiler* compiler, Block* block, Block** next_block, Bl
     }
 
     if (!is_type_storable(value.data.chunk_val.return_type)) {
-        compiler_set_error(compiler, gettext("Cannot declare variable with type %s"), type_to_str(value.data.chunk_val.return_type));
+        compiler_set_error(compiler, gettext("Cannot declare variable with type %s"), gettext(type_to_str(value.data.chunk_val.return_type)));
         return DATA_ERROR;
     }
 
@@ -2160,8 +2164,8 @@ Value block_set_var(Compiler* compiler, Block* block, Block** next_block, Block*
             compiler,
             gettext("Assign to variable \"%s\" of type %s with incompatible type %s"),
             name.data.str_val,
-            type_to_str(var.type),
-            type_to_str(value.data.chunk_val.return_type)
+            gettext(type_to_str(var.type)),
+            gettext(type_to_str(value.data.chunk_val.return_type))
         );
         return DATA_ERROR;
     }
