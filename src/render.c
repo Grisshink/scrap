@@ -402,7 +402,7 @@ static void draw_blockdef_argument_input(char** input, const char* hint, bool ca
     gui_element_begin(gui);
         gui_set_rect(gui, bg_color);
 
-        gui_element_begin(gui);
+        GuiElement* el = gui_element_begin(gui);
             if (editable) {
                 if (ui.hover.select_input == input) {
                     gui_set_border(gui, (GuiColor) { 0x30, 0x30, 0x30, 0xff }, BLOCK_OUTLINE_SIZE);
@@ -412,7 +412,7 @@ static void draw_blockdef_argument_input(char** input, const char* hint, bool ca
                     .input = input,
                     .rel_pos = (Vector2) { BLOCK_STRING_PADDING / 2, 0 },
                     .font = &assets.fonts.font_cond_shadow,
-                    .font_size = BLOCK_TEXT_SIZE,
+                    .font_size = BLOCK_TEXT_SIZE * el->scaling,
                 };
                 gui_set_state(gui, &info, sizeof(info));
                 if (can_hover) gui_on_hover(gui, argument_input_on_hover);
@@ -614,7 +614,7 @@ static void draw_value_argument(Argument* arg, bool can_hover, bool editable, bo
     if (arg->type != ARGUMENT_VALUE) return;
     Value* value = &arg->data.value;
 
-    gui_element_begin(gui);
+    GuiElement* el = gui_element_begin(gui);
         gui_set_direction(gui, DIRECTION_HORIZONTAL);
         if (editable) {
             if (ui.hover.editor.select_argument == arg) {
@@ -627,7 +627,7 @@ static void draw_value_argument(Argument* arg, bool can_hover, bool editable, bo
                     .input = value->type == DATA_TYPE_STRING || value->type == DATA_TYPE_ANY ? &value->data.str_val : &ui.hover.editor.select_argument_scratch_input,
                     .rel_pos = (Vector2) { BLOCK_STRING_PADDING / 2, 0 },
                     .font = &assets.fonts.font_cond_shadow,
-                    .font_size = BLOCK_TEXT_SIZE,
+                    .font_size = BLOCK_TEXT_SIZE * el->scaling,
                 };
                 gui_set_state(gui, &info, sizeof(info));
             }
