@@ -996,6 +996,12 @@ static void code_put_blocks(bool single) {
         for (size_t i = 0; i < vector_size(editor.mouse_blockchains); i++) {
             RootBlockChain root = editor.mouse_blockchains[i];
 
+            int offset_x = root.x - editor.mouse_blockchains[0].x;
+            int offset_y = root.y - editor.mouse_blockchains[0].y;
+
+            root.x -= offset_x - offset_x * editor.camera.linear_zoom;
+            root.y -= offset_y - offset_y * editor.camera.linear_zoom;
+
             root.x -= ui.hover.panels.panel_size.x + ui.hover.panels.panel_size.width  / 2;
             root.y -= ui.hover.panels.panel_size.y + ui.hover.panels.panel_size.height / 2;
             root.x /= editor.camera.linear_zoom;
