@@ -532,19 +532,27 @@ static void toggle_on_hover(GuiElement* el) {
 
 static void draw_toggle(bool* value) {
     gui_element_begin(gui);
-        gui_set_border(gui, (GuiColor) { 0x30, 0x30, 0x30, 0xff }, 2);
+        gui_set_rect(gui, (GuiColor) { 0x30, 0x30, 0x30, 0xff });
+        gui_on_hover(gui, toggle_on_hover);
+        gui_set_custom_data(gui, value);
+
         gui_element_begin(gui);
             gui_set_fixed(gui, config.ui_size * 2, config.ui_size);
-            gui_set_rect(gui, (GuiColor) { 0x20, 0x20, 0x20, 0xff });
+            if (IsShaderValid(assets.line_shader)) {
+                gui_set_border(gui, (GuiColor) { 0x60, 0x60, 0x60, 0xff }, 2);
+                gui_set_shader(gui, &assets.line_shader);
+            }
             gui_set_direction(gui, DIRECTION_HORIZONTAL);
-            gui_on_hover(gui, toggle_on_hover);
-            gui_set_custom_data(gui, value);
 
             if (*value) gui_spacer(gui, config.ui_size, 0);
 
             gui_element_begin(gui);
-                gui_set_fixed(gui, config.ui_size, config.ui_size);
-                gui_set_rect(gui, *value ? (GuiColor) { 0x30, 0xff, 0x30, 0xff } : (GuiColor) { 0xff, 0x30, 0x30, 0xff });
+                gui_set_padding(gui, config.ui_size * 0.125, config.ui_size * 0.125);
+
+                gui_element_begin(gui);
+                    gui_set_fixed(gui, config.ui_size * 0.75, config.ui_size * 0.75);
+                    gui_set_rect(gui, *value ? (GuiColor) { 0x30, 0xdd, 0x30, 0xff } : (GuiColor) { 0xdd, 0x30, 0x30, 0xff });
+                gui_element_end(gui);
             gui_element_end(gui);
         gui_element_end(gui);
     gui_element_end(gui);
