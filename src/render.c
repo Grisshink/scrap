@@ -1793,11 +1793,11 @@ static void draw_list_dropdown(void) {
         gui_set_padding(gui, 2, 2);
         if (ui.dropdown.as.list.len > max_list_size) {
             gui_set_scissor(gui);
-            gui_set_fixed(gui, ui.dropdown.element->w + 5, max_list_size * (config.ui_size + 2) + 4);
+            gui_set_fixed(gui, ui.dropdown.element->w * ui.dropdown.element->scaling + 5, max_list_size * (config.ui_size + 2) + 4);
             gui_set_scroll(gui, &ui.dropdown.as.list.scroll);
             gui_set_scroll_scaling(gui, (config.ui_size + 2) * 2);
         } else {
-            gui_set_min_size(gui, ui.dropdown.element->w, 0);
+            gui_set_min_size(gui, ui.dropdown.element->w * ui.dropdown.element->scaling, 0);
         }
 
         for (int i = 0; i < ui.dropdown.as.list.len; i++) {
@@ -1841,7 +1841,7 @@ static void draw_dropdown(void) {
     gui_element_begin(gui);
         gui_set_floating(gui);
         gui_set_parent_anchor(gui, ui.dropdown.element);
-        gui_set_position(gui, 0, ui.dropdown.element->h);
+        gui_set_position(gui, 0, ui.dropdown.element->h * ui.dropdown.element->scaling);
         gui_on_render(gui, dropdown_on_render);
 
         switch (ui.dropdown.type) {
