@@ -378,6 +378,7 @@ static void argument_input_on_hover(GuiElement* el) {
             input_on_hover(el);
         }
 
+        if (ui.hover.button.handler) return;
         if (arg->type == ARGUMENT_VALUE) {
             Value* value = &arg->data.value;
             if (value->type == DATA_TYPE_INTEGER || value->type == DATA_TYPE_FLOAT) {
