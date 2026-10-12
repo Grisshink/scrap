@@ -334,6 +334,10 @@ typedef struct {
     Vector2 position;
     Vector2 real_position;
     Vector2 click_position;
+    float zoom;
+    float linear_zoom;
+    float real_zoom;
+    float real_linear_zoom;
 } ScrapCamera;
 
 typedef enum {

@@ -177,7 +177,7 @@ static void flush_command_batch(Gui* gui) {
 }
 
 
-static void new_draw_command(Gui* gui, GuiDrawBounds bounds, GuiDrawType draw_type, unsigned char draw_subtype, GuiDrawData data, GuiColor color) {
+static void new_draw_command(Gui* gui, GuiDrawBounds bounds, GuiDrawType draw_type, unsigned char draw_subtype, GuiDrawData data, GuiColor color, float scaling) {
     GuiDrawCommand command = {
         .pos_x   = bounds.x,
         .pos_y   = bounds.y,
@@ -187,6 +187,7 @@ static void new_draw_command(Gui* gui, GuiDrawBounds bounds, GuiDrawType draw_ty
         .data    = data,
         .color   = color,
         .subtype = draw_subtype,
+        .scaling = scaling,
     };
     gui_arena_append(gui->arena, gui->command_list, command);
     gui_arena_append(gui->arena, gui->aux_command_list, command);
@@ -267,25 +268,29 @@ static void gui_render(Gui* gui, GuiElement* el) {
         (float)el->h * el->scaling,
     };
 
+    if (el->draw_type == DRAWTYPE_BORDER) {
+        el->data.border_width *= el->scaling;
+    }
+
     if (SCISSOR(el) || FLOATING(el) || el->shader) flush_command_batch(gui);
 
     GuiBounds scissor = prev_scissor;
     if (SCISSOR(el)) {
         scissor = scissor_rect(prev_scissor, (GuiBounds) { el_bounds.x, el_bounds.y, el_bounds.w, el_bounds.h });
         if (scissor.w > 0 && scissor.h > 0) {
-            new_draw_command(gui, (GuiDrawBounds) { scissor.x, scissor.y, scissor.w, scissor.h }, DRAWTYPE_SCISSOR_SET, GUI_SUBTYPE_DEFAULT, (GuiDrawData) {0}, (GuiColor) {0});
+            new_draw_command(gui, (GuiDrawBounds) { scissor.x, scissor.y, scissor.w, scissor.h }, DRAWTYPE_SCISSOR_SET, GUI_SUBTYPE_DEFAULT, (GuiDrawData) {0}, (GuiColor) {0}, el->scaling);
         }
         gui_arena_append(gui->arena, gui->scissor_stack, scissor);
     }
-    if (el->shader) new_draw_command(gui, el_bounds, DRAWTYPE_SHADER_BEGIN, GUI_SUBTYPE_DEFAULT, (GuiDrawData) { .shader = el->shader }, (GuiColor) {0});
+    if (el->shader) new_draw_command(gui, el_bounds, DRAWTYPE_SHADER_BEGIN, GUI_SUBTYPE_DEFAULT, (GuiDrawData) { .shader = el->shader }, (GuiColor) {0}, el->scaling);
 
     if (el->draw_type != DRAWTYPE_UNKNOWN && inside_scissor(el_bounds, scissor)) {
-        new_draw_command(gui, el_bounds, el->draw_type, el->draw_subtype, el->data, el->color);
+        new_draw_command(gui, el_bounds, el->draw_type, el->draw_subtype, el->data, el->color, el->scaling);
     }
 
     if (el->shader) {
         flush_command_batch(gui);
-        new_draw_command(gui, el_bounds, DRAWTYPE_SHADER_END, GUI_SUBTYPE_DEFAULT, (GuiDrawData) { .shader = el->shader }, (GuiColor) {0});
+        new_draw_command(gui, el_bounds, DRAWTYPE_SHADER_END, GUI_SUBTYPE_DEFAULT, (GuiDrawData) { .shader = el->shader }, (GuiColor) {0}, el->scaling);
     }
 
     for (GuiElement* iter = el->child_elements_begin; iter; iter = iter->next) {
@@ -303,6 +308,7 @@ static void gui_render(Gui* gui, GuiElement* el) {
             command.type = DRAWTYPE_RECT;
             command.subtype = GUI_SUBTYPE_DEFAULT;
             command.color = (GuiColor) { 0xff, 0xff, 0xff, 0x80 };
+            command.scaling = el->scaling;
 
             float scroll_size = (float)el_size / ((float)content_size / (float)el_size);
             float scroll_pos = (-(float)*el->scroll_value / (float)max) * ((float)el_size - scroll_size);
@@ -332,10 +338,10 @@ static void gui_render(Gui* gui, GuiElement* el) {
     if (SCISSOR(el)) {
         gui->scissor_stack.size--;
         if (gui->scissor_stack.size == 0) {
-            new_draw_command(gui, el_bounds, DRAWTYPE_SCISSOR_RESET, GUI_SUBTYPE_DEFAULT, (GuiDrawData) {0}, (GuiColor) {0});
+            new_draw_command(gui, el_bounds, DRAWTYPE_SCISSOR_RESET, GUI_SUBTYPE_DEFAULT, (GuiDrawData) {0}, (GuiColor) {0}, el->scaling);
         } else {
             if (prev_scissor.w > 0 && prev_scissor.h > 0) {
-                new_draw_command(gui, (GuiDrawBounds) { prev_scissor.x, prev_scissor.y, prev_scissor.w, prev_scissor.h }, DRAWTYPE_SCISSOR_SET, GUI_SUBTYPE_DEFAULT, (GuiDrawData) {0}, (GuiColor) {0});
+                new_draw_command(gui, (GuiDrawBounds) { prev_scissor.x, prev_scissor.y, prev_scissor.w, prev_scissor.h }, DRAWTYPE_SCISSOR_SET, GUI_SUBTYPE_DEFAULT, (GuiDrawData) {0}, (GuiColor) {0}, el->scaling);
             }
         }
     }

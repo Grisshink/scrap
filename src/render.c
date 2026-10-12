@@ -91,13 +91,26 @@ const char* sgettext(const char* msgid) {
     return msgval;
 }
 
-static void draw_dots(void) {
+static void draw_dots(float size, float spacing) {
+    size    *= editor.camera.real_linear_zoom;
+    spacing *= editor.camera.real_linear_zoom;
+
+    if (size < 1) return;
+
     int win_width = GetScreenWidth();
     int win_height = GetScreenHeight();
 
-    for (int y = MOD(-(int)editor.camera.real_position.y, config.ui_size * 2); y < win_height; y += config.ui_size * 2) {
-        for (int x = MOD(-(int)editor.camera.real_position.x, config.ui_size * 2); x < win_width; x += config.ui_size * 2) {
-            DrawRectangle(x, y, 2, 2, (Color) { 0x40, 0x40, 0x40, 0xff });
+    float offset_x = (0.0 - editor.camera.real_position.x) * editor.camera.real_linear_zoom
+                   + ui.hover.panels.code_panel_bounds.width / 2.0
+                   + ui.hover.panels.code_panel_bounds.x;
+
+    float offset_y = (0.0 - editor.camera.real_position.y) * editor.camera.real_linear_zoom
+                   + ui.hover.panels.code_panel_bounds.height / 2.0
+                   + ui.hover.panels.code_panel_bounds.y;
+
+    for (float y = fmodf(offset_y, spacing); y < win_height; y += spacing) {
+        for (float x = fmodf(offset_x, spacing); x < win_width; x += spacing) {
+            DrawRectangle(x, y, size, size, (Color) { 0x40, 0x40, 0x40, 0xff });
         }
     }
 
@@ -105,12 +118,12 @@ static void draw_dots(void) {
     if (!IsShaderValid(assets.line_shader)) return;
 
     BeginShaderMode(assets.line_shader);
-    for (int y = MOD(-(int)editor.camera.real_position.y, config.ui_size * 2); y < win_height; y += config.ui_size * 2) {
-        DrawRectangle(0, y, win_width, 2, (Color) { 0x40, 0x40, 0x40, 0xff });
-    }
-    for (int x = MOD(-(int)editor.camera.real_position.x, config.ui_size * 2); x < win_width; x += config.ui_size * 2) {
-        DrawRectangle(x, 0, 2, win_height, (Color) { 0x40, 0x40, 0x40, 0xff });
-    }
+        for (float y = fmodf(offset_y, spacing); y < win_height; y += spacing) {
+            DrawRectangle(0, y, win_width, size, (Color) { 0x40, 0x40, 0x40, 0xff });
+        }
+        for (float x = fmodf(offset_x, spacing); x < win_width; x += spacing) {
+            DrawRectangle(x, 0, size, win_height, (Color) { 0x40, 0x40, 0x40, 0xff });
+        }
     EndShaderMode();
 }
 
@@ -1732,18 +1745,24 @@ static void draw_panel(PanelTree* panel) {
 static void draw_code(void) {
     for (size_t i = 0; i < vector_size(editor.code); i++) {
         Vector2 chain_pos = (Vector2) {
-            editor.code[i].x * config.ui_size / 32.0 - editor.camera.real_position.x,
-            editor.code[i].y * config.ui_size / 32.0 - editor.camera.real_position.y,
+            (editor.code[i].x * config.ui_size / 32.0 - editor.camera.real_position.x) * editor.camera.real_linear_zoom + ui.hover.panels.code_panel_bounds.width / 2,
+            (editor.code[i].y * config.ui_size / 32.0 - editor.camera.real_position.y) * editor.camera.real_linear_zoom + ui.hover.panels.code_panel_bounds.height / 2,
         };
         Rectangle code_size = ui.hover.panels.code_panel_bounds;
         if (editor.code[i].chain != ui.hover.editor.select_blockchain) {
             if (chain_pos.x > code_size.width || chain_pos.y > code_size.height) continue;
+
             if (editor.code[i].width > 0 && editor.code[i].height > 0 &&
-                (chain_pos.x + editor.code[i].width < 0 || chain_pos.y + editor.code[i].height < 0)) continue;
+                (chain_pos.x + editor.code[i].width  * editor.camera.real_linear_zoom < 0 || 
+                 chain_pos.y + editor.code[i].height * editor.camera.real_linear_zoom < 0)) 
+            {
+                continue;
+            }
         }
         GuiElement* el = gui_element_begin(gui);
             gui_set_floating(gui);
             gui_set_position(gui, chain_pos.x, chain_pos.y);
+            gui_scale_element(gui, editor.camera.real_linear_zoom);
 
             draw_blockchain(editor.code[i].chain, false, config.show_blockchain_previews, true);
         gui_element_end(gui);
@@ -2054,7 +2073,7 @@ static void render_border_control(GuiDrawCommand cmd) {
 
     /* 1 */ DrawRectangle(cmd.pos_x, cmd.pos_y, cmd.width, border_w, color);
     /* 2 */ DrawRectangle(cmd.pos_x + cmd.width - border_w, cmd.pos_y, border_w, cmd.height, color);
-    /* 3 */ DrawRectangle(cmd.pos_x + BLOCK_CONTROL_INDENT - border_w, cmd.pos_y + cmd.height - border_w, cmd.width - BLOCK_CONTROL_INDENT, border_w, color);
+    /* 3 */ DrawRectangle(cmd.pos_x + BLOCK_CONTROL_INDENT * cmd.scaling - border_w, cmd.pos_y + cmd.height - border_w, cmd.width - BLOCK_CONTROL_INDENT * cmd.scaling, border_w, color);
     /* 4 */ DrawRectangle(cmd.pos_x, cmd.pos_y, border_w, cmd.height, color);
 }
 
@@ -2084,9 +2103,9 @@ static void render_border_control_end(GuiDrawCommand cmd) {
     unsigned short border_w = cmd.data.border_width;
     Color color = CONVERT_COLOR(cmd.color, Color);
 
-    /* 1 */ DrawRectangle(cmd.pos_x + BLOCK_CONTROL_INDENT - border_w, cmd.pos_y, cmd.width - BLOCK_CONTROL_INDENT, border_w, color);
+    /* 1 */ DrawRectangle(cmd.pos_x + BLOCK_CONTROL_INDENT * cmd.scaling - border_w, cmd.pos_y, cmd.width - BLOCK_CONTROL_INDENT * cmd.scaling, border_w, color);
     /* 2 */ DrawRectangle(cmd.pos_x + cmd.width - border_w, cmd.pos_y, border_w, cmd.height, color);
-    /* 3 */ DrawRectangle(cmd.pos_x + BLOCK_CONTROL_INDENT - border_w, cmd.pos_y + cmd.height - border_w, cmd.width - BLOCK_CONTROL_INDENT, border_w, color);
+    /* 3 */ DrawRectangle(cmd.pos_x + BLOCK_CONTROL_INDENT * cmd.scaling - border_w, cmd.pos_y + cmd.height - border_w, cmd.width - BLOCK_CONTROL_INDENT * cmd.scaling, border_w, color);
     /* 4 */ DrawRectangle(cmd.pos_x, cmd.pos_y, border_w, cmd.height, color);
 }
 
@@ -2101,7 +2120,7 @@ static void render_border_end(GuiDrawCommand cmd) {
     unsigned short border_w = cmd.data.border_width;
     Color color = CONVERT_COLOR(cmd.color, Color);
 
-    /* 1 */ DrawRectangle(cmd.pos_x + BLOCK_CONTROL_INDENT - border_w, cmd.pos_y, cmd.width - BLOCK_CONTROL_INDENT, border_w, color);
+    /* 1 */ DrawRectangle(cmd.pos_x + BLOCK_CONTROL_INDENT * cmd.scaling - border_w, cmd.pos_y, cmd.width - BLOCK_CONTROL_INDENT * cmd.scaling, border_w, color);
     /* 2 */ DrawRectangle(cmd.pos_x + cmd.width - border_w, cmd.pos_y, border_w, cmd.height, color);
     /* 3 */ DrawRectangle(cmd.pos_x, cmd.pos_y + cmd.height - border_w, cmd.width, border_w, color);
     /* 4 */ DrawRectangle(cmd.pos_x, cmd.pos_y, border_w, cmd.height, color);
@@ -2118,7 +2137,7 @@ static void render_border_end(GuiDrawCommand cmd) {
 static void render_border_notched(GuiDrawCommand cmd) {
     unsigned short border_w = cmd.data.border_width;
     Color color = CONVERT_COLOR(cmd.color, Color);
-    int notch_size = config.ui_size / 4;
+    int notch_size = config.ui_size / 4 * cmd.scaling;
 
     /* 1 */ DrawRectangle(cmd.pos_x, cmd.pos_y, cmd.width - notch_size, border_w, color);
     /* 2 */ DrawRectanglePro((Rectangle) {
@@ -2134,7 +2153,7 @@ static void render_border_notched(GuiDrawCommand cmd) {
 
 static void render_rect_notched(GuiDrawCommand cmd) {
     Color color = CONVERT_COLOR(cmd.color, Color);
-    int notch_size = config.ui_size / 4;
+    int notch_size = config.ui_size / 4 * cmd.scaling;
 
     DrawRectangle(cmd.pos_x, cmd.pos_y, cmd.width - notch_size, cmd.height, color);
     DrawRectangle(cmd.pos_x, cmd.pos_y + notch_size, cmd.width, cmd.height - notch_size, color);
@@ -2320,7 +2339,7 @@ static void write_debug_buffer(void) {
     print_debug(&i, "Select block bounds Pos: (%.3f, %.3f), Size: (%.3f, %.3f)", ui.hover.panels.code_panel_bounds.x, ui.hover.panels.code_panel_bounds.y, ui.hover.panels.code_panel_bounds.width, ui.hover.panels.code_panel_bounds.height);
     print_debug(&i, "Category: %p", ui.hover.category);
     print_debug(&i, "Mouse chains: %zu, Time: %.3f, Pos: (%d, %d), Click: (%d, %d)", vector_size(editor.mouse_blockchains), ui.hover.time_at_last_pos, GetMouseX(), GetMouseY(), (int)ui.hover.mouse_click_pos.x, (int)ui.hover.mouse_click_pos.y);
-    print_debug(&i, "Camera: (%.3f, %.3f), Click: (%.3f, %.3f)", editor.camera.position.x, editor.camera.position.y, editor.camera.click_position.x, editor.camera.click_position.y);
+    print_debug(&i, "Camera: (%.3f, %.3f), Click: (%.3f, %.3f), Zoom: %.3f", editor.camera.position.x, editor.camera.position.y, editor.camera.click_position.x, editor.camera.click_position.y, editor.camera.zoom);
     print_debug(&i, "Drag cancelled: %d", ui.hover.drag_cancelled);
     print_debug(&i, "Editor: %d, Editing: %p, Blockdef: %p, input: %zu", ui.hover.editor.part, ui.hover.editor.edit_blockdef, ui.hover.editor.blockdef, ui.hover.editor.blockdef_input);
     print_debug(&i, "Slider: %p, min: %d, max: %d", ui.hover.hover_slider.value, ui.hover.hover_slider.min, ui.hover.hover_slider.max);
@@ -2337,7 +2356,7 @@ void scrap_gui_process_render(void) {
     ui.render_surface_needs_redraw = false;
 
     ClearBackground(GetColor(0x202020ff));
-    draw_dots();
+    draw_dots(2, config.ui_size * 2);
 
     for (int i = 0; i < DEBUG_BUFFER_LINES; i++) editor.debug_buffer[i][0] = 0;
     write_debug_buffer();

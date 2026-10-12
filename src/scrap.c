@@ -190,6 +190,8 @@ Image setup(void* save_data, size_t save_size) {
         editor.camera.position.x = editor.code[0].x - 50;
         editor.camera.position.y = editor.code[0].y - 50;
     }
+    editor.camera.linear_zoom = 1.0;
+    editor.camera.real_linear_zoom = 1.0;
 
     editor.search_list = vector_create();
     editor.search_list_search = vector_create();

@@ -77,6 +77,7 @@ typedef struct {
     unsigned char subtype;
     float pos_x, pos_y;
     float width, height;
+    float scaling;
     GuiColor color;
     GuiDrawData data;
 } GuiDrawCommand;

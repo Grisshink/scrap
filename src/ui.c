@@ -981,8 +981,13 @@ static void code_put_blocks(bool single) {
 
     if (single) {
         RootBlockChain root = editor.mouse_blockchains[0]; 
-        root.x += editor.camera.position.x - ui.hover.panels.panel_size.x;
-        root.y += editor.camera.position.y - ui.hover.panels.panel_size.y;
+
+        root.x -= ui.hover.panels.panel_size.x + ui.hover.panels.panel_size.width  / 2;
+        root.y -= ui.hover.panels.panel_size.y + ui.hover.panels.panel_size.height / 2;
+        root.x /= editor.camera.linear_zoom;
+        root.y /= editor.camera.linear_zoom;
+        root.x += editor.camera.position.x;
+        root.y += editor.camera.position.y;
         root.x /= config.ui_size / 32.0;
         root.y /= config.ui_size / 32.0;
         vector_add(&editor.code, root);
@@ -990,8 +995,13 @@ static void code_put_blocks(bool single) {
     } else {
         for (size_t i = 0; i < vector_size(editor.mouse_blockchains); i++) {
             RootBlockChain root = editor.mouse_blockchains[i];
-            root.x += editor.camera.position.x - ui.hover.panels.panel_size.x;
-            root.y += editor.camera.position.y - ui.hover.panels.panel_size.y;
+
+            root.x -= ui.hover.panels.panel_size.x + ui.hover.panels.panel_size.width  / 2;
+            root.y -= ui.hover.panels.panel_size.y + ui.hover.panels.panel_size.height / 2;
+            root.x /= editor.camera.linear_zoom;
+            root.y /= editor.camera.linear_zoom;
+            root.x += editor.camera.position.x;
+            root.y += editor.camera.position.y;
             root.x /= config.ui_size / 32.0;
             root.y /= config.ui_size / 32.0;
             vector_add(&editor.code, root);
@@ -1643,10 +1653,10 @@ static void code_reposition(void) {
 
     switch (editor.code_area_reposition_type) {
     case CODE_REPOSITION_SNAP:
-        if (block_pos.x > right_edge)  editor.camera.position.x += block_pos.x - right_edge;
-        if (block_pos.x < left_edge)   editor.camera.position.x += block_pos.x - left_edge;
-        if (block_pos.y > bottom_edge) editor.camera.position.y += block_pos.y - bottom_edge;
-        if (block_pos.y < top_edge)    editor.camera.position.y += block_pos.y - top_edge;
+        if (block_pos.x > right_edge)  editor.camera.position.x += (block_pos.x - right_edge) / editor.camera.linear_zoom;
+        if (block_pos.x < left_edge)   editor.camera.position.x += (block_pos.x - left_edge) / editor.camera.linear_zoom;
+        if (block_pos.y > bottom_edge) editor.camera.position.y += (block_pos.y - bottom_edge) / editor.camera.linear_zoom;
+        if (block_pos.y < top_edge)    editor.camera.position.y += (block_pos.y - top_edge) / editor.camera.linear_zoom;
 
         if (block_pos.x < left_edge  || block_pos.y < top_edge ||
             block_pos.x > right_edge || block_pos.y > bottom_edge)
@@ -1656,8 +1666,8 @@ static void code_reposition(void) {
 
         break;
     case CODE_REPOSITION_FIXED_SNAP:
-        editor.camera.position.x += block_pos.x - left_edge;
-        editor.camera.position.y += block_pos.y - top_edge;
+        editor.camera.position.x += (block_pos.x - left_edge) / editor.camera.linear_zoom;
+        editor.camera.position.y += (block_pos.y - top_edge) / editor.camera.linear_zoom;
         break;
     }
 }
@@ -1907,8 +1917,23 @@ static void handle_mouse_wheel(void) {
     if (gui_window_is_shown()) return;
 
     Vector2 wheel = GetMouseWheelMoveV();
-    editor.camera.position.x -= wheel.x * config.ui_size * 2;
-    editor.camera.position.y -= wheel.y * config.ui_size * 2;
+    if (IsKeyDown(KEY_LEFT_CONTROL) || IsKeyDown(KEY_RIGHT_CONTROL)) {
+        float prev_linear_zoom = exp2f(editor.camera.zoom);
+
+        editor.camera.zoom += wheel.y * 0.4;
+        editor.camera.zoom = CLAMP(editor.camera.zoom, -4.0, 4.0);
+
+        float current_linear_zoom = exp2f(editor.camera.zoom);
+
+        float code_mouse_x = GetMouseX() - ui.hover.panels.panel_size.x - ui.hover.panels.panel_size.width / 2;
+        float code_mouse_y = GetMouseY() - ui.hover.panels.panel_size.y - ui.hover.panels.panel_size.height / 2;
+
+        editor.camera.position.x += code_mouse_x / prev_linear_zoom - code_mouse_x / current_linear_zoom;
+        editor.camera.position.y += code_mouse_y / prev_linear_zoom - code_mouse_y / current_linear_zoom;
+    } else {
+        editor.camera.position.x -= wheel.x * config.ui_size * 2 / editor.camera.linear_zoom;
+        editor.camera.position.y -= wheel.y * config.ui_size * 2 / editor.camera.linear_zoom;
+    }
 
     if (wheel.x != 0 || wheel.y != 0) {
         ui.hover.editor.select_block = NULL;
@@ -1948,8 +1973,8 @@ static void handle_mouse_drag(void) {
         return;
     }
 
-    editor.camera.position.x = editor.camera.click_position.x - (gui->mouse_x - ui.hover.mouse_click_pos.x);
-    editor.camera.position.y = editor.camera.click_position.y - (gui->mouse_y - ui.hover.mouse_click_pos.y);
+    editor.camera.position.x = editor.camera.click_position.x - (gui->mouse_x - ui.hover.mouse_click_pos.x) / editor.camera.linear_zoom;
+    editor.camera.position.y = editor.camera.click_position.y - (gui->mouse_y - ui.hover.mouse_click_pos.y) / editor.camera.linear_zoom;
 }
 
 void scrap_gui_process_ui(void) {
@@ -1973,13 +1998,24 @@ void scrap_gui_process_ui(void) {
         editor.code_area_needs_reposition = false;
     }
 
-    if (fabsf(editor.camera.position.x - editor.camera.real_position.x) > 1e-3 || 
-        fabsf(editor.camera.position.y - editor.camera.real_position.y) > 1e-3 ) 
+    if (fabsf(editor.camera.position.x  - editor.camera.real_position.x) > 1e-3 || 
+        fabsf(editor.camera.position.y  - editor.camera.real_position.y) > 1e-3 ||
+        fabsf(editor.camera.zoom - editor.camera.real_zoom)       > 1e-3) 
     {
         editor.camera.real_position.x += (editor.camera.position.x - editor.camera.real_position.x) / (config.code_area_smoothness / GetFrameTime() / 120 + 1);
         editor.camera.real_position.y += (editor.camera.position.y - editor.camera.real_position.y) / (config.code_area_smoothness / GetFrameTime() / 120 + 1);
+        editor.camera.real_zoom += (editor.camera.zoom - editor.camera.real_zoom) / (config.code_area_smoothness / GetFrameTime() / 90 + 1);
+
         ui.render_surface_needs_redraw = true;
+    } else {
+        if (editor.camera.real_zoom != editor.camera.zoom) {
+            editor.camera.real_zoom = editor.camera.zoom;
+            ui.render_surface_needs_redraw = true;
+        }
     }
+
+    editor.camera.linear_zoom = exp2f(editor.camera.zoom);
+    editor.camera.real_linear_zoom = exp2f(editor.camera.real_zoom);
 
     int prev_mouse_scroll = gui->mouse_scroll;
     gui_update_mouse_scroll(gui, GetMouseWheelMove());
