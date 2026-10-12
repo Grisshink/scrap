@@ -448,21 +448,20 @@ void load_config(Config* config) {
         if (file[cursor] == '\0') has_lines = false;
         file[cursor++] = '\0';
 
+        char* end_ptr;
+        long int_value = strtol(value, &end_ptr, 10);
+        bool int_value_valid = value != end_ptr;
+
         if (!strcmp(field, "UI_SIZE")) {
-            int val = atoi(value);
-            config->ui_size = val ? val : config->ui_size;
+            config->ui_size = int_value_valid ? int_value : config->ui_size;
         } else if (!strcmp(field, "FPS_LIMIT")) {
-            int val = atoi(value);
-            config->fps_limit = val ? val : config->fps_limit;
+            config->fps_limit = int_value_valid ? int_value : config->fps_limit;
         } else if (!strcmp(field, "BLOCK_SIZE_THRESHOLD")) {
-            int val = atoi(value);
-            config->block_size_threshold = val ? val : config->block_size_threshold;
+            config->block_size_threshold = int_value_valid ? int_value : config->block_size_threshold;
         } else if (!strcmp(field, "CODE_AREA_SMOOTHNESS")) {
-            int val = atoi(value);
-            config->code_area_smoothness = val ? val : config->code_area_smoothness;
+            config->code_area_smoothness = int_value_valid ? int_value : config->code_area_smoothness;
         } else if (!strcmp(field, "CATEGORIES_COLUMN_COUNT")) {
-            int val = atoi(value);
-            config->categories_column_count = val ? val : config->categories_column_count;
+            config->categories_column_count = int_value_valid ? int_value : config->categories_column_count;
         } else if (!strcmp(field, "FONT_PATH")) {
             vector_set_string(&config->font_path, value);
         } else if (!strcmp(field, "FONT_BOLD_PATH")) {
