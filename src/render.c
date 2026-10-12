@@ -1928,6 +1928,7 @@ void scrap_gui_process(void) {
             gui_set_floating(gui);
             gui_set_position(gui, gui->mouse_x, gui->mouse_y);
             gui_set_gap(gui, config.ui_size);
+            gui_scale_element(gui, editor.camera.real_linear_zoom);
 
             int x_i = 0,
                 x_i_max = ceil(sqrt(vector_size(editor.mouse_blockchains))),
