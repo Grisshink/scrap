@@ -85,6 +85,11 @@ sudo apt install libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev gettext 
 sudo pacman -S libx11 libxrandr libxi libxcursor libxinerama gettext libffi
 ```
 
+#### FreeBSD
+```
+pkg install gcc gmake libXinerama libXi libXcursor libXcursor libXrandr libX11 gettext gettext-runtime libffi raylib
+```
+
 #### OpenSUSE
 
 Download command for openSUSE:
@@ -127,11 +132,6 @@ make -j$(nproc)
 ```
 
 #### FreeBSD
-
-First, run this command to install necessary dependencies:
-```
-pkg install gcc gmake libXinerama libXi libXcursor libXcursor libXrandr libX11 gettext gettext-runtime libffi raylib
-```
 
 To build and run Scrap, use the following commands:
 
