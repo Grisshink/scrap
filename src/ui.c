@@ -1678,6 +1678,23 @@ static void code_reposition(void) {
     }
 }
 
+static void change_zoom_level_by(float zoom) {
+    assert(ui.hover.panels.panel->type == PANEL_CODE);
+
+    float prev_linear_zoom = exp2f(editor.camera.zoom * ZOOM_SPEED);
+
+    editor.camera.zoom += zoom;
+    editor.camera.zoom = CLAMP(editor.camera.zoom, -10.0, 10.0);
+
+    float current_linear_zoom = exp2f(editor.camera.zoom * ZOOM_SPEED);
+
+    float code_mouse_x = GetMouseX() - ui.hover.panels.panel_size.x - ui.hover.panels.panel_size.width / 2;
+    float code_mouse_y = GetMouseY() - ui.hover.panels.panel_size.y - ui.hover.panels.panel_size.height / 2;
+
+    editor.camera.position.x += code_mouse_x / prev_linear_zoom - code_mouse_x / current_linear_zoom;
+    editor.camera.position.y += code_mouse_y / prev_linear_zoom - code_mouse_y / current_linear_zoom;
+}
+
 static bool handle_code_panel_key_press(void) {
     if (ui.hover.editor.select_argument && !ui.hover.select_input) {
         if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_KP_ENTER)) {
@@ -1693,6 +1710,16 @@ static bool handle_code_panel_key_press(void) {
             ui.hover.select_input_mark = 0;
             ui.hover.select_input_cursor = strlen(*ui.hover.select_input);
             ui.render_surface_needs_redraw = true;
+            return true;
+        }
+    }
+
+    if (IsKeyDown(KEY_LEFT_CONTROL) || IsKeyDown(KEY_RIGHT_CONTROL)) {
+        if (IsKeyPressed(KEY_KP_ADD)) {
+            change_zoom_level_by(1.0);
+            return true;
+        } else if (IsKeyPressed(KEY_KP_SUBTRACT)) {
+            change_zoom_level_by(-1.0);
             return true;
         }
     }
@@ -1924,18 +1951,7 @@ static void handle_mouse_wheel(void) {
 
     Vector2 wheel = GetMouseWheelMoveV();
     if (IsKeyDown(KEY_LEFT_CONTROL) || IsKeyDown(KEY_RIGHT_CONTROL)) {
-        float prev_linear_zoom = exp2f(editor.camera.zoom * ZOOM_SPEED);
-
-        editor.camera.zoom += wheel.y;
-        editor.camera.zoom = CLAMP(editor.camera.zoom, -10.0, 10.0);
-
-        float current_linear_zoom = exp2f(editor.camera.zoom * ZOOM_SPEED);
-
-        float code_mouse_x = GetMouseX() - ui.hover.panels.panel_size.x - ui.hover.panels.panel_size.width / 2;
-        float code_mouse_y = GetMouseY() - ui.hover.panels.panel_size.y - ui.hover.panels.panel_size.height / 2;
-
-        editor.camera.position.x += code_mouse_x / prev_linear_zoom - code_mouse_x / current_linear_zoom;
-        editor.camera.position.y += code_mouse_y / prev_linear_zoom - code_mouse_y / current_linear_zoom;
+        change_zoom_level_by(wheel.y);
     } else {
         editor.camera.position.x -= wheel.x * config.ui_size * 2 / editor.camera.linear_zoom;
         editor.camera.position.y -= wheel.y * config.ui_size * 2 / editor.camera.linear_zoom;
