@@ -1924,12 +1924,12 @@ static void handle_mouse_wheel(void) {
 
     Vector2 wheel = GetMouseWheelMoveV();
     if (IsKeyDown(KEY_LEFT_CONTROL) || IsKeyDown(KEY_RIGHT_CONTROL)) {
-        float prev_linear_zoom = exp2f(editor.camera.zoom);
+        float prev_linear_zoom = exp2f(editor.camera.zoom * ZOOM_SPEED);
 
-        editor.camera.zoom += wheel.y * 0.4;
-        editor.camera.zoom = CLAMP(editor.camera.zoom, -4.0, 4.0);
+        editor.camera.zoom += wheel.y;
+        editor.camera.zoom = CLAMP(editor.camera.zoom, -10.0, 10.0);
 
-        float current_linear_zoom = exp2f(editor.camera.zoom);
+        float current_linear_zoom = exp2f(editor.camera.zoom * ZOOM_SPEED);
 
         float code_mouse_x = GetMouseX() - ui.hover.panels.panel_size.x - ui.hover.panels.panel_size.width / 2;
         float code_mouse_y = GetMouseY() - ui.hover.panels.panel_size.y - ui.hover.panels.panel_size.height / 2;
@@ -2020,8 +2020,9 @@ void scrap_gui_process_ui(void) {
         }
     }
 
-    editor.camera.linear_zoom = exp2f(editor.camera.zoom);
-    editor.camera.real_linear_zoom = exp2f(editor.camera.real_zoom);
+    // Multiply zoom speed in place to avoid some floating point precision issues
+    editor.camera.linear_zoom = exp2f(editor.camera.zoom * ZOOM_SPEED);
+    editor.camera.real_linear_zoom = exp2f(editor.camera.real_zoom * ZOOM_SPEED);
 
     int prev_mouse_scroll = gui->mouse_scroll;
     gui_update_mouse_scroll(gui, GetMouseWheelMove());

@@ -67,6 +67,8 @@
 #define CATEGORY_META_COLOR { 0x99, 0x00, 0xff, 0xff }
 #define CATEGORY_NOTHING_COLOR { 0x77, 0x77, 0x77, 0xff }
 
+#define ZOOM_SPEED 0.4
+
 #define UNIMPLEMENTED_BLOCK_COLOR { 0x66, 0x66, 0x66, 0xff }
 
 #define MAX_ERROR_LEN 512
