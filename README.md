@@ -128,10 +128,17 @@ make -j$(nproc)
 
 #### FreeBSD
 
-To build and run Scrap on FreeBSD you need to install `gcc` (10+) and `gmake`. After installation, run the following commands:
+First, run this command to install necessary dependences:
+```
+# pkg install gcc gmake libXinerama libXi libXcursor libXcursor libXrandr libX gettext gettext-runtime libffi raylib
+```
+```
+```
+
+To build and run Scrap, use the following commands:
 
 ```bash
-gmake MAKE=gmake -j$(nproc)
+gmake MAKE=gmake TARGET=FREEBSD -j$(nproc)
 ./scrap
 ```
 
