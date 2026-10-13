@@ -37,6 +37,7 @@ its forks such as [Turbowarp](https://turbowarp.org).
 - Press arrow keys while the block is highlighted to move the block cursor around
 - Press `Enter` to enter the highlighted text box and `Esc` to leave that text box
 - Press `S` to open block search menu
+- Press `Ctrl-+` or `Ctrl--` in code area to zoom in/out (Scrolling mouse while holding `Ctrl` also works)
 
 ## Binary Installation
 
