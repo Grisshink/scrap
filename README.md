@@ -133,7 +133,7 @@ make -j$(nproc)
 
 #### FreeBSD
 
-To build and run Scrap, use the following commands:
+To build and run Scrap on FreeBSD, run the following commands:
 
 ```bash
 gmake MAKE=gmake TARGET=FREEBSD -j$(nproc)
