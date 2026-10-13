@@ -128,11 +128,9 @@ make -j$(nproc)
 
 #### FreeBSD
 
-First, run this command to install necessary dependences:
+First, run this command to install necessary dependencies:
 ```
 # pkg install gcc gmake libXinerama libXi libXcursor libXcursor libXrandr libX gettext gettext-runtime libffi raylib
-```
-```
 ```
 
 To build and run Scrap, use the following commands:
