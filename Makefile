@@ -15,6 +15,10 @@ else ifeq ($(TARGET), OSX)
 	# Thanks to @arducat for MacOS support
 	CC := clang
 	LDFLAGS := -framework CoreVideo -framework IOKit -framework Cocoa -framework GLUT -framework OpenGL -lm -lpthread -lintl -rdynamic
+else ifeq ($(TARGET), FREEBSD)
+	CC := gcc
+	CFLAGS += -I/usr/local/include 
+	LDFLAGS := -lm -lpthread -lX11 -ldl -rdynamic -lintl -lutil -L/usr/local/lib
 else
 	CC := x86_64-w64-mingw32-gcc
 	LDFLAGS := -static -lole32 -lcomdlg32 -lwinmm -lgdi32 -lintl -liconv -lshlwapi -lpthread -Wl,--subsystem,windows -Wl,--export-all-symbols
