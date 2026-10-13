@@ -47,10 +47,8 @@
 #include <sys/wait.h>
 #endif /* _WIN32 */
 
-/**
- * FreeBSD uses SIGIO instead of SIGPOLL,
- * so i'll just override it here
- */
+// FreeBSD uses SIGIO instead of SIGPOLL,
+// so i'll just override it here
 #ifndef SIGPOLL 
 #define SIGPOLL SIGIO 
 #endif /* SIGPOLL */
