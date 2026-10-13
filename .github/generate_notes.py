@@ -1,5 +1,6 @@
 import re
 
+
 def main() -> None:
     """Generate release notes for the latest GitHub release."""
 
@@ -11,12 +12,13 @@ def main() -> None:
 
     latest_changes = changelog[start:end].strip()
 
-    release_notes = f"""# Changelog
+    release_notes = f"""## Changelog
 
 {latest_changes}
 """
-    
+
     print(release_notes)
+
 
 if __name__ == "__main__":
     main()
