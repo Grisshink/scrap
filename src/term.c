@@ -1,15 +1,15 @@
 // Scrap is a project that allows anyone to build software using simple, block based interface.
 //
 // Copyright (C) 2024-2026 Grisshink
-// 
+//
 // This software is provided 'as-is', without any express or implied
 // warranty.  In no event will the authors be held liable for any damages
 // arising from the use of this software.
-// 
+//
 // Permission is granted to anyone to use this software for any purpose,
 // including commercial applications, and to alter it and redistribute it
 // freely, subject to the following restrictions:
-// 
+//
 // 1. The origin of this software must not be misrepresented; you must not
 //    claim that you wrote the original software. If you use this software
 //    in a product, an acknowledgment in the product documentation would be
@@ -34,11 +34,18 @@
 #ifdef _WIN32
 #include <windows.h>
 #else
+#ifndef __FreeBSD__
 #include <pty.h>
 #include <utmp.h>
+#else
+#include <libutil.h>
+#include <sys/types.h>
+#include <sys/ioctl.h>
+#include <termios.h>
+#endif /* __FreeBSD__ */
 #include <signal.h>
 #include <sys/wait.h>
-#endif
+#endif /* _WIN32 */
 
 #define TERM_BLACK (TermColor) { 0x00, 0x00, 0x00, 0xff }
 #define TERM_RED (TermColor) { 230, 41, 55, 255 }
@@ -654,7 +661,7 @@ static const char* sig_to_str(int signum) {
     case SIGCHLD: return "SIGCHLD";
     case SIGTTIN: return "SIGTTIN";
     case SIGTTOU: return "SIGTTOU";
-    case SIGPOLL: return "SIGPOLL";
+    case SIGIO: return "SIGIO";
     case SIGXFSZ: return "SIGXFSZ";
     case SIGXCPU: return "SIGXCPU";
     case SIGVTALRM: return "SIGVTALRM";
@@ -832,7 +839,7 @@ bool term_run_process(char* command, char* error, size_t error_len) {
         void* val;
         (void) val;
         pthread_join(term_read_thread, &val);
-        
+
         if (WIFEXITED(status)) {
             int exit_code = WEXITSTATUS(status);
             if (exit_code == 0) {
