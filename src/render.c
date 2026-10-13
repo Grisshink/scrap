@@ -2204,6 +2204,8 @@ static void scrap_gui_render(void) {
             assert(false && "Got unknown draw type");
             break;
         case DRAWTYPE_BORDER:
+            command.width = ceilf(command.width);
+            command.height = ceilf(command.height);
             switch (command.subtype) {
             case BORDER_NORMAL:
                 DrawRectangleLinesEx(
@@ -2233,6 +2235,8 @@ static void scrap_gui_render(void) {
             }
             break;
         case DRAWTYPE_RECT:
+            command.width = ceilf(command.width);
+            command.height = ceilf(command.height);
             switch (command.subtype) {
             case RECT_NORMAL:
                 DrawRectangle(command.pos_x, command.pos_y, command.width, command.height, CONVERT_COLOR(command.color, Color));
