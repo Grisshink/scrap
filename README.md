@@ -87,7 +87,7 @@ sudo pacman -S libx11 libxrandr libxi libxcursor libxinerama gettext libffi
 
 #### FreeBSD
 ```
-pkg install gcc gmake libXinerama libXi libXcursor libXcursor libXrandr libX11 gettext gettext-runtime libffi raylib
+pkg install gcc gmake libXinerama libXi libXcursor libXcursor libXrandr libX11 gettext gettext-runtime libffi
 ```
 
 #### OpenSUSE
