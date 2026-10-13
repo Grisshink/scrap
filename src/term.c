@@ -34,11 +34,26 @@
 #ifdef _WIN32
 #include <windows.h>
 #else
+#ifndef __FreeBSD__
 #include <pty.h>
 #include <utmp.h>
+#else 
+#include <libutil.h>
+#include <sys/types.h>
+#include <sys/ioctl.h>
+#include <termios.h>
+#endif /* __FreeBSD__ */
 #include <signal.h>
 #include <sys/wait.h>
-#endif
+#endif /* _WIN32 */
+
+/**
+ * FreeBSD uses SIGIO instead of SIGPOLL,
+ * so i'll just override it here
+ */
+#ifndef SIGPOLL 
+#define SIGPOLL SIGIO 
+#endif /* SIGPOLL */
 
 #define TERM_BLACK (TermColor) { 0x00, 0x00, 0x00, 0xff }
 #define TERM_RED (TermColor) { 230, 41, 55, 255 }
