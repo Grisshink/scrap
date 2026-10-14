@@ -1347,7 +1347,7 @@ static void spectrum_on_hover(GuiElement* el) {
 static void spectrum_on_render(GuiElement* el) {
     if (IsMouseButtonDown(MOUSE_BUTTON_LEFT) && ui.dropdown.as.color_picker.select_part == COLOR_PICKER_SPECTRUM) {
         ui.dropdown.as.color_picker.color.hue = CLAMP((gui->mouse_y - el->parent->abs_y) / el->parent->h * 360.0, 0.0, 360.0);
-        editor.project_modified = true;
+        project_mark_modified();
     }
     el->y = (ui.dropdown.as.color_picker.color.hue / 360.0) * el->parent->h - el->h / 2.0;
 }
@@ -1372,7 +1372,7 @@ static void color_picker_sv_on_render(GuiElement* el) {
     if (IsMouseButtonDown(MOUSE_BUTTON_LEFT) && ui.dropdown.as.color_picker.select_part == COLOR_PICKER_SV) {
         ui.dropdown.as.color_picker.color.saturation = CLAMP((gui->mouse_x - el->parent->abs_x) / el->parent->w, 0.0, 1.0);
         ui.dropdown.as.color_picker.color.value = CLAMP(1.0 - (gui->mouse_y - el->parent->abs_y) / el->parent->h, 0.0, 1.0);
-        editor.project_modified = true;
+        project_mark_modified();
     }
 
     el->x = ui.dropdown.as.color_picker.color.saturation * el->parent->w - el->w / 2.0;
@@ -2329,7 +2329,7 @@ static void write_debug_buffer(void) {
     print_debug(&i, "FPS: %d, Frame time: %.3f", GetFPS(), GetFrameTime());
 
     if (!editor.show_debug) return;
-    print_debug(&i, "UI time: %.3f", ui.ui_time);
+    print_debug(&i, "UI time: %.6g us", ui.ui_time);
     print_debug(&i, "Elements: %zu, Drawn: %zu", gui->elements_count, gui->command_list.size);
     print_debug(&i, "Mem: %.3f/%.3f MiB", (double)gui->arena->pos / (1024.0 * 1024.0), (double)gui->arena->reserve_size / (1024.0 * 1024.0));
     print_debug(&i, " ");
@@ -2353,6 +2353,7 @@ static void write_debug_buffer(void) {
     print_debug(&i, "Part: %d, Select: %d", ui.dropdown.as.color_picker.hover_part, ui.dropdown.as.color_picker.select_part);
     print_debug(&i, "Anchor: %p, Ref: %p", ui.dropdown.element, ui.dropdown.ref_object);
     print_debug(&i, "Error root: %p, chain: %p, block: %p", vm.compiler_error.root_blockchain, vm.compiler_error.blockchain, vm.compiler_error.block);
+    print_debug(&i, "Last save time: %.3g s", editor.project_modified && !editor.project_autosaved ? end_timer(editor.project_time_since_save) / 1e+6 : 0.0);
 }
 
 void scrap_gui_process_render(void) {

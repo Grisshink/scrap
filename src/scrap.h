@@ -348,6 +348,8 @@ typedef enum {
 typedef struct {
     char project_name[1024];
     bool project_modified;
+    bool project_autosaved;
+    Timer project_time_since_save;
 
     Tab* tabs;
 
@@ -460,7 +462,8 @@ PanelTree* panel_new(PanelType type);
 void panel_split(PanelTree* panel, SplitSide side, PanelType new_panel_type, float split_percent);
 void panel_delete(PanelTree* panel);
 
-bool save_project(void);
+bool save_project(char* path);
+void project_mark_modified(void);
 
 bool handle_file_button_click(void);
 bool handle_settings_button_click(void);

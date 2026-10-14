@@ -21,6 +21,7 @@
 #include "scrap.h"
 #include "term.h"
 #include "../external/tinyfiledialogs.h"
+#include "../external/cfgpath.h"
 #include "vec.h"
 #include "util.h"
 
@@ -35,12 +36,14 @@ typedef enum {
     FILE_MENU_NEW_PROJECT = 0,
     FILE_MENU_SAVE_PROJECT,
     FILE_MENU_LOAD_PROJECT,
+    FILE_MENU_LOAD_AUTOSAVE,
 } FileMenuInds;
 
 char* file_menu_list[] = {
     "New project",
     "Save project",
     "Load project",
+    "Load autosave"
 };
 
 static char* type_switcher_type_name_list[] = {
@@ -68,6 +71,15 @@ static DataType type_switcher_type_list[] = {
 };
 
 static void get_input_ind(void);
+
+void project_mark_modified(void) {
+    if (!editor.project_modified || editor.project_autosaved) {
+        editor.project_time_since_save = start_timer("Project autosave");
+    }
+
+    editor.project_modified = true;
+    editor.project_autosaved = false;
+}
 
 // Divides the panel into two parts along the specified side with the specified split percentage
 void panel_split(PanelTree* panel, SplitSide side, PanelType new_panel_type, float split_percent) {
@@ -512,34 +524,42 @@ static char* get_basename(char* path) {
     return base_name;
 }
 
-bool save_project(void) {
-    char const* filters[] = {"*.scrp"};
+bool save_project(char* path) {
+    bool user_path = false;
 
-    char* path = tinyfd_saveFileDialog(NULL, editor.project_name, ARRLEN(filters), filters, "Scrap project files (.scrp)");
-    if (!path) return false;
+    if (!path) {
+        user_path = true;
+        char const* filters[] = {"*.scrp"};
+        path = tinyfd_saveFileDialog(NULL, editor.project_name, ARRLEN(filters), filters, "Scrap project files (.scrp)");
+        if (!path) return false;
+    }
+
     save_code(path, editor.code);
 
-    char* base_path = get_basename(path);
-    int i;
-    for (i = 0; base_path[i]; i++) editor.project_name[i] = base_path[i];
-    editor.project_name[i] = 0;
-    editor.project_modified = false;
+    if (user_path) {
+        char* base_path = get_basename(path);
+        int i;
+        for (i = 0; base_path[i]; i++) editor.project_name[i] = base_path[i];
+        editor.project_name[i] = 0;
+    }
     return true;
 }
 
-void load_project(void) {
-    char const* filters[] = {"*.scrp"};
+void load_project(char* path) {
+    if (!path) {
+        char const* filters[] = {"*.scrp"};
 
-    char* file_path = tinyfd_openFileDialog(NULL, editor.project_name, ARRLEN(filters), filters, "Scrap project files (.scrp)", 0);
-    if (!file_path) return;
+        path = tinyfd_openFileDialog(NULL, editor.project_name, ARRLEN(filters), filters, "Scrap project files (.scrp)", 0);
+        if (!path) return;
+    }
 
     int file_size;
-    void* file_data = LoadFileData(file_path, &file_size);
+    void* file_data = LoadFileData(path, &file_size);
     if (!file_data) {
         actionbar_show(gettext("File load failed :("));
         return;
     }
-    scrap_log(LOG_INFO, "%zu bytes read from %s", file_size, file_path);
+    scrap_log(LOG_INFO, "%zu bytes read from %s", file_size, path);
 
     RootBlockChain* chain = load_code(file_data, file_size, false);
 
@@ -561,14 +581,15 @@ void load_project(void) {
     editor.camera.position.x = editor.code[editor.blockchain_select_counter].x - 50;
     editor.camera.position.y = editor.code[editor.blockchain_select_counter].y - 50;
 
-    char* base_file_path = get_basename(file_path);
+    char* base_path = get_basename(path);
 
     int i;
-    for (i = 0; base_file_path[i]; i++) editor.project_name[i] = base_file_path[i];
+    for (i = 0; base_path[i]; i++) editor.project_name[i] = base_path[i];
     editor.project_name[i] = 0;
 
     actionbar_show(gettext("File load succeeded!"));
     editor.project_modified = false;
+    editor.project_autosaved = false;
 }
 
 bool handle_file_menu_click(void) {
@@ -580,12 +601,25 @@ bool handle_file_menu_click(void) {
         vector_clear(editor.code);
         switch_tab_to_panel(PANEL_CODE);
         editor.project_modified = false;
+        editor.project_autosaved = false;
         break;
     case FILE_MENU_SAVE_PROJECT:
-        save_project();
+        save_project(NULL);
+        editor.project_modified = false;
         break;
     case FILE_MENU_LOAD_PROJECT:
-        load_project();
+        load_project(NULL);
+        break;
+    case FILE_MENU_LOAD_AUTOSAVE: ;
+        char autosave_path[MAX_PATH + 32];
+        get_user_cache_folder(autosave_path, ARRLEN(autosave_path), CONFIG_FOLDER_NAME);
+        strcat(autosave_path, "autosave.scrp");
+
+        if (!FileExists(autosave_path)) {
+            actionbar_show(gettext("No autosave found"));
+            break;
+        }
+        load_project(autosave_path);
         break;
     default:
         printf("idk\n");
@@ -597,6 +631,7 @@ bool handle_file_menu_click(void) {
 bool handle_block_dropdown_click(void) {
     assert(ui.dropdown.type == DROPDOWN_LIST);
     argument_set_value(ui.hover.editor.select_argument, value_from_string(ui.dropdown.as.list.data[ui.dropdown.as.list.select_ind]));
+    project_mark_modified();
     return handle_dropdown_close();
 }
 
@@ -733,6 +768,7 @@ bool handle_editor_add_arg_button(void) {
     arg->data.blockdef = blockdef;
     ui.hover.editor.edit_blockdef = blockdef;
 
+    project_mark_modified();
     deselect_all();
     return true;
 }
@@ -754,6 +790,7 @@ bool handle_editor_add_text_button(void) {
     ui.hover.editor.argument->data.blockdef = blockdef;
     ui.hover.editor.edit_blockdef = blockdef;
 
+    project_mark_modified();
     deselect_all();
     return true;
 }
@@ -774,6 +811,7 @@ bool handle_editor_del_arg_button(void) {
     ui.hover.editor.argument->data.blockdef = blockdef;
     ui.hover.editor.edit_blockdef = blockdef;
 
+    project_mark_modified();
     deselect_all();
     return true;
 }
@@ -796,6 +834,7 @@ bool handle_editor_color_button(void) {
     assert(ui.hover.editor.edit_blockdef != NULL);
 
     show_color_picker_dropdown((Color*)&ui.hover.editor.edit_blockdef->color, &ui.hover.editor.edit_blockdef->color, NULL);
+    project_mark_modified();
     return true;
 }
 
@@ -816,6 +855,7 @@ bool handle_editor_return_type_switcher_dropdown_click(void) {
 
     *return_type = set_type;
 
+    project_mark_modified();
     return handle_dropdown_close();
 }
 
@@ -841,6 +881,7 @@ bool handle_editor_type_switcher_dropdown_click(void) {
         blockdef_input->data.arg.default_value = value_get_default(set_type);
     }
 
+    project_mark_modified();
     return handle_dropdown_close();
 }
 
@@ -863,6 +904,7 @@ bool handle_bool_value_input_click(void) {
     Argument* arg = ui.hover.button.data;
     ui.hover.editor.select_argument = arg;
     arg->data.value.data.bool_val = !arg->data.value.data.bool_val;
+    project_mark_modified();
     return true;
 }
 
@@ -871,6 +913,7 @@ bool handle_color_value_input_click(void) {
     ui.hover.editor.select_argument = arg;
 
     show_color_picker_dropdown((Color*)&arg->data.value.data.color_val, &arg->data.value.data.color_val, NULL);
+    project_mark_modified();
     return true;
 }
 
@@ -895,6 +938,7 @@ bool handle_numeric_value_input_click(void) {
     vector_add(&ui.hover.editor.select_argument_scratch_input, 0);
 
     get_input_ind();
+    project_mark_modified();
     return true;
 }
 
@@ -918,6 +962,7 @@ static bool handle_value_input_type_switcher_dropdown_click(void) {
         arg->data.value = value_get_default(set_type);
     }
 
+    project_mark_modified();
     return handle_dropdown_close();
 }
 
@@ -1017,7 +1062,7 @@ static void code_put_blocks(bool single) {
 
     ui.hover.editor.select_blockchain = editor.code[vector_size(editor.code) - 1].chain;
     ui.hover.editor.select_block = ui.hover.editor.select_blockchain->start;
-    editor.project_modified = true;
+    project_mark_modified();
 }
 
 static void code_attach_to_argument(void) {
@@ -1047,7 +1092,7 @@ static void code_attach_to_argument(void) {
     ui.hover.editor.select_blockchain = ui.hover.editor.blockchain;
     ui.hover.editor.select_block = ui.hover.editor.argument->data.block;
     ui.hover.select_input = NULL;
-    editor.project_modified = true;
+    project_mark_modified();
 }
 
 static void code_copy_argument(void) {
@@ -1091,7 +1136,7 @@ static void code_swap_argument(void) {
 
     ui.hover.editor.select_block = ui.hover.editor.parent_argument->data.block;
     ui.hover.editor.select_blockchain = ui.hover.editor.blockchain;
-    editor.project_modified = true;
+    project_mark_modified();
 }
 
 static void code_detach_argument(void) {
@@ -1117,7 +1162,7 @@ static void code_detach_argument(void) {
     ui.hover.editor.select_blockchain = NULL;
     ui.hover.editor.select_block = NULL;
     ui.hover.select_input = NULL;
-    editor.project_modified = true;
+    project_mark_modified();
 }
 
 static void code_copy_blocks(bool single) {
@@ -1162,7 +1207,7 @@ static void code_copy_blocks(bool single) {
 static void code_detach_blocks(bool single) {
     scrap_log(LOG_INFO, "Detach block(s)");
 
-    editor.project_modified = true;
+    project_mark_modified();
     ui.hover.select_input = NULL;
 
     BlockChain* hover_chain = ui.hover.editor.blockchain;
@@ -1265,7 +1310,7 @@ static void code_attach_block(void) {
 
     ui.hover.editor.select_block = inserted_block;
     ui.hover.editor.select_blockchain = inserted_blockchain;
-    editor.project_modified = true;
+    project_mark_modified();
 }
 
 static bool handle_code_editor_click(bool mouse_empty) {
@@ -1462,7 +1507,10 @@ static bool handle_mouse_click(void) {
     if (thread_is_running(&vm.thread)) return ui.hover.panels.panel->type != PANEL_CODE;
 
     if (ui.hover.input_info.input) get_input_ind();
-    if (ui.hover.input_info.input != ui.hover.select_input) ui.hover.select_input = ui.hover.input_info.input;
+    if (ui.hover.input_info.input != ui.hover.select_input) {
+        if (ui.hover.editor.argument && !ui.hover.select_input) project_mark_modified();
+        ui.hover.select_input = ui.hover.input_info.input;
+    }
 
     bool mouse_empty = vector_size(editor.mouse_blockchains) == 0;
 
@@ -2018,6 +2066,23 @@ void scrap_gui_process_ui(void) {
     if (editor.code_area_needs_reposition) {
         code_reposition();
         editor.code_area_needs_reposition = false;
+    }
+
+    if (editor.project_modified && !editor.project_autosaved) {
+        double t = end_timer(editor.project_time_since_save) / 1e+6;
+        if (t > EDITOR_AUTOSAVE_INTERVAL) {
+            char autosave_path[MAX_PATH + 32];
+            get_user_cache_folder(autosave_path, ARRLEN(autosave_path), CONFIG_FOLDER_NAME);
+            strcat(autosave_path, "autosave.scrp");
+
+            if (save_project(autosave_path)) {
+                actionbar_show(gettext("Project autosaved"));
+                editor.project_autosaved = true;
+            } else {
+                actionbar_show(gettext("Project autosave failed"));
+                editor.project_time_since_save = start_timer("Project autosave");
+            }
+        }
     }
 
     if (fabsf(editor.camera.position.x  - editor.camera.real_position.x) > 1e-3 || 

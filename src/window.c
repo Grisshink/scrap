@@ -144,7 +144,8 @@ static bool settings_on_toggle_button_click(void) {
 }
 
 static bool save_confirmation_on_yes_button_click(void) {
-    if (save_project()) {
+    if (save_project(NULL)) {
+        editor.project_modified = false;
         ui.scrap_running = false;
     } else {
         gui_window_hide();

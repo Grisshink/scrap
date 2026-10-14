@@ -22,6 +22,7 @@
 #define SCRAP_MAX_SAVE_VERSION 6
 
 #define EDITOR_DEFAULT_PROJECT_NAME "project.scrp"
+#define EDITOR_AUTOSAVE_INTERVAL 60.0
 
 #define DROP_TEX_WIDTH ((float)(config.ui_size - BLOCK_OUTLINE_SIZE * 4) / (float)drop_tex.height * (float)drop_tex.width)
 #define FONT_PATH_MAX_SIZE 256
