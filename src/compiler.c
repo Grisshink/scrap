@@ -21,6 +21,7 @@
 #include "scrap.h"
 #include "ast.h"
 #include "vec.h"
+#include "../external/cfgpath.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -172,12 +173,16 @@ bool compiler_run(void* e) {
         goto thread_return;
     }
 
-    bytecode_save(&bytecode, "bytecode.scrb");
+    char bytecode_path[MAX_PATH + 32];
+    get_user_cache_folder(bytecode_path, ARRLEN(bytecode_path), CONFIG_FOLDER_NAME);
+    strcat(bytecode_path, "bytecode.scrb");
+
+    bytecode_save(&bytecode, bytecode_path);
 
 #ifdef _WIN32
-    char* cmd = ir_arena_sprintf(compiler.arena, 2048, "scrap.exe bytecode.scrb");
+    char* cmd = ir_arena_sprintf(compiler.arena, 2048, "scrap.exe %s", bytecode_path);
 #else
-    char* cmd = ir_arena_sprintf(compiler.arena, 2048, "%sscrap bytecode.scrb", GetApplicationDirectory());
+    char* cmd = ir_arena_sprintf(compiler.arena, 2048, "%sscrap %s", GetApplicationDirectory(), bytecode_path);
 #endif
 
     if (!term_run_process(cmd, vm->compiler_error.buf, vm->compiler_error.buf_size)) {
