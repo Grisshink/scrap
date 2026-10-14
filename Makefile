@@ -10,7 +10,7 @@ CFLAGS := -Wall -Wextra -std=c11 -D_GNU_SOURCE -DSCRAP_VERSION=\"$(SCRAP_VERSION
 
 ifeq ($(TARGET), LINUX)
 	CC := gcc
-	LDFLAGS := -lm -lpthread -lX11 -ldl -rdynamic
+	LDFLAGS := -lm -lpthread -lX11 -ldl -rdynamic -lutil
 else ifeq ($(TARGET), OSX)
 	# Thanks to @arducat for MacOS support
 	CC := clang
