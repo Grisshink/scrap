@@ -182,7 +182,9 @@ Image setup(void* save_data, size_t save_size) {
     vm = vm_new();
     register_blocks(&vm);
 
+#ifdef DEBUG
     editor.show_debug = true;
+#endif
     editor.mouse_blockchains = vector_create();
     editor.code = save_data && save_size ? load_code(save_data, save_size, false) : vector_create();
 

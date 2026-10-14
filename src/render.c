@@ -2328,7 +2328,6 @@ static void write_debug_buffer(void) {
     print_debug(&i, "Scrap " SCRAP_VERSION);
     print_debug(&i, "FPS: %d, Frame time: %.3f", GetFPS(), GetFrameTime());
 
-#ifdef DEBUG
     if (!editor.show_debug) return;
     print_debug(&i, "UI time: %.3f", ui.ui_time);
     print_debug(&i, "Elements: %zu, Drawn: %zu", gui->elements_count, gui->command_list.size);
@@ -2354,7 +2353,6 @@ static void write_debug_buffer(void) {
     print_debug(&i, "Part: %d, Select: %d", ui.dropdown.as.color_picker.hover_part, ui.dropdown.as.color_picker.select_part);
     print_debug(&i, "Anchor: %p, Ref: %p", ui.dropdown.element, ui.dropdown.ref_object);
     print_debug(&i, "Error root: %p, chain: %p, block: %p", vm.compiler_error.root_blockchain, vm.compiler_error.blockchain, vm.compiler_error.block);
-#endif
 }
 
 void scrap_gui_process_render(void) {

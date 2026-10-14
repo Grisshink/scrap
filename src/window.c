@@ -648,7 +648,6 @@ void draw_settings_window(void) {
             gui_element_end(gui);
         end_setting();
 
-#ifdef DEBUG
         begin_setting(gettext("Show debug info"), false);
             gui_element_begin(gui);
                 gui_set_grow(gui, DIRECTION_HORIZONTAL);
@@ -658,7 +657,6 @@ void draw_settings_window(void) {
                 draw_toggle(&editor.show_debug);
             gui_element_end(gui);
         end_setting();
-#endif
 
         gui_grow(gui, DIRECTION_VERTICAL);
 

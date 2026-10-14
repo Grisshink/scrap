@@ -394,9 +394,7 @@ typedef struct {
 
     GuiMemArena* scratch_arena;
 
-#ifdef DEBUG
     double ui_time;
-#endif
 } UI;
 
 struct Vm {

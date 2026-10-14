@@ -2122,13 +2122,9 @@ void scrap_gui_process_ui(void) {
 
         gui_arena_clear(ui.scratch_arena);
 
-#ifdef DEBUG
         Timer t = start_timer("gui process");
-#endif
         scrap_gui_process();
-#ifdef DEBUG
         ui.ui_time = end_timer(t);
-#endif
 
         if (vm.start_timeout >= 0) vm.start_timeout--;
         // This fixes selecting wrong argument of a block when two blocks overlap
