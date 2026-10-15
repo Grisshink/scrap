@@ -1,15 +1,15 @@
 // Scrap is a project that allows anyone to build software using simple, block based interface.
 //
 // Copyright (C) 2024-2026 Grisshink
-// 
+//
 // This software is provided 'as-is', without any express or implied
 // warranty.  In no event will the authors be held liable for any damages
 // arising from the use of this software.
-// 
+//
 // Permission is granted to anyone to use this software for any purpose,
 // including commercial applications, and to alter it and redistribute it
 // freely, subject to the following restrictions:
-// 
+//
 // 1. The origin of this software must not be misrepresented; you must not
 //    claim that you wrote the original software. If you use this software
 //    in a product, an acknowledgment in the product documentation would be
@@ -350,7 +350,7 @@ int start_runtime(void* bc_data, size_t bc_size) {
     assert(bc_data != NULL);
     assert(bc_size > 0);
 
-    // When starting the editor, GLFW internally sets LC_CTYPE locale to make %lc format options work properly, 
+    // When starting the editor, GLFW internally sets LC_CTYPE locale to make %lc format options work properly,
     // so we need to set it here explicitly
     setlocale(LC_CTYPE, "");
 

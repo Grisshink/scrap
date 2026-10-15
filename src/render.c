@@ -1,15 +1,15 @@
 // Scrap is a project that allows anyone to build software using simple, block based interface.
 //
 // Copyright (C) 2024-2026 Grisshink
-// 
+//
 // This software is provided 'as-is', without any express or implied
 // warranty.  In no event will the authors be held liable for any damages
 // arising from the use of this software.
-// 
+//
 // Permission is granted to anyone to use this software for any purpose,
 // including commercial applications, and to alter it and redistribute it
 // freely, subject to the following restrictions:
-// 
+//
 // 1. The origin of this software must not be misrepresented; you must not
 //    claim that you wrote the original software. If you use this software
 //    in a product, an acknowledgment in the product documentation would be
@@ -56,14 +56,14 @@ typedef enum {
 } ImageType;
 
 GuiColor color_picker_default_colors[18] = {
-    /* Black  */ { 0x00, 0x00, 0x00, 0xff }, /* Red    */ { 0xff, 0x00, 0x00, 0xff }, 
-    /* Green  */ { 0x00, 0xff, 0x00, 0xff }, /* Yellow */ { 0xff, 0xff, 0x00, 0xff }, 
-    /* Blue   */ { 0x00, 0x00, 0xff, 0xff }, /* Purple */ { 0xff, 0x00, 0xff, 0xff }, 
-    /* Cyan   */ { 0x00, 0xff, 0xff, 0xff }, /* White  */ { 0xff, 0xff, 0xff, 0xff }, 
-    CATEGORY_CONTROL_COLOR, CATEGORY_TERMINAL_COLOR, 
-    CATEGORY_MATH_COLOR,    CATEGORY_LOGIC_COLOR, 
-    CATEGORY_STRING_COLOR,  CATEGORY_MISC_COLOR, 
-    CATEGORY_DATA_COLOR,    CATEGORY_LIST_COLOR, 
+    /* Black  */ { 0x00, 0x00, 0x00, 0xff }, /* Red    */ { 0xff, 0x00, 0x00, 0xff },
+    /* Green  */ { 0x00, 0xff, 0x00, 0xff }, /* Yellow */ { 0xff, 0xff, 0x00, 0xff },
+    /* Blue   */ { 0x00, 0x00, 0xff, 0xff }, /* Purple */ { 0xff, 0x00, 0xff, 0xff },
+    /* Cyan   */ { 0x00, 0xff, 0xff, 0xff }, /* White  */ { 0xff, 0xff, 0xff, 0xff },
+    CATEGORY_CONTROL_COLOR, CATEGORY_TERMINAL_COLOR,
+    CATEGORY_MATH_COLOR,    CATEGORY_LOGIC_COLOR,
+    CATEGORY_STRING_COLOR,  CATEGORY_MISC_COLOR,
+    CATEGORY_DATA_COLOR,    CATEGORY_LIST_COLOR,
     CATEGORY_META_COLOR,    CATEGORY_NOTHING_COLOR,
 };
 
@@ -293,8 +293,8 @@ void input_on_hover(GuiElement* el) {
     if (ui.hover.is_panel_edit_mode) return;
 
     ui.hover.input_info = *(InputHoverInfo*)gui_get_state(el);
-    ui.hover.input_info.rel_pos = (Vector2) { 
-        gui->mouse_x - el->abs_x - ui.hover.input_info.rel_pos.x, 
+    ui.hover.input_info.rel_pos = (Vector2) {
+        gui->mouse_x - el->abs_x - ui.hover.input_info.rel_pos.x,
         gui->mouse_y - el->abs_y - ui.hover.input_info.rel_pos.y,
     };
 }
@@ -822,7 +822,7 @@ static void draw_block(Block* block, bool highlight, bool select, bool can_hover
                 break;
             case ARGUMENT_VALUE:
                 draw_value_argument(
-                    arg, 
+                    arg,
                     can_hover,
                     editable,
                     ghost,
@@ -1212,7 +1212,7 @@ static GuiElement* draw_blockchain(BlockChain* chain, bool ghost, bool show_prev
                 }
             }
         }
-        
+
         for (Block* iter = chain->start; iter; iter = iter->next) {
             if (!thread_is_running(&vm.thread) && iter == vm.compiler_error.block) vm.compiler_error.blockchain = chain;
             draw_block(iter, false, false, true, ghost, editable_arguments, show_previews, false);
@@ -1462,7 +1462,7 @@ static void draw_color_picker(void) {
                         for (size_t j = 0; j < 4; j++) {
                             size_t ind = i*4 + j;
                             if (ind >= ARRLEN(color_picker_default_colors)) break;
-                            
+
                             gui_element_begin(gui);
                                 gui_set_border(gui, (GuiColor) { 0x40, 0x40, 0x40, 0xff }, 2);
                                 gui_on_hover(gui, color_picker_default_colors_on_hover);
@@ -1534,7 +1534,7 @@ static void draw_code_area(void) {
                     gui_spacer(gui, 0, config.ui_size * 0.5);
 
                     gui_element_begin(gui);
-                        gui_set_direction(gui, DIRECTION_HORIZONTAL);   
+                        gui_set_direction(gui, DIRECTION_HORIZONTAL);
                         gui_set_gap(gui, config.ui_size * 0.5);
 
                         if (vm.compiler_error.block) {
@@ -1560,7 +1560,7 @@ static void draw_code_area(void) {
                 gui_set_grow(gui, DIRECTION_HORIZONTAL);
                 gui_set_direction(gui, DIRECTION_VERTICAL);
                 gui_set_align(gui, ALIGN_CENTER, ALIGN_TOP);
-                
+
                 Color color = YELLOW;
                 color.a = editor.actionbar.show_time / 3.0 * 255.0;
                 gui_text(gui, &assets.fonts.font_eb, editor.actionbar.text, config.ui_size * 0.8, CONVERT_COLOR(color, GuiColor));
@@ -1754,8 +1754,8 @@ static void draw_code(void) {
             if (chain_pos.x > code_size.width || chain_pos.y > code_size.height) continue;
 
             if (editor.code[i].width > 0 && editor.code[i].height > 0 &&
-                (chain_pos.x + editor.code[i].width  * editor.camera.real_linear_zoom < 0 || 
-                 chain_pos.y + editor.code[i].height * editor.camera.real_linear_zoom < 0)) 
+                (chain_pos.x + editor.code[i].width  * editor.camera.real_linear_zoom < 0 ||
+                 chain_pos.y + editor.code[i].height * editor.camera.real_linear_zoom < 0))
             {
                 continue;
             }

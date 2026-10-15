@@ -1,15 +1,15 @@
 // Scrap is a project that allows anyone to build software using simple, block based interface.
 //
 // Copyright (C) 2024-2026 Grisshink
-// 
+//
 // This software is provided 'as-is', without any express or implied
 // warranty.  In no event will the authors be held liable for any damages
 // arising from the use of this software.
-// 
+//
 // Permission is granted to anyone to use this software for any purpose,
 // including commercial applications, and to alter it and redistribute it
 // freely, subject to the following restrictions:
-// 
+//
 // 1. The origin of this software must not be misrepresented; you must not
 //    claim that you wrote the original software. If you use this software
 //    in a product, an acknowledgment in the product documentation would be
@@ -1025,7 +1025,7 @@ static void code_put_blocks(bool single) {
     scrap_log(LOG_INFO, "Put block(s)");
 
     if (single) {
-        RootBlockChain root = editor.mouse_blockchains[0]; 
+        RootBlockChain root = editor.mouse_blockchains[0];
 
         root.x -= ui.hover.panels.panel_size.x + ui.hover.panels.panel_size.width  / 2;
         root.y -= ui.hover.panels.panel_size.y + ui.hover.panels.panel_size.height / 2;
@@ -1104,7 +1104,7 @@ static void code_copy_argument(void) {
     BlockParent chain_parent;
     chain_parent.type = BLOCK_PARENT_BLOCKCHAIN;
     chain_parent.as.chain = root.chain;
-    
+
     root.chain->start = block_copy(ui.hover.editor.block, chain_parent);
     root.chain->end = root.chain->start;
     vector_add(&editor.mouse_blockchains, root);
@@ -1319,7 +1319,7 @@ static bool handle_code_editor_click(bool mouse_empty) {
     bool ctrl_down = IsKeyDown(KEY_LEFT_CONTROL) || IsKeyDown(KEY_RIGHT_CONTROL);
 
     if (!mouse_empty && !ui.hover.editor.block) {
-        int x   = 0, 
+        int x   = 0,
             y   = 0,
             x_i = 0,
             x_i_max = ceil(sqrt(vector_size(editor.mouse_blockchains))),
@@ -1355,7 +1355,7 @@ static bool handle_code_editor_click(bool mouse_empty) {
         if (alt_down) {
             code_copy_argument();
             return true;
-        } 
+        }
 
         if (!mouse_empty && !shift_down) {
             code_swap_argument();
@@ -1652,7 +1652,7 @@ static Block* block_next_block(Block* block, Block* prev) {
     }
 
     if (block->next) return block->next;
-    
+
     Block* parent = block->parent.as.chain->parent;
     if (parent) return block_next_block(parent, block);
 
@@ -1746,8 +1746,8 @@ static void change_zoom_level_by(float zoom) {
 static bool handle_code_panel_key_press(void) {
     if (ui.hover.editor.select_argument && !ui.hover.select_input) {
         if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_KP_ENTER)) {
-            if (ui.hover.editor.select_argument->type == ARGUMENT_VALUE && 
-                ui.hover.editor.select_argument->data.value.type != DATA_TYPE_ANY && 
+            if (ui.hover.editor.select_argument->type == ARGUMENT_VALUE &&
+                ui.hover.editor.select_argument->data.value.type != DATA_TYPE_ANY &&
                 ui.hover.editor.select_argument->data.value.type != DATA_TYPE_STRING)
             {
                 return true;
@@ -2085,9 +2085,9 @@ void scrap_gui_process_ui(void) {
         }
     }
 
-    if (fabsf(editor.camera.position.x  - editor.camera.real_position.x) > 1e-3 || 
+    if (fabsf(editor.camera.position.x  - editor.camera.real_position.x) > 1e-3 ||
         fabsf(editor.camera.position.y  - editor.camera.real_position.y) > 1e-3 ||
-        fabsf(editor.camera.zoom - editor.camera.real_zoom)       > 1e-3) 
+        fabsf(editor.camera.zoom - editor.camera.real_zoom)       > 1e-3)
     {
         editor.camera.real_position.x += (editor.camera.position.x - editor.camera.real_position.x) / (config.code_area_smoothness / GetFrameTime() / 120 + 1);
         editor.camera.real_position.y += (editor.camera.position.y - editor.camera.real_position.y) / (config.code_area_smoothness / GetFrameTime() / 120 + 1);

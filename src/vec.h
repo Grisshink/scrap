@@ -55,7 +55,7 @@ typedef struct
 {
 	vec_size_t size;
 	vec_size_t capacity;
-	unsigned char data[]; 
+	unsigned char data[];
 } vector_header;
 
 // TODO: more rigorous check for typeof support with different compilers

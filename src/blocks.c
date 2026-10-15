@@ -1428,18 +1428,18 @@ static bool check_valid_foreign_types(Compiler* compiler, DataType type, const c
     case DATA_TYPE_BOOL: ffi_type_list = bool_type_list; break;
     default:
         compiler_set_error(
-            compiler, 
-            gettext("Invalid input type %s, allowed argument input types are: %s, %s, %s, %s, %s"), 
-            gettext(type_to_str(type)), 
-            gettext(type_to_str(DATA_TYPE_INTEGER)), 
-            gettext(type_to_str(DATA_TYPE_FLOAT)), 
-            gettext(type_to_str(DATA_TYPE_STRING)), 
-            gettext(type_to_str(DATA_TYPE_NOTHING)), 
+            compiler,
+            gettext("Invalid input type %s, allowed argument input types are: %s, %s, %s, %s, %s"),
+            gettext(type_to_str(type)),
+            gettext(type_to_str(DATA_TYPE_INTEGER)),
+            gettext(type_to_str(DATA_TYPE_FLOAT)),
+            gettext(type_to_str(DATA_TYPE_STRING)),
+            gettext(type_to_str(DATA_TYPE_NOTHING)),
             gettext(type_to_str(DATA_TYPE_BOOL))
         );
         return false;
     }
-    
+
     for (char** check_type = ffi_type_list; *check_type; check_type++) {
         if (!strcmp(ffi_type, *check_type)) {
             return true;

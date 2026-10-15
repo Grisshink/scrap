@@ -1,15 +1,15 @@
 // Scrap is a project that allows anyone to build software using simple, block based interface.
 //
 // Copyright (C) 2024-2026 Grisshink
-// 
+//
 // This software is provided 'as-is', without any express or implied
 // warranty.  In no event will the authors be held liable for any damages
 // arising from the use of this software.
-// 
+//
 // Permission is granted to anyone to use this software for any purpose,
 // including commercial applications, and to alter it and redistribute it
 // freely, subject to the following restrictions:
-// 
+//
 // 1. The origin of this software must not be misrepresented; you must not
 //    claim that you wrote the original software. If you use this software
 //    in a product, an acknowledgment in the product documentation would be
@@ -750,7 +750,7 @@ void save_add_constant(Value constant) {
 
 void block_collect_constants(Block* block) {
     save_add_constant((Value) {
-        .type = DATA_TYPE_STRING, 
+        .type = DATA_TYPE_STRING,
         .data.str_val = (char*)block->blockdef->id,
     });
     for (size_t i = 0; i < vector_size(block->arguments); i++) {
@@ -972,7 +972,7 @@ Blockdef* load_blockdef(SaveData* save) {
         int arg_id;
         if (!save_read_varint(save, (unsigned int*)&arg_id)) return NULL;
     }
-    
+
     DataType return_type = DATA_TYPE_ANY;
     if (ver >= 6) {
         if (!save_read_varint(save, (unsigned int*)&return_type)) return NULL;
@@ -1075,7 +1075,7 @@ bool load_block_argument(SaveData* save, Argument* arg) {
         BlockdefColor color = INT_TO_COLOR(color_int);
 
         arg->type = ARGUMENT_VALUE;
-        arg->data.value.type = DATA_TYPE_COLOR; 
+        arg->data.value.type = DATA_TYPE_COLOR;
         arg->data.value.data.color_val = color;
         break;
     default:
@@ -1256,7 +1256,7 @@ bool load_root_blockchain(SaveData* save, RootBlockChain* chain) {
 }
 
 // This function converts all control blocks from linear representation into the new hierarchical format
-// Before save version 5 all control blocks were stored linearly, with "end" blocks marking the end of control block contents. 
+// Before save version 5 all control blocks were stored linearly, with "end" blocks marking the end of control block contents.
 // With the new ast structure control blocks actually contain the chains inside them and this function converts to this new format
 void convert_old_save_structure(RootBlockChain* code) {
     scrap_log(LOG_INFO, "Fixing old save");
@@ -1357,7 +1357,7 @@ RootBlockChain* load_code(void* file_data, size_t file_size, bool test) {
             for (char* ch = constant_str; *ch; ch++) vector_add(&constant.data.str_val, *ch);
             vector_add(&constant.data.str_val, 0);
         } else {
-            if (!load_value(&save, &constant)) goto load_fail; 
+            if (!load_value(&save, &constant)) goto load_fail;
         }
 
         vector_add(&save_value_constants, constant);

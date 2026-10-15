@@ -1,15 +1,15 @@
 // Scrap is a project that allows anyone to build software using simple, block based interface.
 //
 // Copyright (C) 2024-2026 Grisshink
-// 
+//
 // This software is provided 'as-is', without any express or implied
 // warranty.  In no event will the authors be held liable for any damages
 // arising from the use of this software.
-// 
+//
 // Permission is granted to anyone to use this software for any purpose,
 // including commercial applications, and to alter it and redistribute it
 // freely, subject to the following restrictions:
-// 
+//
 // 1. The origin of this software must not be misrepresented; you must not
 //    claim that you wrote the original software. If you use this software
 //    in a product, an acknowledgment in the product documentation would be
@@ -235,7 +235,7 @@ void blockdef_add_image(Blockdef* blockdef, BlockdefImage image);
 void blockdef_add_blockdef_editor(Blockdef* blockdef, void* block_func, void* arg_func, Blockdef* default_blockdef);
 void blockdef_delete_input(Blockdef* blockdef, size_t input);
 void blockdef_set_id(Blockdef* blockdef, const char* new_id);
-// Removes all function pointers from blockdef, rendering it unusable. 
+// Removes all function pointers from blockdef, rendering it unusable.
 // User is expected to manually fix these blockdefs by putting appropriate newly created blockdef
 void blockdef_abandon(Blockdef* blockdef);
 void blockdef_free(Blockdef* blockdef);
