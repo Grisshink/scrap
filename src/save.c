@@ -614,6 +614,10 @@ void save_value(SaveData* save, Value* value) {
         save_add_array(save, value->data.str_val, strlen(value->data.str_val) + 1, sizeof(value->data.str_val[0]));
         break;
     case DATA_TYPE_LIST:
+        if (!value->data.list_val) {
+            save_add_varint(save, 0);
+            break;
+        }
         assert(false && "TODO");
         break;
     case DATA_TYPE_BLOCKDEF:
@@ -724,6 +728,7 @@ int save_find_constant(const Value id) {
             if (!strcmp(save_value_constants[i].data.str_val, id.data.str_val)) return i;
             break;
         case DATA_TYPE_LIST:
+            if (!save_value_constants[i].data.list_val && !id.data.list_val) return i;
             assert(false && "TODO");
             break;
         case DATA_TYPE_BLOCKDEF:
@@ -877,6 +882,12 @@ bool load_value(SaveData* save, Value* value) {
         vector_add(&value->data.str_val, 0);
         break;
     case DATA_TYPE_LIST:
+        unsigned int read_size;
+        if (!save_read_varint(save, &read_size)) return false;
+        if (read_size == 0) {
+            value->data.list_val = NULL;
+            break;
+        }
         assert(false && "TODO");
         break;
     case DATA_TYPE_BLOCKDEF:
