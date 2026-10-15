@@ -106,7 +106,7 @@ void block_category_add_label(BlockCategory* category, const char* label, Color 
     item->data.label.color = color;
 }
 
-void unregister_categories(void) {
+void block_category_unregister_all(void) {
     if (!editor.palette.categories_start) return;
     BlockCategory* cat = editor.palette.categories_start;
     while (cat) {
@@ -118,7 +118,7 @@ void unregister_categories(void) {
     editor.palette.categories_end = NULL;
 }
 
-void clear_compile_error(void) {
+void compile_error_clear(void) {
     vm.compiler_error.block = NULL;
     vm.compiler_error.blockchain = NULL;
     vm.compiler_error.root_blockchain = NULL;
@@ -136,6 +136,7 @@ Vm vm_new(void) {
         .error_lines = vector_create(),
         .start_timeout = -1,
     };
+    vm_register_blocks(&vm);
     return vm;
 }
 

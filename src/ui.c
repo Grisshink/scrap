@@ -70,7 +70,7 @@ static DataType type_switcher_type_list[] = {
     // DATA_TYPE_BLOCKDEF,
 };
 
-static void get_input_ind(void);
+static void input_update_cursor_position(void);
 
 void project_mark_modified(void) {
     if (!editor.project_modified || editor.project_autosaved) {
@@ -166,7 +166,7 @@ void tab_delete(size_t tab) {
     if (editor.current_tab >= (int)vector_size(editor.tabs)) editor.current_tab = vector_size(editor.tabs) - 1;
 }
 
-void delete_all_tabs(void) {
+void tabs_delete_all(void) {
     for (ssize_t i = vector_size(editor.tabs) - 1; i >= 0; i--) tab_delete(i);
 }
 
@@ -201,7 +201,7 @@ void tab_insert(char* name, PanelTree* root_panel, size_t position) {
 }
 
 // Initializes codespace, using a default panel layout
-void init_panels(void) {
+void panels_init(void) {
     PanelTree* code_panel = panel_new(PANEL_CODE);
     panel_split(code_panel, SPLIT_SIDE_LEFT, PANEL_BLOCK_PALETTE, 0.3);
     panel_split(code_panel->left, SPLIT_SIDE_TOP, PANEL_BLOCK_CATEGORIES, 0.35);
@@ -479,7 +479,7 @@ void show_dropdown(DropdownType type, void* ref_object, ButtonClickHandler handl
     ui.dropdown.type = type;
 }
 
-void show_list_dropdown(char** list, int list_len, void* ref_object, ButtonClickHandler handler) {
+void dropdown_show_list(char** list, int list_len, void* ref_object, ButtonClickHandler handler) {
     show_dropdown(DROPDOWN_LIST, ref_object, handler);
     ui.dropdown.as.list.data = list;
     ui.dropdown.as.list.len = list_len;
@@ -502,7 +502,7 @@ void show_color_picker_dropdown(Color* edit_color, void* ref_object, ButtonClick
     ui.dropdown.as.color_picker.color_hex[0] = 0;
 }
 
-bool handle_dropdown_close(void) {
+bool dropdown_handle_close(void) {
     memset(&ui.dropdown.as, 0, sizeof(ui.dropdown.as));
     ui.dropdown.ref_object = NULL;
     ui.dropdown.handler = NULL;
@@ -524,7 +524,7 @@ static char* get_basename(char* path) {
     return base_name;
 }
 
-bool save_project(char* path) {
+bool project_save(char* path) {
     bool user_path = false;
 
     if (!path) {
@@ -534,7 +534,7 @@ bool save_project(char* path) {
         if (!path) return false;
     }
 
-    save_code(path, editor.code);
+    code_save(path, editor.code);
 
     if (user_path) {
         char* base_path = get_basename(path);
@@ -545,7 +545,7 @@ bool save_project(char* path) {
     return true;
 }
 
-void load_project(char* path) {
+void project_load(char* path) {
     if (!path) {
         char const* filters[] = {"*.scrp"};
 
@@ -561,7 +561,7 @@ void load_project(char* path) {
     }
     scrap_log(LOG_INFO, "%zu bytes read from %s", file_size, path);
 
-    RootBlockChain* chain = load_code(file_data, file_size, false);
+    RootBlockChain* chain = code_load(file_data, file_size, false);
 
     switch_tab_to_panel(PANEL_CODE);
     UnloadFileData(file_data);
@@ -592,7 +592,7 @@ void load_project(char* path) {
     editor.project_autosaved = false;
 }
 
-bool handle_file_menu_click(void) {
+bool file_dropdown_handle_click(void) {
     assert(ui.dropdown.type == DROPDOWN_LIST);
 
     switch (ui.dropdown.as.list.select_ind) {
@@ -604,11 +604,11 @@ bool handle_file_menu_click(void) {
         editor.project_autosaved = false;
         break;
     case FILE_MENU_SAVE_PROJECT:
-        save_project(NULL);
+        project_save(NULL);
         editor.project_modified = false;
         break;
     case FILE_MENU_LOAD_PROJECT:
-        load_project(NULL);
+        project_load(NULL);
         break;
     case FILE_MENU_LOAD_AUTOSAVE: ;
         char autosave_path[MAX_PATH + 32];
@@ -619,28 +619,28 @@ bool handle_file_menu_click(void) {
             actionbar_show(gettext("No autosave found"));
             break;
         }
-        load_project(autosave_path);
+        project_load(autosave_path);
         break;
     default:
         printf("idk\n");
         break;
     }
-    return handle_dropdown_close();
+    return dropdown_handle_close();
 }
 
 bool handle_block_dropdown_click(void) {
     assert(ui.dropdown.type == DROPDOWN_LIST);
     argument_set_value(ui.hover.editor.select_argument, value_from_string(ui.dropdown.as.list.data[ui.dropdown.as.list.select_ind]));
     project_mark_modified();
-    return handle_dropdown_close();
+    return dropdown_handle_close();
 }
 
-bool handle_color_picker_click(void) {
+bool color_picker_handle_click(void) {
     ui.dropdown.as.color_picker.select_part = ui.dropdown.as.color_picker.hover_part;
     return true;
 }
 
-bool handle_color_picker_default_color_click(void) {
+bool color_picker_default_color_handle_click(void) {
     size_t default_color_ind = (size_t)ui.hover.button.data;
     GuiColor default_color = color_picker_default_colors[default_color_ind];
     Vector3 hsv_vec = ColorToHSV(CONVERT_COLOR(default_color, Color));
@@ -654,38 +654,38 @@ bool handle_color_picker_default_color_click(void) {
     return true;
 }
 
-bool handle_file_button_click(void) {
+bool file_button_handle_click(void) {
     if (thread_is_running(&vm.thread)) return true;
-    show_list_dropdown(file_menu_list, ARRLEN(file_menu_list), NULL, handle_file_menu_click);
+    dropdown_show_list(file_menu_list, ARRLEN(file_menu_list), NULL, file_dropdown_handle_click);
     return true;
 }
 
-bool handle_settings_button_click(void) {
-    gui_window_show(draw_settings_window);
+bool settings_button_handle_click(void) {
+    gui_window_show(settings_window_draw);
     return true;
 }
 
-bool handle_about_button_click(void) {
-    gui_window_show(draw_about_window);
+bool about_button_handle_click(void) {
+    gui_window_show(about_window_draw);
     return true;
 }
 
-bool handle_run_button_click(void) {
+bool run_button_handle_click(void) {
     vm_start();
     return true;
 }
 
-bool handle_stop_button_click(void) {
+bool stop_button_handle_click(void) {
     vm_stop();
     return true;
 }
 
-bool handle_category_click(void) {
+bool block_category_handle_click(void) {
     editor.palette.current_category = ui.hover.category;
     return true;
 }
 
-bool handle_jump_to_block_button_click(void) {
+bool error_jump_to_block_button_handle_click(void) {
     ui.hover.editor.select_block = vm.compiler_error.block;
     ui.hover.editor.select_blockchain = vm.compiler_error.blockchain;
     ui.hover.editor.select_root_blockchain = vm.compiler_error.root_blockchain;
@@ -693,18 +693,18 @@ bool handle_jump_to_block_button_click(void) {
     return true;
 }
 
-bool handle_error_window_close_button_click(void) {
-    clear_compile_error();
+bool error_close_button_handle_click(void) {
+    compile_error_clear();
     return true;
 }
 
-bool handle_tab_button(void) {
+bool tab_button_handle_click(void) {
     editor.current_tab = (int)(size_t)ui.hover.button.data;
     ui.shader_time = 0.0;
     return true;
 }
 
-bool handle_add_tab_button(void) {
+bool tab_add_button_handle_click(void) {
     char* name = "";
     switch (ui.hover.panels.mouse_panel) {
     case PANEL_NONE:
@@ -735,18 +735,18 @@ bool handle_add_tab_button(void) {
     return true;
 }
 
-bool handle_panel_editor_save_button(void) {
+bool panel_editor_save_button_handle_click(void) {
     ui.hover.is_panel_edit_mode = false;
-    save_config(&config);
+    config_save(&config);
     return true;
 }
 
-bool handle_panel_editor_cancel_button(void) {
+bool panel_editor_cancel_button_handle_click(void) {
     ui.hover.is_panel_edit_mode = false;
     return true;
 }
 
-bool handle_editor_add_arg_button(void) {
+bool blockdef_editor_add_arg_button_handle_click(void) {
     Argument* arg = ui.hover.editor.argument;
     Blockdef* blockdef = arg->data.blockdef;
     size_t last_input = vector_size(blockdef->inputs);
@@ -773,7 +773,7 @@ bool handle_editor_add_arg_button(void) {
     return true;
 }
 
-bool handle_editor_add_text_button(void) {
+bool blockdef_editor_add_text_button_handle_click(void) {
     Blockdef* blockdef = ui.hover.editor.argument->data.blockdef;
     size_t last_input = vector_size(blockdef->inputs);
     char str[32];
@@ -795,7 +795,7 @@ bool handle_editor_add_text_button(void) {
     return true;
 }
 
-bool handle_editor_del_arg_button(void) {
+bool blockdef_editor_del_arg_button_handle_click(void) {
     Blockdef* blockdef = ui.hover.editor.argument->data.blockdef;
 
     assert(ui.hover.editor.blockdef_input != (size_t)-1);
@@ -816,21 +816,21 @@ bool handle_editor_del_arg_button(void) {
     return true;
 }
 
-bool handle_editor_edit_button(void) {
+bool blockdef_editor_edit_button_handle_click(void) {
     ui.hover.editor.edit_blockdef = ui.hover.editor.argument->data.blockdef;
     ui.hover.editor.edit_block = ui.hover.editor.block;
     deselect_all();
     return true;
 }
 
-bool handle_editor_close_button(void) {
+bool blockdef_editor_close_button_handle_click(void) {
     ui.hover.editor.edit_blockdef = NULL;
     ui.hover.editor.edit_block = NULL;
     deselect_all();
     return true;
 }
 
-bool handle_editor_color_button(void) {
+bool blockdef_editor_color_button_handle_click(void) {
     assert(ui.hover.editor.edit_blockdef != NULL);
 
     show_color_picker_dropdown((Color*)&ui.hover.editor.edit_blockdef->color, &ui.hover.editor.edit_blockdef->color, NULL);
@@ -838,7 +838,7 @@ bool handle_editor_color_button(void) {
     return true;
 }
 
-bool handle_editor_return_type_switcher_dropdown_click(void) {
+bool blockdef_editor_return_type_switcher_dropdown_handle_click(void) {
     DataType* return_type = ui.dropdown.ref_object;
 
     assert(return_type != NULL);
@@ -856,10 +856,10 @@ bool handle_editor_return_type_switcher_dropdown_click(void) {
     *return_type = set_type;
 
     project_mark_modified();
-    return handle_dropdown_close();
+    return dropdown_handle_close();
 }
 
-bool handle_editor_type_switcher_dropdown_click(void) {
+bool blockdef_editor_type_switcher_dropdown_handle_click(void) {
     Input* blockdef_input = ui.dropdown.ref_object;
 
     assert(blockdef_input != NULL);
@@ -882,25 +882,25 @@ bool handle_editor_type_switcher_dropdown_click(void) {
     }
 
     project_mark_modified();
-    return handle_dropdown_close();
+    return dropdown_handle_close();
 }
 
-bool handle_editor_return_type_switcher_button(void) {
+bool blockdef_editor_return_type_switcher_button_handle_click(void) {
     assert(ui.hover.editor.edit_blockdef != NULL);
 
-    show_list_dropdown(type_switcher_type_name_list, ARRLEN(type_switcher_type_name_list), &ui.hover.editor.edit_blockdef->return_type, handle_editor_return_type_switcher_dropdown_click);
+    dropdown_show_list(type_switcher_type_name_list, ARRLEN(type_switcher_type_name_list), &ui.hover.editor.edit_blockdef->return_type, blockdef_editor_return_type_switcher_dropdown_handle_click);
     return true;
 }
 
-bool handle_editor_type_switcher_button(void) {
+bool blockdef_editor_type_switcher_button_handle_click(void) {
     assert(ui.hover.editor.edit_blockdef != NULL);
     assert(ui.hover.editor.blockdef_input != (size_t)-1);
 
-    show_list_dropdown(type_switcher_type_name_list, ARRLEN(type_switcher_type_name_list), &ui.hover.editor.edit_blockdef->inputs[ui.hover.editor.blockdef_input], handle_editor_type_switcher_dropdown_click);
+    dropdown_show_list(type_switcher_type_name_list, ARRLEN(type_switcher_type_name_list), &ui.hover.editor.edit_blockdef->inputs[ui.hover.editor.blockdef_input], blockdef_editor_type_switcher_dropdown_handle_click);
     return true;
 }
 
-bool handle_bool_value_input_click(void) {
+bool input_bool_handle_click(void) {
     Argument* arg = ui.hover.button.data;
     ui.hover.editor.select_argument = arg;
     arg->data.value.data.bool_val = !arg->data.value.data.bool_val;
@@ -908,7 +908,7 @@ bool handle_bool_value_input_click(void) {
     return true;
 }
 
-bool handle_color_value_input_click(void) {
+bool input_color_handle_click(void) {
     Argument* arg = ui.hover.button.data;
     ui.hover.editor.select_argument = arg;
 
@@ -917,7 +917,7 @@ bool handle_color_value_input_click(void) {
     return true;
 }
 
-bool handle_numeric_value_input_click(void) {
+bool input_numeric_handle_click(void) {
     ui.hover.editor.select_argument = ui.hover.button.data;
     ui.hover.select_input = &ui.hover.editor.select_argument_scratch_input;
 
@@ -937,12 +937,12 @@ bool handle_numeric_value_input_click(void) {
     for (char* ch = buf; *ch; ch++) vector_add(&ui.hover.editor.select_argument_scratch_input, *ch);
     vector_add(&ui.hover.editor.select_argument_scratch_input, 0);
 
-    get_input_ind();
+    input_update_cursor_position();
     project_mark_modified();
     return true;
 }
 
-static bool handle_value_input_type_switcher_dropdown_click(void) {
+static bool input_type_switcher_dropdown_handle_click(void) {
     Argument* arg = ui.hover.editor.select_argument;
     assert(arg != NULL);
     assert(arg->type == ARGUMENT_VALUE);
@@ -963,15 +963,15 @@ static bool handle_value_input_type_switcher_dropdown_click(void) {
     }
 
     project_mark_modified();
-    return handle_dropdown_close();
+    return dropdown_handle_close();
 }
 
-bool handle_value_input_type_switcher_click(void) {
-    show_list_dropdown(type_switcher_type_name_list, ARRLEN(type_switcher_type_name_list), ui.hover.button.data, handle_value_input_type_switcher_dropdown_click);
+bool input_type_switcher_handle_click(void) {
+    dropdown_show_list(type_switcher_type_name_list, ARRLEN(type_switcher_type_name_list), ui.hover.button.data, input_type_switcher_dropdown_handle_click);
     return true;
 }
 
-static bool handle_block_palette_click(bool mouse_empty) {
+static bool block_palette_handle_click(bool mouse_empty) {
     if (ui.hover.editor.select_argument) {
         deselect_all();
         return true;
@@ -1001,7 +1001,7 @@ static bool handle_block_palette_click(bool mouse_empty) {
     return true;
 }
 
-static bool handle_blockdef_editor_click(void) {
+static bool blockdef_editor_handle_click(void) {
     // Pickup blockdef
     scrap_log(LOG_INFO, "Pickup blockdef");
 
@@ -1313,7 +1313,7 @@ static void code_attach_block(void) {
     project_mark_modified();
 }
 
-static bool handle_code_editor_click(bool mouse_empty) {
+static bool code_editor_handle_click(bool mouse_empty) {
     bool shift_down = IsKeyDown(KEY_LEFT_SHIFT) || IsKeyDown(KEY_RIGHT_SHIFT);
     bool alt_down = IsKeyDown(KEY_LEFT_ALT) || IsKeyDown(KEY_RIGHT_ALT);
     bool ctrl_down = IsKeyDown(KEY_LEFT_CONTROL) || IsKeyDown(KEY_RIGHT_CONTROL);
@@ -1386,7 +1386,7 @@ static bool handle_code_editor_click(bool mouse_empty) {
     return true;
 }
 
-static bool handle_editor_panel_click(void) {
+static bool panel_editor_handle_click(void) {
     if (!ui.hover.panels.panel) return true;
 
     if (ui.hover.panels.panel->type == PANEL_SPLIT) {
@@ -1427,7 +1427,7 @@ static bool handle_editor_panel_click(void) {
     return true;
 }
 
-static void get_input_ind(void) {
+static void input_update_cursor_position(void) {
     assert(ui.hover.input_info.font != NULL);
     assert(ui.hover.input_info.input != NULL);
 
@@ -1469,7 +1469,7 @@ static void get_input_ind(void) {
 }
 
 // Return value indicates if we should cancel dragging
-static bool handle_mouse_click(void) {
+static bool gui_handle_click(void) {
     ui.hover.mouse_click_pos = (Vector2) { gui->mouse_x, gui->mouse_y };
     editor.camera.click_position = editor.camera.position;
     ui.hover.dragged_slider.value = NULL;
@@ -1497,16 +1497,16 @@ static bool handle_mouse_click(void) {
         return false;
     }
     if (gui_window_is_shown()) {
-        if (ui.hover.input_info.input) get_input_ind();
+        if (ui.hover.input_info.input) input_update_cursor_position();
         if (ui.hover.input_info.input != ui.hover.select_input) ui.hover.select_input = ui.hover.input_info.input;
         return true;
     }
     if (!ui.hover.panels.panel) return true;
-    if (ui.hover.is_panel_edit_mode) return handle_editor_panel_click();
+    if (ui.hover.is_panel_edit_mode) return panel_editor_handle_click();
     if (ui.hover.panels.panel->type == PANEL_TERM) return true;
     if (thread_is_running(&vm.thread)) return ui.hover.panels.panel->type != PANEL_CODE;
 
-    if (ui.hover.input_info.input) get_input_ind();
+    if (ui.hover.input_info.input) input_update_cursor_position();
     if (ui.hover.input_info.input != ui.hover.select_input) {
         if (ui.hover.editor.argument && !ui.hover.select_input) project_mark_modified();
         ui.hover.select_input = ui.hover.input_info.input;
@@ -1514,10 +1514,10 @@ static bool handle_mouse_click(void) {
 
     bool mouse_empty = vector_size(editor.mouse_blockchains) == 0;
 
-    if (ui.hover.panels.panel->type == PANEL_BLOCK_PALETTE) return handle_block_palette_click(mouse_empty);
+    if (ui.hover.panels.panel->type == PANEL_BLOCK_PALETTE) return block_palette_handle_click(mouse_empty);
 
     if (ui.hover.editor.argument && ui.hover.editor.argument->type == ARGUMENT_BLOCKDEF) {
-        if (handle_blockdef_editor_click()) return true;
+        if (blockdef_editor_handle_click()) return true;
     }
 
     if (ui.dropdown.shown && ui.dropdown.type == DROPDOWN_COLOR_PICKER) {
@@ -1531,7 +1531,7 @@ static bool handle_mouse_click(void) {
                 size_t list_len = 0;
                 char** list = block_input.data.drop.list(ui.hover.editor.block, &list_len);
 
-                show_list_dropdown(list, list_len, ui.hover.editor.argument, handle_block_dropdown_click);
+                dropdown_show_list(list, list_len, ui.hover.editor.argument, handle_block_dropdown_click);
             }
         }
 
@@ -1560,7 +1560,7 @@ static bool handle_mouse_click(void) {
         }
     }
 
-    if (ui.hover.panels.panel->type == PANEL_CODE && handle_code_editor_click(mouse_empty)) return true;
+    if (ui.hover.panels.panel->type == PANEL_CODE && code_editor_handle_click(mouse_empty)) return true;
     return ui.hover.panels.panel->type != PANEL_CODE;
 }
 
@@ -1726,7 +1726,7 @@ static void code_reposition(void) {
     }
 }
 
-static void change_zoom_level_by(float zoom) {
+static void code_change_zoom_level(float zoom) {
     assert(ui.hover.panels.panel->type == PANEL_CODE);
 
     float prev_linear_zoom = exp2f(editor.camera.zoom * ZOOM_SPEED);
@@ -1743,7 +1743,7 @@ static void change_zoom_level_by(float zoom) {
     editor.camera.position.y += code_mouse_y / prev_linear_zoom - code_mouse_y / current_linear_zoom;
 }
 
-static bool handle_code_panel_key_press(void) {
+static bool code_panel_handle_key_press(void) {
     if (ui.hover.editor.select_argument && !ui.hover.select_input) {
         if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_KP_ENTER)) {
             if (ui.hover.editor.select_argument->type == ARGUMENT_VALUE &&
@@ -1764,10 +1764,10 @@ static bool handle_code_panel_key_press(void) {
 
     if (IsKeyDown(KEY_LEFT_CONTROL) || IsKeyDown(KEY_RIGHT_CONTROL)) {
         if (IsKeyPressed(KEY_KP_ADD)) {
-            change_zoom_level_by(1.0);
+            code_change_zoom_level(1.0);
             return true;
         } else if (IsKeyPressed(KEY_KP_SUBTRACT)) {
-            change_zoom_level_by(-1.0);
+            code_change_zoom_level(-1.0);
             return true;
         }
     }
@@ -1825,7 +1825,7 @@ static bool handle_code_panel_key_press(void) {
     return false;
 }
 
-static bool search_string(const char* str, const char* substr) {
+static bool substring_find(const char* str, const char* substr) {
     if (*substr == 0) return true;
 
     int next_ch, next_subch, cur_ch, cur_subch;
@@ -1847,27 +1847,27 @@ static bool search_string(const char* str, const char* substr) {
     return *cur_substr == 0;
 }
 
-static void update_search_blockdef(Blockdef* blockdef) {
+static void blockdef_searcher_update_search_blockdef(Blockdef* blockdef) {
     if (!blockdef) return;
     if (!blockdef->func) return;
 
     bool added = false;
-    if (!added && search_string(blockdef->id, editor.search_list_search)) {
+    if (!added && substring_find(blockdef->id, editor.search_list_search)) {
         vector_add(&editor.search_list, blockdef);
         added = true;
     }
 
     for (size_t i = 0; i < vector_size(blockdef->inputs); i++) {
-        static_assert(INPUT_LAST == 6, "Exhaustive input type in update_search_blockdef");
+        static_assert(INPUT_LAST == 6, "Exhaustive input type in blockdef_searcher_update_search_blockdef");
         switch (blockdef->inputs[i].type) {
         case INPUT_TEXT_DISPLAY:
-            if (!added && search_string(blockdef->inputs[i].data.text, editor.search_list_search)) {
+            if (!added && substring_find(blockdef->inputs[i].data.text, editor.search_list_search)) {
                 vector_add(&editor.search_list, blockdef);
                 added = true;
             }
             break;
         case INPUT_ARGUMENT:
-            update_search_blockdef(blockdef->inputs[i].data.arg.blockdef);
+            blockdef_searcher_update_search_blockdef(blockdef->inputs[i].data.arg.blockdef);
             break;
         default:
             break;
@@ -1875,10 +1875,10 @@ static void update_search_blockdef(Blockdef* blockdef) {
     }
 }
 
-void update_search(void) {
+void blockdef_searcher_update_search(void) {
     vector_clear(editor.search_list);
     for (size_t i = 0; i < vector_size(vm.blockdefs); i++) {
-        update_search_blockdef(vm.blockdefs[i]);
+        blockdef_searcher_update_search_blockdef(vm.blockdefs[i]);
     }
     for (size_t i = 0; i < vector_size(editor.code); i++) {
         Block* hat = editor.code[i].chain->start;
@@ -1887,12 +1887,12 @@ void update_search(void) {
         for (size_t j = 0; j < vector_size(hat->arguments); j++) {
             Argument* arg = &hat->arguments[j];
             if (arg->type != ARGUMENT_BLOCKDEF) continue;
-            update_search_blockdef(arg->data.blockdef);
+            blockdef_searcher_update_search_blockdef(arg->data.blockdef);
         }
     }
 }
 
-static void handle_key_press(void) {
+static void gui_handle_key_press(void) {
     if (vector_size(editor.mouse_blockchains) > 0) return;
 
     if (IsKeyPressed(KEY_F5)) {
@@ -1918,7 +1918,7 @@ static void handle_key_press(void) {
         ui.hover.select_input_cursor = 0;
         ui.hover.select_input_mark = -1;
         ui.render_surface_needs_redraw = true;
-        update_search();
+        blockdef_searcher_update_search();
         return;
     }
 
@@ -1956,7 +1956,7 @@ static void handle_key_press(void) {
             }
             return;
         } else if (ui.hover.panels.panel->type == PANEL_CODE) {
-            if (handle_code_panel_key_press()) return;
+            if (code_panel_handle_key_press()) return;
         }
     }
 
@@ -1975,7 +1975,7 @@ static void handle_key_press(void) {
     }
 
     if (edit_text(ui.hover.select_input)) {
-        if (ui.hover.select_input == &editor.search_list_search) update_search();
+        if (ui.hover.select_input == &editor.search_list_search) blockdef_searcher_update_search();
         if (ui.hover.editor.select_argument && ui.hover.editor.select_argument->type == ARGUMENT_VALUE) {
             DataType select_argument_type = ui.hover.editor.select_argument->data.value.type;
             if (select_argument_type == DATA_TYPE_ANY) {
@@ -1989,7 +1989,7 @@ static void handle_key_press(void) {
     }
 }
 
-static void handle_mouse_wheel(void) {
+static void gui_handle_mouse_wheel(void) {
     if (!ui.hover.panels.panel) return;
     if (ui.hover.panels.panel->type != PANEL_CODE) return;
     if (ui.hover.editor.select_argument) return;
@@ -1999,7 +1999,7 @@ static void handle_mouse_wheel(void) {
 
     Vector2 wheel = GetMouseWheelMoveV();
     if (IsKeyDown(KEY_LEFT_CONTROL) || IsKeyDown(KEY_RIGHT_CONTROL)) {
-        change_zoom_level_by(wheel.y);
+        code_change_zoom_level(wheel.y);
     } else {
         editor.camera.position.x -= wheel.x * config.ui_size * 2 / editor.camera.linear_zoom;
         editor.camera.position.y -= wheel.y * config.ui_size * 2 / editor.camera.linear_zoom;
@@ -2014,7 +2014,7 @@ static void handle_mouse_wheel(void) {
     }
 }
 
-static void handle_mouse_drag(void) {
+static void gui_handle_mouse_drag(void) {
     if (ui.hover.drag_cancelled) return;
 
     if (ui.hover.is_panel_edit_mode && ui.hover.panels.drag_panel && ui.hover.panels.drag_panel->type == PANEL_SPLIT) {
@@ -2075,7 +2075,7 @@ void scrap_gui_process_ui(void) {
             get_user_cache_folder(autosave_path, ARRLEN(autosave_path), CONFIG_FOLDER_NAME);
             strcat(autosave_path, "autosave.scrp");
 
-            if (save_project(autosave_path)) {
+            if (project_save(autosave_path)) {
                 actionbar_show(gettext("Project autosaved"));
                 editor.project_autosaved = true;
             } else {
@@ -2122,7 +2122,7 @@ void scrap_gui_process_ui(void) {
     if (delta.x != 0 || delta.y != 0) ui.render_surface_needs_redraw = true;
 
     if (GetMouseWheelMove() != 0.0) {
-        handle_mouse_wheel();
+        gui_handle_mouse_wheel();
         ui.render_surface_needs_redraw = true;
     }
 
@@ -2133,7 +2133,7 @@ void scrap_gui_process_ui(void) {
 #endif
 
     if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
-        ui.hover.drag_cancelled = handle_mouse_click();
+        ui.hover.drag_cancelled = gui_handle_click();
         ui.render_surface_needs_redraw = true;
     } else if (IsMouseButtonPressed(MOUSE_BUTTON_MIDDLE)) {
         ui.hover.mouse_click_pos = (Vector2) { gui->mouse_x, gui->mouse_y };
@@ -2144,14 +2144,14 @@ void scrap_gui_process_ui(void) {
         ui.hover.editor.select_blockchain = NULL;
         ui.hover.editor.select_root_blockchain = NULL;
         ui.render_surface_needs_redraw = true;
-        if (ui.dropdown.shown) handle_dropdown_close();
+        if (ui.dropdown.shown) dropdown_handle_close();
     } else if (IsMouseButtonDown(MOUSE_BUTTON_MIDDLE) || IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
-        handle_mouse_drag();
+        gui_handle_mouse_drag();
     } else {
         ui.hover.drag_cancelled = false;
         ui.hover.dragged_slider.value = NULL;
         ui.hover.panels.drag_panel = NULL;
-        handle_key_press();
+        gui_handle_key_press();
     }
 
     if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT) || IsMouseButtonReleased(MOUSE_BUTTON_MIDDLE)) ui.render_surface_needs_redraw = true;
@@ -2161,7 +2161,7 @@ void scrap_gui_process_ui(void) {
         ui.render_surface_redraw_next = false;
     }
 
-    handle_window();
+    window_handle();
 
     if (ui.render_surface_needs_redraw) {
         ui.hover.editor.block = NULL;
@@ -2207,8 +2207,8 @@ void scrap_gui_process_ui(void) {
 
         if (vector_size(editor.mouse_blockchains) > 0 &&
             // This small hack allows to transfer mouse blockchain contents between projects
-            ui.hover.button.handler != handle_file_button_click &&
-            ui.hover.button.handler != handle_file_menu_click)
+            ui.hover.button.handler != file_button_handle_click &&
+            ui.hover.button.handler != file_dropdown_handle_click)
         {
             ui.hover.button.handler = NULL;
         }

@@ -434,20 +434,20 @@ extern GuiColor color_picker_default_colors[18];
 // render.c
 void actionbar_show(const char* text);
 void process_render(void);
-void prerender_font_shadow(Font* font);
+void font_prerender_shadow(Font* font);
 void scrap_gui_process_render(void);
 void scrap_gui_process(void);
 bool svg_load(const char* file_name, size_t width, size_t height, Image* out_image);
 const char* sgettext(const char* msgid);
 void input_on_hover(GuiElement* el);
-void draw_input_text(Font* font, char** input, const char* hint, unsigned short font_size, GuiColor font_color);
+void input_text_draw(Font* font, char** input, const char* hint, unsigned short font_size, GuiColor font_color);
 
-// input.c
+// ui.c
 void scrap_gui_process_ui(void);
 
 PanelTree* find_panel(PanelTree* root, PanelType panel);
-void update_search(void);
-void show_list_dropdown(char** list, int list_len, void* ref_object, ButtonClickHandler handler);
+void blockdef_searcher_update_search(void);
+void dropdown_show_list(char** list, int list_len, void* ref_object, ButtonClickHandler handler);
 
 GuiMeasurement scrap_gui_measure_image(void* image, unsigned short size);
 GuiMeasurement scrap_gui_measure_text(void* font, const char* text, unsigned int text_size, unsigned short font_size);
@@ -455,59 +455,59 @@ TermVec term_measure_text(void* font, const char* text, unsigned int text_size, 
 int search_glyph(Font font, int codepoint);
 
 size_t tab_new(char* name, PanelTree* root_panel);
-void delete_all_tabs(void);
+void tabs_delete_all(void);
 
-void init_panels(void);
+void panels_init(void);
 PanelTree* panel_new(PanelType type);
 void panel_split(PanelTree* panel, SplitSide side, PanelType new_panel_type, float split_percent);
 void panel_delete(PanelTree* panel);
 
-bool save_project(char* path);
+bool project_save(char* path);
 void project_mark_modified(void);
 
-bool handle_file_button_click(void);
-bool handle_settings_button_click(void);
-bool handle_about_button_click(void);
-bool handle_run_button_click(void);
-bool handle_stop_button_click(void);
-bool handle_code_tab_click(void);
-bool handle_output_tab_click(void);
-bool handle_dropdown_close(void);
-bool handle_file_menu_click(void);
-bool handle_editor_close_button(void);
-bool handle_editor_edit_button(void);
-bool handle_editor_add_arg_button(void);
-bool handle_editor_add_text_button(void);
-bool handle_editor_del_arg_button(void);
-bool handle_panel_editor_save_button(void);
-bool handle_panel_editor_cancel_button(void);
-bool handle_tab_button(void);
-bool handle_add_tab_button(void);
-bool handle_category_click(void);
-bool handle_jump_to_block_button_click(void);
-bool handle_error_window_close_button_click(void);
-bool handle_color_picker_click(void);
-bool handle_editor_color_button(void);
-bool handle_bool_value_input_click(void);
-bool handle_numeric_value_input_click(void);
-bool handle_value_input_type_switcher_click(void);
-bool handle_editor_type_switcher_button(void);
-bool handle_editor_return_type_switcher_button(void);
-bool handle_color_value_input_click(void);
-bool handle_color_picker_default_color_click(void);
+bool about_button_handle_click(void);
+bool tab_add_button_handle_click(void);
+bool block_category_handle_click(void);
+bool blockdef_editor_add_arg_button_handle_click(void);
+bool blockdef_editor_add_text_button_handle_click(void);
+bool blockdef_editor_close_button_handle_click(void);
+bool blockdef_editor_color_button_handle_click(void);
+bool blockdef_editor_del_arg_button_handle_click(void);
+bool blockdef_editor_edit_button_handle_click(void);
+bool blockdef_editor_return_type_switcher_button_handle_click(void);
+bool blockdef_editor_type_switcher_button_handle_click(void);
+bool code_tab_handle_click(void);
+bool color_picker_default_color_handle_click(void);
+bool color_picker_handle_click(void);
+bool dropdown_handle_close(void);
+bool error_close_button_handle_click(void);
+bool error_jump_to_block_button_handle_click(void);
+bool file_button_handle_click(void);
+bool file_dropdown_handle_click(void);
+bool input_bool_handle_click(void);
+bool input_color_handle_click(void);
+bool input_numeric_handle_click(void);
+bool input_type_switcher_handle_click(void);
+bool output_tab_handle_click(void);
+bool panel_editor_cancel_button_handle_click(void);
+bool panel_editor_save_button_handle_click(void);
+bool run_button_handle_click(void);
+bool settings_button_handle_click(void);
+bool stop_button_handle_click(void);
+bool tab_button_handle_click(void);
 
 // save.c
 void config_new(Config* config);
 void config_free(Config* config);
-void set_default_config(Config* config);
-void apply_config(Config* dst, Config* src);
-void save_config(Config* config);
-void load_config(Config* config);
+void config_set_default(Config* config);
+void config_apply(Config* dst, Config* src);
+void config_save(Config* config);
+void config_load(Config* config);
 void config_copy(Config* dst, Config* src);
 
-void save_code(const char* file_path, RootBlockChain* code);
-// Pass true to test argument to check if save has valid signature and can *theoretitally* be loaded, in that case load_code returns non-NULL value if save has valid signature and NULL otherwise
-RootBlockChain* load_code(void* file_data, size_t file_size, bool test);
+void code_save(const char* file_path, RootBlockChain* code);
+// Pass true to test argument to check if save has valid signature and can *theoretitally* be loaded, in that case code_load returns non-NULL value if save has valid signature and NULL otherwise
+RootBlockChain* code_load(void* file_data, size_t file_size, bool test);
 
 const char* language_to_code(Language lang);
 Language code_to_language(const char* code);
@@ -519,21 +519,21 @@ const char* into_shared_dir_path(const char* path);
 void reload_fonts(void);
 
 // window.c
-void init_gui_window(void);
+void gui_window_init(void);
 void gui_window_show(WindowGuiRenderFunc func);
 void gui_window_hide(void);
 void gui_window_hide_immediate(void);
 WindowGuiRenderFunc gui_window_get_render_func(void);
 bool gui_window_is_shown(void);
-void handle_window(void);
-void draw_window(void);
+void window_handle(void);
+void window_draw(void);
 
-void draw_settings_window(void);
-void draw_about_window(void);
-void draw_save_confirmation_window(void);
+void settings_window_draw(void);
+void about_window_draw(void);
+void save_confirmation_window_draw(void);
 
 // blocks.c
-void register_blocks(Vm* vm);
+void vm_register_blocks(Vm* vm);
 
 BlockFunc block_custom_arg, block_exec_custom;
 
@@ -546,7 +546,7 @@ void block_category_add_label(BlockCategory* category, const char* label, Color 
 size_t blockdef_register(Vm* vm, Blockdef* blockdef);
 void blockdef_unregister(Vm* vm, size_t block_id);
 
-void unregister_categories(void);
+void block_category_unregister_all(void);
 
 Vm vm_new(void);
 void vm_free(Vm* vm);
@@ -554,10 +554,10 @@ bool vm_start(void);
 bool vm_stop(void);
 void vm_handle_running_thread(void);
 
-void clear_compile_error(void);
+void compile_error_clear(void);
 
 // platform.c
 void scrap_set_env(const char* name, const char* value);
-void init_console(void);
+void console_init(void);
 
 #endif // SCRAP_H

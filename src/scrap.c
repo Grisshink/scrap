@@ -180,13 +180,12 @@ Image setup(void* save_data, size_t save_size) {
     vector_add(&ui.hover.editor.select_argument_scratch_input, 0);
 
     vm = vm_new();
-    register_blocks(&vm);
 
 #ifdef DEBUG
     editor.show_debug = true;
 #endif
     editor.mouse_blockchains = vector_create();
-    editor.code = save_data && save_size ? load_code(save_data, save_size, false) : vector_create();
+    editor.code = save_data && save_size ? code_load(save_data, save_size, false) : vector_create();
 
     if (vector_size(editor.code) > 0) {
         editor.camera.position.x = editor.code[0].x - 50;
@@ -198,7 +197,7 @@ Image setup(void* save_data, size_t save_size) {
     editor.search_list = vector_create();
     editor.search_list_search = vector_create();
     vector_add(&editor.search_list_search, 0);
-    update_search();
+    blockdef_searcher_update_search();
 
     term_init(term_measure_text, &assets.fonts.font_mono, config.ui_size * 0.6);
 
@@ -217,7 +216,7 @@ Image setup(void* save_data, size_t save_size) {
     gui_set_measure_text_func(gui, scrap_gui_measure_text);
     gui_set_measure_image_func(gui, scrap_gui_measure_image);
     gui_update_window_size(gui, GetScreenWidth(), GetScreenHeight());
-    init_gui_window();
+    gui_window_init();
 
     editor.blockchain_render_layer_widths = vector_create();
 
@@ -240,13 +239,13 @@ void cleanup(void) {
     gui_arena_free(ui.scratch_arena);
     vector_free(ui.hover.editor.select_argument_scratch_input);
 
-    delete_all_tabs();
+    tabs_delete_all();
     vector_free(editor.tabs);
 
     vector_free(editor.search_list_search);
     vector_free(editor.search_list);
 
-    unregister_categories();
+    block_category_unregister_all();
 
     config_free(&config);
     config_free(&window_config);
@@ -269,8 +268,8 @@ void start_editor(void* save_data, size_t save_size, bool daemonize) {
     config_new(&window_config);
 
     editor.tabs = vector_create();
-    set_default_config(&config);
-    load_config(&config);
+    config_set_default(&config);
+    config_load(&config);
 
     if (config.language != LANG_SYSTEM) {
 #ifdef _WIN32
@@ -304,7 +303,7 @@ void start_editor(void* save_data, size_t save_size, bool daemonize) {
                 ui.scrap_running = false;
                 break;
             } else {
-                gui_window_show(draw_save_confirmation_window);
+                gui_window_show(save_confirmation_window_draw);
             }
         }
 
@@ -398,7 +397,7 @@ int start_runtime(void* bc_data, size_t bc_size) {
 }
 
 void usage(char* exe_name) {
-    init_console();
+    console_init();
 
     printf("Usage %s [OPTIONS] [FILE]\n\n", exe_name);
     printf("OPTIONS:\n");
@@ -464,7 +463,7 @@ int main(int argc, char** argv) {
 
         if (bytecode_load(NULL, NULL, file_data, file_size)) {
             return start_runtime(file_data, file_size);
-        } else if (load_code(file_data, file_size, true)) {
+        } else if (code_load(file_data, file_size, true)) {
             start_editor(file_data, file_size, !flags.no_daemonize);
             return 0;
         } else {

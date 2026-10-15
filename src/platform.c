@@ -47,7 +47,7 @@ void scrap_set_env(const char* name, const char* value) {
 }
 
 
-void init_console(void) {
+void console_init(void) {
 #ifdef _WIN32
     AllocConsole();
     freopen("CON", "w", stdout);

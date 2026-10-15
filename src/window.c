@@ -44,19 +44,19 @@ static bool settings_tooltip = false;
 static bool settings_applied = false;
 static char** about_text_split = NULL;
 
-static void draw_button(const char* label, Texture2D* icon, ButtonClickHandler handler, void* data);
+static void button_draw(const char* label, Texture2D* icon, ButtonClickHandler handler, void* data);
 
 // https://easings.net/#easeOutExpo
 float ease_out_expo(float x) {
     return x == 1.0 ? 1.0 : 1 - powf(2.0, -10.0 * x);
 }
 
-static bool about_on_license_button_click(void) {
+static bool about_license_button_handle_click(void) {
     OpenURL(LICENSE_URL);
     return true;
 }
 
-static bool window_on_close_button_click(void) {
+static bool window_close_button_handle_click(void) {
     gui_window_hide();
     return true;
 }
@@ -67,7 +67,7 @@ static void vector_append(char** vec, const char* str) {
     vector_add(vec, 0);
 }
 
-static bool settings_on_browse_button_click(void) {
+static bool settings_browse_button_handle_click(void) {
     char const* filters[] = { "*.ttf", "*.otf" };
     char** path_input = ui.hover.button.data;
     char* path = tinyfd_openFileDialog(NULL, *path_input, ARRLEN(filters), filters, "Font files", 0);
@@ -83,30 +83,30 @@ static bool settings_on_browse_button_click(void) {
     return true;
 }
 
-static bool settings_on_left_slider_button_click(void) {
+static bool settings_left_slider_button_handle_click(void) {
     settings_applied = false;
     *ui.hover.hover_slider.value = MAX(*ui.hover.hover_slider.value - 1, ui.hover.hover_slider.min);
     return true;
 }
 
-static bool settings_on_right_slider_button_click(void) {
+static bool settings_right_slider_button_handle_click(void) {
     settings_applied = false;
     *ui.hover.hover_slider.value = MIN(*ui.hover.hover_slider.value + 1, ui.hover.hover_slider.max);
     return true;
 }
 
-static bool settings_on_dropdown_button_click(void) {
+static bool settings_dropdown_handle_click(void) {
     settings_applied = false;
     *(int*)ui.dropdown.ref_object = ui.dropdown.as.list.select_ind;
-    return handle_dropdown_close();
+    return dropdown_handle_close();
 }
 
-static bool settings_on_dropdown_click(void) {
-    show_list_dropdown(ui.hover.settings_dropdown_data.list, ui.hover.settings_dropdown_data.list_len, ui.hover.settings_dropdown_data.value, settings_on_dropdown_button_click);
+static bool settings_dropdown_button_handle_click(void) {
+    dropdown_show_list(ui.hover.settings_dropdown_data.list, ui.hover.settings_dropdown_data.list_len, ui.hover.settings_dropdown_data.value, settings_dropdown_handle_click);
     return true;
 }
 
-static bool settings_on_panel_editor_button_click(void) {
+static bool settings_panel_editor_button_handle_click(void) {
     gui_window_hide();
     ui.hover.is_panel_edit_mode = true;
     ui.hover.select_input = NULL;
@@ -116,35 +116,35 @@ static bool settings_on_panel_editor_button_click(void) {
     return true;
 }
 
-static bool settings_on_reset_button_click(void) {
-    set_default_config(&window_config);
+static bool settings_reset_button_handle_click(void) {
+    config_set_default(&window_config);
     settings_applied = false;
     return true;
 }
 
-static bool settings_on_reset_panels_button_click(void) {
-    delete_all_tabs();
-    init_panels();
+static bool settings_reset_panels_button_handle_click(void) {
+    tabs_delete_all();
+    panels_init();
     editor.current_tab = 0;
     settings_applied = false;
     return true;
 }
 
-static bool settings_on_apply_button_click(void) {
-    apply_config(&config, &window_config);
-    save_config(&window_config);
+static bool settings_apply_button_handle_click(void) {
+    config_apply(&config, &window_config);
+    config_save(&window_config);
     settings_applied = true;
     return true;
 }
 
-static bool settings_on_toggle_button_click(void) {
+static bool settings_toggle_button_handle_click(void) {
     bool* toggle_value = ui.hover.button.data;
     *toggle_value = !*toggle_value;
     return true;
 }
 
-static bool save_confirmation_on_yes_button_click(void) {
-    if (save_project(NULL)) {
+static bool save_confirmation_yes_button_handle_click(void) {
+    if (project_save(NULL)) {
         editor.project_modified = false;
         ui.scrap_running = false;
     } else {
@@ -153,17 +153,17 @@ static bool save_confirmation_on_yes_button_click(void) {
     return true;
 }
 
-static bool save_confirmation_on_no_button_click(void) {
+static bool save_confirmation_no_button_handle_click(void) {
     ui.scrap_running = false;
     return true;
 }
 
-static bool save_confirmation_on_cancel_button_click(void) {
+static bool save_confirmation_cancel_button_handle_click(void) {
     gui_window_hide();
     return true;
 }
 
-void init_gui_window(void) {
+void gui_window_init(void) {
     window.is_fading = true;
 }
 
@@ -206,7 +206,7 @@ static void close_button_on_hover(GuiElement* el) {
     el->draw_type = DRAWTYPE_RECT;
     el->draw_subtype = GUI_SUBTYPE_DEFAULT;
     el->color = (GuiColor) { 0x40, 0x40, 0x40, 0xff };
-    ui.hover.button.handler = window_on_close_button_click;
+    ui.hover.button.handler = window_close_button_handle_click;
 }
 
 static void window_on_hover(GuiElement* el) {
@@ -214,8 +214,8 @@ static void window_on_hover(GuiElement* el) {
     if (!ui.dropdown.shown) ui.hover.button.handler = NULL;
 }
 
-static void begin_window(const char* title, Texture2D* icon, int w, int h, float scaling) {
-    ui.hover.button.handler = window_on_close_button_click;
+static void window_begin(const char* title, Texture2D* icon, int w, int h, float scaling) {
+    ui.hover.button.handler = window_close_button_handle_click;
     gui_element_begin(gui);
         gui_set_floating(gui);
         gui_set_rect(gui, (GuiColor) { 0x00, 0x00, 0x00, 0x40 * scaling });
@@ -257,7 +257,7 @@ static void begin_window(const char* title, Texture2D* icon, int w, int h, float
             gui_set_gap(gui, ELEMENT_GAP);
 }
 
-static void end_window(void) {
+static void window_end(void) {
         gui_element_end(gui);
 
         GuiElement* el = gui_get_element(gui);
@@ -290,7 +290,7 @@ static void warning_on_hover(GuiElement* el) {
     settings_tooltip = true;
 }
 
-static void begin_setting(const char* name, bool warning) {
+static void setting_begin(const char* name, bool warning) {
     gui_element_begin(gui);
         gui_set_grow(gui, DIRECTION_HORIZONTAL);
         gui_set_direction(gui, DIRECTION_HORIZONTAL);
@@ -341,7 +341,7 @@ static void slider_button_on_hover(GuiElement* el) {
     ui.hover.button.handler = el->custom_data;
 }
 
-static void draw_slider(int min, int max, int* value) {
+static void slider_draw(int min, int max, int* value) {
     gui_element_begin(gui);
         gui_set_grow(gui, DIRECTION_HORIZONTAL);
         gui_set_grow(gui, DIRECTION_VERTICAL);
@@ -370,7 +370,7 @@ static void draw_slider(int min, int max, int* value) {
 
             gui_element_begin(gui);
                 gui_on_hover(gui, slider_button_on_hover);
-                gui_set_custom_data(gui, settings_on_left_slider_button_click);
+                gui_set_custom_data(gui, settings_left_slider_button_handle_click);
                 gui_set_grow(gui, DIRECTION_VERTICAL);
                 gui_set_direction(gui, DIRECTION_HORIZONTAL);
                 gui_set_align(gui, ALIGN_LEFT, ALIGN_CENTER);
@@ -386,7 +386,7 @@ static void draw_slider(int min, int max, int* value) {
 
             gui_element_begin(gui);
                 gui_on_hover(gui, slider_button_on_hover);
-                gui_set_custom_data(gui, settings_on_right_slider_button_click);
+                gui_set_custom_data(gui, settings_right_slider_button_handle_click);
                 gui_set_grow(gui, DIRECTION_VERTICAL);
                 gui_set_direction(gui, DIRECTION_HORIZONTAL);
                 gui_set_align(gui, ALIGN_LEFT, ALIGN_CENTER);
@@ -397,7 +397,7 @@ static void draw_slider(int min, int max, int* value) {
     gui_element_end(gui);
 }
 
-static void end_setting(void) {
+static void setting_end(void) {
     gui_element_end(gui);
     gui_element_end(gui);
 }
@@ -410,11 +410,11 @@ static void text_input_on_hover(GuiElement* el) {
 static void dropdown_input_on_hover(GuiElement* el) {
     if (ui.hover.button.handler) return;
     ui.hover.settings_dropdown_data = *(DropdownData*)gui_get_state(el);
-    ui.hover.button.handler = settings_on_dropdown_click;
+    ui.hover.button.handler = settings_dropdown_button_handle_click;
     if (el->color.r == 0x30) el->color = (GuiColor) { 0x40, 0x40, 0x40, 0xff };
 }
 
-static void draw_dropdown_input(int* value, char** list, int list_len) {
+static void dropdown_input_draw(int* value, char** list, int list_len) {
     gui_element_begin(gui);
         gui_set_grow(gui, DIRECTION_HORIZONTAL);
         gui_set_grow(gui, DIRECTION_VERTICAL);
@@ -454,7 +454,7 @@ static void draw_dropdown_input(int* value, char** list, int list_len) {
     gui_element_end(gui);
 }
 
-static void draw_text_input(char** input, const char* hint, int* scroll, bool editable, bool path_input) {
+static void text_input_draw(char** input, const char* hint, int* scroll, bool editable, bool path_input) {
     gui_element_begin(gui);
         gui_set_grow(gui, DIRECTION_HORIZONTAL);
         gui_set_grow(gui, DIRECTION_VERTICAL);
@@ -489,14 +489,14 @@ static void draw_text_input(char** input, const char* hint, int* scroll, bool ed
                 gui_on_hover(gui, input_on_hover);
             }
 
-            draw_input_text(&assets.fonts.font_cond, input, hint, config.ui_size * 0.6, GUI_WHITE);
+            input_text_draw(&assets.fonts.font_cond, input, hint, config.ui_size * 0.6, GUI_WHITE);
         gui_element_end(gui);
     gui_element_end(gui);
 
-    if (path_input) draw_button(NULL, &assets.textures.icon_folder, settings_on_browse_button_click, input);
+    if (path_input) button_draw(NULL, &assets.textures.icon_folder, settings_browse_button_handle_click, input);
 }
 
-static void draw_button(const char* label, Texture2D* icon, ButtonClickHandler handler, void* data) {
+static void button_draw(const char* label, Texture2D* icon, ButtonClickHandler handler, void* data) {
     gui_element_begin(gui);
         gui_set_min_size(gui, 0, config.ui_size);
         gui_set_rect(gui, (GuiColor) { 0x30, 0x30, 0x30, 0xff });
@@ -527,11 +527,11 @@ static void draw_button(const char* label, Texture2D* icon, ButtonClickHandler h
 
 static void toggle_on_hover(GuiElement* el) {
     el->color = (GuiColor) { 0x40, 0x40, 0x40, 0xff };
-    ui.hover.button.handler = settings_on_toggle_button_click;
+    ui.hover.button.handler = settings_toggle_button_handle_click;
     ui.hover.button.data = el->custom_data;
 }
 
-static void draw_toggle(bool* value) {
+static void toggle_draw(bool* value) {
     gui_element_begin(gui);
         gui_set_rect(gui, (GuiColor) { 0x30, 0x30, 0x30, 0xff });
         gui_on_hover(gui, toggle_on_hover);
@@ -559,7 +559,7 @@ static void draw_toggle(bool* value) {
     gui_element_end(gui);
 }
 
-void handle_window(void) {
+void window_handle(void) {
     if (window.is_hiding) {
         window.shown = false;
         window.is_hiding = false;
@@ -591,73 +591,73 @@ void handle_window(void) {
     }
 }
 
-void draw_settings_window(void) {
+void settings_window_draw(void) {
     static int font_path_scroll = 0;
     static int font_bold_path_scroll = 0;
     static int font_mono_path_scroll = 0;
 
-    begin_window(gettext("Settings"), &assets.textures.icon_settings, MIN(700 * config.ui_size / 32.0, gui->win_w - config.ui_size), 0, window.animation_ease);
-        begin_setting(gettext("Language"), true);
-            draw_dropdown_input((int*)&window_config.language, language_list, ARRLEN(language_list));
-        end_setting();
+    window_begin(gettext("Settings"), &assets.textures.icon_settings, MIN(700 * config.ui_size / 32.0, gui->win_w - config.ui_size), 0, window.animation_ease);
+        setting_begin(gettext("Language"), true);
+            dropdown_input_draw((int*)&window_config.language, language_list, ARRLEN(language_list));
+        setting_end();
 
-        begin_setting(gettext("UI size"), false);
-            draw_slider(8, 64, &window_config.ui_size);
-        end_setting();
+        setting_begin(gettext("UI size"), false);
+            slider_draw(8, 64, &window_config.ui_size);
+        setting_end();
 
-        begin_setting(gettext("FPS limit"), false);
-            draw_slider(0, 240, &window_config.fps_limit);
-        end_setting();
+        setting_begin(gettext("FPS limit"), false);
+            slider_draw(0, 240, &window_config.fps_limit);
+        setting_end();
 
-        begin_setting(gettext("Code panel smoothness"), false);
-            draw_slider(0, 32, &window_config.code_area_smoothness);
-        end_setting();
+        setting_begin(gettext("Code panel smoothness"), false);
+            slider_draw(0, 32, &window_config.code_area_smoothness);
+        setting_end();
 
-        begin_setting(gettext("Categories column count"), false);
-            draw_slider(1, 8, &window_config.categories_column_count);
-        end_setting();
+        setting_begin(gettext("Categories column count"), false);
+            slider_draw(1, 8, &window_config.categories_column_count);
+        setting_end();
 
-        begin_setting(gettext("Font path"), false);
-            draw_text_input(&window_config.font_path, gettext("path"), &font_path_scroll, true, true);
-        end_setting();
+        setting_begin(gettext("Font path"), false);
+            text_input_draw(&window_config.font_path, gettext("path"), &font_path_scroll, true, true);
+        setting_end();
 
-        begin_setting(gettext("Bold font path"), false);
-            draw_text_input(&window_config.font_bold_path, gettext("path"), &font_bold_path_scroll, true, true);
-        end_setting();
+        setting_begin(gettext("Bold font path"), false);
+            text_input_draw(&window_config.font_bold_path, gettext("path"), &font_bold_path_scroll, true, true);
+        setting_end();
 
-        begin_setting(gettext("Monospaced font path"), false);
-            draw_text_input(&window_config.font_mono_path, gettext("path"), &font_mono_path_scroll, true, true);
-        end_setting();
+        setting_begin(gettext("Monospaced font path"), false);
+            text_input_draw(&window_config.font_mono_path, gettext("path"), &font_mono_path_scroll, true, true);
+        setting_end();
 
-        begin_setting(gettext("Panel layout"), false);
+        setting_begin(gettext("Panel layout"), false);
             gui_element_begin(gui);
                 gui_set_grow(gui, DIRECTION_HORIZONTAL);
                 gui_set_grow(gui, DIRECTION_VERTICAL);
                 gui_set_direction(gui, DIRECTION_HORIZONTAL);
 
-                draw_button(gettext("Edit"), &assets.textures.button_edit, settings_on_panel_editor_button_click, NULL);
+                button_draw(gettext("Edit"), &assets.textures.button_edit, settings_panel_editor_button_handle_click, NULL);
             gui_element_end(gui);
-        end_setting();
+        setting_end();
 
-        begin_setting(gettext("Show block previews"), false);
+        setting_begin(gettext("Show block previews"), false);
             gui_element_begin(gui);
                 gui_set_grow(gui, DIRECTION_HORIZONTAL);
                 gui_set_grow(gui, DIRECTION_VERTICAL);
                 gui_set_direction(gui, DIRECTION_HORIZONTAL);
 
-                draw_toggle(&window_config.show_blockchain_previews);
+                toggle_draw(&window_config.show_blockchain_previews);
             gui_element_end(gui);
-        end_setting();
+        setting_end();
 
-        begin_setting(gettext("Show debug info"), false);
+        setting_begin(gettext("Show debug info"), false);
             gui_element_begin(gui);
                 gui_set_grow(gui, DIRECTION_HORIZONTAL);
                 gui_set_grow(gui, DIRECTION_VERTICAL);
                 gui_set_direction(gui, DIRECTION_HORIZONTAL);
 
-                draw_toggle(&editor.show_debug);
+                toggle_draw(&editor.show_debug);
             gui_element_end(gui);
-        end_setting();
+        setting_end();
 
         gui_grow(gui, DIRECTION_VERTICAL);
 
@@ -676,11 +676,11 @@ void draw_settings_window(void) {
             gui_set_gap(gui, ELEMENT_GAP);
 
             gui_grow(gui, DIRECTION_HORIZONTAL);
-            draw_button(gettext("Reset panels"), NULL, settings_on_reset_panels_button_click, NULL);
-            draw_button(gettext("Reset"), NULL, settings_on_reset_button_click, NULL);
-            draw_button(gettext("Apply"), NULL, settings_on_apply_button_click, NULL);
+            button_draw(gettext("Reset panels"), NULL, settings_reset_panels_button_handle_click, NULL);
+            button_draw(gettext("Reset"), NULL, settings_reset_button_handle_click, NULL);
+            button_draw(gettext("Apply"), NULL, settings_apply_button_handle_click, NULL);
         gui_element_end(gui);
-    end_window();
+    window_end();
 
     if (settings_tooltip) {
         gui_element_begin(gui);
@@ -696,7 +696,7 @@ void draw_settings_window(void) {
     settings_tooltip = false;
 }
 
-void draw_about_window(void) {
+void about_window_draw(void) {
     if (!about_text_split) {
         scrap_log(LOG_INFO, "Split about text");
         about_text_split = vector_create();
@@ -716,7 +716,7 @@ void draw_about_window(void) {
         vector_add(&about_text_split, current_text);
     }
 
-    begin_window(gettext("About"), &assets.textures.icon_about, 500 * config.ui_size / 32.0, 0, window.animation_ease);
+    window_begin(gettext("About"), &assets.textures.icon_about, 500 * config.ui_size / 32.0, 0, window.animation_ease);
         gui_element_begin(gui);
             gui_set_direction(gui, DIRECTION_HORIZONTAL);
             gui_set_align(gui, ALIGN_LEFT, ALIGN_CENTER);
@@ -746,13 +746,13 @@ void draw_about_window(void) {
             gui_set_gap(gui, ELEMENT_GAP);
 
             gui_grow(gui, DIRECTION_HORIZONTAL);
-            draw_button(gettext("License"), &assets.textures.icon_file, about_on_license_button_click, NULL);
+            button_draw(gettext("License"), &assets.textures.icon_file, about_license_button_handle_click, NULL);
         gui_element_end(gui);
-    end_window();
+    window_end();
 }
 
-void draw_save_confirmation_window(void) {
-    begin_window(gettext("Confirm save"), &assets.textures.icon_about, 500 * config.ui_size / 32.0, 0, window.animation_ease);
+void save_confirmation_window_draw(void) {
+    window_begin(gettext("Confirm save"), &assets.textures.icon_about, 500 * config.ui_size / 32.0, 0, window.animation_ease);
         gui_text(gui, &assets.fonts.font_cond, gettext("Project is modified. Save the changes before quitting?"), config.ui_size * 0.6, GUI_WHITE);
 
         gui_grow(gui, DIRECTION_VERTICAL);
@@ -764,14 +764,14 @@ void draw_save_confirmation_window(void) {
 
             gui_grow(gui, DIRECTION_HORIZONTAL);
 
-            draw_button(gettext("Yes"),    NULL, save_confirmation_on_yes_button_click, NULL);
-            draw_button(gettext("No"),     NULL, save_confirmation_on_no_button_click, NULL);
-            draw_button(gettext("Cancel"), NULL, save_confirmation_on_cancel_button_click, NULL);
+            button_draw(gettext("Yes"),    NULL, save_confirmation_yes_button_handle_click, NULL);
+            button_draw(gettext("No"),     NULL, save_confirmation_no_button_handle_click, NULL);
+            button_draw(gettext("Cancel"), NULL, save_confirmation_cancel_button_handle_click, NULL);
         gui_element_end(gui);
-    end_window();
+    window_end();
 }
 
-void draw_window(void) {
+void window_draw(void) {
     if (!window.shown) return;
 
     window.animation_ease = ease_out_expo(window.animation_time);

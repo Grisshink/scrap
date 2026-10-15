@@ -60,16 +60,16 @@ Blockdef** save_blockdefs = NULL;
 static unsigned int ver = 0;
 
 int save_find_constant(const Value constant);
-void save_code(const char* file_path, RootBlockChain* code);
-RootBlockChain* load_code(void* file_data, size_t file_size, bool test);
-void save_block(SaveData* save, Block* block);
-Block* load_block(SaveData* save);
-void save_blockdef(SaveData* save, Blockdef* blockdef);
-Blockdef* load_blockdef(SaveData* save);
-void save_blockchain(SaveData* save, BlockChain* chain);
-BlockChain* load_blockchain(SaveData* save);
-void collect_blockchain_constants(BlockChain* chain);
-void save_value(SaveData* save, Value* value);
+void code_save(const char* file_path, RootBlockChain* code);
+RootBlockChain* code_load(void* file_data, size_t file_size, bool test);
+void block_save(SaveData* save, Block* block);
+Block* block_load(SaveData* save);
+void blockdef_save(SaveData* save, Blockdef* blockdef);
+Blockdef* blockdef_load(SaveData* save);
+void blockchain_save(SaveData* save, BlockChain* chain);
+BlockChain* blockchain_load(SaveData* save);
+void blockchain_collect_constants(BlockChain* chain);
+void value_save(SaveData* save, Value* value);
 
 const char* language_to_code(Language lang) {
     switch (lang) {
@@ -184,7 +184,7 @@ void reload_fonts(void) {
 
     vector_free(codepoints);
 
-    prerender_font_shadow(&assets.fonts.font_cond_shadow);
+    font_prerender_shadow(&assets.fonts.font_cond_shadow);
 }
 
 void vector_set_string(char** vec, char* str) {
@@ -218,7 +218,7 @@ void config_copy(Config* dst, Config* src) {
     dst->show_blockchain_previews = src->show_blockchain_previews;
 }
 
-void set_default_config(Config* config) {
+void config_set_default(Config* config) {
     config->ui_size = 32;
     config->fps_limit = 60;
     config->block_size_threshold = 1000;
@@ -231,7 +231,7 @@ void set_default_config(Config* config) {
     config->show_blockchain_previews = true;
 }
 
-void apply_config(Config* dst, Config* src) {
+void config_apply(Config* dst, Config* src) {
     dst->fps_limit = src->fps_limit;
     SetTargetFPS(dst->fps_limit);
 
@@ -257,7 +257,7 @@ void apply_config(Config* dst, Config* src) {
     dst->show_blockchain_previews = src->show_blockchain_previews;
 }
 
-void save_panel_config(char* file_str, int* cursor, PanelTree* panel) {
+static void panel_config_save(char* file_str, int* cursor, PanelTree* panel) {
     switch (panel->type) {
     case PANEL_NONE:
         *cursor += sprintf(file_str + *cursor, "PANEL_NONE ");
@@ -278,8 +278,8 @@ void save_panel_config(char* file_str, int* cursor, PanelTree* panel) {
             panel->direction == DIRECTION_HORIZONTAL ? "DIRECTION_HORIZONTAL" : "DIRECTION_VERTICAL",
             panel->split_percent
         );
-        save_panel_config(file_str, cursor, panel->left);
-        save_panel_config(file_str, cursor, panel->right);
+        panel_config_save(file_str, cursor, panel->left);
+        panel_config_save(file_str, cursor, panel->right);
         break;
     case PANEL_BLOCK_CATEGORIES:
         *cursor += sprintf(file_str + *cursor, "PANEL_BLOCK_CATEGORIES ");
@@ -302,7 +302,7 @@ static char* read_panel_token(char** str, bool* is_eof) {
     return out;
 }
 
-PanelTree* load_panel_config(char** config) {
+static PanelTree* panel_config_load(char** config) {
     bool is_eof = false;
 
     char* name = read_panel_token(config, &is_eof);
@@ -325,9 +325,9 @@ PanelTree* load_panel_config(char** config) {
 
         float percent = CLAMP(atof(split_percent), 0.0, 1.0);
 
-        PanelTree* left = load_panel_config(config);
+        PanelTree* left = panel_config_load(config);
         if (!left) return NULL;
-        PanelTree* right = load_panel_config(config);
+        PanelTree* right = panel_config_load(config);
         if (!right) {
             panel_delete(left);
             return NULL;
@@ -363,7 +363,7 @@ PanelTree* load_panel_config(char** config) {
     return NULL;
 }
 
-void save_config(Config* config) {
+void config_save(Config* config) {
     char* file_str = malloc(sizeof(char) * 32768);
     file_str[0] = 0;
     int cursor = 0;
@@ -380,7 +380,7 @@ void save_config(Config* config) {
     cursor += sprintf(file_str + cursor, "SHOW_BLOCKCHAIN_PREVIEWS=%u\n", config->show_blockchain_previews);
     for (size_t i = 0; i < vector_size(editor.tabs); i++) {
         cursor += sprintf(file_str + cursor, "CONFIG_TAB_%s=", editor.tabs[i].name);
-        save_panel_config(file_str, &cursor, editor.tabs[i].root_panel);
+        panel_config_save(file_str, &cursor, editor.tabs[i].root_panel);
         cursor += sprintf(file_str + cursor, "\n");
     }
 
@@ -392,7 +392,7 @@ void save_config(Config* config) {
     free(file_str);
 }
 
-PanelTree* find_panel_in_all_tabs(PanelType panel_type) {
+static PanelTree* panel_find_in_all_tabs(PanelType panel_type) {
     for (size_t i = 0; i < vector_size(editor.tabs); i++) {
         PanelTree* panel = find_panel(editor.tabs[i].root_panel, panel_type);
         if (panel) return panel;
@@ -400,11 +400,12 @@ PanelTree* find_panel_in_all_tabs(PanelType panel_type) {
     return NULL;
 }
 
+// TODO: Add all missing panels to a new tab
 void add_missing_panels(void) {
-    PanelTree* categories = find_panel_in_all_tabs(PANEL_BLOCK_CATEGORIES);
+    PanelTree* categories = panel_find_in_all_tabs(PANEL_BLOCK_CATEGORIES);
     if (categories) return;
 
-    PanelTree* palette = find_panel_in_all_tabs(PANEL_BLOCK_PALETTE);
+    PanelTree* palette = panel_find_in_all_tabs(PANEL_BLOCK_PALETTE);
     if (!palette) {
         scrap_log(LOG_ERROR, "Failed to insert missing panel PANEL_BLOCK_CATEGORIES: panel PANEL_BLOCK_PALETTE is missing");
         return;
@@ -412,8 +413,8 @@ void add_missing_panels(void) {
     panel_split(palette, SPLIT_SIDE_TOP, PANEL_BLOCK_CATEGORIES, 0.35);
 }
 
-void load_config(Config* config) {
-    delete_all_tabs();
+void config_load(Config* config) {
+    tabs_delete_all();
 
     char config_path[MAX_PATH + 10];
     get_user_config_folder(config_path, ARRLEN(config_path), CONFIG_FOLDER_NAME);
@@ -421,7 +422,7 @@ void load_config(Config* config) {
 
     char* file = LoadFileText(config_path);
     if (!file) {
-        init_panels();
+        panels_init();
         editor.current_tab = 0;
         return;
     }
@@ -472,7 +473,7 @@ void load_config(Config* config) {
             config->show_blockchain_previews = atoi(value) != 0;
         } else if (!strncmp(field, "CONFIG_TAB_", sizeof("CONFIG_TAB_") - 1)) {
             char* panel_value = value;
-            tab_new(field + sizeof("CONFIG_TAB_") - 1, load_panel_config(&panel_value));
+            tab_new(field + sizeof("CONFIG_TAB_") - 1, panel_config_load(&panel_value));
         } else if (!strcmp(field, "LANGUAGE")) {
             Language lang = code_to_language(value);
             config->language = lang;
@@ -482,7 +483,7 @@ void load_config(Config* config) {
     }
 
     add_missing_panels();
-    if (vector_size(editor.tabs) == 0) init_panels();
+    if (vector_size(editor.tabs) == 0) panels_init();
     if (editor.current_tab >= (int)vector_size(editor.tabs)) editor.current_tab = vector_size(editor.tabs) - 1;
 
     UnloadFileText(file);
@@ -547,23 +548,23 @@ void save_add_array(SaveData* save, const void* array, int array_size, size_t da
     for (int i = 0; i < array_size; i++) save_add_item(save, array + data_size * i, data_size);
 }
 
-void free_save(SaveData* save) {
+void save_free(SaveData* save) {
     free(save->ptr);
     save->size = 0;
     save->capacity = 0;
 }
 
-void save_blockdef_input(SaveData* save, Input* input) {
+void blockdef_input_save(SaveData* save, Input* input) {
     save_add_varint(save, input->type);
-    static_assert(INPUT_LAST == 6, "Exhaustive input type in save_blockdef_input");
+    static_assert(INPUT_LAST == 6, "Exhaustive input type in blockdef_input_save");
     switch (input->type) {
     case INPUT_TEXT_DISPLAY:
         save_add_array(save, input->data.text, vector_size(input->data.text), sizeof(input->data.text[0]));
         break;
     case INPUT_ARGUMENT:
-        save_blockdef(save, input->data.arg.blockdef);
+        blockdef_save(save, input->data.arg.blockdef);
         save_add_varint(save, input->data.arg.allowed_type);
-        save_value(save, &input->data.arg.default_value);
+        value_save(save, &input->data.arg.default_value);
         break;
     case INPUT_DROPDOWN:
     case INPUT_BLOCKDEF_EDITOR:
@@ -578,7 +579,7 @@ void save_blockdef_input(SaveData* save, Input* input) {
     }
 }
 
-void save_blockdef(SaveData* save, Blockdef* blockdef) {
+void blockdef_save(SaveData* save, Blockdef* blockdef) {
     save_add_array(save, blockdef->id, strlen(blockdef->id) + 1, sizeof(blockdef->id[0]));
     save_add(save, blockdef->color);
     save_add_varint(save, blockdef->type);
@@ -586,13 +587,13 @@ void save_blockdef(SaveData* save, Blockdef* blockdef) {
 
     int input_count = vector_size(blockdef->inputs);
     save_add_varint(save, input_count);
-    for (int i = 0; i < input_count; i++) save_blockdef_input(save, &blockdef->inputs[i]);
+    for (int i = 0; i < input_count; i++) blockdef_input_save(save, &blockdef->inputs[i]);
 }
 
-void save_value(SaveData* save, Value* value) {
+void value_save(SaveData* save, Value* value) {
     save_add_varint(save, value->type);
 
-    static_assert(DATA_TYPE_LAST == 12, "Exhaustive data type in save_value");
+    static_assert(DATA_TYPE_LAST == 12, "Exhaustive data type in value_save");
     switch (value->type) {
     case DATA_TYPE_NOTHING:
         break;
@@ -626,18 +627,18 @@ void save_value(SaveData* save, Value* value) {
     case DATA_TYPE_NULL:
         assert(false && "Invalid save type");
     default:
-        assert(false && "Unhandled data type in save_value");
+        assert(false && "Unhandled data type in value_save");
     }
 }
 
-void save_block_arguments(SaveData* save, Argument* arg) {
+void block_arguments_save(SaveData* save, Argument* arg) {
     save_add_varint(save, arg->type);
 
     int constant_ind;
-    static_assert(ARGUMENT_LAST == 6, "Exhaustive argument type in save_block_arguments");
+    static_assert(ARGUMENT_LAST == 6, "Exhaustive argument type in block_arguments_save");
     switch (arg->type) {
     case ARGUMENT_BLOCK:
-        save_block(save, arg->data.block);
+        block_save(save, arg->data.block);
         break;
     case ARGUMENT_BLOCKDEF:
         constant_ind = save_find_constant((Value) {
@@ -662,7 +663,7 @@ void save_block_arguments(SaveData* save, Argument* arg) {
     }
 }
 
-void save_block(SaveData* save, Block* block) {
+void block_save(SaveData* save, Block* block) {
     assert(block->blockdef->id != NULL);
 
     int arg_count = vector_size(block->arguments);
@@ -674,27 +675,27 @@ void save_block(SaveData* save, Block* block) {
     assert(constant_ind != -1);
     save_add_varint(save, constant_ind);
     save_add_varint(save, arg_count);
-    for (int i = 0; i < arg_count; i++) save_block_arguments(save, &block->arguments[i]);
+    for (int i = 0; i < arg_count; i++) block_arguments_save(save, &block->arguments[i]);
 
-    if (block->blockdef->type == BLOCKTYPE_CONTROL || block->blockdef->type == BLOCKTYPE_CONTROLEND) save_blockchain(save, block->contents);
-    if (block->blockdef->type == BLOCKTYPE_CONTROL) save_blockchain(save, block->controlend_contents);
+    if (block->blockdef->type == BLOCKTYPE_CONTROL || block->blockdef->type == BLOCKTYPE_CONTROLEND) blockchain_save(save, block->contents);
+    if (block->blockdef->type == BLOCKTYPE_CONTROL) blockchain_save(save, block->controlend_contents);
 }
 
-void save_blockchain(SaveData* save, BlockChain* chain) {
+void blockchain_save(SaveData* save, BlockChain* chain) {
     int blocks_count = 0;
     for (Block* iter = chain->start; iter; iter = iter->next) blocks_count++;
 
     save_add_varint(save, blocks_count);
-    for (Block* iter = chain->start; iter; iter = iter->next) save_block(save, iter);
+    for (Block* iter = chain->start; iter; iter = iter->next) block_save(save, iter);
 }
 
-void save_root_blockchain(SaveData* save, RootBlockChain* chain) {
+void root_blockchain_save(SaveData* save, RootBlockChain* chain) {
     save_add(save, chain->x);
     save_add(save, chain->y);
-    save_blockchain(save, chain->chain);
+    blockchain_save(save, chain->chain);
 }
 
-void rename_blockdef(Blockdef* blockdef, int id) {
+void blockdef_rename(Blockdef* blockdef, int id) {
     blockdef_set_id(blockdef, TextFormat("custom%d", id));
     int arg_id = 0;
     for (size_t i = 0; i < vector_size(blockdef->inputs); i++) {
@@ -778,17 +779,17 @@ void block_collect_constants(Block* block) {
         }
     }
 
-    if (block->blockdef->type == BLOCKTYPE_CONTROL || block->blockdef->type == BLOCKTYPE_CONTROLEND) collect_blockchain_constants(block->contents);
-    if (block->blockdef->type == BLOCKTYPE_CONTROL) collect_blockchain_constants(block->controlend_contents);
+    if (block->blockdef->type == BLOCKTYPE_CONTROL || block->blockdef->type == BLOCKTYPE_CONTROLEND) blockchain_collect_constants(block->contents);
+    if (block->blockdef->type == BLOCKTYPE_CONTROL) blockchain_collect_constants(block->controlend_contents);
 }
 
-void collect_blockchain_constants(BlockChain* chain) {
+void blockchain_collect_constants(BlockChain* chain) {
     for (Block* iter = chain->start; iter; iter = iter->next) {
         block_collect_constants(iter);
     }
 }
 
-void save_code(const char* file_path, RootBlockChain* code) {
+void code_save(const char* file_path, RootBlockChain* code) {
     SaveData save = {0};
     ver = SCRAP_MAX_SAVE_VERSION;
     int chains_count = vector_size(code);
@@ -801,13 +802,13 @@ void save_code(const char* file_path, RootBlockChain* code) {
         Block* block = code[i].chain->start;
         for (size_t j = 0; j < vector_size(block->arguments); j++) {
             if (block->arguments[j].type != ARGUMENT_BLOCKDEF) continue;
-            rename_blockdef(block->arguments[j].data.blockdef, id++);
+            blockdef_rename(block->arguments[j].data.blockdef, id++);
             vector_add(&blockdefs, block->arguments[j].data.blockdef);
         }
     }
 
     for (size_t i = 0; i < vector_size(code); i++) {
-        collect_blockchain_constants(code[i].chain);
+        blockchain_collect_constants(code[i].chain);
     }
 
     save_add_varint(&save, ver);
@@ -815,21 +816,21 @@ void save_code(const char* file_path, RootBlockChain* code) {
 
     save_add_varint(&save, vector_size(save_value_constants));
     for (size_t i = 0; i < vector_size(save_value_constants); i++) {
-        save_value(&save, &save_value_constants[i]);
+        value_save(&save, &save_value_constants[i]);
     }
 
     save_add_varint(&save, id);
-    for (size_t i = 0; i < vector_size(blockdefs); i++) save_blockdef(&save, blockdefs[i]);
+    for (size_t i = 0; i < vector_size(blockdefs); i++) blockdef_save(&save, blockdefs[i]);
 
     save_add_varint(&save, chains_count);
-    for (int i = 0; i < chains_count; i++) save_root_blockchain(&save, &code[i]);
+    for (int i = 0; i < chains_count; i++) root_blockchain_save(&save, &code[i]);
 
     SaveFileData(file_path, save.ptr, save.size);
     scrap_log(LOG_INFO, "%zu bytes written into %s", save.size, file_path);
 
     vector_free(save_value_constants);
     vector_free(blockdefs);
-    free_save(&save);
+    save_free(&save);
 }
 
 Blockdef* find_blockdef(Blockdef** blockdefs, const char* id) {
@@ -839,12 +840,12 @@ Blockdef* find_blockdef(Blockdef** blockdefs, const char* id) {
     return NULL;
 }
 
-bool load_value(SaveData* save, Value* value) {
+bool value_load(SaveData* save, Value* value) {
     DataType type;
     if (!save_read_varint(save, (unsigned int*)&type)) return false;
     value->type = type;
 
-    static_assert(DATA_TYPE_LAST == 12, "Exhaustive data type in load_value");
+    static_assert(DATA_TYPE_LAST == 12, "Exhaustive data type in value_load");
     switch (type) {
     case DATA_TYPE_NOTHING:
         break;
@@ -896,12 +897,12 @@ bool load_value(SaveData* save, Value* value) {
     case DATA_TYPE_NULL:
         assert(false && "Invalid save type");
     default:
-        assert(false && "Unhandled data type in load_value");
+        assert(false && "Unhandled data type in value_load");
     }
     return true;
 }
 
-bool load_blockdef_input(SaveData* save, Input* input) {
+bool blockdef_input_load(SaveData* save, Input* input) {
     InputType type;
     if (!save_read_varint(save, (unsigned int*)&type)) return false;
     input->type = type;
@@ -913,7 +914,7 @@ bool load_blockdef_input(SaveData* save, Input* input) {
     } constr = BLOCKCONSTR_UNLIMITED;
     char* text;
 
-    static_assert(INPUT_LAST == 6, "Exhaustive input type in load_blockdef_input");
+    static_assert(INPUT_LAST == 6, "Exhaustive input type in blockdef_input_load");
     switch (input->type) {
     case INPUT_TEXT_DISPLAY:
         text = save_read_array(save, sizeof(char), &text_len);
@@ -930,12 +931,12 @@ bool load_blockdef_input(SaveData* save, Input* input) {
             if (!save_read_varint(save, &constr)) return false;
         }
 
-        Blockdef* blockdef = load_blockdef(save);
+        Blockdef* blockdef = blockdef_load(save);
         if (!blockdef) return false;
 
         if (ver >= 6) {
             if (!save_read_varint(save, (unsigned int*)&input->data.arg.allowed_type)) return false;
-            if (!load_value(save, &input->data.arg.default_value)) return false;
+            if (!value_load(save, &input->data.arg.default_value)) return false;
         } else {
             input->data.arg.default_value = value_from_string("");
             input->data.arg.default_value.type = constr == BLOCKCONSTR_UNLIMITED ? DATA_TYPE_ANY : DATA_TYPE_STRING;
@@ -954,7 +955,7 @@ bool load_blockdef_input(SaveData* save, Input* input) {
     return true;
 }
 
-Blockdef* load_blockdef(SaveData* save) {
+Blockdef* blockdef_load(SaveData* save) {
     unsigned int id_len;
     char* id = save_read_array(save, sizeof(char), &id_len);
     if (!id) return NULL;
@@ -992,7 +993,7 @@ Blockdef* load_blockdef(SaveData* save) {
 
     for (unsigned int i = 0; i < input_count; i++) {
         Input input;
-        if (!load_blockdef_input(save, &input)) {
+        if (!blockdef_input_load(save, &input)) {
             blockdef_free(blockdef);
             return NULL;
         }
@@ -1002,7 +1003,7 @@ Blockdef* load_blockdef(SaveData* save) {
     return blockdef;
 }
 
-bool load_block_argument(SaveData* save, Argument* arg) {
+bool block_argument_load(SaveData* save, Argument* arg) {
     if (ver < 6) {
         // Deprecated: input_id is not stored in the arguments because input_ids can shift whenever blockdef input count is changed
         unsigned int input_id;
@@ -1019,10 +1020,10 @@ bool load_block_argument(SaveData* save, Argument* arg) {
 
     Value constant;
 
-    static_assert(ARGUMENT_LAST == 6, "Exhaustive argument type in load_block_argument");
+    static_assert(ARGUMENT_LAST == 6, "Exhaustive argument type in block_argument_load");
     switch (arg_type) {
     case ARGUMENT_BLOCK: ;
-        Block* block = load_block(save);
+        Block* block = block_load(save);
         if (!block) return false;
 
         block->parent.type = BLOCK_PARENT_ARGUMENT;
@@ -1100,7 +1101,7 @@ void assign_blockdef_funcs(Blockdef* blockdef, Argument* arg) {
     }
 }
 
-Block* load_block(SaveData* save) {
+Block* block_load(SaveData* save) {
     unsigned int block_id_constant_ind;
     if (!save_read_varint(save, &block_id_constant_ind)) return NULL;
     Value block_id_constant = save_value_constants[block_id_constant_ind];
@@ -1156,7 +1157,7 @@ Block* load_block(SaveData* save) {
         Argument* arg = vector_add_dst(&block->arguments);
 
         if (i < arg_count) {
-            if (!load_block_argument(save, arg)) {
+            if (!block_argument_load(save, arg)) {
                 block_free(block);
                 return NULL;
             }
@@ -1181,7 +1182,7 @@ Block* load_block(SaveData* save) {
 
     if (ver >= 5) {
         if (blockdef->type == BLOCKTYPE_CONTROL || blockdef->type == BLOCKTYPE_CONTROLEND) {
-            BlockChain* contents = load_blockchain(save);
+            BlockChain* contents = blockchain_load(save);
             if (!contents) return NULL;
             blockchain_free(block->contents);
             block->contents = contents;
@@ -1189,7 +1190,7 @@ Block* load_block(SaveData* save) {
         }
 
         if (blockdef->type == BLOCKTYPE_CONTROL) {
-            BlockChain* controlend_contents = load_blockchain(save);
+            BlockChain* controlend_contents = blockchain_load(save);
             if (!controlend_contents) return NULL;
             blockchain_free(block->controlend_contents);
             block->controlend_contents = controlend_contents;
@@ -1200,7 +1201,7 @@ Block* load_block(SaveData* save) {
     return block;
 }
 
-BlockChain* load_blockchain(SaveData* save) {
+BlockChain* blockchain_load(SaveData* save) {
     unsigned int blocks_count;
     if (!save_read_varint(save, &blocks_count)) return NULL;
 
@@ -1208,7 +1209,7 @@ BlockChain* load_blockchain(SaveData* save) {
     if (blocks_count == 0) return chain;
 
     for (unsigned int i = 0; i < blocks_count; i++) {
-        Block* block = load_block(save);
+        Block* block = block_load(save);
         if (!block) {
             blockchain_free(chain);
             return NULL;
@@ -1230,7 +1231,7 @@ BlockChain* load_blockchain(SaveData* save) {
     return chain;
 }
 
-bool load_root_blockchain(SaveData* save, RootBlockChain* chain) {
+bool root_blockchain_load(SaveData* save, RootBlockChain* chain) {
     int pos_x, pos_y;
     if (ver == 1) {
         struct { float x; float y; }* pos = save_read_item(save, sizeof(struct { float x; float y; }));
@@ -1249,7 +1250,7 @@ bool load_root_blockchain(SaveData* save, RootBlockChain* chain) {
 
     chain->x = pos_x;
     chain->y = pos_y;
-    chain->chain = load_blockchain(save);
+    chain->chain = blockchain_load(save);
     if (!chain->chain) return false;
 
     return true;
@@ -1311,7 +1312,7 @@ void convert_old_save_structure(RootBlockChain* code) {
     vector_free(chain_list);
 }
 
-RootBlockChain* load_code(void* file_data, size_t file_size, bool test) {
+RootBlockChain* code_load(void* file_data, size_t file_size, bool test) {
     SaveData save = {
         .ptr = file_data,
         .capacity = file_size,
@@ -1357,7 +1358,7 @@ RootBlockChain* load_code(void* file_data, size_t file_size, bool test) {
             for (char* ch = constant_str; *ch; ch++) vector_add(&constant.data.str_val, *ch);
             vector_add(&constant.data.str_val, 0);
         } else {
-            if (!load_value(&save, &constant)) goto load_fail;
+            if (!value_load(&save, &constant)) goto load_fail;
         }
 
         vector_add(&save_value_constants, constant);
@@ -1366,7 +1367,7 @@ RootBlockChain* load_code(void* file_data, size_t file_size, bool test) {
     unsigned int custom_block_len;
     if (!save_read_varint(&save, &custom_block_len)) goto load_fail;
     for (unsigned int i = 0; i < custom_block_len; i++) {
-        Blockdef* blockdef = load_blockdef(&save);
+        Blockdef* blockdef = blockdef_load(&save);
         if (!blockdef) goto load_fail;
         vector_add(&save_blockdefs, blockdef);
     }
@@ -1376,7 +1377,7 @@ RootBlockChain* load_code(void* file_data, size_t file_size, bool test) {
 
     for (unsigned int i = 0; i < code_len; i++) {
         RootBlockChain* chain = vector_add_dst(&code);
-        if (!load_root_blockchain(&save, chain)) goto load_fail;
+        if (!root_blockchain_load(&save, chain)) goto load_fail;
     }
 
     vector_free(save_blockdefs);

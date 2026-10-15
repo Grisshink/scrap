@@ -2661,7 +2661,7 @@ Value block_custom_arg(Compiler* compiler, Block* block, Block** next_block, Blo
 }
 
 // Creates and registers blocks (commands) for the Vm/Compiler virtual machine
-void register_blocks(Vm* vm) {
+void vm_register_blocks(Vm* vm) {
     BlockCategory cat;
     cat = block_category_new(gettext("Control"),  (Color) CATEGORY_CONTROL_COLOR, &assets.textures.icon_loop);
     BlockCategory* cat_control = block_category_register(cat);
